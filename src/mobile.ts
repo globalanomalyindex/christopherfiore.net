@@ -62,6 +62,7 @@ import {
   BLSP_STATEMENT,
 } from './data/blsp-case.ts';
 import { STUDIO, PROFILE_LINKS, CONTACT_TABLE } from './data/studio.ts';
+import { ABOUT, ABOUT_SECTIONS, AT_A_GLANCE } from './data/about.ts';
 import type { TableRow } from './data/types.ts';
 
 /** Viewport width below which the fixed stage stops being legible. */
@@ -675,14 +676,30 @@ function competizioneSection(): HTMLElement {
 
 /* ------------------------------------------------------------------ 04 */
 
-function contactSection(): HTMLElement {
+/**
+ * 04 — about and contact.
+ *
+ * The wide stage puts the full background behind a control, because a fixed
+ * 1080px screen has nowhere to put 700 words. This view is a document that
+ * already scrolls, so there is nothing to open: the sections run inline, and
+ * the subpage simply does not exist here.
+ *
+ * Contact comes first inside the section. Someone who has read this far on a
+ * phone should not have to scroll past the whole background to find the email.
+ */
+function aboutContactSection(): HTMLElement {
   return section(
     '04',
-    'Contact',
+    'About me + contact',
     STUDIO.location,
+    el('p', { class: 'm-stand' }, ABOUT.lede),
     el('a', { class: 'm-email', href: `mailto:${STUDIO.email}` }, STUDIO.email),
     el('div', { class: 'm-caselinks' }, ...PROFILE_LINKS.map((l) => link(l.href, l.label))),
     table(CONTACT_TABLE),
+    block('about-glance', 'at a glance', null, table(AT_A_GLANCE)),
+    ...ABOUT_SECTIONS.map((s) =>
+      block(`about-${s.id}`, s.name, null, ...s.paras.map((p) => body(p))),
+    ),
   );
 }
 
@@ -713,7 +730,7 @@ export function buildMobile(): HTMLElement {
     motionSection(),
     paintingsSection(),
     competizioneSection(),
-    contactSection(),
+    aboutContactSection(),
     el(
       'footer',
       { class: 'm-foot' },

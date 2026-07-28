@@ -219,6 +219,37 @@ export function chellbookOpen(stage: HTMLElement): boolean;
 Chellbook's safety vocabulary is a claim boundary in the same way the Kona N
 release language is. See the header comment in `src/data/chellbook.ts`.
 
+### `src/pages/about.ts` + `src/runtime/about.ts`
+Channel 04's in-stage background, opened from the page-04 control
+(`data-act="about"`). Same shape and choreography as the chellbook screen with
+the board machinery removed: it is prose, so it carries a native scroll column
+with a rust rail and a "you are here" readout instead of a plate and slots.
+Open state is a module-local `WeakSet` keyed by the stage, and `aboutOpen(stage)`
+is what `actions.ts` asks when routing Escape.
+
+```ts
+export function openAbout(stage: HTMLElement, trigger: HTMLElement): void;
+export function closeAbout(stage: HTMLElement): void;
+export function goAbout(stage: HTMLElement, n: number): void;
+export function aboutOpen(stage: HTMLElement): boolean;
+```
+
+Two ordering rules hold here:
+
+- The scroll column carries one more section than the jump index: the
+  standfirst is scroll section 0, so index row `n` is scroll section `n + 1`.
+  `goAbout` and the current-row paint both apply that offset, and the readout
+  deliberately does not number the standfirst — numbering it would make the
+  readout, the index and the footer give three different section counts.
+- `navParts()` finds a page's title with `q(page, '[data-ptitle]')`, which is
+  document order. This screen lives inside `[data-page="4"]` and has a title of
+  its own, so `contact.ts` must keep appending it **after** its own title. Left
+  vs right in that child list decides which title the page transition animates.
+
+The credentials in `src/data/about.ts` are checkable claims about a real person
+and several are narrower than their nearest paraphrase. That header comment is
+a claim boundary in the same way chellbook's is.
+
 ### `src/pages/*.ts`
 `menu.ts`, `products.ts`, `paintings.ts`, `competizione.ts`, `contact.ts` —
 each exports `build(): HTMLElement` returning the page's subtree with all

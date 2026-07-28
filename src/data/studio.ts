@@ -40,10 +40,19 @@ export const CONTACT_TABLE: TableRow[] = [
     value: 'products, research, UI/UX, motion, accessibility, interfaces, AI integration, creative tools',
   },
   { field: 'based', value: 'new york city' },
+  /*
+    Was `method`, carrying devkit `profile.thesis`. Nothing was lost by
+    dropping it: that string is `CASES_THESIS` verbatim and is still printed as
+    page 01's standfirst, so it was on the site twice. Here it had also become
+    the third statement of method on one screen, after ABOUT.lede in the
+    right-hand column and the `roles` row above. The slot is spent on the one
+    thing the lede does not carry instead. Four rows is the hard ceiling: a
+    fifth at rowH 78 starts at 976 and the footer starts at 992.
+  */
   {
-    field: 'method',
+    field: 'trained',
     value:
-      'i design ambitious products, prototype the difficult parts, and test whether the ideas actually hold up',
+      'concept art at CG Spectrum, graphic design under a senior Disney designer, Method acting at Lee Strasberg',
   },
 ];
 

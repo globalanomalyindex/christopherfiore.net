@@ -183,15 +183,66 @@ export const EVIDENCE = {
 */
 
 /** Page 04 · Contact. All handoff. */
+/**
+ * Page 04 — about + contact.
+ *
+ * The title is two lines now ("About me" / "+ contact"), so this page takes
+ * page 01's composition rather than its own former one: a stacked title down
+ * the left with the identity block under it, a prose panel in the right column
+ * on page 01's own `panel.x`, and the field/value table full width underneath.
+ * The table stays where it was to the pixel — only the space above it is
+ * rebuilt — so the two pages read as the same grid seen twice.
+ */
 export const PAGE4 = {
   headerH: 62,
-  title: { x: 56, y: 196, size: 172, lh: 172, track: '-.05em' },
-  email: { x: 56, y: 404, size: 60, track: '-.03em' },
-  links: { x: 56, y: 502 },
+  // two lines at 148/120 occupy 120–360, landing the identity block where the
+  // one-line 172px title used to end
+  title: { x: 56, y: 120, size: 148, lh: 120, track: '-.05em' },
+  email: { x: 56, y: 432, size: 60, track: '-.03em' },
+  links: { x: 56, y: 530 },
+  /** the standfirst, in page 01's right-hand panel column */
+  lede: { x: 1090.9, y: 150, w: 727.27, size: 21, lh: 1.5, track: '-.01em' },
+  /** the control into the about subpage, directly under the prose it extends */
+  more: { x: 1090.9, y: 470 },
   tableHeader: { y: 620, h: 44 },
   rowY: [664, 742, 820, 898],
   rowH: 78,
   footerH: 88,
+} as const;
+
+/**
+ * The about subpage. A reading screen: title and section index down the left,
+ * one scrolling prose column filling the right two thirds. The band runs from
+ * under the title rule to the same 976 every other screen stops at.
+ */
+export const ABOUT_PAGE = {
+  headerH: 62,
+  footerH: 88,
+  title: { x: MODULE, y: 88, size: 152, lh: 146, track: '-.05em' },
+  descriptorY: 246,
+  ruleY: 300,
+  bandY: 336,
+  bandEnd: 976,
+  /*
+    Three columns on the module grid with a one-module gutter between each:
+    4 · gutter · 9 · gutter · 9.4. The prose column is 9 modules (654.5px)
+    because that is the widest it can be and still hold a sane measure — about
+    77 characters at 17px. The full band width would be 1447px, which is twice
+    a readable line and the reason this screen is not one wide column.
+  */
+  index: { x: MODULE, y: 336, w: MODULE * 4 },
+  indexRowsY: 380,
+  indexRowH: 54,
+  /** email and links, under the section index — contact stays reachable here */
+  indexFootY: 800,
+  text: { x: MODULE * 6, y: 336, w: MODULE * 9 },
+  /** the scannable credential column: what a reader skimming wants first */
+  glance: { x: MODULE * 16, y: 336, w: STAGE.w - MODULE * 17 },
+  glanceRowsY: 380,
+  /** the "you are here" bar above the scrolling column */
+  secBarH: 34,
+  secBarGap: 12,
+  railW: 6,
 } as const;
 
 /** Motion contact sheet drawn into the page-01 key-frame panel on hover. */

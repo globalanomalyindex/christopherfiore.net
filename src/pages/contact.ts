@@ -1,8 +1,15 @@
 /**
- * Screen 5 · Page 04 — Contact.
+ * Screen 5 · Page 04 — About me + contact.
  *
  * Near-black ground, lavender ink, one quiet dither canvas at full rest
  * opacity. Geometry from PAGE4 in `src/design/layout.ts`.
+ *
+ * The title went to two lines when this page took on the about material, so
+ * the composition is page 01's: stacked title with the identity block under
+ * it, the standfirst in the right-hand panel column, the field/value table
+ * full width below. The long-form background does not fit a 1080px screen at
+ * a readable size, so it lives in the subpage built by `./about.ts` and this
+ * page carries the standfirst plus the control that opens it.
  *
  * The design sheet draws this page's close control at the right end of the
  * header; the interaction contract (and PORT_CONTRACT non-negotiable 2) says
@@ -14,6 +21,8 @@ import { css, el, letters } from '../dom.ts';
 import { COLOR, rgba } from '../design/tokens.ts';
 import { PAGE4 } from '../design/layout.ts';
 import { CONTACT_TABLE, PROFILE_LINKS, STUDIO } from '../data/studio.ts';
+import { ABOUT } from '../data/about.ts';
+import * as aboutPage from './about.ts';
 
 /** Rules on the near-black ground. */
 const RULE_MAJOR = rgba(COLOR.lavender, 0.28);
@@ -102,7 +111,7 @@ function header(): HTMLElement {
       }),
     },
     close,
-    cell('04 · contact', 3, '0 20px', true),
+    cell('04 · about + contact', 3, '0 20px', true),
     cell('open for 2026', 3, '0 20px', true),
     cell(STUDIO.rev, 4, '0 56px 0 20px', false),
   );
@@ -307,10 +316,84 @@ export function build(): HTMLElement {
         'white-space': 'nowrap',
       }),
     },
-    ...letters('Contact').map((s) => {
+    // two lines, set the way page 01 sets "Product / designs" — one letters()
+    // run per line so the intro's per-letter flash still walks the whole title
+    ...letters('About me').map((s) => {
       s.style.display = 'inline-block';
       return s;
     }),
+    el('br'),
+    ...letters('+ contact').map((s) => {
+      s.style.display = 'inline-block';
+      return s;
+    }),
+  );
+
+  /**
+   * The standfirst. Page 01 puts its thesis under the title; this page puts it
+   * in the right-hand panel column instead, because the identity block (a 60px
+   * email and the profile links) already owns the space under the title and is
+   * the thing someone arriving to make contact is looking for.
+   */
+  const lede = el(
+    'p',
+    {
+      'data-intro': 'fade',
+      'data-dfx': 7,
+      'data-in-delay': 180,
+      'data-in-dur': 340,
+      style: css({
+        opacity: '0',
+        position: 'absolute',
+        margin: '0',
+        left: PAGE4.lede.x,
+        top: PAGE4.lede.y,
+        width: PAGE4.lede.w,
+        'font-family': "'Karrik',sans-serif",
+        'font-size': PAGE4.lede.size,
+        'line-height': String(PAGE4.lede.lh),
+        'letter-spacing': PAGE4.lede.track,
+        'text-wrap': 'pretty',
+      }),
+    },
+    ABOUT.lede,
+  );
+
+  /**
+   * Into the about subpage. A real button rather than a link: the subpage is an
+   * overlay on this screen, not a document, exactly as the chellbook and case
+   * study doors are on pages 01 and 03.
+   */
+  const more = el(
+    'button',
+    {
+      type: 'button',
+      'data-act': 'about',
+      'aria-label': 'Read the full background',
+      class: 'ps-hov-invert-dark',
+      'data-intro': 'wipeX',
+      'data-in-delay': 300,
+      'data-in-dur': 320,
+      style: css({
+        ...BTN,
+        'clip-path': 'inset(0 100% 0 0)',
+        position: 'absolute',
+        left: PAGE4.more.x,
+        top: PAGE4.more.y,
+        width: PAGE4.lede.w,
+        height: 54,
+        display: 'flex',
+        'align-items': 'center',
+        'justify-content': 'space-between',
+        padding: '0 18px',
+        border: `1px solid ${RULE_MAJOR}`,
+        'font-size': 13,
+        'letter-spacing': '.16em',
+        transition: 'background 150ms linear,color 150ms linear',
+      }),
+    },
+    'read the full background',
+    el('span', { 'aria-hidden': 'true', style: css({ 'font-size': 19, 'line-height': '1' }) }, '→'),
   );
 
   const email = el(
@@ -383,6 +466,8 @@ export function build(): HTMLElement {
     header(),
     email,
     linkRow,
+    lede,
+    more,
     tableHeader(),
     ...CONTACT_TABLE.map((r, i) => tableRow(r.field, r.value, i)),
     footer(),
@@ -392,9 +477,9 @@ export function build(): HTMLElement {
     'section',
     {
       'data-page': 4,
-      'data-screen-label': 'Page 04 contact',
+      'data-screen-label': 'Page 04 about and contact',
       role: 'region',
-      'aria-label': 'Contact',
+      'aria-label': 'About and contact',
       'aria-hidden': 'true',
       inert: true,
       style: css({
@@ -410,5 +495,9 @@ export function build(): HTMLElement {
     frost,
     title,
     body,
+    // the about subpage lives inside this page, the way the chellbook screen
+    // lives inside page 01 — it grows out of the control above and collapses
+    // back into it, so it cannot be a sibling of the page it covers
+    aboutPage.build(),
   );
 }

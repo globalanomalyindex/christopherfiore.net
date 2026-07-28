@@ -28,6 +28,7 @@ import {
   openChellbook,
   stepChellbook,
 } from './chellbook';
+import { aboutOpen, closeAbout, goAbout, openAbout } from './about';
 import { closePage, nextPage, openPage, runIntro } from './transitions';
 import { locked, state } from './state';
 
@@ -170,6 +171,7 @@ export function bindActions(stage: HTMLElement): void {
         // screen is up, so this can only be reached if that ever stops holding.
         if (state(stage).evidence !== null) closeEvidence(stage);
         else if (chellbookOpen(stage)) closeChellbook(stage);
+        else if (aboutOpen(stage)) closeAbout(stage);
         else closePage(stage);
         break;
       case 'evidence':
@@ -197,6 +199,16 @@ export function bindActions(stage: HTMLElement): void {
         break;
       case 'chellbook-step':
         stepChellbook(stage, num(t, 'data-step'));
+        break;
+      case 'about':
+        // page 04's "read the full background" — the screen grows out of it
+        openAbout(stage, t);
+        break;
+      case 'about-close':
+        closeAbout(stage);
+        break;
+      case 'about-go':
+        goAbout(stage, num(t, 'data-abrow'));
         break;
       case 'next':
         nextPage(stage, num(t, 'data-next'));
@@ -305,6 +317,11 @@ export function bindActions(stage: HTMLElement): void {
         closeChellbook(stage);
         return;
       }
+      if (aboutOpen(stage)) {
+        e.preventDefault();
+        closeAbout(stage);
+        return;
+      }
       if (s.open === null) return;
       e.preventDefault();
       closePage(stage);
@@ -324,6 +341,12 @@ export function bindActions(stage: HTMLElement): void {
         stepChellbook(stage, step);
         return;
       }
+      /* The about screen is prose in a scroll column, not a stepped set, so
+         there is nothing for left/right to advance. Swallowing them here is
+         still load-bearing: without it they would fall through to nextPage and
+         change the channel underneath an open modal. Not prevented — the arrows
+         belong to whatever the visitor has focused. */
+      if (aboutOpen(stage)) return;
       // Only meaningful with a page open — on the menu the arrows belong to
       // the browser (and to whatever the user has focused).
       if (s.open === null) return;

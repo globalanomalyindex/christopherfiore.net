@@ -152,10 +152,13 @@ const SCROLL_PAD = CB.railW + 16;
  * self-contained HTML sitting in `public/`, and someone landing here should be
  * one obvious click from the 30-screen showcase.
  *
- * `fidelity` is printed on its own chip and never softened — "low fidelity ·
- * context only" is the exploration's own description of itself, and a wireframe
- * board presented as a spec would misrepresent both. The accessible name says
- * the link opens in a new tab, because it does.
+ * `fidelity` is printed on its own chip and says what each file is, not how
+ * finished it looks: "the spec" and "the exploration". An earlier revision of
+ * this comment called the wireframes "low fidelity · context only", which came
+ * from the handoff's prose rather than from the file — both documents in fact
+ * hold finished iPhone screens, and the labels were corrected once they were
+ * opened. Describe the role, not the polish. The accessible name says the link
+ * opens in a new tab, because it does.
  *
  * The 1px frame sits on a wrapper rather than on the anchor. base.css paints
  * the focus band with `box-shadow`, and an inline `box-shadow` on the anchor
