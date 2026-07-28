@@ -143,18 +143,6 @@ function header(): HTMLElement {
       ...content,
     );
 
-  const replay = el(
-    'button',
-    {
-      type: 'button',
-      'data-act': 'replay',
-      class: 'ps-hov-replay',
-      'aria-label': 'Replay the intro animation',
-      style: css({ ...BTN, color: 'rgba(223,203,250,.62)' }),
-    },
-    'replay intro',
-  );
-
   return el(
     'div',
     {
@@ -169,10 +157,12 @@ function header(): HTMLElement {
         'letter-spacing': '.18em',
       }),
     },
-    cell([STUDIO.name], 4, 480, '0 20px 0 56px'),
-    cell([STUDIO.rev], 3, 520, '0 20px'),
+    // 3/4/3/2 rather than the handoff's 4/3/3/2: the revision cell now carries
+    // the date as well, and the role cell got shorter, so a column moves across.
+    cell([STUDIO.name], 3, 480, '0 20px 0 56px'),
+    cell([`${STUDIO.rev} · ${STUDIO.updated}`], 4, 520, '0 20px'),
     cell([STUDIO.roles], 3, 560, '0 20px'),
-    cell([STUDIO.locationShort, replay], 2, 600, '0 56px 0 20px', true),
+    cell([STUDIO.locationShort], 2, 600, '0 56px 0 20px', true),
   );
 }
 

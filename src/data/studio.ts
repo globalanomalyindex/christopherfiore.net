@@ -10,8 +10,10 @@ export const STUDIO = {
   tagline: 'the designs of christopher robin fiore',
   location: 'new york city',
   locationShort: 'new york',
-  roles: 'product design, design engineering',
+  roles: 'product designer',
   rev: 'studio index, rev 04',
+  /** Bump this with any substantive content change; it is shown in the header. */
+  updated: 'last updated july 27 2026',
   email: 'chrisrobinfiore@gmail.com',
 } as const;
 

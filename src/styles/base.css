@@ -22,13 +22,23 @@ body {
   min-height: 100%;
 }
 
-/* Black letterbox behind the scaled stage. */
+/*
+  The letterbox behind the scaled stage.
+
+  The stage scales uniformly (`min`, not `max`) so nothing is ever cropped or
+  distorted, which on any viewport that is not exactly 16:9 leaves a margin.
+  Painting that margin black turns it into a visible border; painting it the
+  same color as the screen it frames makes it disappear, and the design reads as
+  full-bleed at every aspect ratio. `src/main.ts` keeps the value in step with
+  whichever screen is up. Rust is the menu's ground, so it is the right value
+  before the first paint.
+*/
 html {
-  background: #000;
+  background: var(--ps-backdrop, #c62c05);
 }
 
 body {
-  background: #000;
+  background: transparent;
   color: #dfcbfa;
   /* The prototype's document font. All micro / metadata type in the design
      inherits it; only elements that name Karrik get Karrik. */
