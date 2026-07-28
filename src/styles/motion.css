@@ -1,0 +1,212 @@
+/*
+  motion — every @keyframes from the prototype <style> block, copied verbatim.
+
+  These frames are the design. Do not re-derive, round or "clean up" a stop:
+  the exact percentages are what make the stroke fills read as hand-drawn and
+  the lap flashes read as hard linear light rather than an ease.
+
+  Applied three ways:
+  · inline in markup (page 03 speed lines, checkered band) — see the
+    decorative classes at the bottom of this file
+  · by src/runtime/channels.ts, which writes element.style.animation with
+    these names (ps-lap, ps-breath, ps-driftR, ps-flag, ps-line, ps-sweep,
+    ps-whizz)
+  · by the intro / page-in sequencer, which builds the name as
+    "ps-in-" + [data-intro] (wipeX, wipeUp, fade, line)
+
+  ps-stroke12 / ps-stroke24 / ps-slam / ps-charge / ps-shoot / ps-drift /
+  ps-drag / ps-drag2 / ps-caret / ps-in-slateDown / ps-in-bar / ps-driftL are
+  carried over unused by the current channel personalities — they belong to
+  exploration variants that share these names. Kept verbatim so a variant can
+  be switched back on without re-deriving the frames.
+
+  --r / --p / --d are registered in base.css; ps-drift needs --d registered as
+  a <length> or it will not interpolate.
+*/
+
+@keyframes ps-stroke12{
+0%{background-size:0.0% 9.500%,0.0% 9.500%,0.0% 9.500%,0.0% 9.500%,0.0% 9.500%,0.0% 9.500%,0.0% 9.500%,0.0% 9.500%,0.0% 9.500%,0.0% 9.500%,0.0% 9.500%,0.0% 9.500%;box-shadow:inset 0px 0 0 0 #DFCBFA;color:#DFCBFA}
+8.33%{background-size:0.0% 9.500%,0.0% 9.500%,0.0% 9.500%,0.0% 9.500%,30.9% 9.500%,30.9% 9.500%,30.9% 9.500%,30.9% 9.500%,0.0% 9.500%,0.0% 9.500%,0.0% 9.500%,0.0% 9.500%;box-shadow:inset 0px 0 0 0 #DFCBFA}
+16.67%{background-size:0.0% 9.500%,0.0% 9.500%,0.0% 9.500%,62.3% 9.500%,62.3% 9.500%,62.3% 9.500%,62.3% 9.500%,56.7% 9.500%,0.0% 9.500%,0.0% 9.500%,0.0% 9.500%,0.0% 9.500%;box-shadow:inset 0px 0 0 0 #DFCBFA}
+25%{background-size:0.0% 9.500%,0.0% 9.500%,0.0% 9.500%,93.8% 9.500%,93.8% 9.500%,93.8% 9.500%,93.8% 9.500%,56.7% 9.500%,0.0% 9.500%,0.0% 9.500%,0.0% 9.500%,0.0% 9.500%;box-shadow:inset 0px 0 0 0 #DFCBFA}
+33.33%{background-size:0.0% 9.500%,0.0% 9.500%,96.6% 9.500%,100.0% 9.500%,100.0% 9.500%,100.0% 9.500%,100.0% 9.500%,56.7% 9.500%,0.0% 9.500%,0.0% 9.500%,0.0% 9.500%,0.0% 9.500%;box-shadow:inset 0px 0 0 0 #DFCBFA}
+41.67%{background-size:0.0% 9.500%,66.4% 9.500%,96.6% 9.500%,100.0% 9.500%,100.0% 9.500%,100.0% 9.500%,100.0% 9.500%,56.7% 9.500%,0.0% 9.500%,0.0% 9.500%,0.0% 9.500%,0.0% 9.500%;box-shadow:inset 0px 0 0 0 #DFCBFA}
+50%{background-size:35.7% 9.500%,66.4% 9.500%,96.6% 9.500%,100.0% 9.500%,100.0% 9.500%,100.0% 9.500%,100.0% 9.500%,56.7% 9.500%,0.0% 9.500%,0.0% 9.500%,0.0% 9.500%,0.0% 9.500%;box-shadow:inset 0px 0 0 0 #DFCBFA}
+58.33%{background-size:35.7% 9.500%,66.4% 9.500%,96.6% 9.500%,100.0% 9.500%,100.0% 9.500%,100.0% 9.500%,100.0% 9.500%,56.7% 9.500%,0.0% 9.500%,0.0% 9.500%,0.0% 9.500%,0.0% 9.500%;box-shadow:inset 0px 0 0 0 #DFCBFA}
+66.67%{background-size:35.7% 9.500%,66.4% 9.500%,96.6% 9.500%,100.0% 9.500%,100.0% 9.500%,100.0% 9.500%,100.0% 9.500%,70.9% 9.500%,0.0% 9.500%,0.0% 9.500%,0.0% 9.500%,0.0% 9.500%;box-shadow:inset 0px 0 0 0 #DFCBFA}
+75%{background-size:35.7% 9.500%,66.4% 9.500%,96.6% 9.500%,100.0% 9.500%,100.0% 9.500%,100.0% 9.500%,100.0% 9.500%,100.0% 9.500%,100.0% 9.500%,100.0% 9.500%,0.0% 9.500%,0.0% 9.500%;box-shadow:inset 93px 0 0 0 #DFCBFA}
+83.33%{background-size:35.7% 9.500%,66.4% 9.500%,96.6% 9.500%,100.0% 9.500%,100.0% 9.500%,100.0% 9.500%,100.0% 9.500%,100.0% 9.500%,100.0% 9.500%,100.0% 9.500%,100.0% 9.500%,79.9% 9.500%;box-shadow:inset 249px 0 0 0 #DFCBFA}
+91.67%{background-size:35.7% 9.500%,66.4% 9.500%,96.6% 9.500%,100.0% 9.500%,100.0% 9.500%,100.0% 9.500%,100.0% 9.500%,100.0% 9.500%,100.0% 9.500%,100.0% 9.500%,100.0% 9.500%,79.9% 9.500%;box-shadow:inset 404px 0 0 0 #DFCBFA}
+100%{background-size:35.7% 9.500%,66.4% 9.500%,96.6% 9.500%,100.0% 9.500%,100.0% 9.500%,100.0% 9.500%,100.0% 9.500%,100.0% 9.500%,100.0% 9.500%,100.0% 9.500%,100.0% 9.500%,79.9% 9.500%;box-shadow:inset 560px 0 0 0 #DFCBFA}
+14.00%{color:#DFCBFA}
+15.00%{color:#C62C05}
+100%{color:#C62C05}
+}
+@keyframes ps-stroke24{
+0%{background-size:0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%;box-shadow:inset 0px 0 0 0 #DFCBFA;color:#DFCBFA}
+6.25%{background-size:0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,23.4% 4.750%,23.4% 4.750%,23.4% 4.750%,23.4% 4.750%,23.4% 4.750%,23.4% 4.750%,23.4% 4.750%,23.4% 4.750%,1.9% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%;box-shadow:inset 0px 0 0 0 #DFCBFA}
+12.5%{background-size:0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,46.9% 4.750%,46.9% 4.750%,46.9% 4.750%,46.9% 4.750%,46.9% 4.750%,46.9% 4.750%,46.9% 4.750%,46.9% 4.750%,38.4% 4.750%,1.9% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%;box-shadow:inset 0px 0 0 0 #DFCBFA}
+18.75%{background-size:0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,70.3% 4.750%,70.3% 4.750%,70.3% 4.750%,70.3% 4.750%,70.3% 4.750%,70.3% 4.750%,70.3% 4.750%,70.3% 4.750%,70.3% 4.750%,38.4% 4.750%,1.9% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%;box-shadow:inset 0px 0 0 0 #DFCBFA}
+25%{background-size:0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,93.8% 4.750%,93.8% 4.750%,93.8% 4.750%,93.8% 4.750%,93.8% 4.750%,93.8% 4.750%,93.8% 4.750%,93.8% 4.750%,75.0% 4.750%,38.4% 4.750%,1.9% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%;box-shadow:inset 0px 0 0 0 #DFCBFA}
+31.25%{background-size:0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,75.0% 4.750%,38.4% 4.750%,1.9% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%;box-shadow:inset 0px 0 0 0 #DFCBFA}
+37.5%{background-size:0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,73.8% 4.750%,89.2% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,75.0% 4.750%,38.4% 4.750%,1.9% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%;box-shadow:inset 0px 0 0 0 #DFCBFA}
+43.75%{background-size:0.0% 4.750%,43.6% 4.750%,59.0% 4.750%,73.8% 4.750%,89.2% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,75.0% 4.750%,38.4% 4.750%,1.9% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%;box-shadow:inset 0px 0 0 0 #DFCBFA}
+50%{background-size:28.3% 4.750%,43.6% 4.750%,59.0% 4.750%,73.8% 4.750%,89.2% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,75.0% 4.750%,38.4% 4.750%,1.9% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%;box-shadow:inset 0px 0 0 0 #DFCBFA}
+56.25%{background-size:28.3% 4.750%,43.6% 4.750%,59.0% 4.750%,73.8% 4.750%,89.2% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,75.0% 4.750%,38.4% 4.750%,1.9% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%;box-shadow:inset 0px 0 0 0 #DFCBFA}
+62.5%{background-size:28.3% 4.750%,43.6% 4.750%,59.0% 4.750%,73.8% 4.750%,89.2% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,75.0% 4.750%,38.4% 4.750%,1.9% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%;box-shadow:inset 0px 0 0 0 #DFCBFA}
+68.75%{background-size:28.3% 4.750%,43.6% 4.750%,59.0% 4.750%,73.8% 4.750%,89.2% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,79.8% 4.750%,79.8% 4.750%,79.8% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%;box-shadow:inset 0px 0 0 0 #DFCBFA}
+75%{background-size:28.3% 4.750%,43.6% 4.750%,59.0% 4.750%,73.8% 4.750%,89.2% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,0.0% 4.750%,0.0% 4.750%,0.0% 4.750%;box-shadow:inset 93px 0 0 0 #DFCBFA}
+81.25%{background-size:28.3% 4.750%,43.6% 4.750%,59.0% 4.750%,73.8% 4.750%,89.2% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,88.7% 4.750%,0.0% 4.750%;box-shadow:inset 210px 0 0 0 #DFCBFA}
+87.5%{background-size:28.3% 4.750%,43.6% 4.750%,59.0% 4.750%,73.8% 4.750%,89.2% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,88.7% 4.750%,70.6% 4.750%;box-shadow:inset 327px 0 0 0 #DFCBFA}
+93.75%{background-size:28.3% 4.750%,43.6% 4.750%,59.0% 4.750%,73.8% 4.750%,89.2% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,88.7% 4.750%,70.6% 4.750%;box-shadow:inset 443px 0 0 0 #DFCBFA}
+100%{background-size:28.3% 4.750%,43.6% 4.750%,59.0% 4.750%,73.8% 4.750%,89.2% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,100.0% 4.750%,88.7% 4.750%,70.6% 4.750%;box-shadow:inset 560px 0 0 0 #DFCBFA}
+12.00%{color:#DFCBFA}
+13.00%{color:#C62C05}
+100%{color:#C62C05}
+}
+
+@keyframes ps-drift{0%,100%{--d:0px}35%{--d:13px}70%{--d:-9px}}
+@keyframes ps-slam{0%{color:#C62C05;text-shadow:none;transform:translateX(0) skewX(0)}
+7%{color:#FFF9F0;text-shadow:-13px 0 0 rgba(255,249,240,.6),-27px 0 0 rgba(255,249,240,.3),-44px 0 0 rgba(255,249,240,.14);transform:translateX(9px) skewX(-17deg)}
+24%{color:#FFF9F0;text-shadow:-20px 0 0 rgba(255,249,240,.34),-38px 0 0 rgba(255,249,240,.14);transform:translateX(4.5px) skewX(-9deg)}
+48%{color:#C62C05;text-shadow:-34px 0 0 rgba(255,249,240,.1);transform:translateX(0) skewX(0)}
+100%{color:#C62C05;text-shadow:none;transform:translateX(0) skewX(0)}}
+@keyframes ps-charge{0%{color:#C62C05;text-shadow:none;transform:translateX(0) skewX(0)}
+9%{color:#CF4A18}
+15%{color:#DE7A42}
+19%{color:#F0B48A}
+20.4%{color:#FFF9F0;text-shadow:none;transform:translateX(0) skewX(0)}
+21.6%{color:#FFF9F0;text-shadow:-16px 0 0 rgba(255,249,240,.6),-34px 0 0 rgba(255,249,240,.28),-54px 0 0 rgba(255,249,240,.12);transform:translateX(10px) skewX(-18deg)}
+25%{color:#FFF9F0;text-shadow:-24px 0 0 rgba(255,249,240,.32),-44px 0 0 rgba(255,249,240,.13);transform:translateX(5px) skewX(-9deg)}
+30%{color:#C62C05;text-shadow:-40px 0 0 rgba(255,249,240,.1);transform:translateX(0) skewX(0)}
+36%,100%{color:#C62C05;text-shadow:none;transform:translateX(0) skewX(0)}}
+@keyframes ps-shoot{0%,.8%{color:#C62C05;text-shadow:none;transform:translateX(0) skewX(0)}
+1.9%{color:#FFF9F0;text-shadow:-16px 0 0 rgba(255,249,240,.62),-34px 0 0 rgba(255,249,240,.3),-54px 0 0 rgba(255,249,240,.13);transform:translateX(10px) skewX(-18deg)}
+4%{color:#FFF9F0;text-shadow:-25px 0 0 rgba(255,249,240,.32),-46px 0 0 rgba(255,249,240,.13);transform:translateX(5px) skewX(-9deg)}
+7.4%{color:#C62C05;text-shadow:-40px 0 0 rgba(255,249,240,.1);transform:translateX(0) skewX(0)}
+11%,100%{color:#C62C05;text-shadow:none;transform:translateX(0) skewX(0)}}
+@keyframes ps-lap{0%{color:#C62C05;text-shadow:none;transform:translateX(0) skewX(0)}
+0.7%{color:#FFF9F0;text-shadow:-16px 0 0 rgba(255,249,240,.62),-34px 0 0 rgba(255,249,240,.3),-54px 0 0 rgba(255,249,240,.13);transform:translateX(10px) skewX(-18deg)}
+2.4%{color:#FFF9F0;text-shadow:-24px 0 0 rgba(255,249,240,.34),-44px 0 0 rgba(255,249,240,.14);transform:translateX(5px) skewX(-9deg)}
+4.8%{color:#C62C05;text-shadow:-38px 0 0 rgba(255,249,240,.1);transform:translateX(0) skewX(0)}
+10%,100%{color:#C62C05;text-shadow:none;transform:translateX(0) skewX(0)}}
+@keyframes ps-in-slateDown{from{transform:translateY(0)}to{transform:translateY(100%)}}
+@keyframes ps-caret{0%,52%{opacity:1}53%,100%{opacity:.18}}
+@keyframes ps-in-wipeX{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+@keyframes ps-in-wipeUp{from{clip-path:inset(100% 0 0 0)}to{clip-path:inset(0 0 0 0)}}
+@keyframes ps-in-bar{0%{left:-18px;opacity:1}88%{opacity:1}100%{left:100%;opacity:0}}
+@keyframes ps-in-fade{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+@keyframes ps-in-line{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+@keyframes ps-drag{from{transform:translateX(0)}to{transform:translateX(-320px)}}
+@keyframes ps-drag2{from{transform:translateX(0)}to{transform:translateX(260px)}}
+@keyframes ps-rush{from{transform:translateX(0)}to{transform:translateX(-190px)}}
+@keyframes ps-rush2{from{transform:translateX(0)}to{transform:translateX(-70px)}}
+@keyframes ps-checkdrift{from{transform:translateX(0)}to{transform:translateX(-96px)}}
+@keyframes ps-line{0%{opacity:.6}50%{opacity:.85}100%{opacity:.6}}
+@keyframes ps-flag{0%{opacity:.15;filter:brightness(1)}50%{opacity:.3;filter:brightness(.66)}100%{opacity:.15;filter:brightness(1)}}
+@keyframes ps-driftL{from{transform:translate3d(0,0,0)}to{transform:translate3d(-192px,0,0)}}
+@keyframes ps-driftR{from{transform:translate3d(0,0,0)}to{transform:translate3d(96px,0,0)}}
+@keyframes ps-breath{0%,62%{opacity:1}72%{opacity:.66}82%{opacity:1}90%{opacity:.86}100%{opacity:1}}
+@keyframes ps-sweep{0%{color:#C62C05;text-shadow:none}2%{color:#FBF7F0;text-shadow:-9px 0 0 rgba(251,247,240,.5),-19px 0 0 rgba(251,247,240,.2)}5%{color:#FBF7F0;text-shadow:-15px 0 0 rgba(251,247,240,.22)}9%{color:#C62C05;text-shadow:-22px 0 0 rgba(251,247,240,.08)}13%,100%{color:#C62C05;text-shadow:none}}
+@keyframes ps-whizz{0%,100%{transform:translateX(0) scaleX(1)}3%{transform:translateX(3px) scaleX(1.16)}7%{transform:translateX(-2px) scaleX(.93)}12%{transform:translateX(0) scaleX(1)}}
+
+/* ---------- decorative loops ---------- */
+
+/*
+  Page 03 background — irregular speed lines. Two layers on different pitches
+  (190px / 70px) and different cycles (1.7s / .9s), so coverage fluctuates
+  instead of reading as one moving grating. The conic mask is the light dither.
+  The .42 opacity lives on the wrapper, as in the prototype.
+*/
+.ps-speed {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0.42;
+}
+
+.ps-speed-a,
+.ps-speed-b {
+  position: absolute;
+  left: -50%;
+  top: 0;
+  width: 200%;
+  height: 100%;
+}
+
+.ps-speed-a {
+  background-image: repeating-linear-gradient(90deg, rgba(43, 11, 3, 0.34) 0 3px, rgba(0, 0, 0, 0) 3px 190px);
+  -webkit-mask-image: repeating-conic-gradient(#000 0% 25%, rgba(0, 0, 0, 0.22) 0% 50%);
+  mask-image: repeating-conic-gradient(#000 0% 25%, rgba(0, 0, 0, 0.22) 0% 50%);
+  -webkit-mask-size: 6px 6px;
+  mask-size: 6px 6px;
+  animation: ps-rush 1.7s steps(63, end) infinite;
+}
+
+.ps-speed-b {
+  background-image: repeating-linear-gradient(90deg, rgba(43, 11, 3, 0.2) 0 3px, rgba(0, 0, 0, 0) 3px 70px);
+  -webkit-mask-image: repeating-conic-gradient(#000 0% 25%, rgba(0, 0, 0, 0.3) 0% 50%);
+  mask-image: repeating-conic-gradient(#000 0% 25%, rgba(0, 0, 0, 0.3) 0% 50%);
+  -webkit-mask-size: 6px 6px;
+  mask-size: 6px 6px;
+  animation: ps-rush2 0.9s steps(23, end) infinite;
+}
+
+/*
+  Page 03 background — 96px checkered band in deep rust, drifting exactly one
+  cell per 2.6s cycle so the loop is seamless. Geometry (top / height) stays
+  with the page builder; PAGE3.checker carries it.
+*/
+.ps-check {
+  position: absolute;
+  left: 0;
+  right: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.ps-checkband {
+  position: absolute;
+  left: -96px;
+  right: -96px;
+  top: 0;
+  bottom: 0;
+  background-image: repeating-conic-gradient(#4a1305 0% 25%, rgba(0, 0, 0, 0) 0% 50%);
+  background-size: 96px 96px;
+  animation: ps-checkdrift 2.6s linear infinite;
+}
+
+/* ---------- prefers-reduced-motion ---------- */
+
+/*
+  Freeze the decorative loops. !important because the prototype (and
+  channels.ts) write animation shorthand inline, and an inline declaration
+  otherwise beats any class selector here.
+
+  This block only stills the CSS keyframes. The rest of the reduced-motion
+  contract — skipping the dither/FLIP choreography in favour of a cross-fade,
+  stopping the ambient wordmark glitch, freezing the background canvases at
+  rest — is wired in the runtime off state(stage).reduced.
+*/
+@media (prefers-reduced-motion: reduce) {
+  .ps-speed-a,
+  .ps-speed-b,
+  /* page 03 builds its speed lines with inline styles rather than the classes
+     above, so the freeze has to reach them by attribute too */
+  [data-speed],
+  .ps-checkband,
+  .ps-flag-a,
+  .ps-flag-b,
+  [data-flag],
+  [data-frame],
+  [data-word],
+  [data-scaf],
+  [data-l],
+  [data-intro],
+  [data-dfx],
+  [data-pcheck] > * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "name": "perfection-synthetique",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "perfection synthétique — the studio portfolio of christopher robin fiore",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3",
+    "vite": "^6.0.11"
+  }
+}

@@ -1,0 +1,170 @@
+/*
+  base — reset, black letterbox, the fixed stage box.
+
+  Non-negotiables enforced here:
+  · corner radius 0 everywhere
+  · no drop shadows anywhere — depth is hairline rules and 1px box-shadow
+    frames only, so box-shadow itself is not blanket-disabled
+  · everything inside [data-stage] is authored in the fixed 1920 × 1080 design
+    space; src/runtime/stage.ts scales the whole box, nothing reflows.
+*/
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+}
+
+/* Black letterbox behind the scaled stage. */
+html {
+  background: #000;
+}
+
+body {
+  background: #000;
+  color: #dfcbfa;
+  /* The prototype's document font. All micro / metadata type in the design
+     inherits it; only elements that name Karrik get Karrik. */
+  font-family: 'Dessign Maison', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/*
+  Registered custom properties, verbatim from the prototype.
+  --r and --p are the menu channel hover fills (radial grid burst, horizontal
+  wipe); they must be registered as <length> or they cannot be transitioned.
+  --d is the ps-drift keyframe's offset.
+*/
+@property --r {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+@property --p {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+@property --d {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+
+:root {
+  /*
+    Focus ring. Two tone on purpose: a 2px light band at the very edge plus a
+    2px near-black outline immediately inside it, so at least one of the two
+    clears 3:1 whichever ground it lands on — rust #C62C05, lavender #DFCBFA
+    or near-black #0B0B0C. The ring is a shape that was not there before, so
+    the state never depends on color perception alone.
+    Offsets are negative because stage boxes clip (overflow: hidden), so an
+    outward ring would be cut off.
+  */
+  --ps-focus-band: inset 0 0 0 2px #f5d90a;
+  --ps-focus-line: 2px solid #0b0b0c;
+  --ps-focus-offset: -2px;
+}
+
+/* ---------- the stage ---------- */
+
+[data-stage] {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+  /* stage.ts writes transform: translate(...) scale(k) — origin must be 0 0
+     so the translate is a plain letterbox offset in viewport px. */
+  transform-origin: 0 0;
+  overflow: hidden;
+  background: #c62c05;
+  color: #dfcbfa;
+  font-family: 'Dessign Maison', Helvetica, Arial, sans-serif;
+}
+
+/* Corner radius 0 everywhere — including anything a UA rounds by default. */
+[data-stage],
+[data-stage] *,
+[data-stage] *::before,
+[data-stage] *::after {
+  border-radius: 0;
+}
+
+/*
+  The prototype's click targets are styled <div>/<span>. In the port they are
+  real <button>/<a> with accessible names, so strip the UA chrome and let them
+  inherit type exactly as the divs did.
+*/
+[data-stage] button,
+[data-stage] a {
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+  text-align: inherit;
+  text-decoration: none;
+  background: none;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+[data-stage] button {
+  cursor: pointer;
+}
+
+[data-stage] canvas,
+[data-stage] img {
+  display: block;
+}
+
+/* Per-letter spans for the glitch engine. The prototype sets this inline on
+   every span; doing it here keeps src/dom.ts letters() output correct too. */
+[data-stage] [data-l] {
+  display: inline-block;
+}
+
+/* Default ring for every focusable in the stage. Per-state :focus-visible
+   rules in menu.css / pages.css add the matching hover treatment on top. */
+[data-stage] :focus-visible {
+  outline: var(--ps-focus-line);
+  outline-offset: var(--ps-focus-offset);
+  box-shadow: var(--ps-focus-band);
+}
+
+/*
+  Set on <body> by the integrator when the fixed stage is mounted (not the
+  mobile document view). The stage is position:fixed so it cannot scroll the
+  document on its own; this kills any transient scrollbar before fitStage runs.
+*/
+body.ps-stage-host {
+  overflow: hidden;
+}
+
+/* ---------- utilities ---------- */
+
+/* Visually hidden, still announced. For accessible names that the graphic
+   design does not spell out ("Open Product designs", "Close, back to studio
+   index"). */
+.ps-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}

@@ -1,0 +1,47 @@
+/*
+  perfection synthétique — the two faces.
+
+  Karrik carries all display type at rest (wordmark, page titles, channel
+  titles, list names). Dessign Maison does double duty: it is the micro /
+  metadata face — every 11.5–15px label in the design inherits it from the
+  stage — and it is the glitch alternate that Karrik swaps into.
+
+  As an alternate it must ALWAYS be set with font-feature-settings:
+  'salt' 1, 'ss01' 1. The alternates are what makes the swap read as a glitch
+  rather than as a font change. Use .ps-alt, or FONT.alt / FONT.altFeatures
+  from src/design/tokens.ts.
+
+  font-display: block on both, deliberately. There must be no flash of
+  fallback: the dither-in covers the load, and a swap would drop Helvetica
+  into the middle of the intro for a frame.
+
+  url() is root-absolute so Vite rebases it against BASE_URL at build time;
+  the files are served from public/fonts/.
+*/
+
+@font-face {
+  font-family: 'Karrik';
+  src: url('/fonts/Karrik-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+}
+
+@font-face {
+  font-family: 'Dessign Maison';
+  src: url('/fonts/SLTFDessignMaison-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+}
+
+/* Display face at rest. */
+.ps-display {
+  font-family: Karrik, Helvetica, Arial, sans-serif;
+}
+
+/* Glitch alternate. Never set Dessign Maison as an alternate without these. */
+.ps-alt {
+  font-family: 'Dessign Maison', Karrik, Helvetica, sans-serif;
+  font-feature-settings: 'salt' 1, 'ss01' 1;
+}

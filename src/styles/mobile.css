@@ -1,0 +1,852 @@
+/*
+  Mobile document view. Same tokens, same voice, none of the choreography.
+  See src/mobile.ts for why this exists.
+
+  Rules that hold here as much as on the stage: corner radius 0, no drop
+  shadows, depth from hairlines only, type on a color band is always
+  #0B0B0C — and the band itself is `--band`, which src/mobile.ts sets from
+  LIGHTS. No color is written literally in this file; every one arrives as a
+  custom property off `.m-root`'s inline style, so the palette cannot drift
+  away from src/design/tokens.ts.
+
+  Measure: `--measure` caps every run of prose at roughly 65 characters, which
+  matters at the 900px end of this view far more than at 390px, where the
+  viewport does the capping on its own.
+*/
+
+.m-root {
+  --measure: 32rem;
+
+  background: var(--rust);
+  color: var(--lavender);
+  font-family: Karrik, Helvetica, Arial, sans-serif;
+  min-height: 100%;
+  padding: 0 0 4rem;
+  overflow-x: hidden;
+  overflow-wrap: break-word;
+}
+
+.m-root *,
+.m-root *::before,
+.m-root *::after {
+  box-sizing: border-box;
+  border-radius: 0;
+}
+
+/* ---------- header ---------- */
+
+.m-head {
+  padding: 1.25rem 1.25rem 2rem;
+  position: relative;
+  border-bottom: 1px solid var(--hair);
+  overflow: hidden;
+}
+
+.m-headmeta {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.6875rem;
+  letter-spacing: 0.18em;
+  padding-bottom: 1.5rem;
+}
+
+.m-wordmark {
+  display: flex;
+  flex-direction: column;
+  font-size: clamp(3rem, 17vw, 6rem);
+  line-height: 0.9;
+  letter-spacing: -0.06em;
+  position: relative;
+  z-index: 1;
+}
+
+.m-tagline {
+  margin-top: 0.875rem;
+  font-size: 0.9375rem;
+  letter-spacing: -0.01em;
+  position: relative;
+  z-index: 1;
+}
+
+.m-crest {
+  position: absolute;
+  right: -3.5rem;
+  top: 2rem;
+  width: 14rem;
+  opacity: 0.5;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ---------- sections ---------- */
+
+.m-section {
+  padding: 2.5rem 1.25rem;
+  border-bottom: 1px solid var(--hair);
+}
+
+.m-sechead {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.6875rem;
+  letter-spacing: 0.16em;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--hair-min);
+}
+
+.m-title {
+  font-size: clamp(2.5rem, 13vw, 4.5rem);
+  line-height: 0.96;
+  letter-spacing: -0.05em;
+  font-weight: 400;
+  margin: 1rem 0 1.25rem;
+}
+
+.m-thesis {
+  font-size: 1.125rem;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  text-wrap: pretty;
+  max-width: var(--measure);
+  margin-bottom: 2rem;
+}
+
+.m-thesis-sm {
+  font-size: 0.8125rem;
+  letter-spacing: 0.12em;
+  line-height: 1.6;
+  opacity: 0.8;
+}
+
+.m-label {
+  font-size: 0.6875rem;
+  letter-spacing: 0.22em;
+  opacity: 0.72;
+  margin: 1.5rem 0 0.75rem;
+}
+
+.m-note {
+  font-size: 0.8125rem;
+  letter-spacing: 0.06em;
+  line-height: 1.7;
+  opacity: 0.75;
+  max-width: var(--measure);
+  margin-top: 1rem;
+}
+
+.m-meta {
+  font-size: 0.6875rem;
+  letter-spacing: 0.16em;
+  opacity: 0.72;
+}
+
+/* ---------- prose ---------- */
+
+.m-body {
+  font-size: 1rem;
+  line-height: 1.55;
+  letter-spacing: 0;
+  text-wrap: pretty;
+  max-width: var(--measure);
+  margin-bottom: 1rem;
+}
+
+.m-body-sm {
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.m-lead {
+  font-size: 1.25rem;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+  max-width: var(--measure);
+  margin-bottom: 0.875rem;
+}
+
+.m-stand {
+  font-size: 1.125rem;
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+  text-wrap: pretty;
+  max-width: var(--measure);
+}
+
+.m-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-width: var(--measure);
+}
+
+.m-list li {
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  text-wrap: pretty;
+  padding: 0.625rem 0 0.625rem 1.25rem;
+  border-top: 1px solid var(--hair-min);
+  position: relative;
+}
+
+.m-list li::before {
+  content: '—';
+  position: absolute;
+  left: 0;
+  opacity: 0.6;
+}
+
+/*
+  The release boundary. Framed rather than filled: a fill would make it a band,
+  and a band takes near-black ink, which would read as a warning label rather
+  than as the page's own statement of what has and has not been earned.
+*/
+.m-boundary {
+  font-size: 0.8125rem;
+  letter-spacing: 0.1em;
+  line-height: 1.6;
+  padding: 0.75rem 0.875rem;
+  box-shadow: inset 0 0 0 1px var(--hair);
+  max-width: var(--measure);
+  margin-bottom: 1.75rem;
+}
+
+/* ---------- case rows ---------- */
+
+.m-case {
+  padding: 1.5rem 0;
+  border-top: 1px solid var(--hair-min);
+}
+
+.m-entry {
+  border-top-color: var(--hair);
+}
+
+/* the entry's trailing metadata is its own line, not a run-on of the caption */
+.m-entry .m-meta {
+  display: block;
+  margin-top: 0.75rem;
+}
+
+.m-caseidx {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.6875rem;
+  letter-spacing: 0.16em;
+  opacity: 0.72;
+}
+
+.m-casename {
+  font-size: 2rem;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  font-weight: 400;
+  margin: 0.5rem 0 0.5rem;
+}
+
+.m-caseline {
+  font-size: 0.9375rem;
+  line-height: 1.4;
+  opacity: 0.85;
+  text-wrap: pretty;
+  max-width: var(--measure);
+  margin-bottom: 1rem;
+}
+
+.m-caselinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  align-items: baseline;
+  margin-top: 0.875rem;
+}
+
+.m-link {
+  color: var(--lavender);
+  font-size: 0.75rem;
+  letter-spacing: 0.16em;
+  text-decoration: none;
+  border-bottom: 1px solid currentColor;
+  padding-bottom: 2px;
+}
+
+.m-link:hover,
+.m-link:focus-visible {
+  background: var(--band);
+  color: var(--near-black);
+  border-bottom-color: transparent;
+}
+
+/* ---------- blocks (the inlined case study) ---------- */
+
+.m-block {
+  margin-top: 2.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--hair);
+}
+
+.m-blockhead {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.m-blocktitle {
+  font-size: clamp(1.25rem, 6vw, 1.75rem);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  font-weight: 400;
+  margin: 0;
+}
+
+.m-sub {
+  font-size: 0.6875rem;
+  letter-spacing: 0.22em;
+  font-weight: 400;
+  opacity: 0.72;
+  margin: 1.25rem 0 0.5rem;
+}
+
+.m-assemblies {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.m-assembly {
+  padding: 1rem 0;
+  border-top: 1px solid var(--hair-min);
+}
+
+.m-assembly .m-sub {
+  font-size: 1.125rem;
+  letter-spacing: -0.01em;
+  opacity: 1;
+  margin: 0.375rem 0 0.5rem;
+}
+
+.m-assembly .m-body {
+  margin-bottom: 0;
+}
+
+/* ---------- gates ---------- */
+
+.m-gate {
+  padding: 1rem 0;
+  border-top: 1px solid var(--hair-min);
+}
+
+.m-gatehead {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.m-gatename {
+  font-size: 1.125rem;
+  letter-spacing: -0.01em;
+}
+
+.m-status {
+  font-size: 0.6875rem;
+  letter-spacing: 0.16em;
+  padding: 0.25rem 0.5rem;
+  box-shadow: inset 0 0 0 1px var(--hair);
+  opacity: 0.8;
+}
+
+/* The one reached gate is a band, so its ink is near-black. */
+.m-status[data-status='current'] {
+  background: var(--band);
+  color: var(--near-black);
+  box-shadow: none;
+  opacity: 1;
+}
+
+.m-gate .m-body {
+  margin-bottom: 0;
+}
+
+/* ---------- manifest records ---------- */
+
+.m-recs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--hair-min);
+}
+
+.m-rec {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.125rem 0.75rem;
+  padding: 0.625rem 0;
+  border-bottom: 1px solid var(--hair-min);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.m-recpart {
+  grid-row: span 2;
+  letter-spacing: 0.16em;
+  opacity: 0.62;
+}
+
+.m-reclabel {
+  grid-column: 2;
+  text-wrap: pretty;
+}
+
+.m-recsize {
+  grid-column: 2;
+  font-size: 0.6875rem;
+  letter-spacing: 0.16em;
+  opacity: 0.62;
+}
+
+/*
+  The one volume that is actually hosted. Framed rather than banded: the band
+  belongs to the motion archive, which is a destination; this is a file.
+*/
+.m-doc {
+  display: grid;
+  gap: 0.375rem;
+  padding: 0.875rem 1rem;
+  box-shadow: inset 0 0 0 1px var(--hair);
+  color: var(--lavender);
+  text-decoration: none;
+}
+
+.m-docname {
+  font-size: 1rem;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+
+.m-docmeta {
+  font-size: 0.6875rem;
+  letter-spacing: 0.16em;
+  opacity: 0.72;
+}
+
+.m-doc:hover,
+.m-doc:focus-visible {
+  background: var(--band);
+  color: var(--near-black);
+}
+
+.m-fingerprint {
+  font-size: 0.6875rem;
+  letter-spacing: 0.1em;
+  line-height: 1.6;
+  opacity: 0.62;
+  margin-top: 0.5rem;
+  word-break: break-word;
+}
+
+/* ---------- images ---------- */
+
+.m-fig {
+  margin: 0;
+}
+
+.m-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  box-shadow: inset 0 0 0 1px var(--hair);
+  background: var(--imgbg);
+}
+
+.m-cap {
+  font-size: 0.6875rem;
+  letter-spacing: 0.14em;
+  opacity: 0.72;
+  line-height: 1.6;
+  max-width: var(--measure);
+  margin-top: 0.5rem;
+}
+
+/* One sheet, uncropped and full width — the phone's version of the viewer. */
+.m-sheetfig {
+  margin: 2rem 0 0;
+}
+
+.m-sheet {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-top: 0.5rem;
+  box-shadow: inset 0 0 0 1px var(--hair);
+  background: var(--imgbg);
+}
+
+/* ---------- chellbook · prototypes ---------- */
+
+/*
+  The two hosted prototypes. They are the case study's headline, so they are
+  the only band-weight controls inside section 01.
+
+  `.m-proto-lead` is the band — `--band`, therefore a LIGHTS color, therefore
+  near-black ink, same contract as `.m-cta`. The second prototype is framed
+  rather than filled because the records rank them: one is the spec, the other
+  is context and says so on its own face. Two bands would flatten that.
+*/
+
+.m-protos {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.m-proto {
+  display: grid;
+  gap: 0.375rem;
+  padding: 1rem;
+  box-shadow: inset 0 0 0 1px var(--hair);
+  color: var(--lavender);
+  text-decoration: none;
+  max-width: var(--measure);
+}
+
+.m-protoname {
+  font-size: 1.25rem;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.m-protofid {
+  font-size: 0.6875rem;
+  letter-spacing: 0.16em;
+  opacity: 0.72;
+}
+
+.m-protonote {
+  font-size: 0.875rem;
+  line-height: 1.45;
+  text-wrap: pretty;
+  opacity: 0.85;
+}
+
+.m-proto-lead {
+  background: var(--band);
+  color: var(--near-black);
+  box-shadow: none;
+}
+
+.m-proto:hover,
+.m-proto:focus-visible {
+  background: var(--band);
+  color: var(--near-black);
+  box-shadow: none;
+}
+
+.m-proto-lead:hover,
+.m-proto-lead:focus-visible {
+  background: var(--rust);
+  color: var(--lavender);
+  box-shadow: inset 0 0 0 1px var(--band);
+}
+
+/* ---------- chellbook · the core loop ---------- */
+
+.m-loop {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-width: var(--measure);
+}
+
+.m-loopitem {
+  display: grid;
+  grid-template-columns: 2.25rem 1fr;
+  gap: 0 0.5rem;
+  align-items: baseline;
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--hair-min);
+}
+
+.m-loopn {
+  font-size: 0.6875rem;
+  letter-spacing: 0.16em;
+  opacity: 0.62;
+}
+
+.m-looptext {
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+
+/* ---------- chellbook · the four safety states ---------- */
+
+/*
+  The one place in this file where the ink is not `--near-black` and the wash
+  is not `--band`. These four pairs are another product's palette quoted as a
+  specimen, and they arrive inline from CHELL_STATES so they still cannot be
+  written literally here. See src/mobile.ts for the reasoning.
+
+  The dashed edge belongs to `unknown` alone. All four cards carry the same
+  1px transparent border so the dashed one does not sit a pixel off the
+  others, and the dash takes `currentColor`, which is the state's own ink.
+*/
+
+.m-states {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+/*
+  One column on a phone, then 2×2 — never 3+1, which would strand `unknown` on
+  a row of its own and read as a rank rather than as one of four peers.
+*/
+@media (min-width: 34rem) {
+  .m-states {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.m-state {
+  padding: 0.875rem 1rem 1rem;
+  border: 1px solid transparent;
+}
+
+.m-state-dashed {
+  border-style: dashed;
+  border-color: currentColor;
+}
+
+.m-statehead {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.25rem 0.75rem;
+}
+
+.m-statename {
+  font-size: 1.125rem;
+  letter-spacing: -0.01em;
+}
+
+.m-statemineral {
+  font-size: 0.6875rem;
+  letter-spacing: 0.16em;
+  opacity: 0.72;
+}
+
+.m-statemeaning {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  text-wrap: pretty;
+  margin: 0.5rem 0 0;
+}
+
+/* ---------- chellbook · boards ---------- */
+
+/*
+  Uncropped, full width, height reserved from the record's own dimensions so a
+  3338px-tall board never lands under the paragraph that follows it. Nothing
+  caps the height: the tallest board is about one screen at 390px, and a cap
+  would either crop it — which is the one thing a phone is not supposed to do
+  to these — or shrink it to a third of the column. The caption row carries a
+  direct link to the file instead, which is also how a reader zooms.
+*/
+
+.m-boardfig {
+  margin: 2rem 0 0;
+}
+
+.m-board {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-top: 0.5rem;
+  box-shadow: inset 0 0 0 1px var(--hair);
+  background: var(--imgbg);
+}
+
+.m-boardcap {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem 1rem;
+  font-size: 0.6875rem;
+  letter-spacing: 0.14em;
+  opacity: 0.72;
+  line-height: 1.6;
+  margin-top: 0.5rem;
+}
+
+.m-boardcap .m-link {
+  opacity: 1;
+  flex: none;
+}
+
+/* ---------- motion filmstrip ---------- */
+
+.m-film {
+  list-style: none;
+  margin: 0 0 1.75rem;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.75rem 0.5rem;
+}
+
+.m-filmitem {
+  display: grid;
+  gap: 0.375rem;
+}
+
+.m-thumb {
+  width: 100%;
+  height: auto;
+  display: block;
+  background: var(--near-black);
+  box-shadow: inset 0 0 0 1px var(--hair-min);
+}
+
+.m-filmlabel {
+  font-size: 0.6875rem;
+  letter-spacing: 0.16em;
+  opacity: 0.8;
+}
+
+.m-cta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.375rem 1rem;
+  padding: 0.9375rem 1rem;
+  background: var(--band);
+  color: var(--near-black);
+  text-decoration: none;
+}
+
+.m-ctatext {
+  font-size: 1.125rem;
+  letter-spacing: -0.01em;
+}
+
+.m-ctameta {
+  font-size: 0.6875rem;
+  letter-spacing: 0.16em;
+  opacity: 0.72;
+}
+
+.m-cta:hover,
+.m-cta:focus-visible {
+  background: var(--rust);
+  color: var(--lavender);
+  box-shadow: inset 0 0 0 1px var(--band);
+}
+
+/* ---------- paintings ---------- */
+
+.m-works {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.m-work {
+  display: block;
+  position: relative;
+  text-decoration: none;
+  color: inherit;
+}
+
+.m-plaque {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  background: var(--plaque);
+  color: var(--lavender);
+  font-size: 0.6875rem;
+  letter-spacing: 0.16em;
+  padding: 0.625rem 0.75rem;
+}
+
+.m-plaqueyear {
+  opacity: 0.62;
+}
+
+/* ---------- tables ---------- */
+
+.m-table {
+  margin: 0;
+  border-top: 1px solid var(--hair-min);
+}
+
+.m-table dt {
+  font-size: 0.6875rem;
+  letter-spacing: 0.16em;
+  opacity: 0.62;
+  padding-top: 0.875rem;
+}
+
+.m-table dd {
+  margin: 0.25rem 0 0.875rem;
+  font-size: 1rem;
+  letter-spacing: 0.01em;
+  line-height: 1.4;
+  border-bottom: 1px solid var(--hair-min);
+  padding-bottom: 0.875rem;
+  max-width: var(--measure);
+  text-wrap: pretty;
+}
+
+.m-email {
+  display: inline-block;
+  color: var(--lavender);
+  font-size: clamp(1.5rem, 7vw, 2.25rem);
+  letter-spacing: -0.03em;
+  text-decoration: none;
+  word-break: break-all;
+  margin-bottom: 1.25rem;
+}
+
+.m-email:hover,
+.m-email:focus-visible {
+  color: var(--email-hover);
+}
+
+/* ---------- footer ---------- */
+
+.m-foot {
+  padding: 2.5rem 1.25rem 0;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  opacity: 0.7;
+  display: grid;
+  gap: 0.75rem;
+  max-width: calc(var(--measure) + 2.5rem);
+  text-wrap: pretty;
+}
+
+/* Focus is never color-only. */
+.m-root a:focus-visible {
+  outline: 3px solid var(--band);
+  outline-offset: 2px;
+}
+
+.m-work:focus-visible {
+  outline-offset: 3px;
+}

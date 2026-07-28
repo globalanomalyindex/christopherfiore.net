@@ -1,0 +1,336 @@
+/**
+ * One delegated binder for the whole stage.
+ *
+ * The prototype's `onClick="{{ openPage }}"` / `onMouseEnter="{{ prodOn }}"`
+ * attributes become `data-act` / `data-hov`, read here. Nothing else in the
+ * codebase attaches a click or hover listener to a click target.
+ *
+ * Enter/Space are deliberately NOT handled: every target is a real <button>
+ * or <a>, so the UA already synthesises a click. Handling them here would
+ * double-fire, and preventDefault-ing them would break the native behavior.
+ */
+
+import { q, qq } from '../dom';
+import {
+  prodOff,
+  prodOn,
+  scafMove,
+  sweepOff,
+  sweepOn,
+  waterOff,
+  waterOn,
+} from './channels';
+import { closeEvidence, goEvidence, openEvidence, stepEvidence } from './evidence';
+import {
+  chellbookOpen,
+  closeChellbook,
+  goChellbook,
+  openChellbook,
+  stepChellbook,
+} from './chellbook';
+import { closePage, nextPage, openPage, runIntro } from './transitions';
+import { locked, state } from './state';
+
+/** How many channels the stage carries. ArrowLeft/Right cycle through them. */
+const CHANNELS = 4;
+
+const BOUND = new WeakSet<HTMLElement>();
+
+const num = (el: Element, attr: string): number => Number(el.getAttribute(attr)) || 0;
+
+/* ----------------------------------------------------------- panel swaps */
+
+/**
+ * Row hover → detail panel. Page 01 crossfades the key-frame slot (the 240ms
+ * linear transition lives on the slot's inline style); page 03 swaps the hero
+ * render. Both carry the caption and the fig number on the row, so one
+ * implementation covers them.
+ *
+ * There is no "off": the panel holds the last selection, as in the prototype.
+ */
+function swapSlot(row: HTMLElement, attr: 'data-case' | 'data-system'): void {
+  const page = row.closest<HTMLElement>('[data-page]');
+  if (!page) return;
+
+  const n = row.getAttribute(attr);
+  if (n === null) return;
+
+  for (const slot of qq(page, '[data-cslot]')) {
+    slot.style.opacity = slot.getAttribute('data-cslot') === n ? '1' : '0';
+  }
+
+  const cap = q(page, '[data-ccap]');
+  const capText = row.getAttribute('data-cap');
+  if (cap && capText) cap.textContent = capText;
+
+  const fig = q(page, '[data-cfig]');
+  const figText = row.getAttribute('data-fig');
+  if (fig && figText) fig.textContent = figText;
+}
+
+/* --------------------------------------------------------- hover routing */
+
+type HovKind = 'prod' | 'water' | 'sweep' | 'case' | 'system';
+
+const HOV_ON: Partial<Record<HovKind, (cell: HTMLElement) => void>> = {
+  prod: prodOn,
+  water: waterOn,
+  sweep: sweepOn,
+};
+
+const HOV_OFF: Partial<Record<HovKind, (cell: HTMLElement) => void>> = {
+  prod: prodOff,
+  water: waterOff,
+  sweep: sweepOff,
+};
+
+/**
+ * Pointer and keyboard focus both raise the same hover, so each target keeps
+ * two independent flags and the personality runs on the OR of them. Without
+ * this, tabbing out of a focused channel while the cursor is still inside it
+ * would tear the animation down (and waterOn/waterOff are a whole simulation —
+ * they must be balanced exactly once each).
+ */
+interface HovFlags {
+  pointer: boolean;
+  focus: boolean;
+  on: boolean;
+}
+
+const FLAGS = new WeakMap<HTMLElement, HovFlags>();
+
+const flagsOf = (el: HTMLElement): HovFlags => {
+  let f = FLAGS.get(el);
+  if (!f) {
+    f = { pointer: false, focus: false, on: false };
+    FLAGS.set(el, f);
+  }
+  return f;
+};
+
+function refreshHov(el: HTMLElement, kind: HovKind): void {
+  const f = flagsOf(el);
+  const want = f.pointer || f.focus;
+  if (want === f.on) return;
+  f.on = want;
+  const fn = want ? HOV_ON[kind] : HOV_OFF[kind];
+  fn?.(el);
+}
+
+function enterHov(el: HTMLElement, kind: HovKind, viaFocus: boolean): void {
+  const f = flagsOf(el);
+  if (viaFocus) f.focus = true;
+  else f.pointer = true;
+  refreshHov(el, kind);
+}
+
+function leaveHov(el: HTMLElement, kind: HovKind, viaFocus: boolean): void {
+  const f = flagsOf(el);
+  if (viaFocus) f.focus = false;
+  else f.pointer = false;
+  refreshHov(el, kind);
+}
+
+/** Row selections write through to the stage's state so it stays the truth. */
+function selectRow(stage: HTMLElement, row: HTMLElement, kind: 'case' | 'system'): void {
+  const s = state(stage);
+  if (kind === 'case') s.selectedCase = num(row, 'data-case');
+  else s.selectedSystem = num(row, 'data-system');
+  swapSlot(row, kind === 'case' ? 'data-case' : 'data-system');
+}
+
+/* -------------------------------------------------------------- bindings */
+
+export function bindActions(stage: HTMLElement): void {
+  if (BOUND.has(stage)) return;
+  BOUND.add(stage);
+
+  const hovTarget = (t: EventTarget | null): HTMLElement | null =>
+    t instanceof Element ? t.closest<HTMLElement>('[data-hov]') : null;
+
+  const kindOf = (el: HTMLElement): HovKind | null => {
+    const v = el.getAttribute('data-hov');
+    return v === 'prod' || v === 'water' || v === 'sweep' || v === 'case' || v === 'system'
+      ? v
+      : null;
+  };
+
+  /* ---- click ---- */
+
+  stage.addEventListener('click', (e) => {
+    const t = e.target instanceof Element ? e.target.closest<HTMLElement>('[data-act]') : null;
+    if (!t) return;
+
+    switch (t.getAttribute('data-act')) {
+      case 'open':
+        openPage(stage, num(t, 'data-open'), t);
+        break;
+      case 'close':
+        // Defensive: a page's own close controls are inert while a case-study
+        // screen is up, so this can only be reached if that ever stops holding.
+        if (state(stage).evidence !== null) closeEvidence(stage);
+        else if (chellbookOpen(stage)) closeChellbook(stage);
+        else closePage(stage);
+        break;
+      case 'evidence':
+        // the hero and the four system rows — the viewer grows out of `t`
+        openEvidence(stage, t);
+        break;
+      case 'evidence-close':
+        closeEvidence(stage);
+        break;
+      case 'evidence-go':
+        goEvidence(stage, num(t, 'data-sheet'));
+        break;
+      case 'evidence-step':
+        stepEvidence(stage, num(t, 'data-step'));
+        break;
+      case 'chellbook':
+        // row 08 — the case study grows out of the row that opened it
+        openChellbook(stage, t);
+        break;
+      case 'chellbook-close':
+        closeChellbook(stage);
+        break;
+      case 'chellbook-go':
+        goChellbook(stage, num(t, 'data-board'));
+        break;
+      case 'chellbook-step':
+        stepChellbook(stage, num(t, 'data-step'));
+        break;
+      case 'next':
+        nextPage(stage, num(t, 'data-next'));
+        break;
+      case 'replay':
+        // the replay control sits inside the header cell — don't let the click
+        // travel on to anything that might also claim it
+        e.stopPropagation();
+        runIntro(stage);
+        break;
+    }
+  });
+
+  /* ---- hover ----
+     pointerover/pointerout bubble (pointerenter/pointerleave do not), and the
+     relatedTarget check turns them into exact enter/leave semantics. */
+
+  stage.addEventListener(
+    'pointerover',
+    (e) => {
+      const t = hovTarget(e.target);
+      if (!t) return;
+      const rel = e.relatedTarget;
+      if (rel instanceof Node && t.contains(rel)) return; // move within the target
+      const kind = kindOf(t);
+      if (!kind) return;
+      if (kind === 'case' || kind === 'system') selectRow(stage, t, kind);
+      else enterHov(t, kind, false);
+    },
+    { passive: true },
+  );
+
+  stage.addEventListener(
+    'pointerout',
+    (e) => {
+      const t = hovTarget(e.target);
+      if (!t) return;
+      const rel = e.relatedTarget;
+      if (rel instanceof Node && t.contains(rel)) return;
+      const kind = kindOf(t);
+      if (!kind || kind === 'case' || kind === 'system') return;
+      leaveHov(t, kind, false);
+    },
+    { passive: true },
+  );
+
+  // 01's scaffolding guides and "col NN · row NN" label track the cursor.
+  stage.addEventListener(
+    'pointermove',
+    (e) => {
+      const t = hovTarget(e.target);
+      if (!t || t.getAttribute('data-hov') !== 'prod') return;
+      scafMove(t, e);
+    },
+    { passive: true },
+  );
+
+  /* ---- focus: same treatment, so a keyboard user sees the same thing ---- */
+
+  stage.addEventListener('focusin', (e) => {
+    const t = hovTarget(e.target);
+    if (!t) return;
+    const kind = kindOf(t);
+    if (!kind) return;
+    if (kind === 'case' || kind === 'system') {
+      selectRow(stage, t, kind);
+      return;
+    }
+    // A mouse click focuses the channel too; only a real keyboard focus should
+    // raise the personality, or the band would stay up after the pointer left.
+    if (t.matches(':focus-visible')) enterHov(t, kind, true);
+  });
+
+  stage.addEventListener('focusout', (e) => {
+    const t = hovTarget(e.target);
+    if (!t) return;
+    const rel = e.relatedTarget;
+    if (rel instanceof Node && t.contains(rel)) return;
+    const kind = kindOf(t);
+    if (!kind || kind === 'case' || kind === 'system') return;
+    leaveHov(t, kind, true);
+  });
+
+  /* ---- keyboard ---- */
+
+  document.addEventListener('keydown', (e) => {
+    if (!stage.isConnected) return;
+    if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return;
+
+    const s = state(stage);
+
+    /* Escape and the arrows always belong to the topmost surface: the evidence
+       viewer while it is up, the page underneath otherwise. Without this,
+       Escape would close the channel out from under an open viewer and the
+       arrows would advance to page 04 behind it. */
+
+    if (e.key === 'Escape') {
+      if (locked(stage)) return;
+      if (s.evidence !== null) {
+        e.preventDefault();
+        closeEvidence(stage);
+        return;
+      }
+      if (chellbookOpen(stage)) {
+        e.preventDefault();
+        closeChellbook(stage);
+        return;
+      }
+      if (s.open === null) return;
+      e.preventDefault();
+      closePage(stage);
+      return;
+    }
+
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+      if (locked(stage)) return;
+      const step = e.key === 'ArrowRight' ? 1 : -1;
+      if (s.evidence !== null) {
+        e.preventDefault();
+        stepEvidence(stage, step);
+        return;
+      }
+      if (chellbookOpen(stage)) {
+        e.preventDefault();
+        stepChellbook(stage, step);
+        return;
+      }
+      // Only meaningful with a page open — on the menu the arrows belong to
+      // the browser (and to whatever the user has focused).
+      if (s.open === null) return;
+      e.preventDefault();
+      // 1-based cycle across the four channels
+      const n = ((s.open - 1 + step + CHANNELS) % CHANNELS) + 1;
+      nextPage(stage, n);
+    }
+  });
+}

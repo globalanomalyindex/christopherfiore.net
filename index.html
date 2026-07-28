@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>perfection synthétique — christopher robin fiore</title>
+    <meta
+      name="description"
+      content="perfection synthétique — the studio portfolio of christopher robin fiore. product design and design engineering: ambitious products designed, the difficult parts prototyped, and the ideas tested to see whether they actually hold up."
+    />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#C62C05" />
+
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <!--
+      Both faces are font-display: block — there must be no flash of fallback,
+      because the intro's dither-in is what covers the load. Preloading them
+      keeps that block window short.
+    -->
+    <link
+      rel="preload"
+      href="/fonts/Karrik-Regular.otf"
+      as="font"
+      type="font/otf"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href="/fonts/SLTFDessignMaison-Regular.otf"
+      as="font"
+      type="font/otf"
+      crossorigin
+    />
+
+    <!--
+      Duplicated from src/styles/base.css so the letterbox and the visually
+      hidden heading are correct on the first paint, before the module graph
+      (and with it the stylesheet) has been evaluated.
+    -->
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: #000;
+      }
+      .ps-sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        margin: -1px;
+        padding: 0;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        clip-path: inset(50%);
+        white-space: nowrap;
+        border: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <!--
+      The visible wordmark is per-letter spans inside the stage so the glitch
+      engine can measure and swap each letter; it is deliberately not a
+      heading. This is the document's one real h1.
+    -->
+    <h1 class="ps-sr-only">
+      perfection synthétique — the studio of christopher robin fiore
+    </h1>
+
+    <div id="app"></div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

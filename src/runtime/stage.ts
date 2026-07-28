@@ -1,0 +1,98 @@
+/**
+ * The stage: one fixed 1920 × 1080 box holding the menu and the four pages,
+ * scaled as a unit to fit the viewport.
+ *
+ * The element carries BOTH `data-stage` and `data-frame-root`. `data-stage` is
+ * this codebase's name for it (src/styles/base.css, dither.ts, channels.ts,
+ * hover.ts); `data-frame-root` is the prototype's, and frost.ts and glitch.ts
+ * still resolve their scope through it. Carrying both is cheaper than editing
+ * two runtime modules for a selector.
+ */
+
+import { el, qq } from '../dom';
+import { STAGE } from '../design/layout';
+import * as menuPage from '../pages/menu';
+import * as productsPage from '../pages/products';
+import * as paintingsPage from '../pages/paintings';
+import * as competizionePage from '../pages/competizione';
+import * as contactPage from '../pages/contact';
+import { bindActions } from './actions';
+import { installDitherDefs } from './dither';
+import { startFrost, trackFrost } from './frost';
+import { wireHovers } from './hover';
+
+/**
+ * Build the stage and wire every runtime that needs a live DOM.
+ *
+ * Order matters: the stage is in the document before anything measures it,
+ * because trackFrost and wireHovers both read computed style / layout rects.
+ */
+export function mountStage(root: HTMLElement): HTMLElement {
+  const stage = el('div', {
+    'data-stage': true,
+    'data-frame-root': true,
+    'data-screen-label': 'Stage',
+  });
+
+  stage.appendChild(menuPage.build());
+  stage.appendChild(productsPage.build());
+  stage.appendChild(paintingsPage.build());
+  stage.appendChild(competizionePage.build());
+  stage.appendChild(contactPage.build());
+
+  root.appendChild(stage);
+
+  // The shared <defs> must exist before any dfxFilter() call clones from it.
+  installDitherDefs(stage);
+
+  // Every canvas, menu and page alike. trackFrost only adopts the menu's, so
+  // the page canvases would otherwise stay dark until their first transition.
+  for (const cv of qq<HTMLCanvasElement>(stage, 'canvas[data-frost]')) startFrost(cv);
+
+  trackFrost(stage);
+
+  for (const page of qq(stage, '[data-page]')) wireHovers(page);
+
+  bindActions(stage);
+
+  return stage;
+}
+
+/* ------------------------------------------------------------------- fit */
+
+const BOUND = new WeakSet<HTMLElement>();
+
+/**
+ * Scale the stage to fit: `k = min(vw/1920, vh/1080)`, centerd, letterboxed.
+ *
+ * base.css sets `transform-origin: 0 0`, so the translate is a plain offset in
+ * viewport px and does not need dividing by k. `--ps-k` is published on the
+ * stage for anything that needs to convert viewport px back to design px.
+ */
+export function fitStage(stage: HTMLElement): void {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const k = Math.min(vw / STAGE.w, vh / STAGE.h);
+  const ox = (vw - STAGE.w * k) / 2;
+  const oy = (vh - STAGE.h * k) / 2;
+
+  stage.style.transform = `translate(${ox.toFixed(2)}px,${oy.toFixed(2)}px) scale(${k.toFixed(6)})`;
+  stage.style.setProperty('--ps-k', k.toFixed(6));
+
+  if (BOUND.has(stage)) return;
+  BOUND.add(stage);
+
+  let raf = 0;
+  const schedule = (): void => {
+    if (raf) return;
+    raf = requestAnimationFrame(() => {
+      raf = 0;
+      if (stage.isConnected) fitStage(stage);
+    });
+  };
+
+  window.addEventListener('resize', schedule, { passive: true });
+  window.addEventListener('orientationchange', schedule, { passive: true });
+  // Mobile URL bars change innerHeight without firing a useful window resize.
+  window.visualViewport?.addEventListener('resize', schedule, { passive: true });
+}

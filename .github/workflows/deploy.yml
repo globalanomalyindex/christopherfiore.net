@@ -1,0 +1,56 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  # so a deploy can be re-run without pushing
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deploy at a time; a newer push supersedes a queued one but never
+# cancels a run that is mid-deploy.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # `npm run build` runs tsc --noEmit first, so a type error fails the
+      # deploy rather than shipping a broken bundle.
+      - run: npm run build
+
+      # public/CNAME is copied into dist/ by Vite, which is what keeps the
+      # custom domain bound across deploys. Fail loudly if it ever goes missing:
+      # Pages silently drops the domain and the site starts 404ing on the
+      # apex, which is a confusing thing to debug later.
+      - name: Verify CNAME survived the build
+        run: test -f dist/CNAME && cat dist/CNAME
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

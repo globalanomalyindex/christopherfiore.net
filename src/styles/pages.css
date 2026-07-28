@@ -1,0 +1,237 @@
+/*
+  pages — structural rules for screens 2–5, plus every style-hover="…" in the
+  prototype pages turned into a real class.
+
+  HOVER / FOCUS CLASSES DEFINED HERE (also listed in HOVER_CLASSES.md):
+
+    .ps-hov-invert       background:#C62C05; color:#DFCBFA   — rust fill,
+                         lavender ink. 24 uses in the prototype: page 01
+                         header close / four case rows / footer close / footer
+                         next; page 02 wall list (11 rows); page 03 header
+                         close / three concept rows / footer close / footer
+                         next.
+    .ps-hov-invert-dark  background:#DFCBFA; color:#0B0B0C   — lavender fill,
+                         near-black ink. 3 uses, all page 04: header close,
+                         footer close, footer next.
+    .ps-hov-dim          opacity:.6    — page 02 footer close and footer next.
+    .ps-hov-dim-55       opacity:.55   — page 02 header close.
+    .ps-hov-email        color:#FF2D87 — page 04 email.
+    .ps-hov-evidence     the page-03 hero as the evidence viewer's door. NEW —
+                         no prototype equivalent. Inverts the .ps-ev-chip tab
+                         to an acid band with near-black ink and takes the 1px
+                         frame to solid rust. It exists because hover.ts's band
+                         stack paints at z-index -1, which is invisible behind
+                         an opaque image, and its ink pin would drag the tab's
+                         lavender type to near-black on its own dark plaque —
+                         so the hero carries data-nohl and this instead.
+
+  Every one has a matching :focus-visible so a keyboard user gets the same
+  state, on top of the two-tone ring from base.css.
+
+  Note the ink pairs: on a rust fill the ink is lavender, on a lavender fill
+  the ink is near-black. That is the legibility contract, not a preference —
+  do not swap one for the other when adding a row.
+
+  Structural rules below are utilities: the page builder's inline geometry
+  always wins, so adding one of these classes is additive, never a conflict.
+*/
+
+/* ---------- hover / focus ---------- */
+
+.ps-hov-invert:hover,
+.ps-hov-invert:focus-visible {
+  background: #c62c05;
+  color: #dfcbfa;
+}
+
+.ps-hov-invert-dark:hover,
+.ps-hov-invert-dark:focus-visible {
+  background: #dfcbfa;
+  color: #0b0b0c;
+}
+
+.ps-hov-dim:hover,
+.ps-hov-dim:focus-visible {
+  opacity: 0.6;
+}
+
+.ps-hov-dim-55:hover,
+.ps-hov-dim-55:focus-visible {
+  opacity: 0.55;
+}
+
+.ps-hov-email:hover,
+.ps-hov-email:focus-visible {
+  color: #ff2d87;
+}
+
+/*
+  Page 03 hero → evidence viewer. The acid band is from LIGHTS and the ink on
+  it is #0B0B0C, so the tab keeps the legibility contract while inverted.
+
+  This carries its own resting frame rather than composing with .ps-frame:
+  both would be `.class:focus-visible`, i.e. the same specificity, so which one
+  won would come down to which is written lower in this file. It restates the
+  frame alongside the ring band for the reason .ps-frame:focus-visible does —
+  base.css paints the ring with box-shadow, so a bare ring drops the frame.
+*/
+.ps-hov-evidence {
+  box-shadow: 0 0 0 1px rgba(198, 44, 5, 0.42);
+}
+
+.ps-hov-evidence:hover {
+  box-shadow: 0 0 0 1px #c62c05;
+}
+
+.ps-hov-evidence:focus-visible {
+  box-shadow: var(--ps-focus-band), 0 0 0 1px #c62c05;
+}
+
+.ps-hov-evidence:hover .ps-ev-chip,
+.ps-hov-evidence:focus-visible .ps-ev-chip {
+  background: #c9f227;
+  color: #0b0b0c;
+}
+
+/* ---------- structure ---------- */
+
+/*
+  Page 01 — the visible module grid. 2px lines at rgba(255,255,255,.62) every
+  72.727px. The 4.45px vertical offset is the prototype's: it lands the first
+  horizontal line on the module rather than on the page edge.
+*/
+.ps-grid-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.62) 0 2px, rgba(255, 255, 255, 0) 2px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.62) 0 2px, rgba(255, 255, 255, 0) 2px);
+  background-size: 72.727px 100%, 100% 72.727px;
+  background-position: 0 0, 0 4.45px;
+}
+
+/* Page 01 — the four stacked key frames in the panel. Row hover selects one;
+   240ms linear is the documented crossfade, not a guess. */
+[data-cslot] {
+  position: absolute;
+  inset: 0;
+  transition: opacity 240ms linear;
+}
+
+/*
+  1px rust frame. box-shadow, not border, so it sits outside the box and does
+  not eat the image's 400×500 / 1090.9×400 crop. This is a frame, not a drop
+  shadow — the only kind of shadow the design allows.
+*/
+.ps-frame {
+  box-shadow: 0 0 0 1px rgba(198, 44, 5, 0.42);
+}
+
+/* If a frame is also a control (a paintings lightbox trigger, say), keep the
+   frame and add the ring band — the plain ring rule in base.css would
+   otherwise replace the box-shadow outright. */
+.ps-frame:focus-visible {
+  box-shadow: var(--ps-focus-band), 0 0 0 1px rgba(198, 44, 5, 0.42);
+}
+
+/*
+  Corner crosshair marks: 15 × 15px, offset -7.5px so they straddle the
+  corner, drawn as two 1px lines. --ps-cross defaults to rust.
+*/
+.ps-corner {
+  position: absolute;
+  width: 15px;
+  height: 15px;
+  pointer-events: none;
+  background-image:
+    linear-gradient(var(--ps-cross, #c62c05), var(--ps-cross, #c62c05)),
+    linear-gradient(var(--ps-cross, #c62c05), var(--ps-cross, #c62c05));
+  background-size: 1px 15px, 15px 1px;
+  background-position: center center, center center;
+  background-repeat: no-repeat;
+}
+
+.ps-corner-tl {
+  left: -7.5px;
+  top: -7.5px;
+}
+
+.ps-corner-tr {
+  right: -7.5px;
+  top: -7.5px;
+}
+
+.ps-corner-bl {
+  left: -7.5px;
+  bottom: -7.5px;
+}
+
+.ps-corner-br {
+  right: -7.5px;
+  bottom: -7.5px;
+}
+
+/*
+  Page 02 — painting caption plaque. Opaque on purpose: the organic dither
+  field behind it never stops moving, and this is what keeps the titles
+  legible over it. Keep the plaque; do not make it translucent.
+*/
+.ps-plaque {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 38px;
+  background: #150b20;
+  color: #dfcbfa;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 13px;
+  font-size: 12px;
+  letter-spacing: 0.16em;
+}
+
+/* Background canvases are decorative and marked aria-hidden by the builder. */
+[data-page] canvas {
+  pointer-events: none;
+}
+
+/* ---------- page 03 · the evidence viewer ---------- */
+
+/*
+  The twelve stacked sheets. Same 240ms linear crossfade as the key-frame slots
+  above — a sheet change and a key-frame change are the same gesture, so they
+  are the same duration. runtime/evidence.ts drives the opacity and dithers the
+  plate over the top of it.
+*/
+[data-evslot] {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  transition: opacity 240ms linear;
+}
+
+/*
+  The page-03 hero's evidence tab. Opaque for the same reason .ps-plaque is:
+  it sits on a photographic render and has to stay readable on all five of
+  them. Colours live here, not inline, so .ps-hov-evidence can invert them.
+*/
+.ps-ev-chip {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  padding: 0 13px;
+  background: #150b20;
+  color: #dfcbfa;
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  z-index: 2;
+  transition:
+    background 150ms linear,
+    color 150ms linear;
+}
