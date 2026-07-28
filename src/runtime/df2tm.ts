@@ -1,14 +1,10 @@
 /**
- * Page 04 ↔ about subpage choreography.
+ * Page 01 ↔ df2tm subpage choreography.
  *
- * The same move page 01 makes into the chellbook screen: the clicked control's
- * box becomes the whole screen, and closing collapses it back into that same
- * box rather than fading it out. Timing is the tokens' own at the nextPage
- * weight, because this opens on top of a page that is already up.
- *
- * This screen carries no plate and no boards — it is prose — so what is left of
- * the chellbook runtime here is the clip-path grow, the veil, the staged chrome
- * and the scroll column's rail and readout.
+ * Identical in shape to `runtime/about.ts`, because the two screens are
+ * identical in kind: prose in a scroll column with a jump index, grown out of
+ * the control that opened it. The clicked row's box becomes the whole screen,
+ * and closing collapses it back into that same row.
  *
  * STATE LIVES HERE, in a module-local WeakSet keyed by the stage, for the same
  * reason chellbook's does: `runtime/actions.ts` must be able to ask which
@@ -43,7 +39,7 @@ const THUMB_MIN = 28;
 
 const FULL = 'inset(0px 0px 0px 0px)';
 
-/** Stages whose about screen is currently up. */
+/** Stages whose df2tm screen is currently up. */
 const OPEN = new WeakSet<HTMLElement>();
 /** The control the screen grew out of, so close can collapse back into it. */
 const FROM = new WeakMap<HTMLElement, HTMLElement>();
@@ -59,10 +55,10 @@ const attrNum = (el: Element | null, name: string, dflt: number): number => {
 };
 
 /**
- * True while the about screen is up. `runtime/actions.ts` asks this before
- * routing Escape, the way it asks `chellbookOpen` for page 01's screen.
+ * True while the df2tm screen is up. `runtime/actions.ts` asks this before
+ * routing Escape, the way it asks `chellbookOpen` for the case-study screen.
  */
-export function aboutOpen(stage: HTMLElement): boolean {
+export function df2tmOpen(stage: HTMLElement): boolean {
   return OPEN.has(stage);
 }
 
@@ -76,7 +72,7 @@ interface Parts {
 }
 
 function partsFor(stage: HTMLElement): Parts | null {
-  const screen = q(stage, '[data-about]');
+  const screen = q(stage, '[data-df2tm]');
   if (!screen) return null;
   const page = screen.closest<HTMLElement>('[data-page]');
   if (!page) return null;
@@ -84,13 +80,13 @@ function partsFor(stage: HTMLElement): Parts | null {
     screen,
     page,
     body: q(page, '[data-pbody]'),
-    chrome: q(screen, '[data-abchrome]'),
+    chrome: q(screen, '[data-dfchrome]'),
     cq: q<HTMLCanvasElement>(screen, '[data-frost]'),
   };
 }
 
 const closeOf = (screen: HTMLElement): HTMLElement | null =>
-  q(screen, '[data-act="about-close"]');
+  q(screen, '[data-act="df2tm-close"]');
 
 /**
  * The trigger's box as a clip inset in the page's own 1920 × 1080 space.
@@ -120,7 +116,7 @@ const SCROLLED = new WeakSet<HTMLElement>();
  * one text write, no layout reads beyond the container's own metrics.
  */
 function paintScroll(screen: HTMLElement): void {
-  const region = q(screen, '[data-abscroll]');
+  const region = q(screen, '[data-dfscroll]');
   if (!region) return;
 
   const view = region.clientHeight;
@@ -131,7 +127,7 @@ function paintScroll(screen: HTMLElement): void {
   // close lands after display:none, so this guard is load-bearing.
   if (!view) return;
 
-  const thumb = q(screen, '[data-abthumb]');
+  const thumb = q(screen, '[data-dfthumb]');
   if (thumb) {
     if (over <= 1) {
       thumb.style.display = 'none';
@@ -144,7 +140,7 @@ function paintScroll(screen: HTMLElement): void {
     }
   }
 
-  const secs = qq(region, '[data-absec]');
+  const secs = qq(region, '[data-dfsec]');
   if (!secs.length) return;
   // whichever section owns the top of the window, not the middle: the heading a
   // reader has just passed is the one they are reading under
@@ -157,9 +153,9 @@ function paintScroll(screen: HTMLElement): void {
   // which would leave the final section never named.
   if (over > 0 && region.scrollTop >= over - 1) cur = secs.length - 1;
 
-  const at = q(screen, '[data-absecat]');
+  const at = q(screen, '[data-dfsecat]');
   if (at) {
-    const name = secs[cur].getAttribute('data-absec-name') || '';
+    const name = secs[cur].getAttribute('data-dfsec-name') || '';
     /*
       The standfirst is scroll section 0 but is not one of the numbered
       sections, so it is named without a count. Numbering it would make this
@@ -170,13 +166,13 @@ function paintScroll(screen: HTMLElement): void {
   }
 
   /*
-    The index lists ABOUT_SECTIONS; the scroll column carries one extra section
+    The index lists DF2TM_SECTIONS; the scroll column carries one extra section
     ahead of them (the standfirst), so index row n is scroll section n + 1.
     While the standfirst is on screen no row is current, which is correct: it is
     not one of the sections.
   */
-  for (const row of qq(screen, '[data-abrow]')) {
-    const on = Number(row.getAttribute('data-abrow')) + 1 === cur;
+  for (const row of qq(screen, '[data-dfrow]')) {
+    const on = Number(row.getAttribute('data-dfrow')) + 1 === cur;
     row.setAttribute('aria-current', on ? 'true' : 'false');
     row.style.borderLeftColor = on ? COLOR.lavender : 'transparent';
     row.style.opacity = on ? '1' : '.62';
@@ -184,7 +180,7 @@ function paintScroll(screen: HTMLElement): void {
 }
 
 function wireScroll(screen: HTMLElement): void {
-  const region = q(screen, '[data-abscroll]');
+  const region = q(screen, '[data-dfscroll]');
   if (!region || SCROLLED.has(region)) return;
   SCROLLED.add(region);
   region.addEventListener('scroll', () => paintScroll(screen), { passive: true });
@@ -192,7 +188,7 @@ function wireScroll(screen: HTMLElement): void {
 
 /** Send the column back to the top, while the screen is still displayed. */
 function resetScroll(screen: HTMLElement): void {
-  const region = q(screen, '[data-abscroll]');
+  const region = q(screen, '[data-dfscroll]');
   if (region) region.scrollTop = 0;
   paintScroll(screen);
 }
@@ -201,11 +197,11 @@ function resetScroll(screen: HTMLElement): void {
  * Jump the column to section `n` of the index. Smooth unless the visitor has
  * asked for reduced motion, in which case it lands immediately.
  */
-export function goAbout(stage: HTMLElement, n: number): void {
+export function goDf2tm(stage: HTMLElement, n: number): void {
   if (!OPEN.has(stage)) return;
   const P = partsFor(stage);
   if (!P) return;
-  const region = q(P.screen, '[data-abscroll]');
+  const region = q(P.screen, '[data-dfscroll]');
   if (!region) return;
   // index row n is scroll section n + 1: the standfirst is section 0
   const target = q(P.screen, `[data-absec="${n + 1}"]`);
@@ -218,7 +214,7 @@ export function goAbout(stage: HTMLElement, n: number): void {
 
 /* -------------------------------------------------------------------- open */
 
-export function openAbout(stage: HTMLElement, trigger: HTMLElement): void {
+export function openDf2tm(stage: HTMLElement, trigger: HTMLElement): void {
   if (locked(stage)) return;
   if (OPEN.has(stage)) return;
   const P = partsFor(stage);
@@ -320,7 +316,7 @@ function finishClose(stage: HTMLElement, P: Parts, trigger: HTMLElement | null):
   focusInto(trigger);
 }
 
-export function closeAbout(stage: HTMLElement): void {
+export function closeDf2tm(stage: HTMLElement): void {
   if (locked(stage)) return;
   if (!OPEN.has(stage)) return;
   const P = partsFor(stage);

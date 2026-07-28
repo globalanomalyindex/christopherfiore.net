@@ -7,7 +7,7 @@
  *
  * THE LANGUAGE HERE IS A SAFETY BOUNDARY, not copy.
  *
- * This is a product about coeliac disease. Its own handoff says several of its
+ * This is a product about celiac disease. Its own handoff says several of its
  * rules are "legal constraints, not preferences", and the design's central
  * claim is that it never overstates what it knows: Verified means "supported by
  * the recipe and by the ingredient's own published information", explicitly
@@ -298,7 +298,7 @@ export const CHELL_MOTION: TableRow[] = [
  */
 export const CHELL_OPEN: string[] = [
   'the trusted brands editor is referenced from profile and settings, but its editing UI is not designed',
-  'cross-contamination in a shared kitchen is out of scope, and it is the single most requested thing from coeliac users',
+  'cross-contamination in a shared kitchen is out of scope, and it is the single most requested thing from celiac users',
   'mid-cook discovery has no screen: what happens when a cook is already halfway through and finds the problem then',
   'recipe imagery is emoji placeholders, which is a placeholder and not a decision',
   'whether saved recipes open with no network is unspecified',

@@ -71,10 +71,10 @@ export const PAGE1 = {
   thesis: { x: MODULE, y: 462, w: 727.27, size: 27, lh: 1.32, track: '-.015em' }, // adapted y
   panel: { x: 1090.9, y: 122, w: 727.27, h: 436.36 }, // adapted y (was 149.9)
   figCaption: { x: 1090.9, y: 572, w: 727.27 },
-  rowH: 36.364, // adapted, half a module (was 40.909) — eight cases now, not seven
+  rowH: 32.323, // adapted — nine cases now; 9 × 32.323 still lands on 931.7
   tableHeaderY: 608.97, // adapted
   tableHeaderH: 31.818, // adapted, 7/16 module (was one full row)
-  rowsY: 640.79, // adapted — 8 × 36.364 lands exactly on the motion band at 931.7
+  rowsY: 640.79, // adapted — the rows fill exactly to the motion band at 931.7
   rowCols: '145.455px 363.636px 581.818px 145.455px 1fr', // handoff, inside the row anchor
   rowSplit: '1fr 218.181px', // adapted — row anchor, then the source column (3 modules)
   nameSize: 28, // adapted (was 34)
@@ -211,11 +211,15 @@ export const PAGE4 = {
 } as const;
 
 /**
- * The about subpage. A reading screen: title and section index down the left,
- * one scrolling prose column filling the right two thirds. The band runs from
- * under the title rule to the same 976 every other screen stops at.
+ * A reading subpage. Title and section index down the left, one scrolling
+ * prose column in the middle, a scannable column on the right. The band runs
+ * from under the title rule to the same 976 every other screen stops at.
+ *
+ * Shared by the background screen (channel 04) and the df2tm screen (channel
+ * 01): both are prose with no imagery, so they are the same screen with
+ * different words, and giving them one geometry is what keeps them that way.
  */
-export const ABOUT_PAGE = {
+export const READER_PAGE = {
   headerH: 62,
   footerH: 88,
   title: { x: MODULE, y: 88, size: 152, lh: 146, track: '-.05em' },

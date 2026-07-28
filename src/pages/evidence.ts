@@ -43,7 +43,7 @@
  * not enumerated and this file emits no anchor for any of them.
  */
 
-import { asset, css, el } from '../dom.ts';
+import { asset, css, el, letters } from '../dom.ts';
 import { COLOR, LIGHTS, RULE } from '../design/tokens.ts';
 import { EVIDENCE, MODULE, STAGE } from '../design/layout.ts';
 import { EV_META, EV_SHEETS } from '../data/competizione.ts';
@@ -325,6 +325,11 @@ function titleBlock(): HTMLElement[] {
   const h1 = el(
     'h2',
     {
+      // Letter-wrapped and marked so runtime/evidence.ts can run the same
+      // Dessign Maison swap the page titles run. `data-sptitle`, not
+      // `data-ptitle`: this screen lives inside [data-page="3"], and
+      // navParts() finds a page's title with a document-order query.
+      'data-sptitle': true,
       'data-intro': 'wipeX',
       'data-in-delay': 40,
       'data-in-dur': 420,
@@ -342,7 +347,10 @@ function titleBlock(): HTMLElement[] {
         'white-space': 'nowrap',
       }),
     },
-    BLSP.name,
+    ...letters(BLSP.name).map((s) => {
+      s.style.display = 'inline-block';
+      return s;
+    }),
   );
 
   const descriptor = el(

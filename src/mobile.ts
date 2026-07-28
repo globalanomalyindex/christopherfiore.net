@@ -63,6 +63,7 @@ import {
 } from './data/blsp-case.ts';
 import { STUDIO, PROFILE_LINKS, CONTACT_TABLE } from './data/studio.ts';
 import { ABOUT, ABOUT_SECTIONS, AT_A_GLANCE } from './data/about.ts';
+import { DF2TM, DF2TM_GLANCE, DF2TM_SECTIONS } from './data/df2tm.ts';
 import type { TableRow } from './data/types.ts';
 
 /** Viewport width below which the fixed stage stops being legible. */
@@ -306,6 +307,8 @@ function chellBoards(): HTMLElement[] {
  * carry the weight `BLSP_LIMITS` carries in section 03, in the same block
  * treatment at the same size.
  */
+const CHELL_ROW = CASES.find((c) => c.id === 'chellbook');
+
 function chellbookStudy(): (Node | null)[] {
   return [
     el(
@@ -313,9 +316,16 @@ function chellbookStudy(): (Node | null)[] {
       { class: 'm-case m-entry' },
       el('div', { class: 'm-caseidx' }, CHELL.klass, el('span', {}, CHELL.state)),
       el('h3', { class: 'm-casename' }, CHELL.name),
-      el('p', { class: 'm-caseline' }, CHELL.descriptor),
+      /*
+        The row's own `line`, so this entry says what the stage's table row
+        says. A subpage entry stands in for the row it replaces here, and the
+        two reading differently is the kind of drift nobody notices until the
+        copy is changed in one place. CHELL.descriptor keeps its meaning on the
+        meta line below.
+      */
+      el('p', { class: 'm-caseline' }, CHELL_ROW ? CHELL_ROW.line : CHELL.descriptor),
       figure(CHELL.preview, CHELL.previewAlt, CHELL.previewCaption, LIVE_W, LIVE_H),
-      el('span', { class: 'm-meta' }, `${CHELL.year} · ${CHELL.scale}`),
+      el('span', { class: 'm-meta' }, `${CHELL.descriptor} · ${CHELL.year} · ${CHELL.scale}`),
     ),
 
     block(
@@ -389,14 +399,49 @@ function chellbookStudy(): (Node | null)[] {
   ];
 }
 
+/**
+ * df2tm, inlined for exactly the reason chellbook is: a Product designs row
+ * with a `subpage` and no `href` has nothing to link to in a view that has no
+ * subpages, so it is printed whole. The install commands are the one thing a
+ * reader might act on from a phone, so they lead the reference table.
+ */
+function df2tmStudy(): (Node | null)[] {
+  const rec = CASES.find((c) => c.id === 'df2tm');
+  return [
+    el(
+      'article',
+      { class: 'm-case m-entry' },
+      el('div', { class: 'm-caseidx' }, rec ? rec.idx : '', el('span', {}, DF2TM.state)),
+      el('h3', { class: 'm-casename' }, DF2TM.name),
+      el('p', { class: 'm-caseline' }, rec ? rec.line : DF2TM.descriptor),
+      rec && rec.image
+        ? figure(rec.image, rec.imageAlt, rec.caption, LIVE_W, LIVE_H)
+        : null,
+      el('span', { class: 'm-meta' }, `${DF2TM.expansion} · ${DF2TM.descriptor}`),
+      el('div', { class: 'm-caselinks' }, link(DF2TM.repo, DF2TM.repoLabel)),
+    ),
+    block(
+      'df2tm-idea',
+      'the idea',
+      null,
+      el('p', { class: 'm-stand' }, DF2TM.standfirst),
+      body(DF2TM.question),
+    ),
+    ...DF2TM_SECTIONS.map((sec) =>
+      block(`df2tm-${sec.id}`, sec.name, null, ...sec.paras.map((t) => body(t))),
+    ),
+    block('df2tm-glance', 'at a glance', null, table(DF2TM_GLANCE)),
+  ];
+}
+
 /* ------------------------------------------------------------------ 01 */
 
 function productsSection(): HTMLElement {
   /*
-    Seven rows, not eight. The eighth record carries `subpage` instead of
-    `href`: on the stage it opens a case-study screen, and there are no
-    subpages here, so it is printed in full below instead of appearing as a
-    row with nothing to link to.
+    Seven rows, not nine. Two records carry `subpage` instead of `href` —
+    chellbook and df2tm. On the stage each opens a screen of its own; there are
+    no subpages here, so both are printed in full below instead of appearing as
+    rows with nothing to link to.
   */
   const rows = CASES.filter((c) => !c.subpage).map((c) =>
     el(
@@ -428,6 +473,7 @@ function productsSection(): HTMLElement {
     el('p', { class: 'm-thesis' }, CASES_THESIS),
     ...rows,
     ...chellbookStudy(),
+    ...df2tmStudy(),
   );
 }
 

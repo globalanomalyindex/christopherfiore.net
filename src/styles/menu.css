@@ -164,3 +164,41 @@
 [data-slatelogo] {
   pointer-events: none;
 }
+
+/*
+  The contact strip inverts on hover — it is a plain control, and it was the one
+  thing on the menu with no hover state at all. The inversion itself comes from
+  .ps-hov-invert-dark; what belongs here is its dither canvas, which is drawn
+  for a near-black ground and reads as noise on the lavender fill, so it drops
+  out for the duration rather than sitting on top of the inverted strip.
+*/
+/*
+  Both halves are selected at [data-stage] button.<class> rather than at the
+  bare class, and deliberately so. base.css resets `[data-stage] button` at
+  (0,1,1), which outranks a plain `.ps-contact-strip` (0,1,0) and would leave
+  the strip transparent; and pinning the hover the same way means the
+  inversion beats the resting paint on specificity rather than on which
+  stylesheet main.ts happens to import last.
+
+  The pair is .ps-hov-invert-dark's, COLOR.nearBlack and COLOR.lavender
+  swapped. It is restated here instead of borrowing that class because
+  borrowing it would win or lose on source order alone.
+*/
+[data-stage] button.ps-contact-strip {
+  background: #0b0b0c;
+  color: #dfcbfa;
+}
+
+[data-stage] button.ps-contact-strip:hover,
+[data-stage] button.ps-contact-strip:focus-visible {
+  background: #dfcbfa;
+  color: #0b0b0c;
+}
+
+.ps-contact-strip canvas {
+  transition: opacity 150ms linear;
+}
+.ps-contact-strip:hover canvas,
+.ps-contact-strip:focus-visible canvas {
+  opacity: 0;
+}

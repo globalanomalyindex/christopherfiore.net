@@ -55,6 +55,14 @@ const BTN: Record<string, string> = {
   cursor: 'pointer',
 };
 
+/**
+ * BTN without its `background` / `color`, for controls whose paint lives in a
+ * stylesheet so a `:hover` rule can change it. An inline declaration outranks
+ * any class, so a control that spreads BTN and then wants a hover fill has to
+ * drop these two or the hover is silently a no-op.
+ */
+const { background: _btnBg, color: _btnInk, ...BTN_UNPAINTED } = BTN;
+
 /** Per-letter spans — the handle the glitch engine measures and swaps. */
 function word(text: string, extra?: Partial<CSSStyleDeclaration>): HTMLSpanElement[] {
   return letters(text).map((s) => {
@@ -652,23 +660,22 @@ function contactStrip(): HTMLElement {
         'border-right': `1px solid ${RULE.onRustMinor}`,
       }),
     },
-    el(
-      'span',
-      { style: css({ 'font-size': 13, 'letter-spacing': '.16em', color: COLOR.lavender }) },
-      '04',
-    ),
+    el('span', { style: css({ 'font-size': 13, 'letter-spacing': '.16em' }) }, '04'),
     el(
       'span',
       {
         style: css({
           'font-family': "'Karrik',sans-serif",
-          'font-size': 86,
-          'letter-spacing': '-.05em',
-          color: COLOR.lavender,
+          // 62 rather than the handoff's 86: the strip now names both things it
+          // opens, and "Contact + About me" is 18 characters where "Contact"
+          // was 7. Measured to fit the cell with room at either end.
+          'font-size': 62,
+          'letter-spacing': '-.04em',
           'line-height': '1',
+          'white-space': 'nowrap',
         }),
       },
-      ...word('Contact'),
+      ...word('Contact + About me'),
     ),
   );
 
@@ -691,7 +698,6 @@ function contactStrip(): HTMLElement {
         style: css({
           'font-size': 14,
           'letter-spacing': '.11em',
-          color: COLOR.lavender,
           'line-height': '2.1',
         }),
       },
@@ -712,18 +718,27 @@ function contactStrip(): HTMLElement {
       'data-intro': 'wipeX',
       'data-in-delay': 1300,
       'data-in-dur': 400,
-      'aria-label': 'Open Contact',
+      'aria-label': 'Open Contact and About me',
+      // The one control on the menu with no hover state. The channels get their
+      // own personalities; this is a plain strip, so it takes page 04's plain
+      // inversion. `color` moves here from the four inner spans, because a
+      // child that pins its own colour cannot be inverted by an ancestor.
+      class: 'ps-contact-strip',
       style: css({
-        ...BTN,
+        ...BTN_UNPAINTED,
         'clip-path': 'inset(0 100% 0 0)',
         flex: 'none',
         display: 'grid',
         'grid-template-columns': 'repeat(12,1fr)',
         'align-items': 'center',
         height: MENU.contactStripH,
-        background: COLOR.nearBlack,
+        // background and colour live in menu.css, NOT here: an inline style
+        // outranks a class rule, so declaring them inline would make the hover
+        // inversion a no-op. Same collision HOVER_CLASSES.md records for the
+        // page-03 hero.
         position: 'relative',
         overflow: 'hidden',
+        transition: 'background 150ms linear,color 150ms linear',
       }),
     },
     el('canvas', {
@@ -756,7 +771,6 @@ function contactStrip(): HTMLElement {
           'align-items': 'center',
           'font-size': 13,
           'letter-spacing': '.16em',
-          color: COLOR.lavender,
         }),
       },
       el('span', {}, 'Send a message'),

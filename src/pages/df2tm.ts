@@ -1,37 +1,36 @@
 /**
- * Page 04 subpage — the full background.
+ * Page 01 subpage — df2tm.
  *
- * A reading screen, built the way the chellbook case study is: title and a
- * jump index down the left, one native scroll container in the middle, and a
- * scannable credential column on the right. Geometry from ABOUT_PAGE in
- * `src/design/layout.ts`.
+ * The product-designs table lists df2tm as a row with no hosted demo to link
+ * to, because it is a plugin you install into your own Claude Code rather than
+ * a page you can visit. This screen is what that row opens instead.
  *
- * There is no imagery here and there are no boards, so this screen carries
- * none of chellbook's plate machinery. What it does share is the scroll
- * column's contract: the region is a real focusable `region` with tabindex 0,
- * so arrows, PageUp/PageDown, Home and End reach every word without a pointer,
- * and the native scrollbar is suppressed in favor of a 6px rust rail that is
- * an indicator, not a drag handle — the stage sits under a `transform:
- * scale()`, and every real way to scroll is already wired.
+ * It is the background screen's shape one channel over — title and jump index
+ * left, a scrolling prose column in the middle, a scannable column right — and
+ * shares its geometry (READER_PAGE) rather than restating it, because both are
+ * prose screens with no imagery. The one addition is the repository door in
+ * the title band, treated the way chellbook treats its two prototype doors: a
+ * real anchor, new tab, pinned where nothing can bury it, because "go get it"
+ * is the whole call to action for a plugin.
  *
- * The close control is the top-left cell, as PORT_CONTRACT non-negotiable 2
- * requires of every screen in this design.
+ * Strings come from `src/data/df2tm.ts`, which is transcribed from the repo's
+ * own README. The install commands and steering phrases are an interface
+ * contract — what a user literally types — and are never paraphrased here.
  */
 
 import { css, el, letters } from '../dom.ts';
 import { COLOR, rgba } from '../design/tokens.ts';
-import { READER_PAGE as AP } from '../design/layout.ts';
-import { ABOUT, ABOUT_SECTIONS, AT_A_GLANCE } from '../data/about.ts';
-import { PROFILE_LINKS, STUDIO } from '../data/studio.ts';
+import { READER_PAGE as RP } from '../design/layout.ts';
+import { DF2TM, DF2TM_GLANCE, DF2TM_SECTIONS } from '../data/df2tm.ts';
+import { STUDIO } from '../data/studio.ts';
 
 const KARRIK = "'Karrik',sans-serif";
 const MAJOR = rgba(COLOR.lavender, 0.28);
 const MINOR = rgba(COLOR.lavender, 0.2);
 
-const TEXT_H = AP.bandEnd - AP.text.y;
-const SCROLL_TOP = AP.secBarH + AP.secBarGap;
-/** right padding on the scroll region: clears the rail and gives it air */
-const SCROLL_PAD = AP.railW + 16;
+const TEXT_H = RP.bandEnd - RP.text.y;
+const SCROLL_TOP = RP.secBarH + RP.secBarGap;
+const SCROLL_PAD = RP.railW + 16;
 
 const two = (n: number): string => String(n).padStart(2, '0');
 
@@ -55,12 +54,7 @@ const microLabel = (text: string, opacity = '.6') =>
   el(
     'span',
     {
-      style: css({
-        display: 'block',
-        'font-size': 11.5,
-        'letter-spacing': '.22em',
-        opacity,
-      }),
+      style: css({ display: 'block', 'font-size': 11.5, 'letter-spacing': '.22em', opacity }),
     },
     text,
   );
@@ -72,8 +66,8 @@ function header(): HTMLElement {
     'button',
     {
       type: 'button',
-      'data-act': 'about-close',
-      'aria-label': 'Close the background, back to about and contact',
+      'data-act': 'df2tm-close',
+      'aria-label': 'Close df2tm, back to product designs',
       class: 'ps-hov-invert-dark',
       style: css({
         ...BTN,
@@ -117,7 +111,7 @@ function header(): HTMLElement {
         left: 0,
         right: 0,
         top: 0,
-        height: AP.headerH,
+        height: RP.headerH,
         display: 'grid',
         'grid-template-columns': 'repeat(12,1fr)',
         'border-bottom': `1px solid ${MAJOR}`,
@@ -126,9 +120,9 @@ function header(): HTMLElement {
       }),
     },
     close,
-    cell('04 · background', 3, '0 20px', true),
-    cell(STUDIO.name, 3, '0 20px', true),
-    cell(`${STUDIO.rev} · ${STUDIO.updated}`, 4, '0 56px 0 20px', false),
+    cell('01 · df2tm', 3, '0 20px', true),
+    cell(DF2TM.state, 3, '0 20px', true),
+    cell(STUDIO.rev, 4, '0 56px 0 20px', false),
   );
 }
 
@@ -137,8 +131,8 @@ function footer(): HTMLElement {
     'button',
     {
       type: 'button',
-      'data-act': 'about-close',
-      'aria-label': 'Back to about and contact',
+      'data-act': 'df2tm-close',
+      'aria-label': 'Back to product designs',
       class: 'ps-hov-invert-dark',
       style: css({
         ...BTN,
@@ -152,13 +146,16 @@ function footer(): HTMLElement {
       }),
     },
     el('span', { 'aria-hidden': 'true', style: css({ 'font-size': 19, 'line-height': '1' }) }, '←'),
-    'about + contact',
+    'product designs',
   );
 
-  const mail = el(
+  const repo = el(
     'a',
     {
-      href: `mailto:${STUDIO.email}`,
+      href: DF2TM.repo,
+      target: '_blank',
+      rel: 'noopener noreferrer',
+      'aria-label': `${DF2TM.repoLabel}, opens in a new tab`,
       class: 'ps-hov-invert-dark',
       style: css({
         ...BTN,
@@ -170,7 +167,7 @@ function footer(): HTMLElement {
         transition: 'background 150ms linear,color 150ms linear',
       }),
     },
-    STUDIO.email,
+    DF2TM.repoLabel,
     el('span', { 'aria-hidden': 'true', style: css({ 'font-size': 19, 'line-height': '1' }) }, '→'),
   );
 
@@ -186,7 +183,7 @@ function footer(): HTMLElement {
         left: 0,
         right: 0,
         bottom: 0,
-        height: AP.footerH,
+        height: RP.footerH,
         display: 'grid',
         'grid-template-columns': 'repeat(12,1fr)',
         'border-top': `1px solid ${MAJOR}`,
@@ -207,9 +204,9 @@ function footer(): HTMLElement {
           opacity: '.72',
         }),
       },
-      `${two(ABOUT_SECTIONS.length)} sections`,
+      'MIT · local state only',
     ),
-    mail,
+    repo,
   );
 }
 
@@ -221,17 +218,17 @@ function titleBlock(): HTMLElement[] {
       style: css({
         position: 'absolute',
         'z-index': '3',
-        left: AP.title.x,
-        top: AP.title.y,
+        left: RP.title.x,
+        top: RP.title.y,
         'transform-origin': '0 0',
         'font-family': KARRIK,
-        'font-size': AP.title.size,
-        'line-height': `${AP.title.lh}px`,
-        'letter-spacing': AP.title.track,
+        'font-size': RP.title.size,
+        'line-height': `${RP.title.lh}px`,
+        'letter-spacing': RP.title.track,
         'white-space': 'nowrap',
       }),
     },
-    ...letters('Background').map((s) => {
+    ...letters(DF2TM.name).map((s) => {
       s.style.display = 'inline-block';
       return s;
     }),
@@ -245,17 +242,18 @@ function titleBlock(): HTMLElement[] {
       'data-in-delay': 140,
       'data-in-dur': 320,
       style: css({
-        // the intro drives this from 0; the settled .72 lives on the inner span
-        // so the two are not fighting over one property
         opacity: '0',
         position: 'absolute',
-        left: AP.title.x,
-        top: AP.descriptorY,
+        left: RP.title.x,
+        // +14 on the shared descriptor line: "df2tm" in the alternate italic
+        // has a deep f-descender that crosses it, which "Background" (the only
+        // other user of this geometry) does not.
+        top: RP.descriptorY + 14,
         'font-size': 13,
         'letter-spacing': '.16em',
       }),
     },
-    el('span', { style: css({ opacity: '.72' }) }, ABOUT.descriptor),
+    el('span', { style: css({ opacity: '.78' }) }, `${DF2TM.expansion} · ${DF2TM.descriptor}`),
   );
 
   const rule = el('div', {
@@ -266,9 +264,9 @@ function titleBlock(): HTMLElement[] {
     style: css({
       'clip-path': 'inset(0 100% 0 0)',
       position: 'absolute',
-      left: AP.title.x,
-      right: AP.title.x,
-      top: AP.ruleY,
+      left: RP.title.x,
+      right: RP.title.x,
+      top: RP.ruleY,
       height: 1,
       background: MAJOR,
     }),
@@ -279,22 +277,22 @@ function titleBlock(): HTMLElement[] {
 
 /* ------------------------------------------------------------- jump index */
 
-function indexRow(sec: (typeof ABOUT_SECTIONS)[number], n: number): HTMLElement {
+function indexRow(sec: (typeof DF2TM_SECTIONS)[number], n: number): HTMLElement {
   return el(
     'button',
     {
       type: 'button',
-      'data-act': 'about-go',
-      'data-abrow': n,
+      'data-act': 'df2tm-go',
+      'data-dfrow': n,
       'aria-label': `Jump to ${sec.name}`,
       class: 'ps-hov-invert-dark',
       style: css({
         ...BTN,
         position: 'absolute',
         left: 0,
-        top: AP.indexRowsY - AP.index.y + n * AP.indexRowH,
+        top: RP.indexRowsY - RP.index.y + n * RP.indexRowH,
         width: '100%',
-        height: AP.indexRowH,
+        height: RP.indexRowH,
         display: 'flex',
         'align-items': 'center',
         gap: 14,
@@ -318,25 +316,47 @@ function indexRow(sec: (typeof ABOUT_SECTIONS)[number], n: number): HTMLElement 
   );
 }
 
-function indexColumn(): HTMLElement {
-  const links: (Node | string)[] = [];
-  PROFILE_LINKS.forEach((l, i) => {
-    if (i) links.push(el('br'));
-    links.push(
-      el(
-        'a',
-        {
-          href: l.href,
-          target: '_blank',
-          rel: 'noopener noreferrer',
-          'aria-label': `${l.label}, opens in a new tab`,
-          style: css({ color: 'inherit', 'text-decoration': 'none' }),
-        },
-        l.label,
-      ),
-    );
-  });
+/**
+ * The repository door. A plugin's call to action is "install it", so the link
+ * out is a control with weight rather than a line of body text — the same
+ * reasoning chellbook's two prototype doors are built on.
+ */
+function repoDoor(): HTMLElement {
+  return el(
+    'a',
+    {
+      href: DF2TM.repo,
+      target: '_blank',
+      rel: 'noopener noreferrer',
+      'aria-label': `Open the df2tm repository, ${DF2TM.repoLabel}, opens in a new tab`,
+      class: 'ps-hov-invert-dark',
+      'data-intro': 'wipeX',
+      'data-in-delay': 300,
+      'data-in-dur': 340,
+      style: css({
+        ...BTN,
+        'clip-path': 'inset(0 100% 0 0)',
+        position: 'absolute',
+        left: 0,
+        top: RP.indexFootY - RP.index.y,
+        width: '100%',
+        height: 62,
+        display: 'flex',
+        'align-items': 'center',
+        'justify-content': 'space-between',
+        padding: '0 14px',
+        border: `1px solid ${MAJOR}`,
+        'font-size': 12,
+        'letter-spacing': '.14em',
+        transition: 'background 150ms linear,color 150ms linear',
+      }),
+    },
+    'the repository',
+    el('span', { 'aria-hidden': 'true', style: css({ 'font-size': 18, 'line-height': '1' }) }, '↗'),
+  );
+}
 
+function indexColumn(): HTMLElement {
   return el(
     'div',
     {
@@ -346,30 +366,15 @@ function indexColumn(): HTMLElement {
       style: css({
         'clip-path': 'inset(0 100% 0 0)',
         position: 'absolute',
-        left: AP.index.x,
-        top: AP.index.y,
-        width: AP.index.w,
-        height: AP.bandEnd - AP.index.y,
+        left: RP.index.x,
+        top: RP.index.y,
+        width: RP.index.w,
+        height: RP.bandEnd - RP.index.y,
       }),
     },
     microLabel('sections'),
-    ...ABOUT_SECTIONS.map(indexRow),
-    el(
-      'div',
-      {
-        style: css({
-          position: 'absolute',
-          left: 0,
-          top: AP.indexFootY - AP.index.y,
-          width: '100%',
-          'font-size': 12,
-          'letter-spacing': '.1em',
-          'line-height': '1.9',
-          opacity: '.62',
-        }),
-      },
-      ...links,
-    ),
+    ...DF2TM_SECTIONS.map(indexRow),
+    repoDoor(),
   );
 }
 
@@ -385,10 +390,10 @@ function glanceColumn(): HTMLElement {
       style: css({
         'clip-path': 'inset(0 100% 0 0)',
         position: 'absolute',
-        left: AP.glance.x,
-        top: AP.glance.y,
-        width: AP.glance.w,
-        height: AP.bandEnd - AP.glance.y,
+        left: RP.glance.x,
+        top: RP.glance.y,
+        width: RP.glance.w,
+        height: RP.bandEnd - RP.glance.y,
       }),
     },
     microLabel('at a glance'),
@@ -398,14 +403,14 @@ function glanceColumn(): HTMLElement {
         style: css({
           position: 'absolute',
           left: 0,
-          top: AP.glanceRowsY - AP.glance.y,
+          top: RP.glanceRowsY - RP.glance.y,
           width: '100%',
           margin: '0',
           padding: '0',
           'list-style': 'none',
         }),
       },
-      ...AT_A_GLANCE.map((r) =>
+      ...DF2TM_GLANCE.map((r) =>
         el(
           'li',
           { style: css({ padding: '11px 0', 'border-bottom': `1px solid ${MINOR}` }) },
@@ -415,10 +420,12 @@ function glanceColumn(): HTMLElement {
             {
               style: css({
                 margin: '5px 0 0',
-                'font-family': KARRIK,
-                'font-size': 15,
+                // the install lines are literal commands — set them as such
+                'font-family': r.value.startsWith('/') ? 'ui-monospace,monospace' : KARRIK,
+                'font-size': r.value.startsWith('/') ? 13 : 15,
                 'line-height': '1.4',
                 'text-wrap': 'pretty',
+                'word-break': r.value.startsWith('/') ? 'break-all' : 'normal',
               }),
             },
             r.value,
@@ -435,11 +442,11 @@ function textSections(): HTMLElement[] {
   const lead = el(
     'section',
     {
-      'data-absec': 0,
-      'data-absec-name': 'the short version',
+      'data-dfsec': 0,
+      'data-dfsec-name': 'the idea',
       style: css({ 'padding-bottom': 42 }),
     },
-    microLabel('the short version'),
+    microLabel('the idea'),
     el(
       'p',
       {
@@ -452,17 +459,31 @@ function textSections(): HTMLElement[] {
           'text-wrap': 'pretty',
         }),
       },
-      ABOUT.lede,
+      DF2TM.standfirst,
+    ),
+    el(
+      'p',
+      {
+        style: css({
+          margin: '16px 0 0',
+          'font-family': KARRIK,
+          'font-size': 17,
+          'line-height': '1.55',
+          opacity: '.88',
+          'text-wrap': 'pretty',
+        }),
+      },
+      DF2TM.question,
     ),
   );
 
-  const rest = ABOUT_SECTIONS.map((sec, i) =>
+  const rest = DF2TM_SECTIONS.map((sec, i) =>
     el(
       'section',
       {
-        // +1: the standfirst above is section 00 of the readout
-        'data-absec': i + 1,
-        'data-absec-name': sec.name,
+        // +1: the standfirst above is section 0 of the scroll column
+        'data-dfsec': i + 1,
+        'data-dfsec-name': sec.name,
         style: css({ 'padding-bottom': 42 }),
       },
       microLabel(`${two(i + 1)} · ${sec.name}`),
@@ -491,14 +512,13 @@ function textColumn(): HTMLElement {
   const bar = el(
     'div',
     {
-      // duplicates the headings a screen reader already walks
       'aria-hidden': 'true',
       style: css({
         position: 'absolute',
         left: 0,
         top: 0,
         width: '100%',
-        height: AP.secBarH,
+        height: RP.secBarH,
         display: 'flex',
         'align-items': 'center',
         'border-bottom': `1px solid ${MINOR}`,
@@ -509,16 +529,16 @@ function textColumn(): HTMLElement {
         'white-space': 'nowrap',
       }),
     },
-    el('span', { 'data-absecat': true }, ''),
+    el('span', { 'data-dfsecat': true }, ''),
   );
 
   const region = el(
     'div',
     {
-      'data-abscroll': true,
+      'data-dfscroll': true,
       tabindex: 0,
       role: 'region',
-      'aria-label': 'Full background, christopher robin fiore',
+      'aria-label': 'df2tm, what it is and how it works',
       style: css({
         position: 'absolute',
         inset: '0',
@@ -541,13 +561,13 @@ function textColumn(): HTMLElement {
         right: 0,
         top: 0,
         bottom: 0,
-        width: AP.railW,
+        width: RP.railW,
         background: 'rgba(223,203,250,.16)',
         'pointer-events': 'none',
       }),
     },
     el('span', {
-      'data-abthumb': true,
+      'data-dfthumb': true,
       style: css({
         position: 'absolute',
         left: 0,
@@ -569,18 +589,16 @@ function textColumn(): HTMLElement {
       style: css({
         'clip-path': 'inset(0 100% 0 0)',
         position: 'absolute',
-        left: AP.text.x,
-        top: AP.text.y,
-        width: AP.text.w,
+        left: RP.text.x,
+        top: RP.text.y,
+        width: RP.text.w,
         height: TEXT_H,
       }),
     },
     bar,
     el(
       'div',
-      {
-        style: css({ position: 'absolute', left: 0, right: 0, top: SCROLL_TOP, bottom: 0 }),
-      },
+      { style: css({ position: 'absolute', left: 0, right: 0, top: SCROLL_TOP, bottom: 0 }) },
       region,
       rail,
     ),
@@ -614,7 +632,7 @@ export function build(): HTMLElement {
   const chrome = el(
     'div',
     {
-      'data-abchrome': true,
+      'data-dfchrome': true,
       style: css({ position: 'absolute', inset: '0', 'z-index': '3', opacity: '0' }),
     },
     header(),
@@ -628,11 +646,11 @@ export function build(): HTMLElement {
   return el(
     'div',
     {
-      'data-about': true,
-      'data-screen-label': 'Full background',
+      'data-df2tm': true,
+      'data-screen-label': 'df2tm',
       role: 'dialog',
       'aria-modal': 'true',
-      'aria-label': `The full background of ${STUDIO.name}`,
+      'aria-label': `${DF2TM.name}: ${DF2TM.expansion}, ${DF2TM.descriptor}`,
       style: css({
         position: 'absolute',
         inset: '0',

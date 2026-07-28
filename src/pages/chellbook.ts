@@ -22,7 +22,7 @@
  *                    caveats in a scrolling column with its own rust rail —
  *                    a real focusable region, nothing focusable inside it.
  *
- * CHELLBOOK'S LANGUAGE IS A SAFETY BOUNDARY, NOT COPY. It is a coeliac product,
+ * CHELLBOOK'S LANGUAGE IS A SAFETY BOUNDARY, NOT COPY. It is a celiac product,
  * its own handoff calls several of its rules "legal constraints, not
  * preferences", and it is concept-stage: no app, no logo, six named undesigned
  * questions. Every string on this screen is printed verbatim from
@@ -55,7 +55,7 @@
  * clip-path grow, dither veil and pulsing settle the pages use.
  */
 
-import { asset, css, el } from '../dom.ts';
+import { asset, css, el, letters } from '../dom.ts';
 import { COLOR, LIGHTS, RULE } from '../design/tokens.ts';
 import { MODULE, PAGE3, STAGE } from '../design/layout.ts';
 import {
@@ -472,6 +472,9 @@ function titleBlock(): HTMLElement[] {
   const h2 = el(
     'h2',
     {
+      // see the note on evidence.ts's title: subpage titles are marked
+      // separately so navParts()'s [data-ptitle] query cannot find them
+      'data-sptitle': true,
       'data-intro': 'wipeX',
       'data-in-delay': 40,
       'data-in-dur': 420,
@@ -489,7 +492,10 @@ function titleBlock(): HTMLElement[] {
         'white-space': 'nowrap',
       }),
     },
-    CHELL.name,
+    ...letters(CHELL.name).map((s) => {
+      s.style.display = 'inline-block';
+      return s;
+    }),
   );
 
   const descriptor = el(

@@ -37,6 +37,7 @@ import { CHELL_BOARDS } from '../data/chellbook.ts';
 import { dIn, dfxSeq, killAnim, playIn } from './dither.ts';
 import { frostFor } from './frost.ts';
 import { locked, state } from './state.ts';
+import { subtitleIn, subtitleOut, subtitleReset } from './glitch.ts';
 import { REDUCED_FADE, resetVeil, veilOpen, veilRest } from './transitions.ts';
 
 const { G, OUT, LAG, SH, easeOpen, easeClose } = TIMING;
@@ -45,6 +46,13 @@ const { G, OUT, LAG, SH, easeOpen, easeClose } = TIMING;
 const HOLD = 260;
 /** Settle. The nextPage weight (420), not the menu→page weight (680). */
 const SETTLE = 420;
+/**
+ * When the title takes the alternate face, measured from the open. After the
+ * chrome has arrived (G + HOLD) and its staged wipe has run, so the swap is
+ * seen rather than hidden under a clip-path.
+ */
+const TITLE_ALT = G + HOLD + SETTLE + 120;
+
 /** Blur radius for the plate's dither-in — 15 suits a 581.8 × 556 box. */
 const PLATE_MB = 15;
 /** Shortest the text column's rail thumb is allowed to get. */
@@ -324,6 +332,7 @@ export function openChellbook(stage: HTMLElement, trigger: HTMLElement): void {
   // layout is real, so the rail and the readout are right from frame one
   wireScroll(screen);
   resetScroll(screen);
+  subtitleIn(screen, TITLE_ALT);
 
   // measured after display:block, so the boxes are real
   const clip0 = clipFrom(page, trigger);
@@ -394,6 +403,7 @@ function finishClose(stage: HTMLElement, P: Parts, trigger: HTMLElement | null):
   [screen, plate, chrome, cq].forEach((el) => killAnim(el));
   if (plate) plate.style.filter = '';
   resetVeil(cq);
+  subtitleReset(screen);
 
   if (P.body) {
     P.body.removeAttribute('inert');
@@ -416,6 +426,7 @@ export function closeChellbook(stage: HTMLElement): void {
   const s = state(stage);
   s.nav = true;
 
+  subtitleOut(screen);
   const trigger = FROM.get(screen) || null;
   const clip0 =
     trigger && trigger.isConnected ? clipFrom(page, trigger) : CLIP.get(screen) || FULL;

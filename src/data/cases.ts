@@ -1,9 +1,9 @@
 /**
  * Channel 01 · Product designs.
  *
- * Seven cases transcribed from devkit `data/projects.json`. The eighth devkit
- * record — branchial lateral spine — lives on channel 03 (Competizione)
- * because it is automotive work.
+ * Eight cases transcribed from devkit `data/projects.json`, plus df2tm, which
+ * postdates the devkit. The devkit's branchial lateral spine record
+ * lives on channel 03 (Competizione) instead, because it is automotive work.
  *
  * `evidence` carries the devkit's `evidenceStatus` verbatim. "simulated" and
  * "tested logic" are not synonyms for "built"; keep them distinct.
@@ -31,7 +31,7 @@ export const CASES: CaseRecord[] = [
     id: 'chellbook',
     idx: '02',
     name: 'chellbook',
-    line: 'a recipe made safe to eat, and the label check that follows it to the shelf',
+    line: 'AI-based iOS app concept for celiac food safety',
     year: '2026',
     discipline: 'product design, iOS',
     // Concept-stage: 30 designed screens and two prototypes, no shipped app.
@@ -78,8 +78,26 @@ export const CASES: CaseRecord[] = [
     source: 'https://github.com/globalanomalyindex/adhd-mode-linkedin',
   },
   {
-    id: 'campeon',
+    id: 'df2tm',
     idx: '05',
+    name: 'df2tm',
+    line: 'a learning layer for claude code that teaches the concept behind the work',
+    year: '2026',
+    discipline: 'product design, developer tools',
+    evidence: 'built',
+    image: 'projects/live/df2tm.webp',
+    imageAlt:
+      "The df2tm repository showing a teaching aside in context: a user's request, the fix Claude made, and the concept it taught",
+    caption: 'df2tm · shipped claude code plugin · 2026',
+    // No hosted demo — it is a plugin you install into your own Claude Code.
+    // The subpage carries the repository link as a real anchor.
+    href: null,
+    source: 'https://github.com/globalanomalyindex/df2tm',
+    subpage: 'df2tm',
+  },
+  {
+    id: 'campeon',
+    idx: '06',
     name: 'campeón',
     line: 'four aim drills converge on one range without hiding disagreement',
     year: '2026',
@@ -94,7 +112,7 @@ export const CASES: CaseRecord[] = [
   },
   {
     id: 'chickpea',
-    idx: '06',
+    idx: '07',
     name: 'chickpea',
     line: 'a seeded studio that exposes the grid, palette and math behind output',
     year: '2026',
@@ -116,7 +134,7 @@ export const CASES: CaseRecord[] = [
   },
   {
     id: 'wildcard',
-    idx: '07',
+    idx: '08',
     name: 'wildcard',
     line: 'freeze the problem, draw from outside, keep only what survives',
     year: '2026',
@@ -132,7 +150,7 @@ export const CASES: CaseRecord[] = [
   },
   {
     id: 'dither',
-    idx: '08',
+    idx: '09',
     name: 'dither',
     line: 'a dependency-free studio for dithering, grain, palette and paint',
     year: '2026',

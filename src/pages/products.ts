@@ -31,6 +31,7 @@ import { asset, css, el, letters } from '../dom.ts';
 import { COLOR, RULE, rgba } from '../design/tokens.ts';
 import { MODULE, MOTION_SHEET, PAGE1 } from '../design/layout.ts';
 import * as chellbookPage from './chellbook.ts';
+import * as df2tmPage from './df2tm.ts';
 import {
   CASES,
   CASES_THESIS,
@@ -564,14 +565,19 @@ function motionBand(n: number): HTMLElement {
 /**
  * The header's inventory cell, derived rather than typed out.
  *
- * It names the split instead of a flat count, because the eight rows are not
- * eight of the same thing: seven open a deployed demo, one opens a case study
- * for work that is concept-stage and has no app to open. "8 cases" would have
- * been true and useless; "8 live" would have been false.
+ * It names the split instead of a flat count, because the rows are not all the
+ * same thing: most open a deployed demo, the rest open a case study in this
+ * stage. "9 cases" would be true and useless; "9 live" would be false.
+ *
+ * The second group is counted by what it DOES, not by how finished it is. It
+ * read "concept" while chellbook was the only member, and that stopped being
+ * true when df2tm joined it: df2tm is a shipped plugin with no hosted page,
+ * not concept-stage work. What the two share is that there is nothing to
+ * navigate to, so the row opens a screen instead.
  */
 const DEPLOYED = CASES.filter((c) => str(c.href) !== null).length;
-const CONCEPT = CASES.length - DEPLOYED;
-const INVENTORY = `${DEPLOYED} live, ${CONCEPT} concept, one motion archive`;
+const STUDIES = CASES.length - DEPLOYED;
+const INVENTORY = `${DEPLOYED} live, ${STUDIES} case studies, one motion archive`;
 
 function header(): HTMLElement {
   const close = el(
@@ -933,5 +939,7 @@ export function build(): HTMLElement {
       it rather than arriving as a separate route.
     */
     chellbookPage.build(),
+    // the df2tm row's screen, mounted the same way and for the same reasons
+    df2tmPage.build(),
   );
 }

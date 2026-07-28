@@ -250,6 +250,43 @@ The credentials in `src/data/about.ts` are checkable claims about a real person
 and several are narrower than their nearest paraphrase. That header comment is
 a claim boundary in the same way chellbook's is.
 
+### `src/pages/df2tm.ts` + `src/runtime/df2tm.ts`
+Channel 01's second in-stage screen, opened from the df2tm row
+(`data-act="df2tm"`). Same shape as the about screen and sharing its
+`READER_PAGE` geometry, because both are prose with no imagery.
+
+```ts
+export function openDf2tm(stage: HTMLElement, trigger: HTMLElement): void;
+export function closeDf2tm(stage: HTMLElement): void;
+export function goDf2tm(stage: HTMLElement, n: number): void;
+export function df2tmOpen(stage: HTMLElement): boolean;
+```
+
+The same standfirst-offset rule applies as on the about screen: index row `n`
+is scroll section `n + 1`, and the readout does not number the standfirst.
+
+### Subpage titles
+`glitch.ts` exports `subtitleIn` / `subtitleOut` / `subtitleReset`, which run
+the page titles' Dessign Maison swap on a subpage title. They find it by
+`[data-sptitle]`, **not** `[data-ptitle]`: every subpage is a child of the page
+it covers, and `navParts()` locates a page's own title with a document-order
+query, so sharing the marker would let a subpage's title be mistaken for its
+host page's.
+
+### Adding a screen
+Four places have to learn about a new full-stage screen, and three of them fail
+silently if missed:
+
+1. `runtime/actions.ts` — route its `data-act`, add it to the `close` chain and
+   to Escape, and make sure the arrow keys do not fall through to `nextPage`
+   and change the channel underneath an open modal.
+2. `main.ts` — add it to the `syncPageA11y` selector, or the letterbox backdrop
+   keeps painting the ground of the page underneath.
+3. `runtime/frost.ts` — add it to `SCREEN_SEL`, or its canvas is never
+   recognised as a screen and the coverage test cannot park what it covers.
+4. `mobile.ts` — a row with `subpage` is filtered out of the case table, so
+   without an inline section its content is simply absent on a phone.
+
 ### `src/pages/*.ts`
 `menu.ts`, `products.ts`, `paintings.ts`, `competizione.ts`, `contact.ts` —
 each exports `build(): HTMLElement` returning the page's subtree with all

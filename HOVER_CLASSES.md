@@ -123,3 +123,27 @@ loops (`animation-duration:.01ms !important; animation-iteration-count:1
 !important`). That block only stills CSS keyframes — skipping the dither/FLIP
 choreography, stopping the ambient glitch and freezing the canvases is wired in
 the runtime off `state(stage).reduced`.
+
+## `.ps-contact-strip` — the menu's contact strip
+
+NEW, no prototype equivalent. The strip was the one control on the menu with no
+hover state at all: the three channels have their own personalities, and this
+had nothing. It takes the same inversion page 04's controls take (`#DFCBFA`
+fill, `#0B0B0C` ink) and fades out its dither canvas for the duration, because
+that canvas is drawn for a near-black ground and reads as noise on a light one.
+
+It does **not** reuse `.ps-hov-invert-dark`. Two collisions forced that:
+
+1. `[data-stage] button, [data-stage] a` in base.css resets `background` at
+   specificity (0,1,1), which outranks any bare class, so the resting paint has
+   to be selected at `[data-stage] button.ps-contact-strip` (0,2,1).
+2. With the resting paint at (0,2,1), `.ps-hov-invert-dark:hover` (0,2,0) loses
+   to it, so the hover is pinned the same way at (0,3,1).
+
+Both the paint and the inversion therefore live in `menu.css`, and neither
+depends on the order `main.ts` imports stylesheets in.
+
+The strip also spreads `BTN_UNPAINTED` rather than `BTN`: `BTN` declares
+`background: transparent` and `color: inherit` inline, and an inline
+declaration outranks every class, so a control that wants a hover fill must
+drop them.

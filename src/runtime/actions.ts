@@ -29,6 +29,7 @@ import {
   stepChellbook,
 } from './chellbook';
 import { aboutOpen, closeAbout, goAbout, openAbout } from './about';
+import { closeDf2tm, df2tmOpen, goDf2tm, openDf2tm } from './df2tm';
 import { closePage, nextPage, openPage, runIntro } from './transitions';
 import { locked, state } from './state';
 
@@ -172,6 +173,7 @@ export function bindActions(stage: HTMLElement): void {
         if (state(stage).evidence !== null) closeEvidence(stage);
         else if (chellbookOpen(stage)) closeChellbook(stage);
         else if (aboutOpen(stage)) closeAbout(stage);
+        else if (df2tmOpen(stage)) closeDf2tm(stage);
         else closePage(stage);
         break;
       case 'evidence':
@@ -199,6 +201,16 @@ export function bindActions(stage: HTMLElement): void {
         break;
       case 'chellbook-step':
         stepChellbook(stage, num(t, 'data-step'));
+        break;
+      case 'df2tm':
+        // the df2tm row — the screen grows out of the row that opened it
+        openDf2tm(stage, t);
+        break;
+      case 'df2tm-close':
+        closeDf2tm(stage);
+        break;
+      case 'df2tm-go':
+        goDf2tm(stage, num(t, 'data-dfrow'));
         break;
       case 'about':
         // page 04's "read the full background" — the screen grows out of it
@@ -322,6 +334,11 @@ export function bindActions(stage: HTMLElement): void {
         closeAbout(stage);
         return;
       }
+      if (df2tmOpen(stage)) {
+        e.preventDefault();
+        closeDf2tm(stage);
+        return;
+      }
       if (s.open === null) return;
       e.preventDefault();
       closePage(stage);
@@ -346,7 +363,7 @@ export function bindActions(stage: HTMLElement): void {
          still load-bearing: without it they would fall through to nextPage and
          change the channel underneath an open modal. Not prevented — the arrows
          belong to whatever the visitor has focused. */
-      if (aboutOpen(stage)) return;
+      if (aboutOpen(stage) || df2tmOpen(stage)) return;
       // Only meaningful with a page open — on the menu the arrows belong to
       // the browser (and to whatever the user has focused).
       if (s.open === null) return;

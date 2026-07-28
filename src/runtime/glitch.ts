@@ -47,6 +47,8 @@ interface Meta {
   lsT?: number;
   /** glitchFont's pending timers, cleared when a new run starts */
   gt?: number[];
+  /** a subpage title's pending swap-to-alternate, cleared if it closes first */
+  spT?: number;
   /** the word picked out of a hover target */
   hw?: HTMLElement;
   /** original text of an intro line, so a replay can rebuild it */
@@ -619,6 +621,63 @@ function charsOf(line: HTMLElement): HTMLElement[] {
  * while a page is open; that flag is read from `state(stage)`, never mirrored.
  * A no-op under reduced motion.
  */
+/* ------------------------------------------------------- subpage titles */
+
+/*
+ * A page title takes the alternate face on the way in and hands it back on the
+ * way out — `transitions.ts` drives that. The three subpages (the Kona N case
+ * study, chellbook, the background) are titled screens in the same hierarchy
+ * and were the only ones staying on Karrik throughout, so they run the same
+ * swap through the trio below.
+ *
+ * They are found by `[data-sptitle]`, deliberately not `[data-ptitle]`: every
+ * subpage is a child of the page it covers, and `navParts()` locates a page's
+ * own title with a document-order query. Sharing the marker would let a
+ * subpage's title be mistaken for its host page's.
+ *
+ * The pending swap is held per title so a screen closed mid-open cannot land
+ * its glitch on a title that is already walking back to Karrik.
+ */
+
+const sptitleOf = (screen: HTMLElement): HTMLElement | null =>
+  screen.querySelector<HTMLElement>('[data-sptitle]');
+
+/**
+ * Swap a subpage's title to the alternate face, `delay` ms from now — the
+ * caller passes the point in its own choreography where the title has arrived.
+ * Reduced motion lands on the alternate at once, with no walk, exactly as
+ * `openPage` does.
+ */
+export function subtitleIn(screen: HTMLElement, delay: number): void {
+  const t = sptitleOf(screen);
+  if (!t) return;
+  const m = meta(t);
+  window.clearTimeout(m.spT);
+  resetTitleFont(t);
+  if (isReduced(t)) {
+    glitchFont(t, true, 0, true);
+    return;
+  }
+  m.spT = window.setTimeout(() => glitchFont(t, true), delay);
+}
+
+/** Walk the title back to Karrik as the screen closes. 26ms/letter, as pages. */
+export function subtitleOut(screen: HTMLElement): void {
+  const t = sptitleOf(screen);
+  if (!t) return;
+  const m = meta(t);
+  window.clearTimeout(m.spT);
+  if (!isReduced(t)) glitchFont(t, false, 26);
+}
+
+/** Hard reset once a close has finished, so a re-open starts clean. */
+export function subtitleReset(screen: HTMLElement): void {
+  const t = sptitleOf(screen);
+  if (!t) return;
+  window.clearTimeout(meta(t).spT);
+  resetTitleFont(t);
+}
+
 export function ambientGlitch(stage: HTMLElement): void {
   stopAmbientGlitch(stage);
   if (state(stage).reduced) return;

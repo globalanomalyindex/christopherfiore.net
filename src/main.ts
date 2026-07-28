@@ -38,7 +38,7 @@ const OPAQUE = (c: string): boolean => !!c && c !== 'rgba(0, 0, 0, 0)' && c !== 
 function paintBackdrop(stage: HTMLElement): void {
   const shown = (n: HTMLElement) => getComputedStyle(n).display !== 'none';
   const top =
-    qq(stage, '[data-chellbook],[data-evidence],[data-about]').find(shown) ??
+    qq(stage, '[data-chellbook],[data-evidence],[data-about],[data-df2tm]').find(shown) ??
     qq(stage, '[data-page]').find(shown) ??
     stage.querySelector<HTMLElement>('[data-menu]');
 
@@ -104,7 +104,7 @@ function syncPageA11y(stage: HTMLElement): void {
   for (const page of pages) obs.observe(page, { attributes: true, attributeFilter: ['style'] });
   // The two case-study screens sit inside a page and toggle independently, so
   // they need watching too or the backdrop keeps the page's ground under them.
-  for (const sub of qq(stage, '[data-chellbook],[data-evidence],[data-about]')) {
+  for (const sub of qq(stage, '[data-chellbook],[data-evidence],[data-about],[data-df2tm]')) {
     obs.observe(sub, { attributes: true, attributeFilter: ['style'] });
   }
 }

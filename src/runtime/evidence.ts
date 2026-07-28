@@ -32,6 +32,7 @@ import { EV_SHEETS, HERO, SYSTEMS, sheetForImage } from '../data/competizione.ts
 import { dIn, dfxSeq, killAnim, playIn } from './dither.ts';
 import { frostFor } from './frost.ts';
 import { locked, state } from './state.ts';
+import { subtitleIn, subtitleOut, subtitleReset } from './glitch.ts';
 import { REDUCED_FADE, resetVeil, veilOpen, veilRest } from './transitions.ts';
 
 const { G, OUT, LAG, SH, easeOpen, easeClose } = TIMING;
@@ -40,6 +41,13 @@ const { G, OUT, LAG, SH, easeOpen, easeClose } = TIMING;
 const HOLD = 260;
 /** Settle. The nextPage weight (420), not the menu→page weight (680). */
 const SETTLE = 420;
+/**
+ * When the title takes the alternate face, measured from the open. After the
+ * chrome has arrived (G + HOLD) and its staged wipe has run, so the swap is
+ * seen rather than hidden under a clip-path.
+ */
+const TITLE_ALT = G + HOLD + SETTLE + 120;
+
 /** Blur radius for the plate's dither-in — 17 suits a 945 × 580 box. */
 const PLATE_MB = 17;
 /** Shortest the text column's rail thumb is allowed to get. */
@@ -297,6 +305,7 @@ export function openEvidence(stage: HTMLElement, trigger: HTMLElement): void {
 
   [viewer, plate, chrome, cq].forEach((el) => killAnim(el));
   viewer.style.display = 'block';
+  subtitleIn(viewer, TITLE_ALT);
   if (plate) plate.style.filter = '';
   showSheet(P, n, false);
   // measurable now that the screen has a box; the chrome's opacity is 0 but
@@ -373,6 +382,7 @@ function finishClose(stage: HTMLElement, P: Parts, trigger: HTMLElement | null):
   [viewer, plate, chrome, cq].forEach((el) => killAnim(el));
   if (plate) plate.style.filter = '';
   resetVeil(cq);
+  subtitleReset(viewer);
 
   if (P.body) {
     P.body.removeAttribute('inert');
@@ -396,6 +406,7 @@ export function closeEvidence(stage: HTMLElement): void {
   const { viewer, page, plate, chrome, cq } = P;
   s.nav = true;
 
+  subtitleOut(viewer);
   const trigger = FROM.get(viewer) || null;
   const clip0 =
     trigger && trigger.isConnected ? clipFrom(page, trigger) : CLIP.get(viewer) || FULL;
