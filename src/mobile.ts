@@ -723,7 +723,7 @@ function competizioneSection(): HTMLElement {
 /* ------------------------------------------------------------------ 04 */
 
 /**
- * 04 — about and contact.
+ * 04 — contact and about me.
  *
  * The wide stage puts the full background behind a control, because a fixed
  * 1080px screen has nowhere to put 700 words. This view is a document that
@@ -736,7 +736,7 @@ function competizioneSection(): HTMLElement {
 function aboutContactSection(): HTMLElement {
   return section(
     '04',
-    'About me + contact',
+    'Contact + About me',
     STUDIO.location,
     el('p', { class: 'm-stand' }, ABOUT.lede),
     el('a', { class: 'm-email', href: `mailto:${STUDIO.email}` }, STUDIO.email),

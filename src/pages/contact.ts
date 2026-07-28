@@ -1,5 +1,5 @@
 /**
- * Screen 5 · Page 04 — About me + contact.
+ * Screen 5 · Page 04 — Contact + About me.
  *
  * Near-black ground, lavender ink, one quiet dither canvas at full rest
  * opacity. Geometry from PAGE4 in `src/design/layout.ts`.
@@ -111,7 +111,7 @@ function header(): HTMLElement {
       }),
     },
     close,
-    cell('04 · about + contact', 3, '0 20px', true),
+    cell('04 · contact + about me', 3, '0 20px', true),
     cell('open for 2026', 3, '0 20px', true),
     cell(STUDIO.rev, 4, '0 56px 0 20px', false),
   );
@@ -318,12 +318,12 @@ export function build(): HTMLElement {
     },
     // two lines, set the way page 01 sets "Product / designs" — one letters()
     // run per line so the intro's per-letter flash still walks the whole title
-    ...letters('About me').map((s) => {
+    ...letters('Contact').map((s) => {
       s.style.display = 'inline-block';
       return s;
     }),
     el('br'),
-    ...letters('+ contact').map((s) => {
+    ...letters('+ About me').map((s) => {
       s.style.display = 'inline-block';
       return s;
     }),
@@ -477,9 +477,9 @@ export function build(): HTMLElement {
     'section',
     {
       'data-page': 4,
-      'data-screen-label': 'Page 04 about and contact',
+      'data-screen-label': 'Page 04 contact and about me',
       role: 'region',
-      'aria-label': 'About and contact',
+      'aria-label': 'Contact and about me',
       'aria-hidden': 'true',
       inert: true,
       style: css({

@@ -184,9 +184,9 @@ export const EVIDENCE = {
 
 /** Page 04 · Contact. All handoff. */
 /**
- * Page 04 — about + contact.
+ * Page 04 — contact + about me.
  *
- * The title is two lines now ("About me" / "+ contact"), so this page takes
+ * The title is two lines now ("Contact" / "+ About me"), so this page takes
  * page 01's composition rather than its own former one: a stacked title down
  * the left with the identity block under it, a prose panel in the right column
  * on page 01's own `panel.x`, and the field/value table full width underneath.

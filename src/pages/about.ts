@@ -73,7 +73,7 @@ function header(): HTMLElement {
     {
       type: 'button',
       'data-act': 'about-close',
-      'aria-label': 'Close the background, back to about and contact',
+      'aria-label': 'Close the background, back to contact and about me',
       class: 'ps-hov-invert-dark',
       style: css({
         ...BTN,
@@ -138,7 +138,7 @@ function footer(): HTMLElement {
     {
       type: 'button',
       'data-act': 'about-close',
-      'aria-label': 'Back to about and contact',
+      'aria-label': 'Back to contact and about me',
       class: 'ps-hov-invert-dark',
       style: css({
         ...BTN,
@@ -152,7 +152,7 @@ function footer(): HTMLElement {
       }),
     },
     el('span', { 'aria-hidden': 'true', style: css({ 'font-size': 19, 'line-height': '1' }) }, '←'),
-    'about + contact',
+    'contact + about me',
   );
 
   const mail = el(
