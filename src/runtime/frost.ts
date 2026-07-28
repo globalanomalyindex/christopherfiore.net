@@ -122,8 +122,16 @@ interface Frost {
   vc: number;
   off: boolean;
   live: boolean;
+  /**
+   * The screen this canvas belongs to — the menu, a page, or a subpage. Used by
+   * the coverage test to ask "is my own screen still the one on top here".
+   */
+  screen: HTMLElement | null;
   tweens: Map<string, number>;
 }
+
+/** Everything that can be covered, as a unit, by something drawn over it. */
+const SCREEN_SEL = '[data-evidence],[data-chellbook],[data-about],[data-page],[data-menu]';
 
 const HANDLES = new WeakMap<HTMLCanvasElement, FrostHandle>();
 const FROSTS = new WeakMap<HTMLCanvasElement, Frost>();
@@ -241,6 +249,45 @@ function reset(f: Frost): void {
 
 /* ------------------------------------------------------------------- ticker */
 
+/**
+ * Is this canvas buried under another screen?
+ *
+ * Asked by hit-testing the canvas's own centre rather than by reading which
+ * screens are `display:block`, and that distinction is the whole point. A page
+ * is displayed from frame one of its opening transition, but for the next
+ * ~1.3s it is a growing clip-path with the menu plainly visible around it —
+ * freezing the menu's field then would be a visible regression. `clip-path`
+ * clips hit testing too, so this answers "is something actually drawn over me
+ * *here*, right now", and a screen resumes and stops on its own as the
+ * choreography uncovers and covers it. No transition has to remember to tell
+ * us, which is the class of bug this would otherwise invite.
+ *
+ * Sampling each canvas's own centre, not the viewport's, matters for the
+ * menu: its contact strip sits at the bottom of the stage and is covered at a
+ * different moment than its channel rows.
+ *
+ * What is compared is which screen *owns* the hit, not whether this screen
+ * contains it. Subpages are children of the page they cover — the evidence
+ * viewer lives inside `[data-page="3"]` — so a containment test would have
+ * page 03 declaring itself uncovered by its own case study, which is the
+ * larger half of the saving and the easiest version of this to get wrong.
+ *
+ * Fails safe. Anything unexpected — no hit, no owning screen, a transparent
+ * overlay letting the hit through — reports "not covered", which is exactly
+ * the behavior this had before the test existed.
+ */
+function covered(f: Frost, r: DOMRect): boolean {
+  const screen = f.screen;
+  if (!screen) return false;
+  const x = r.left + r.width / 2;
+  const y = r.top + r.height / 2;
+  if (x < 0 || y < 0 || x >= window.innerWidth || y >= window.innerHeight) return false;
+  const hit = document.elementFromPoint(x, y);
+  if (!hit) return false;
+  const owner = hit.closest(SCREEN_SEL);
+  return !!owner && owner !== screen;
+}
+
 function tick(f: Frost, now: number): void {
   if (state(f.stage).reduced) {
     applyMotionPref(f);
@@ -256,6 +303,10 @@ function tick(f: Frost, now: number): void {
       r.right < -120 ||
       r.top > window.innerHeight + 120 ||
       r.left > window.innerWidth + 120;
+    // ...and neither does a canvas nobody can see because a screen is drawn
+    // over it. Every screen here is opaque and fills the stage, so opening one
+    // buries the field of every screen below it while they all keep ticking.
+    if (!f.off) f.off = covered(f, r);
   }
   if (f.off) return;
   // ~11fps quiet, ~19fps otherwise — the low frame rate is part of the look.
@@ -676,6 +727,7 @@ export function startFrost(cv: HTMLCanvasElement): FrostHandle {
     quiet: kind === 'quiet',
     paint: kind === 'paint',
     stage,
+    screen: cv.closest<HTMLElement>(SCREEN_SEL),
     mode: 0,
     pmode: null,
     mix: 0,
