@@ -1744,11 +1744,20 @@ function freezeCard(strain) {
   /* Remember where the cycle had got to, but in `frozen` — NOT in `picks`.
      Without remembering anything the card would snap back to its default the
      instant you stopped hovering, because step 3 no longer applies once the
-     card is touched. Writing `picks` would avoid that snap too, and is what
-     this did first, but `picks` means "the user chose this" — it is sticky for
-     the session, it survives filter changes, and only Reset clears it. Merely
-     moving the mouse over a card is not a stated preference, and recording it
-     as one makes a hovered card indistinguishable from a clicked one. */
+     card is touched.
+
+     A DELIBERATE IMPLEMENTATION DEVIATION, AND A BEHAVIOUR-PRESERVING ONE.
+     The author's prototype writes `picks` here instead (`touch(id, idx)`:
+     `if (k[id] == null && idx != null) k[id] = idx`). That resolves to the same
+     form in every case, because `touched` is set in the same breath and a
+     touched card never reaches the cycle branch — so this is not a bug fix and
+     nothing on screen changes. It is a naming fix. `picks` means "the user
+     chose this": it is sticky for the session, it survives filter changes, and
+     only Reset clears it. Moving a mouse across a card is not a stated
+     preference, and once anything else in this file starts reading `picks` as
+     intent — analytics, a "you last viewed" affordance, a URL round-trip — a
+     hovered card and a clicked one have to be tellable apart. Keeping the two
+     in separate maps costs one lookup and makes that distinction permanent. */
   if (state.frozen[strain.id] == null) state.frozen[strain.id] = committed;
   return true;
 }
