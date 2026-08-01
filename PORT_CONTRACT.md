@@ -219,6 +219,37 @@ export function chellbookOpen(stage: HTMLElement): boolean;
 Chellbook's safety vocabulary is a claim boundary in the same way the Kona N
 release language is. See the header comment in `src/data/chellbook.ts`.
 
+### `src/pages/mfny.ts` + `src/runtime/mfny.ts`
+Channel 01's third in-stage screen, opened from the MFNY row
+(`data-act="mfny"`). Unlike the about and df2tm screens it is not pure prose:
+its argument is visual, so it takes the chellbook shape — a plate on the left,
+prose beside it — and the plate is a before/after the reader flips.
+
+```ts
+export function openMfny(stage: HTMLElement, trigger: HTMLElement): void;
+export function closeMfny(stage: HTMLElement): void;
+export function setMfnyView(stage: HTMLElement, n: number): void;
+export function mfnyOpen(stage: HTMLElement): boolean;
+```
+
+`setMfnyView` reads its captions from `MFNY_VIEWS`, exported by the page module
+— which makes `runtime/mfny.ts` import from `pages/mfny.ts`, the only
+runtime→page import in the codebase. It is deliberate: the caption names which
+of the two pages you are looking at, and a caption assembled at runtime can
+lose the clause that says "the live page".
+
+The before/after is a two-option `radiogroup`, so `actions.ts` routes
+ArrowLeft/Right to it **only while one of its radios holds focus**, and
+otherwise swallows them on this screen rather than letting them reach
+`nextPage`.
+
+### `public/mfny/concentrates.html`
+The MFNY working demo — a standalone page with no build step and no runtime
+dependency beyond the product photography, served at `/mfny/concentrates.html`.
+Hosted here rather than on a separate Pages repo, exactly as chellbook's two
+prototypes are. Its own spec is the handoff kit it was built from; the file's
+header comment says which parts of that kit are binding.
+
 ### `src/pages/about.ts` + `src/runtime/about.ts`
 Channel 04's in-stage background, opened from the page-04 control
 (`data-act="about"`). Same shape and choreography as the chellbook screen with
@@ -286,6 +317,11 @@ silently if missed:
    recognised as a screen and the coverage test cannot park what it covers.
 4. `mobile.ts` — a row with `subpage` is filtered out of the case table, so
    without an inline section its content is simply absent on a phone.
+
+A fifth thing is not automatic either: `PAGE1.rowH` and `PAGE1.nameSize` are
+divided from the fixed band between `rowsY` (640.79) and the motion band
+(931.7). Adding a case row means re-dividing both — the rows must still land
+exactly on 931.7, and the name has to shrink with them.
 
 ### `src/pages/*.ts`
 `menu.ts`, `products.ts`, `paintings.ts`, `competizione.ts`, `contact.ts` —

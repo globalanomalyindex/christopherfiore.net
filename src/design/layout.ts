@@ -71,13 +71,13 @@ export const PAGE1 = {
   thesis: { x: MODULE, y: 462, w: 727.27, size: 27, lh: 1.32, track: '-.015em' }, // adapted y
   panel: { x: 1090.9, y: 122, w: 727.27, h: 436.36 }, // adapted y (was 149.9)
   figCaption: { x: 1090.9, y: 572, w: 727.27 },
-  rowH: 32.323, // adapted — nine cases now; 9 × 32.323 still lands on 931.7
+  rowH: 29.091, // adapted — ten cases now; 10 × 29.091 still lands on 931.7
   tableHeaderY: 608.97, // adapted
   tableHeaderH: 31.818, // adapted, 7/16 module (was one full row)
   rowsY: 640.79, // adapted — the rows fill exactly to the motion band at 931.7
   rowCols: '145.455px 363.636px 581.818px 145.455px 1fr', // handoff, inside the row anchor
   rowSplit: '1fr 218.181px', // adapted — row anchor, then the source column (3 modules)
-  nameSize: 28, // adapted (was 34)
+  nameSize: 25, // adapted (was 34, then 28) — scaled with the row as it shrank
   /** The motion archive band: full bleed, 20/16 module, sitting on the footer. */
   motion: { y: 931.7, h: 90.9, cols: '472.727px 1fr 327.272px', still: 68 },
   footer: { y: 1022.6, h: 57.4 }, // handoff
@@ -208,6 +208,43 @@ export const PAGE4 = {
   rowY: [664, 742, 820, 898],
   rowH: 78,
   footerH: 88,
+} as const;
+
+/**
+ * The MFNY subpage.
+ *
+ * Not a READER_PAGE: the background and df2tm screens are pure prose, and this
+ * one's argument is visual — the whole case rests on two cards of the same
+ * strain sitting next to each other on the live site. So it takes the chellbook
+ * shape instead, a plate on the left with the prose beside it, and spends the
+ * left column on a before/after the reader can flip.
+ *
+ * Columns on the module grid: 10 (plate) · 9 (prose) · 4.4 (at a glance), with
+ * a half-module gutter between each. The plate is 727.27 × 436.36, which is
+ * page 01's own key-frame panel — the captures are 1456 × 874 and that box is
+ * the same 1.666 ratio, so they land exactly with no letterbox.
+ */
+export const MFNY_PAGE = {
+  headerH: 62,
+  footerH: 88,
+  title: { x: MODULE, y: 88, size: 152, lh: 146, track: '-.05em' },
+  descriptorY: 246,
+  metaY: 286,
+  ruleY: 318,
+  bandY: 336,
+  bandEnd: 976,
+  plate: { x: MODULE, y: 336, w: 727.27, h: 436.36 },
+  plateCaptionY: 788,
+  /** before / after, directly under the caption it changes */
+  toggleY: 828,
+  /** the two doors: the working demo, then the page it critiques */
+  doors: { x: MODULE, y: 886, w: 727.27, h: 66, gap: 12 },
+  text: { x: 836.36, y: 336, w: 654.54 },
+  glance: { x: 1527.27, y: 336, w: STAGE.w - MODULE - 1527.27 },
+  glanceRowsY: 380,
+  secBarH: 34,
+  secBarGap: 12,
+  railW: 6,
 } as const;
 
 /**

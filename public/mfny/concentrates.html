@@ -1,0 +1,1932 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MFNY Concentrates — strain-first product grid</title>
+<meta name="description" content="A redesign of MFNY's concentrates catalog: one card per strain, with form selection moved inside the card.">
+
+<style>
+/* ==========================================================================
+   MFNY Concentrates — frame #2a
+   Static reproduction of the design handoff. No build step, no dependencies.
+   Values are final and come from 03-design-tokens.md / 04-component-specs.md.
+   ========================================================================== */
+
+@font-face {
+  font-family: "Karrik";
+  src: url("../fonts/Karrik-Regular.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* Surface */
+  --page: #F2F2F0;
+  --surface: #FFFFFF;
+
+  /* Ink */
+  --ink: #282828;
+  --ink-muted: #727272;
+  --ink-disabled: #B4B4B0;       /* disabled type-tag text */
+  --ink-disabled-alt: #C6C6C2;   /* disabled form-pill text */
+  --ink-quiet: #A6A6A2;          /* unselected "All" letter in the tri-code pill */
+  --ink-reset-idle: #BCBCB8;
+  --ink-placeholder: #8A8A8A;
+
+  /* Line */
+  --line: #DADADA;
+  --line-soft: #E2E2DF;
+  --line-strong: #727272;
+
+  /* Motion — two curves, deliberately.
+     --ease-move for anything that changes size or position,
+     plain `ease` for anything that changes only opacity or colour,
+     --ease-zoom for the photo hover (a slower settle). */
+  --ease-move: cubic-bezier(.2, .85, .25, 1);
+  --ease-zoom: cubic-bezier(.2, .7, .2, 1);
+
+  --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--page);
+}
+
+body {
+  font-family: "Karrik", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--ink); text-decoration: none; }
+a:hover { color: var(--ink-muted); }
+
+button { font-family: inherit; font-size: inherit; color: inherit; }
+
+[hidden] { display: none !important; }
+
+/* A single visible focus treatment for the whole page: 2px #282828 at 2px offset. */
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* --------------------------------------------------------------------------
+   Page frame — 1440px, centred on #F2F2F0.
+   This is a desktop design. Below 1440 the panel reflows fluidly (the grid is
+   3 × minmax(0,1fr) and every filter row wraps); there is no mobile layout.
+   -------------------------------------------------------------------------- */
+.page { padding: 40px 0 56px; }
+
+.frame {
+  width: 1440px;
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+/* ------------------------------- header --------------------------------- */
+
+.panel-head { padding: 30px 40px 0; }
+
+.head-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 50px;
+  padding-bottom: 26px;
+}
+
+.eyebrow {
+  margin: 0 0 12px;
+  font-size: 14px;
+  letter-spacing: -0.04em;
+  color: var(--ink-muted);
+}
+
+.page-title {
+  margin: 0 0 12px;
+  font-size: 56px;
+  line-height: 0.94;
+  letter-spacing: -0.055em;
+  font-weight: 400;
+}
+
+.deck {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.35;
+  letter-spacing: -0.04em;
+  color: var(--ink-muted);
+  max-width: 520px;
+  text-wrap: pretty;
+}
+
+.type-nav {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  padding-bottom: 5px;
+  max-width: 470px;
+}
+
+.nav-pill {
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 14px;
+  letter-spacing: -0.04em;
+  color: var(--ink-muted);
+  box-shadow: inset 0 0 0 1px var(--line);
+  transition: box-shadow .2s ease, color .2s ease;
+}
+.nav-pill:hover { box-shadow: inset 0 0 0 1px var(--ink-muted); color: var(--ink); }
+.nav-pill[aria-current="page"] {
+  color: var(--surface);
+  background: var(--ink);
+  box-shadow: none;
+}
+
+/* ------------------------------ filter row ------------------------------- */
+
+.filter-row {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  flex-wrap: wrap;
+  padding: 14px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.filter-group { display: flex; align-items: center; gap: 10px; }
+
+.filter-label {
+  font-size: 14px;
+  letter-spacing: -0.04em;
+  color: var(--ink-muted);
+}
+
+.filter-spacer { flex: 1 1 30px; }
+
+.result-count {
+  margin: 0;
+  font-size: 14px;
+  letter-spacing: -0.04em;
+  color: var(--ink-muted);
+}
+
+.reset {
+  height: 32px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 999px;
+  background: var(--surface);
+  font-size: 14px;
+  letter-spacing: -0.04em;
+  box-shadow: inset 0 0 0 1px var(--line);
+  color: var(--ink-reset-idle);
+  cursor: default;
+  transition: box-shadow .2s ease, color .2s ease;
+}
+/* Always rendered so applying a filter never reflows the row under the cursor.
+   It is never disabled: even with no filter active it still clears per-card picks. */
+.reset[data-active="true"] {
+  box-shadow: inset 0 0 0 1px var(--ink);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+/* ------------------------ 1. tri-code type filter ------------------------ */
+
+.tricode {
+  position: relative;
+  height: 26px;
+  border-radius: 999px;
+  overflow: hidden;
+  display: flex;
+  flex-shrink: 0;
+  cursor: pointer;
+  background: var(--surface);            /* colour of segment 0 — fills the caps */
+  transition: width .42s var(--ease-move);
+}
+
+/* The segments are sheared and clipped, so their own focus rings would be both
+   distorted and cut off. Hoist the ring to the container instead — `overflow`
+   clips descendants, never the element's own outline. */
+.tricode:has(:focus-visible) { outline: 2px solid var(--ink); outline-offset: 2px; }
+.tri-seg:focus-visible { outline: none; }
+
+.tri-seg {
+  position: relative;
+  flex-shrink: 0;
+  border: none;
+  padding: 0;
+  height: 100%;
+  cursor: pointer;
+  transform: skewX(-13deg);
+  transition: width .42s var(--ease-move), opacity .28s ease;
+}
+
+.tri-letter,
+.tri-word {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: skewX(13deg);               /* counter-shear — glyphs stay upright */
+  font-size: 14px;
+  line-height: 16px;
+  letter-spacing: -0.05em;
+  white-space: nowrap;
+  transition: opacity .2s ease;
+}
+
+/* The first segment bleeds 9px to the left, so its own inset stroke is drawn
+   outside the container and clipped away — leaving the white All segment with no
+   edge against the white card. This non-clipped overlay closes the left cap.
+   13px = half the pill height, so it stops well before the sheared A/I boundary. */
+.tri-cap {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 13px;
+  border: 1px solid var(--line);
+  border-right: none;
+  border-radius: 999px 0 0 999px;
+  pointer-events: none;
+}
+
+/* --------------------- 5. form segmented control ------------------------- */
+
+.segmented {
+  display: inline-flex;
+  padding: 3px;
+  gap: 3px;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.seg-btn {
+  height: 28px;
+  padding: 0 13px;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 14px;
+  letter-spacing: -0.04em;
+  white-space: nowrap;
+  background: transparent;
+  color: var(--ink-muted);
+  transition: background-color .16s ease, color .16s ease;
+}
+.seg-btn[aria-checked="true"] { background: var(--ink); color: var(--surface); }
+
+/* ------------------------- 3. effect dropdown ---------------------------- */
+
+.dropdown { position: relative; }
+
+.dd-trigger {
+  height: 32px;
+  padding: 0 13px;
+  border: none;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 14px;
+  letter-spacing: -0.04em;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  box-shadow: inset 0 0 0 1px var(--line);
+  transition: box-shadow .2s ease;
+}
+.dd-trigger[aria-expanded="true"] { box-shadow: inset 0 0 0 1px var(--ink); }
+
+.dd-caret {
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid var(--ink-muted);
+  border-bottom: 1.5px solid var(--ink-muted);
+  margin-top: -3px;
+  transform: rotate(45deg);
+  transition: transform .3s var(--ease-move);
+}
+.dd-trigger[aria-expanded="true"] .dd-caret { transform: rotate(225deg); }
+
+.dd-menu {
+  position: absolute;
+  top: 37px;
+  left: 0;
+  min-width: 100%;
+  margin: 0;
+  padding: 5px;
+  list-style: none;
+  border-radius: 15px;
+  background: var(--surface);
+  box-shadow: 0 0 0 1px var(--line), 0 18px 34px -18px rgba(40, 40, 40, 0.45);
+  z-index: 40;
+  transform-origin: 24px top;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  opacity: 0;
+  transform: translateY(-7px) scale(0.96);
+  pointer-events: none;
+  /* `visibility` (rather than `display`) keeps the transform animatable while
+     still taking the closed menu out of the accessibility tree. */
+  visibility: hidden;
+  transition: opacity .2s ease, transform .3s var(--ease-move), visibility 0s linear .3s;
+}
+.dd-menu[data-open="true"] {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+  visibility: visible;
+  transition: opacity .2s ease, transform .3s var(--ease-move), visibility 0s;
+}
+
+.dd-option {
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  cursor: pointer;
+  font-size: 14px;
+  letter-spacing: -0.04em;
+  background: transparent;
+  color: var(--ink-muted);
+  transition: background-color .16s ease, color .16s ease;
+}
+.dd-option[aria-selected="true"] { background: var(--ink); color: var(--surface); }
+/* Options are not focusable (aria-activedescendant pattern), so the active one
+   borrows the page's focus-ring language. Only shown while navigating by key. */
+.dd-option.is-active { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+/* ------------------------------- the grid -------------------------------- */
+
+.panel-body { padding: 34px 40px 48px; }
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 44px 28px;                        /* → 434px cards at 1440 */
+}
+
+.empty { padding: 70px 0; text-align: center; }
+.empty-title { margin: 0 0 8px; font-size: 20px; letter-spacing: -0.05em; font-weight: 400; }
+.empty-btn {
+  height: 32px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 14px;
+  letter-spacing: -0.04em;
+  color: var(--surface);
+  background: var(--ink);
+}
+
+/* ------------------------------ 4. the card ------------------------------ */
+
+.card { display: flex; flex-direction: column; gap: 10px; }
+
+.photo {
+  position: relative;
+  display: block;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  border-radius: 18px;
+  background: var(--line);
+}
+
+.photo-zoom {
+  position: absolute;
+  inset: 0;
+  transition: transform .5s var(--ease-zoom);
+}
+.photo:hover .photo-zoom { transform: scale(1.04); }
+
+/* One layer per form, all mounted at once. A hard `src` swap flashes white while
+   the new image decodes; layered opacity is instant and reversible, which is what
+   makes the hover preview feel free. */
+.layer {
+  position: absolute;
+  inset: 0;
+  background-color: var(--line);         /* the PNGs are transparent */
+  opacity: 0;
+  transition: opacity .5s ease;
+}
+.layer img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.photo-slug {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--ink-placeholder);
+}
+
+.meta { display: flex; flex-direction: column; gap: 7px; }
+
+.tagrow { display: flex; gap: 5px; align-items: center; }
+
+/* Absolutely-positioned children animating `left`, inside a track that animates
+   its own width — so a reorder never nudges the effect tag beside it. */
+.tagtrack {
+  position: relative;
+  height: 26px;
+  flex-shrink: 0;
+  transition: width .36s var(--ease-move);
+}
+
+.tag {
+  position: absolute;
+  top: 0;
+  padding: 0;
+  border: none;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-size: 14px;
+  line-height: 16px;
+  letter-spacing: -0.05em;
+  text-decoration-thickness: 1px;
+  transition:
+    left .36s var(--ease-move),
+    background-color .3s ease,
+    color .3s ease,
+    opacity .3s ease,
+    transform .3s var(--ease-move);
+}
+
+.effect-tag {
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+  color: var(--ink-muted);
+  font-size: 14px;
+  line-height: 16px;
+  letter-spacing: -0.04em;
+  flex-shrink: 0;
+}
+
+/* The heading carries no styling of its own — it exists so eleven products are
+   skimmable by heading and so each <article> has an accessible name. The link
+   inside stays `display: block` so its hit area still spans the card, exactly as
+   it did when the <a> was itself the flex item. */
+.card-heading { margin: 0; font: inherit; }
+
+.card-name {
+  display: block;
+  font-size: 30px;
+  line-height: 0.98;
+  letter-spacing: -0.055em;
+  padding: 1px 0;
+  text-wrap: pretty;
+}
+
+.switcher {
+  position: relative;
+  height: 30px;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px var(--line);
+  margin-top: 1px;
+}
+
+.switcher-thumb {
+  position: absolute;
+  top: 3px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--ink);
+  transition: left .36s var(--ease-move), width .36s var(--ease-move);
+}
+
+.switcher-radios { position: relative; display: flex; padding: 3px; }
+
+.form-pill {
+  height: 24px;
+  border: none;
+  padding: 0;
+  border-radius: 999px;
+  font-size: 14px;
+  letter-spacing: -0.045em;
+  white-space: nowrap;
+  flex-shrink: 0;
+  background: transparent;
+  text-decoration-thickness: 1px;
+  transition: color .3s ease, background-color .24s ease;
+}
+
+.sole-form {
+  font-size: 16px;
+  line-height: 1.2;
+  letter-spacing: -0.04em;
+  color: var(--ink-muted);
+}
+
+.specline {
+  font-size: 16px;
+  line-height: 1.3;
+  letter-spacing: -0.035em;
+  color: var(--ink-muted);
+}
+
+/* --------------------------- reduced motion ------------------------------ */
+/* The idle cycle is decorative and is switched off in JS. Everything else drops
+   to near-zero so state changes are still legible, just instant. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/* ---------------------------- higher contrast ---------------------------- */
+/* Three controls express "not currently chosen" by fading their own label:
+   the tri-code segments (0.38 at rest / 0.60 open), the idle Reset button, and
+   filtered-out tags and pills. Those values are final in 03/04 and the designed
+   rendering is left exactly as specified — but all three stay operable and
+   keyboard-reachable, so for a viewer who has explicitly asked for more contrast
+   the fade is dropped and the state is carried by a ring or the strikethrough
+   that is already there. `!important` because these are set as inline style. */
+@media (prefers-contrast: more) {
+  .tri-seg { opacity: 1 !important; }
+  .tri-seg[aria-checked="true"] { box-shadow: inset 0 0 0 2px var(--ink) !important; }
+
+  .reset { color: var(--ink); }
+
+  .tag[aria-disabled="true"],
+  .form-pill[aria-disabled="true"] { color: var(--ink) !important; }
+}
+</style>
+</head>
+
+<body>
+
+<div class="page">
+  <div class="frame">
+    <!-- The panel IS the page's content, filters included, so it carries the main
+         landmark. That also scopes .panel-head: a <header> inside <main> is a
+         section header, not the site banner it would map to at body level. -->
+    <main class="panel">
+
+      <header class="panel-head">
+        <div class="head-row">
+          <div>
+            <p class="eyebrow">Product type</p>
+            <h1 class="page-title">Concentrates</h1>
+            <p class="deck">The purest expression of the plant. Eleven strains, every form we press them in.</p>
+          </div>
+
+          <nav class="type-nav" aria-label="Product types">
+            <span class="nav-pill" aria-current="page">Concentrates</span>
+            <a class="nav-pill" href="#" data-stub-link>Flower</a>
+            <a class="nav-pill" href="#" data-stub-link>Pre-rolls</a>
+            <a class="nav-pill" href="#" data-stub-link>Vapes</a>
+            <a class="nav-pill" href="#" data-stub-link>Edibles</a>
+            <a class="nav-pill" href="#" data-stub-link>Tinctures</a>
+          </nav>
+        </div>
+
+        <div class="filter-row">
+          <div class="filter-group">
+            <span class="filter-label" id="type-filter-label">Type</span>
+            <div class="tricode" id="tricode" role="radiogroup" aria-labelledby="type-filter-label"></div>
+          </div>
+
+          <div class="filter-group">
+            <span class="filter-label" id="form-filter-label">Form</span>
+            <div class="segmented" id="form-filter" role="radiogroup" aria-labelledby="form-filter-label"></div>
+          </div>
+
+          <div class="filter-group">
+            <span class="filter-label" id="effect-filter-label">Effect</span>
+            <div class="dropdown" id="effect-dropdown">
+              <button type="button" class="dd-trigger" id="effect-trigger"
+                      role="combobox"
+                      aria-labelledby="effect-filter-label effect-trigger"
+                      aria-controls="effect-listbox"
+                      aria-expanded="false">
+                <span id="effect-value">All effects</span>
+                <span class="dd-caret" aria-hidden="true"></span>
+              </button>
+              <ul class="dd-menu" id="effect-listbox" role="listbox"
+                  aria-labelledby="effect-filter-label" data-open="false"></ul>
+            </div>
+          </div>
+
+          <div class="filter-spacer"></div>
+
+          <p class="result-count" id="result-count" aria-live="polite">11 of 11 strains</p>
+
+          <button type="button" class="reset" id="reset" data-active="false">Reset filters</button>
+        </div>
+      </header>
+
+      <div class="panel-body">
+        <div class="grid" id="grid"></div>
+        <div class="empty" id="empty" hidden>
+          <p class="empty-title">Nothing in that combination.</p>
+          <button type="button" class="empty-btn" id="empty-reset">Clear filters</button>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- Referenced by aria-describedby from every filtered-out control. One shared
+     node: the control's own label is already its accessible name. -->
+<span class="sr-only" id="filtered-out-note">Not available with the current filters</span>
+
+<script>
+"use strict";
+(function () {
+
+/* ==========================================================================
+   1. DATA
+   The real MFNY catalog: 11 strains, 13 SKUs. Verbatim from catalog.json.
+   `type` lives on the FORM, not the strain — Chemdog's rosin is Indica and its
+   resin is Sativa, and a strain-level field cannot express that.
+   `forms[0]` is the default form. Terpenes are ordered, dominant first.
+   thcPercent values are placeholders; every live PDP renders that field empty.
+   ========================================================================== */
+
+var CATALOG = [
+  {
+    id: "chemdog", name: "Chemdog", type: "Indica", effect: "Heady", line: "Classics",
+    forms: [
+      { label: "Live Rosin Concentrate", short: "Live Rosin", extraction: "Live Rosin", texture: "Concentrate", type: "Indica", thcPercent: 79.8, size: "1g", terpenes: ["Caryophyllene", "Myrcene"], image: "https://cdn.prod.website-files.com/65ef2b75c351263c36848600/69e00ac150bdd50ddfa8a085_image.png" },
+      { label: "Live Resin Concentrate", short: "Live Resin", extraction: "Live Resin", texture: "Concentrate", type: "Sativa", thcPercent: 83.1, size: "1g", terpenes: ["Caryophyllene", "Limonene"], image: "https://cdn.prod.website-files.com/65ef2b75c351263c36848600/69d6381bd770fcd2ae9234d2_image.png" }
+    ]
+  },
+  {
+    id: "electric-lime", name: "Electric Lime", type: "Sativa", effect: "Energy",
+    forms: [
+      { label: "Badder", short: "Badder", extraction: "Live Resin", texture: "Badder", type: "Sativa", thcPercent: 80.3, size: "1g", terpenes: ["Terpinolene", "Limonene"], image: "https://cdn.prod.website-files.com/65ef2b75c351263c36848600/68fa4776498da3df91d0e28c_image.png" },
+      { label: "Live Resin Badder", short: "Resin Badder", extraction: "Live Resin", texture: "Badder", type: "Sativa", thcPercent: 82.1, size: "1g", terpenes: ["Terpinolene", "Pinene"], image: "https://cdn.prod.website-files.com/65ef2b75c351263c36848600/683582de6a5dd0ba4895131b_MFNY%20Live%20Resin%20Concentrate%20Electric%20Lime%201g.png" }
+    ]
+  },
+  {
+    id: "grape-guava", name: "Grape Guava", type: "Indica", effect: "Euphoria",
+    forms: [
+      { label: "Live Rosin Badder", short: "Rosin Badder", extraction: "Live Rosin", texture: "Badder", type: "Indica", thcPercent: 78.4, size: "1g", terpenes: ["Limonene", "Myrcene", "Linalool"], image: "assets/grape-guava.png" }
+    ]
+  },
+  {
+    id: "candy-rain", name: "Candy Rain", type: "Indica", effect: "Calm",
+    forms: [
+      { label: "Live Resin Badder", short: "Resin Badder", extraction: "Live Resin", texture: "Badder", type: "Indica", thcPercent: 80.5, size: "1g", terpenes: ["Linalool", "Myrcene"], image: "https://cdn.prod.website-files.com/65ef2b75c351263c36848600/67e2dcf0f4b124f73e2af276_MFNY%20Live%20Resin%20Concentrate%20Candy%20Rain%201g.png" }
+    ]
+  },
+  {
+    id: "turbo-blueberry", name: "Turbo Blueberry", type: "Indica", effect: "Calm",
+    forms: [
+      { label: "Live Resin Badder", short: "Resin Badder", extraction: "Live Resin", texture: "Badder", type: "Indica", thcPercent: 79.4, size: "1g", terpenes: ["Myrcene", "Pinene"], image: "https://cdn.prod.website-files.com/65ef2b75c351263c36848600/67e2dd13af43e85422842777_MFNY%20Live%20Resin%20Concentrate%20Turbo%20Blueberry%201g.png" }
+    ]
+  },
+  {
+    id: "the-belafonte", name: "The \"Belafonte\"", type: "Sativa", effect: "Uplift",
+    forms: [
+      { label: "Live Resin Badder", short: "Resin Badder", extraction: "Live Resin", texture: "Badder", type: "Sativa", thcPercent: 81.2, size: "1g", terpenes: ["Limonene", "Terpinolene"], image: "https://cdn.prod.website-files.com/65ef2b75c351263c36848600/67e2dc5725ef1b6585b86840_MFNY%20Live%20Resin%20Concentrate%20The%20Belafonte%201g.png" }
+    ]
+  },
+  {
+    id: "mfny-yuzu-gold", name: "MFNY Yuzu Gold", type: "Indica", effect: "Body",
+    forms: [
+      { label: "Live Resin Badder", short: "Resin Badder", extraction: "Live Resin", texture: "Badder", type: "Indica", thcPercent: 80.9, size: "1g", terpenes: ["Limonene", "Caryophyllene"], image: "https://cdn.prod.website-files.com/65ef2b75c351263c36848600/67e2dc0dacfd47af0471530b_MFNY%20Live%20Resin%20Concentrate%20MFNY%20Yuza%20Gold%201g.png" }
+    ]
+  },
+  {
+    id: "oishii", name: "Oishii", type: "Indica", effect: "Focus",
+    forms: [
+      { label: "Badder", short: "Badder", extraction: "Live Resin", texture: "Badder", type: "Indica", thcPercent: 78.8, size: "1g", terpenes: ["Pinene", "Limonene"], image: "https://cdn.prod.website-files.com/65ef2b75c351263c36848600/68fa479df2d22ef3332f1a67_image.png" }
+    ]
+  },
+  {
+    id: "shishkaberry", name: "Shishkaberry", type: "Indica", effect: "Sleep", line: "Classics",
+    forms: [
+      { label: "Live Resin Concentrate", short: "Live Resin", extraction: "Live Resin", texture: "Concentrate", type: "Indica", thcPercent: 80.7, size: "1g", terpenes: ["Myrcene", "Linalool"], image: "https://cdn.prod.website-files.com/65ef2b75c351263c36848600/6a1d5d8d55e6cee0c3dea826_image.png" }
+    ]
+  },
+  {
+    id: "sour-diesel", name: "Sour Diesel", type: "Sativa", effect: "Energy", line: "Classics",
+    forms: [
+      { label: "Live Resin Concentrate", short: "Live Resin", extraction: "Live Resin", texture: "Concentrate", type: "Sativa", thcPercent: 82.9, size: "1g", terpenes: ["Limonene", "Caryophyllene"], image: "https://cdn.prod.website-files.com/65ef2b75c351263c36848600/699dea7a61b95bb147d306be_image.png" }
+    ]
+  },
+  {
+    id: "superboof", name: "Superboof", type: "Hybrid", effect: "Uplift",
+    forms: [
+      { label: "Live Resin Concentrate", short: "Live Resin", extraction: "Live Resin", texture: "Concentrate", type: "Hybrid", thcPercent: 82.4, size: "1g", terpenes: ["Limonene", "Caryophyllene"], image: "https://cdn.prod.website-files.com/65ef2b75c351263c36848600/6a5e5139c25ece7ed2578807_b59e4af1-e747-412d-8075-2dce61008991.webp" }
+    ]
+  }
+];
+
+
+/* ==========================================================================
+   2. TOKENS AND CONSTANTS
+   ========================================================================== */
+
+/* Indica is verbatim from the MFNY Figma file. Hybrid is the yellow used on the
+   Superboof PDP. Sativa is from the Sour Diesel PDP. `tint` is the 17% preview
+   mix over white, pre-resolved so no colour function is needed at runtime. */
+var TYPE_STYLE = {
+  All:    { fill: "#FFFFFF",               on: "#282828", tint: "#FFFFFF", letter: "A" },
+  Indica: { fill: "rgb(140,167,218)",      on: "#FFFFFF", tint: "#EBF0F9", letter: "I" },
+  Hybrid: { fill: "oklch(0.855 0.142 92)", on: "#282828", tint: "#FDF6E2", letter: "H" },
+  Sativa: { fill: "#FF5A52",               on: "#FFFFFF", tint: "#FFE3E2", letter: "S" }
+};
+
+var TYPES = ["All", "Indica", "Hybrid", "Sativa"];
+var TRI_ORDER = ["Indica", "Hybrid", "Sativa"];
+var FORM_FILTERS = ["All forms", "Badder", "Live Resin", "Live Rosin"];
+
+var IDLE_CYCLE_MS = 3400;
+var SEGMENT_COLLAPSED = 27;
+var END_BLEED = 9;                 /* first/last segment overhang under the shear */
+
+var PLACEHOLDER_TINTS = ["#E6E6E3", "#E1E1DE", "#EAEAE6", "#DEDEDA"];
+
+var FILTERED_OUT_SUFFIX = " — not available with the current filters";
+
+
+/* ==========================================================================
+   3. DERIVED WIDTHS (03-design-tokens.md § Derived widths)
+   The diagonal pill and the form switcher size their segments from label length
+   rather than padding, so the animated `width` is a single number.
+   ========================================================================== */
+
+function segmentOpen(word) {
+  return Math.max(46, Math.round(word.length * 7.05) + 22);
+}
+
+function typeTagWidth(word) {
+  return Math.round(word.length * 7.05) + 20;      // Indica / Hybrid / Sativa = 62
+}
+
+function switcherWidth(forms) {
+  return forms.reduce(function (total, form) {
+    return total + segmentOpen(form.short);
+  }, 6);                                            // Chemdog = 192
+}
+
+
+/* ==========================================================================
+   4. NORMALISED CATALOG
+   ========================================================================== */
+
+function slugify(value) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
+/* Used only where no real photograph exists. Real photos composite on flat
+   #DADADA; these stripes are meant to read as an obvious placeholder. */
+function stripedPlaceholder(seed) {
+  var a = PLACEHOLDER_TINTS[seed % PLACEHOLDER_TINTS.length];
+  var b = PLACEHOLDER_TINTS[(seed + 2) % PLACEHOLDER_TINTS.length];
+  return "repeating-linear-gradient(" + (110 + seed * 9) + "deg, " +
+         a + " 0 7px, " + b + " 7px 14px)";
+}
+
+var STRAINS = CATALOG.map(function (strain, strainIndex) {
+  return {
+    id: strain.id,
+    name: strain.name,
+    type: strain.type,
+    effect: strain.effect,
+    line: strain.line || "",
+    index: strainIndex,                              // drives the idle-cycle stagger
+    forms: strain.forms.map(function (form, formIndex) {
+      return {
+        label: form.label,
+        short: form.short,
+        extraction: form.extraction,
+        texture: form.texture,
+        type: form.type,
+        thcPercent: form.thcPercent,
+        size: form.size,
+        terpenes: form.terpenes,
+        image: form.image || null,
+        placeholderFill: form.image ? null : stripedPlaceholder(strainIndex * 3 + formIndex),
+        slug: strain.id + " · " + slugify(form.label)
+      };
+    })
+  };
+});
+
+var EFFECT_OPTIONS = ["All effects"].concat(
+  STRAINS.map(function (s) { return s.effect; })
+    .filter(function (value, i, all) { return all.indexOf(value) === i; })
+    .sort()
+);
+
+function specLine(form) {
+  return form.thcPercent.toFixed(1) + "% THC · " + form.size + " · " +
+         form.terpenes.join(" · ");
+}
+
+
+/* ==========================================================================
+   5. STATE
+   ========================================================================== */
+
+var state = {
+  type: "All",                  // "All" | "Indica" | "Hybrid" | "Sativa"
+  form: "All forms",            // "All forms" | "Badder" | "Live Resin" | "Live Rosin"
+  effect: "All effects",
+  picks: Object.create(null),   // strainId -> EXPLICIT form index, sticky for the session
+  frozen: Object.create(null),  // strainId -> where the idle cycle stopped, not a choice
+  touched: Object.create(null), // strainId -> true, cards that have stopped cycling
+  preview: null,                // { id, idx, type } — hover only, commits nothing
+  tick: 0,                      // one page-level counter, drives the idle cycle
+  pillHover: false,
+  pillFocus: false,
+  pillHoverSeg: null,
+  effectOpen: false,
+  effectActive: 0,              // aria-activedescendant index
+  effectKeyNav: false           // show the active-option ring only while keying
+};
+
+
+/* ==========================================================================
+   6. FILTER LOGIC (05-interaction-spec.md § Filter composition)
+   Three independent filters, ANDed. The two-axis split is the whole taxonomy
+   fix: Badder is a TEXTURE, Live Resin / Live Rosin are EXTRACTION methods,
+   so a Live Rosin Badder legitimately passes both filters.
+   ========================================================================== */
+
+function matchesForm(form, formFilter) {
+  if (formFilter === "All forms") return true;
+  if (formFilter === "Badder") return form.texture === "Badder";
+  return form.extraction === formFilter;
+}
+
+function formPasses(form) {
+  return matchesForm(form, state.form) &&
+         (state.type === "All" || form.type === state.type);
+}
+
+function strainVisible(strain) {
+  return (state.effect === "All effects" || strain.effect === state.effect) &&
+         strain.forms.some(formPasses);
+}
+
+function anyFilterActive() {
+  return state.form !== "All forms" || state.type !== "All" || state.effect !== "All effects";
+}
+
+/* Resolved every render, in precedence order:
+     1. preview   — a hover on this card
+     2. explicit  — picks[id], if it is still in-filter
+     3. cycle     — untouched && >1 in-filter form
+     4. default   — first in-filter form
+   `committed` (2-4) drives the switcher thumb and the type-tag ordering.
+   `effective` (preview ?? committed) drives the photo, spec line and filled tag.
+   Hover therefore swaps the CONTENT but never moves the CHROME — otherwise hover
+   and click look identical and the control slides away mid-gesture. */
+function resolveCard(strain) {
+  var ok = strain.forms.map(formPasses);
+  var live = [];
+  ok.forEach(function (passes, i) { if (passes) live.push(i); });
+
+  var pick = state.picks[strain.id];
+  var explicit = (pick != null && ok[pick]) ? pick : null;
+  /* Reduced motion suppresses the cycle here, not only in the interval. Stopping
+     the timer alone leaves `tick` frozen at 0 while the per-strain stagger
+     `(tick + index)` still applies, so every card past the first would rest on
+     an arbitrary form rather than its declared default — a visibly different
+     catalog for the one visitor who asked for less motion. Note this checks
+     reduced motion and NOT the off-screen pause: scrolling the grid away must
+     freeze the cycle, not re-resolve every card back to its default. */
+  var cycling =
+    live.length > 1 &&
+    !state.touched[strain.id] &&
+    explicit === null &&
+    !reducedMotion.matches;
+
+  var frozen = state.frozen[strain.id];
+  var frozenOk = (frozen != null && ok[frozen]) ? frozen : null;
+
+  var committed;
+  if (explicit !== null) committed = explicit;
+  else if (cycling) committed = live[(state.tick + strain.index) % live.length];
+  else if (frozenOk !== null) committed = frozenOk;   // where the cycle stopped
+  else committed = live.length ? live[0] : 0;         // hidden strains have no live form
+
+  var preview = (state.preview && state.preview.id === strain.id) ? state.preview : null;
+
+  return {
+    ok: ok,
+    live: live,
+    cycling: cycling,
+    committed: committed,
+    effective: preview ? preview.idx : committed,
+    preview: preview
+  };
+}
+
+
+/* ==========================================================================
+   7. DOM HELPERS
+   ========================================================================== */
+
+function el(tag, props, children) {
+  var node = document.createElement(tag);
+  if (props) {
+    Object.keys(props).forEach(function (key) {
+      var value = props[key];
+      if (value === null || value === undefined) return;
+      if (key === "class") node.className = value;
+      else if (key === "text") node.textContent = value;
+      else if (key === "style") Object.assign(node.style, value);
+      else node.setAttribute(key, value);
+    });
+  }
+  if (children) children.forEach(function (child) { node.appendChild(child); });
+  return node;
+}
+
+/* An attribute write fires a mutation record even when the value is unchanged,
+   and a render touches every control on the page — including on a hover preview
+   and on every idle tick. Writing only on change keeps assistive tech from being
+   handed a stream of no-op state updates. */
+function setAttr(node, name, value) {
+  if (node.getAttribute(name) !== value) node.setAttribute(name, value);
+}
+
+function setFlag(node, name, on) {
+  if (on) setAttr(node, name, "true");
+  else node.removeAttribute(name);      // a no-op remove records nothing
+}
+
+/* `:focus-visible` is the browser's own answer to "did this focus arrive from
+   the keyboard?", which is the only reason the page ever needs to know.
+   Feature-detected once: querySelector throws on an unknown pseudo-class. Where
+   it is unsupported we assume keyboard, which costs at most an extra open pill. */
+var SUPPORTS_FOCUS_VISIBLE = (function () {
+  try { document.querySelector(":focus-visible"); return true; }
+  catch (error) { return false; }
+})();
+
+function isKeyboardFocus(node) {
+  if (!SUPPORTS_FOCUS_VISIBLE) return true;
+  return node instanceof Element && node.matches(":focus-visible");
+}
+
+/* Exactly one radio in a group is tabbable. Prefer whatever currently holds
+   focus so a re-render mid-keyboard-navigation does not move the tab stop out
+   from under the user. */
+function applyRovingTabindex(group, checkedNode) {
+  var radios = group.querySelectorAll('[role="radio"]');
+  var active = document.activeElement;
+  var target = (group.contains(active) && active.getAttribute("role") === "radio")
+    ? active
+    : checkedNode;
+  for (var i = 0; i < radios.length; i++) {
+    radios[i].tabIndex = (radios[i] === target) ? 0 : -1;
+  }
+}
+
+/* Arrow keys move focus and — where the target is selectable — select it, per the
+   ARIA radiogroup pattern. Filtered-out radios stay reachable so they can be
+   discovered and announced, but selecting one is a no-op: they are inert, not
+   merely muted. Space/Enter selects the focused radio. */
+function wireRadioGroupKeys(group, onSelect) {
+  group.addEventListener("keydown", function (event) {
+    var radios = Array.prototype.slice.call(group.querySelectorAll('[role="radio"]'));
+    var current = radios.indexOf(document.activeElement);
+    if (current < 0) return;
+
+    var next = -1;
+    switch (event.key) {
+      case "ArrowRight":
+      case "ArrowDown": next = (current + 1) % radios.length; break;
+      case "ArrowLeft":
+      case "ArrowUp":   next = (current - 1 + radios.length) % radios.length; break;
+      case "Home":      next = 0; break;
+      case "End":       next = radios.length - 1; break;
+      case " ":
+      case "Enter":
+        event.preventDefault();
+        onSelect(radios[current]);
+        return;
+      default: return;
+    }
+
+    event.preventDefault();
+    radios[next].tabIndex = 0;
+    radios[current].tabIndex = -1;
+    radios[next].focus();
+    onSelect(radios[next]);
+  });
+}
+
+
+/* ==========================================================================
+   8. TRI-CODE TYPE FILTER (04-component-specs.md § 1)
+   One pill, four segments, sheared 13°, letters at rest and words when open.
+   ========================================================================== */
+
+var triCodeEl = document.getElementById("tricode");
+var triSegments = [];
+
+function buildTriCode() {
+  TYPES.forEach(function (type, i) {
+    var isFirst = i === 0;
+    var isLast = i === TYPES.length - 1;
+    var style = TYPE_STYLE[type];
+
+    /* "Segments 2..n only", counted from 1 — i.e. every segment that has a left
+       neighbour to divide itself from. Segment 1 is All: it is the left cap, so
+       it has no boundary to draw, and being white against a white card it takes
+       a full #DADADA hairline ring instead. */
+    var divider = isFirst
+      ? "inset 0 0 0 1px var(--line)"
+      : "inset 1.5px 0 0 0 rgba(255,255,255,0.9)";
+
+    /* The 9px end bleed pushes the A and S glyphs off-axis relative to I and H;
+       insetting the labels by the same 9px puts them back optically centred. */
+    var labelStyle = {
+      left: (isFirst ? END_BLEED : 0) + "px",
+      right: (isLast ? END_BLEED : 0) + "px",
+      color: style.on
+    };
+
+    var letter = el("span", { "class": "tri-letter", "aria-hidden": "true", text: style.letter, style: labelStyle });
+    var word = el("span", { "class": "tri-word", text: type, style: Object.assign({}, labelStyle) });
+
+    var segment = el("button", {
+      type: "button",
+      "class": "tri-seg",
+      role: "radio",
+      "aria-checked": "false",
+      "data-type": type,
+      style: {
+        background: style.fill,
+        boxShadow: divider,
+        marginLeft: isFirst ? (-END_BLEED) + "px" : "0px"
+      }
+    }, [letter, word]);
+
+    segment.addEventListener("click", function () { selectType(type); });
+    segment.addEventListener("mouseenter", function () {
+      state.pillHoverSeg = i;
+      renderTriCode();
+    });
+
+    triSegments.push({ node: segment, letter: letter, word: word, type: type, isAll: isFirst });
+    triCodeEl.appendChild(segment);
+  });
+
+  triCodeEl.appendChild(el("div", { "class": "tri-cap", "aria-hidden": "true" }));
+
+  triCodeEl.addEventListener("mouseenter", function () {
+    state.pillHover = true;
+    state.pillHoverSeg = null;
+    renderTriCode();
+  });
+  triCodeEl.addEventListener("mouseleave", function () {
+    state.pillHover = false;
+    state.pillHoverSeg = null;
+    renderTriCode();
+  });
+  /* Keyboard users need the words too — a collapsed pill shows only I / H / S.
+     Gated on :focus-visible, because the spec's open flag is a hover flag: a
+     mouse click leaves focus on the clicked segment, and treating that as open
+     would strand the pill fully expanded after the cursor has left it. */
+  triCodeEl.addEventListener("focusin", function (event) {
+    state.pillFocus = isKeyboardFocus(event.target);
+    renderTriCode();
+  });
+  triCodeEl.addEventListener("focusout", function (event) {
+    if (triCodeEl.contains(event.relatedTarget)) return;
+    state.pillFocus = false;
+    renderTriCode();
+  });
+
+  wireRadioGroupKeys(triCodeEl, function (radio) {
+    selectType(radio.getAttribute("data-type"));
+  });
+}
+
+function selectType(type) {
+  if (state.type === type) return;
+  state.type = type;
+  render();
+}
+
+function renderTriCode() {
+  var open = state.pillHover || state.pillFocus;
+  var hoverSeg = open ? state.pillHoverSeg : null;
+  var activeIdx = TYPES.indexOf(state.type);
+  var containerWidth = 0;
+  var checkedNode = null;
+
+  triSegments.forEach(function (seg, i) {
+    /* All never contracts to a letter: it is the default state and the most-used
+       control, so it stays spelled out. Only the three type codes collapse. */
+    var segOpen = open || i === activeIdx || seg.isAll;
+    var base = segOpen ? segmentOpen(seg.type) : SEGMENT_COLLAPSED;
+    containerWidth += base;
+
+    var width = base;
+    if (i === 0) width += END_BLEED;
+    if (i === triSegments.length - 1) width += END_BLEED;
+    seg.node.style.width = width + "px";
+
+    var opacity;
+    if (hoverSeg !== null) opacity = (hoverSeg === i) ? 1 : 0.55;
+    else opacity = (activeIdx === i) ? 1 : (open ? 0.6 : 0.38);
+
+    /* All is white-on-white, so opacity cannot express its state — it dims the
+       glyph to #A6A6A2 instead and keeps the segment at full opacity. */
+    if (seg.isAll) {
+      var lit = (activeIdx === i) || (hoverSeg === i);
+      seg.node.style.opacity = "1";
+      seg.letter.style.color = lit ? "var(--ink)" : "var(--ink-quiet)";
+      seg.word.style.color = lit ? "var(--ink)" : "var(--ink-quiet)";
+    } else {
+      seg.node.style.opacity = String(opacity);
+    }
+
+    seg.letter.style.opacity = segOpen ? "0" : "1";
+    seg.word.style.opacity = segOpen ? "1" : "0";
+
+    var checked = i === activeIdx;
+    setAttr(seg.node, "aria-checked", checked ? "true" : "false");
+    if (checked) checkedNode = seg.node;
+  });
+
+  triCodeEl.style.width = containerWidth + "px";
+  applyRovingTabindex(triCodeEl, checkedNode || triSegments[0].node);
+}
+
+
+/* ==========================================================================
+   9. FORM SEGMENTED FILTER (04-component-specs.md § 5)
+   ========================================================================== */
+
+var formFilterEl = document.getElementById("form-filter");
+var formFilterButtons = [];
+
+function buildFormFilter() {
+  FORM_FILTERS.forEach(function (label) {
+    var button = el("button", {
+      type: "button",
+      "class": "seg-btn",
+      role: "radio",
+      "aria-checked": "false",
+      "data-form": label,
+      text: label
+    });
+    button.addEventListener("click", function () { selectFormFilter(label); });
+    formFilterButtons.push(button);
+    formFilterEl.appendChild(button);
+  });
+
+  wireRadioGroupKeys(formFilterEl, function (radio) {
+    selectFormFilter(radio.getAttribute("data-form"));
+  });
+}
+
+function selectFormFilter(label) {
+  if (state.form === label) return;
+  state.form = label;
+  render();
+}
+
+function renderFormFilter() {
+  var checkedNode = null;
+  formFilterButtons.forEach(function (button) {
+    var checked = button.getAttribute("data-form") === state.form;
+    setAttr(button, "aria-checked", checked ? "true" : "false");
+    if (checked) checkedNode = button;
+  });
+  applyRovingTabindex(formFilterEl, checkedNode || formFilterButtons[0]);
+}
+
+
+/* ==========================================================================
+   10. EFFECT DROPDOWN (04-component-specs.md § 3)
+   A custom listbox, because a native <select> renders OS chrome inside a page
+   made entirely of pills. Implemented as a select-only combobox: focus stays on
+   the trigger and aria-activedescendant tracks the active option.
+   ========================================================================== */
+
+var dropdownEl = document.getElementById("effect-dropdown");
+var effectTrigger = document.getElementById("effect-trigger");
+var effectValueEl = document.getElementById("effect-value");
+var effectListbox = document.getElementById("effect-listbox");
+var effectOptionNodes = [];
+
+function buildEffectDropdown() {
+  EFFECT_OPTIONS.forEach(function (label, i) {
+    var option = el("li", {
+      "class": "dd-option",
+      role: "option",
+      id: "effect-option-" + i,
+      "aria-selected": "false",
+      text: label
+    });
+    option.addEventListener("click", function () { chooseEffect(label); });
+    option.addEventListener("mouseenter", function () {
+      /* Pointer takes over: drop the keyboard ring, but leave the active index
+         alone so returning to the keyboard resumes where it was. */
+      if (!state.effectKeyNav) return;
+      state.effectKeyNav = false;
+      renderEffectDropdown();
+    });
+    effectOptionNodes.push(option);
+    effectListbox.appendChild(option);
+  });
+
+  effectTrigger.addEventListener("click", function () {
+    setDropdownOpen(!state.effectOpen, false);
+  });
+  effectTrigger.addEventListener("keydown", onEffectKeydown);
+
+  /* Spec'd behaviour: the menu closes on select and on mouse-leave of the
+     wrapper. A keyboard-only user never generates mouseleave, so this is safe. */
+  dropdownEl.addEventListener("mouseleave", function () {
+    if (state.effectOpen) setDropdownOpen(false, false);
+  });
+  dropdownEl.addEventListener("focusout", function (event) {
+    if (dropdownEl.contains(event.relatedTarget)) return;
+    if (state.effectOpen) setDropdownOpen(false, false);
+  });
+}
+
+function setDropdownOpen(open, keyNav) {
+  state.effectOpen = open;
+  state.effectKeyNav = open ? Boolean(keyNav) : false;
+  if (open) state.effectActive = Math.max(0, EFFECT_OPTIONS.indexOf(state.effect));
+  renderEffectDropdown();
+}
+
+function moveEffectActive(index) {
+  state.effectActive = Math.min(EFFECT_OPTIONS.length - 1, Math.max(0, index));
+  state.effectKeyNav = true;
+  renderEffectDropdown();
+}
+
+function onEffectKeydown(event) {
+  var key = event.key;
+
+  if (!state.effectOpen) {
+    if (key === "ArrowDown" || key === "ArrowUp" || key === "Enter" || key === " " ||
+        key === "Home" || key === "End") {
+      event.preventDefault();
+      setDropdownOpen(true, true);
+    }
+    return;
+  }
+
+  switch (key) {
+    case "ArrowDown": event.preventDefault(); moveEffectActive(state.effectActive + 1); return;
+    case "ArrowUp":   event.preventDefault(); moveEffectActive(state.effectActive - 1); return;
+    case "Home":      event.preventDefault(); moveEffectActive(0); return;
+    case "End":       event.preventDefault(); moveEffectActive(EFFECT_OPTIONS.length - 1); return;
+    case "Enter":
+    case " ":
+      event.preventDefault();
+      chooseEffect(EFFECT_OPTIONS[state.effectActive]);
+      return;
+    case "Escape":
+      event.preventDefault();
+      setDropdownOpen(false, false);
+      return;
+    case "Tab":
+      setDropdownOpen(false, false);
+      return;
+    default:
+      break;
+  }
+
+  // Type-ahead: jump to the next option starting with the typed character.
+  if (key.length === 1 && !event.metaKey && !event.ctrlKey && !event.altKey) {
+    var needle = key.toLowerCase();
+    for (var step = 1; step <= EFFECT_OPTIONS.length; step++) {
+      var i = (state.effectActive + step) % EFFECT_OPTIONS.length;
+      if (EFFECT_OPTIONS[i].toLowerCase().indexOf(needle) === 0) {
+        event.preventDefault();
+        moveEffectActive(i);
+        return;
+      }
+    }
+  }
+}
+
+function chooseEffect(label) {
+  state.effect = label;
+  state.effectOpen = false;
+  state.effectKeyNav = false;
+  render();
+}
+
+function renderEffectDropdown() {
+  effectValueEl.textContent = state.effect;
+  setAttr(effectTrigger, "aria-expanded", state.effectOpen ? "true" : "false");
+  setAttr(effectListbox, "data-open", state.effectOpen ? "true" : "false");
+
+  if (state.effectOpen) {
+    setAttr(effectTrigger, "aria-activedescendant", "effect-option-" + state.effectActive);
+  } else {
+    effectTrigger.removeAttribute("aria-activedescendant");
+  }
+
+  effectOptionNodes.forEach(function (option, i) {
+    setAttr(option, "aria-selected", EFFECT_OPTIONS[i] === state.effect ? "true" : "false");
+    option.classList.toggle("is-active", state.effectOpen && state.effectKeyNav && i === state.effectActive);
+  });
+}
+
+
+/* ==========================================================================
+   11. CARDS (04-component-specs.md § 4)
+   Built once, then updated in place. Rebuilding the DOM on every state change
+   would restart every transition mid-flight and drop keyboard focus.
+   ========================================================================== */
+
+var gridEl = document.getElementById("grid");
+var emptyEl = document.getElementById("empty");
+var resultCountEl = document.getElementById("result-count");
+var resetEl = document.getElementById("reset");
+var cardViews = [];
+
+function buildCard(strain) {
+  var multi = strain.forms.length > 1;
+
+  /* -- photo: one layer per form, all mounted, crossfading on opacity -- */
+  var layers = strain.forms.map(function (form) {
+    var layer = el("div", { "class": "layer" });
+    if (form.image) {
+      layer.appendChild(el("img", {
+        src: form.image,
+        alt: "",
+        loading: "lazy",
+        decoding: "async"
+      }));
+    } else {
+      layer.style.backgroundImage = form.placeholderFill;
+    }
+    return layer;
+  });
+
+  var slugEl = el("span", { "class": "photo-slug" });
+  var zoom = el("div", { "class": "photo-zoom" }, layers);
+
+  /* The strain-name link below points at the same PDP, so the photo is a second
+     route to one destination: keep it clickable, keep it out of the tab order
+     and out of the accessibility tree. */
+  var photo = el("a", {
+    "class": "photo",
+    href: "#",
+    tabindex: "-1",
+    "aria-hidden": "true",
+    "data-stub-link": ""
+  }, [zoom, slugEl]);
+
+  /* -- type tags: DOM order is the stable I/H/S order, only `left` animates -- */
+  var presentTypes = TRI_ORDER.filter(function (type) {
+    return strain.forms.some(function (form) { return form.type === type; });
+  });
+  var tagWidths = {};
+  presentTypes.forEach(function (type) { tagWidths[type] = typeTagWidth(type); });
+
+  var multiType = presentTypes.length > 1;
+  var tagTrack = el("div", { "class": "tagtrack" });
+  if (multiType) {
+    tagTrack.setAttribute("role", "radiogroup");
+    tagTrack.setAttribute("aria-label", "Type for " + strain.name);
+  }
+
+  var tagNodes = presentTypes.map(function (type) {
+    /* A single-type strain's tag is informational — it can never be switched to
+       and is always available on a visible card — so it is a span, not a control. */
+    var node = multiType
+      ? el("button", { type: "button", "class": "tag", role: "radio", "aria-checked": "false", "data-type": type, text: type })
+      : el("span", { "class": "tag", text: type });
+
+    node.style.width = tagWidths[type] + "px";
+
+    if (multiType) {
+      var formIndex = strain.forms.findIndex(function (form) { return form.type === type; });
+      node.addEventListener("click", function () {
+        if (node.getAttribute("data-inert") === "true") return;
+        commitForm(strain, formIndex);
+      });
+      node.addEventListener("mouseenter", function () {
+        if (node.getAttribute("data-inert") === "true") return;
+        startPreview(strain, formIndex);
+      });
+      /* No inert guard on leave: endPreview is identity-guarded and a no-op
+         unless this button owns the preview, and skipping it would strand a
+         preview if the filter turned this tag inert under a resting cursor. */
+      node.addEventListener("mouseleave", function () {
+        endPreview(strain, formIndex);
+      });
+    }
+    tagTrack.appendChild(node);
+    return node;
+  });
+
+  if (multiType) {
+    wireRadioGroupKeys(tagTrack, function (radio) {
+      if (radio.getAttribute("data-inert") === "true") return;
+      var type = radio.getAttribute("data-type");
+      commitForm(strain, strain.forms.findIndex(function (form) { return form.type === type; }));
+    });
+  }
+
+  var effectTag = el("span", { "class": "effect-tag", text: strain.effect });
+  var tagRow = el("div", { "class": "tagrow" }, [tagTrack, effectTag]);
+
+  var headingId = "card-name-" + strain.id;
+  var nameEl = el("h2", { "class": "card-heading", id: headingId }, [
+    el("a", { "class": "card-name", href: "#", "data-stub-link": "", text: strain.name })
+  ]);
+
+  /* -- form switcher (multi-form only) -- */
+  var thumb = null;
+  var switcher = null;
+  var formGroup = null;
+  var formNodes = [];
+
+  if (multi) {
+    thumb = el("div", { "class": "switcher-thumb", "aria-hidden": "true" });
+    formGroup = el("div", {
+      "class": "switcher-radios",
+      role: "radiogroup",
+      "aria-label": "Form for " + strain.name
+    });
+
+    formNodes = strain.forms.map(function (form, formIndex) {
+      var pill = el("button", {
+        type: "button",
+        "class": "form-pill",
+        role: "radio",
+        "aria-checked": "false",
+        text: form.short,
+        style: { width: segmentOpen(form.short) + "px" }
+      });
+      pill.addEventListener("click", function () {
+        if (pill.getAttribute("data-inert") === "true") return;
+        commitForm(strain, formIndex);
+      });
+      pill.addEventListener("mouseenter", function () {
+        if (pill.getAttribute("data-inert") === "true") return;
+        startPreview(strain, formIndex);
+      });
+      pill.addEventListener("mouseleave", function () {
+        endPreview(strain, formIndex);
+      });
+      formGroup.appendChild(pill);
+      return pill;
+    });
+
+    wireRadioGroupKeys(formGroup, function (radio) {
+      if (radio.getAttribute("data-inert") === "true") return;
+      commitForm(strain, formNodes.indexOf(radio));
+    });
+
+    switcher = el("div", { "class": "switcher" }, [thumb, formGroup]);
+    switcher.style.width = switcherWidth(strain.forms) + "px";
+  }
+
+  var soleFormEl = multi ? null : el("span", { "class": "sole-form" });
+  var specLineEl = el("div", { "class": "specline" });
+
+  var metaChildren = [tagRow, nameEl];
+  if (switcher) metaChildren.push(switcher);
+  if (soleFormEl) metaChildren.push(soleFormEl);
+  metaChildren.push(specLineEl);
+
+  var root = el("article", {
+    "class": "card",
+    "data-strain": strain.id,
+    "aria-labelledby": headingId
+  }, [photo, el("div", { "class": "meta" }, metaChildren)]);
+
+  /* Hover or focus anywhere on the card stops its idle cycle for good — motion
+     under an active cursor is interference. */
+  root.addEventListener("mouseenter", function () { touchCard(strain); });
+  root.addEventListener("focusin", function () { touchCard(strain); });
+  root.addEventListener("mouseleave", function () { clearPreview(); });
+
+  gridEl.appendChild(root);
+
+  return {
+    strain: strain,
+    root: root,
+    layers: layers,
+    slugEl: slugEl,
+    presentTypes: presentTypes,
+    tagWidths: tagWidths,
+    multiType: multiType,
+    tagTrack: tagTrack,
+    tagNodes: tagNodes,
+    thumb: thumb,
+    formGroup: formGroup,
+    formNodes: formNodes,
+    soleFormEl: soleFormEl,
+    specLineEl: specLineEl
+  };
+}
+
+function renderCard(view) {
+  var strain = view.strain;
+  var visible = strainVisible(strain);
+  view.root.hidden = !visible;
+
+  var card = resolveCard(strain);
+  var effectiveForm = strain.forms[card.effective];
+
+  // ---- photo layers -----------------------------------------------------
+  view.layers.forEach(function (layer, i) {
+    layer.style.opacity = (i === card.effective) ? "1" : "0";
+  });
+  if (effectiveForm.image) {
+    view.slugEl.hidden = true;
+  } else {
+    view.slugEl.hidden = false;
+    view.slugEl.textContent = effectiveForm.slug;
+  }
+
+  // ---- type tags --------------------------------------------------------
+  /* Ordering is driven by the COMMITTED form, never the previewed one, so a tag
+     never slides out from under the cursor. */
+  var anchor = strain.forms[card.committed].type;
+  var ordered = view.presentTypes.slice().sort(function (a, b) {
+    if (a === anchor) return -1;
+    if (b === anchor) return 1;
+    return TRI_ORDER.indexOf(a) - TRI_ORDER.indexOf(b);
+  });
+
+  var offsets = {};
+  var x = 0;
+  ordered.forEach(function (type) {
+    offsets[type] = x;
+    x += view.tagWidths[type] + 5;
+  });
+  view.tagTrack.style.width = Math.max(0, x - 5) + "px";
+
+  var checkedTag = null;
+  view.tagNodes.forEach(function (node, i) {
+    var type = view.presentTypes[i];
+    var held = type === anchor;
+    var previewing = !held && card.preview && card.preview.type === type;
+    var available = strain.forms.some(function (form) {
+      return form.type === type && formPasses(form);
+    });
+    var style = TYPE_STYLE[type];
+
+    node.style.left = offsets[type] + "px";
+
+    if (!available) {
+      node.style.backgroundColor = "var(--page)";
+      node.style.color = "var(--ink-disabled)";
+      node.style.boxShadow = "inset 0 0 0 1px var(--line-soft)";
+      node.style.opacity = "1";
+      node.style.transform = "scale(1)";
+      node.style.textDecoration = "line-through";
+      node.style.cursor = "not-allowed";
+    } else {
+      node.style.backgroundColor = held ? style.fill : (previewing ? style.tint : "#FFFFFF");
+      node.style.color = held ? style.on : style.fill;
+      node.style.boxShadow = "inset 0 0 0 " + (previewing ? "1.5px " : "1px ") + style.fill;
+      node.style.opacity = (held || previewing) ? "1" : "0.82";
+      node.style.transform = previewing ? "scale(1.06)" : "scale(1)";
+      node.style.textDecoration = "none";
+      node.style.cursor = held ? "default" : "pointer";
+    }
+
+    if (view.multiType) {
+      setAttr(node, "aria-checked", held ? "true" : "false");
+      setFlag(node, "aria-disabled", !available);
+      setFlag(node, "data-inert", !available);
+      if (available) {
+        node.removeAttribute("aria-describedby");
+        if (held) node.removeAttribute("title");
+        else setAttr(node, "title", "Click to switch to " + type);
+      } else {
+        setAttr(node, "aria-describedby", "filtered-out-note");
+        setAttr(node, "title", type + FILTERED_OUT_SUFFIX);
+      }
+      if (held) checkedTag = node;
+    }
+  });
+  if (view.multiType) applyRovingTabindex(view.tagTrack, checkedTag || view.tagNodes[0]);
+
+  // ---- form switcher ----------------------------------------------------
+  if (view.formNodes.length) {
+    /* The thumb tracks the COMMITTED form, not the previewed one. If it followed
+       the preview, hover and click would be visually identical again. */
+    var left = 3;
+    for (var k = 0; k < card.committed; k++) left += segmentOpen(strain.forms[k].short);
+    view.thumb.style.left = left + "px";
+    view.thumb.style.width = segmentOpen(strain.forms[card.committed].short) + "px";
+
+    var checkedPill = null;
+    view.formNodes.forEach(function (pill, i) {
+      var form = strain.forms[i];
+      var held = i === card.committed;
+      var off = !card.ok[i];
+      var previewing = !held && !off && card.preview && card.preview.idx === i;
+
+      pill.style.backgroundColor = previewing ? "#EAEAE7" : "transparent";
+      pill.style.color = off
+        ? "var(--ink-disabled-alt)"
+        : (held ? "#FFFFFF" : (previewing ? "var(--ink)" : "var(--ink-muted)"));
+      pill.style.textDecoration = off ? "line-through" : "none";
+      pill.style.cursor = off ? "not-allowed" : (held ? "default" : "pointer");
+
+      setAttr(pill, "aria-checked", held ? "true" : "false");
+      setFlag(pill, "aria-disabled", off);
+      setFlag(pill, "data-inert", off);
+      if (off) {
+        setAttr(pill, "aria-describedby", "filtered-out-note");
+        setAttr(pill, "title", form.label + FILTERED_OUT_SUFFIX);
+      } else {
+        pill.removeAttribute("aria-describedby");
+        if (held) pill.removeAttribute("title");
+        else setAttr(pill, "title", "Click to switch to " + form.label);
+      }
+      if (held) checkedPill = pill;
+    });
+    applyRovingTabindex(view.formGroup, checkedPill || view.formNodes[0]);
+  }
+
+  // ---- text -------------------------------------------------------------
+  if (view.soleFormEl) view.soleFormEl.textContent = effectiveForm.label;
+  view.specLineEl.textContent = specLine(effectiveForm);
+
+  return visible;
+}
+
+function renderGrid() {
+  var visibleCount = 0;
+  cardViews.forEach(function (view) {
+    if (renderCard(view)) visibleCount++;
+  });
+
+  /* Write the live region only when the text actually differs. Replacing the
+     text node is a mutation whether or not the content changed, and readers that
+     do not diff live-region content (JAWS) would re-announce the count on every
+     hover preview and every idle tick. */
+  var countText = visibleCount + " of " + STRAINS.length + " strains";
+  if (resultCountEl.textContent !== countText) resultCountEl.textContent = countText;
+
+  emptyEl.hidden = visibleCount !== 0;
+}
+
+
+/* ==========================================================================
+   12. PER-CARD FORM SELECTION
+   ========================================================================== */
+
+/* Freeze the card on whatever it happens to be showing, then stop it cycling.
+   Without writing the pick, `committed` would collapse back to live[0] the
+   instant the cycle stops and the card would visibly jump under the cursor.
+   Returns whether anything changed, so callers can batch a single render. */
+function freezeCard(strain) {
+  if (state.touched[strain.id]) return false;
+  var committed = resolveCard(strain).committed;
+  state.touched[strain.id] = true;
+  /* Remember where the cycle had got to, but in `frozen` — NOT in `picks`.
+     Without remembering anything the card would snap back to its default the
+     instant you stopped hovering, because step 3 no longer applies once the
+     card is touched. Writing `picks` would avoid that snap too, and is what
+     this did first, but `picks` means "the user chose this" — it is sticky for
+     the session, it survives filter changes, and only Reset clears it. Merely
+     moving the mouse over a card is not a stated preference, and recording it
+     as one makes a hovered card indistinguishable from a clicked one. */
+  if (state.frozen[strain.id] == null) state.frozen[strain.id] = committed;
+  return true;
+}
+
+function touchCard(strain) {
+  if (freezeCard(strain)) renderGrid();
+}
+
+/* The cycle stops per card on hover or focus, because motion under an active
+   cursor is interference. A screen-reader user in browse mode generates neither:
+   they read with a virtual cursor, so a cycling card would keep flipping
+   `aria-checked` inside a radiogroup they are in the middle of reading, and keep
+   rewriting the spec line under them. Any key press is the closest available
+   signal that someone is reading actively, so it freezes the whole grid the same
+   way one hover freezes one card. Reset restores the load state, cycle included,
+   so this stays armed rather than firing once. */
+function freezeGridOnKeyboardUse() {
+  var changed = false;
+  STRAINS.forEach(function (strain) {
+    if (freezeCard(strain)) changed = true;
+  });
+  if (changed) renderGrid();
+}
+
+document.addEventListener("keydown", freezeGridOnKeyboardUse);
+
+function startPreview(strain, formIndex) {
+  touchCard(strain);
+  state.preview = { id: strain.id, idx: formIndex, type: strain.forms[formIndex].type };
+  renderGrid();
+}
+
+/* Clear the preview only if it still refers to THIS exact button. Without the
+   identity guard, moving Indica -> Sativa fires Sativa's enter and then Indica's
+   leave, and the leave wipes the preview that was just set — a visible flicker
+   on every tag-to-tag move. Per-button (not per-card) because the strain name
+   sits directly below the tags and dropping onto it must release immediately. */
+function endPreview(strain, formIndex) {
+  if (!state.preview) return;
+  if (state.preview.id !== strain.id || state.preview.idx !== formIndex) return;
+  state.preview = null;
+  renderGrid();
+}
+
+function clearPreview() {
+  if (!state.preview) return;
+  state.preview = null;
+  renderGrid();
+}
+
+function commitForm(strain, formIndex) {
+  var form = strain.forms[formIndex];
+  state.preview = null;                       // never let a stale preview survive
+  state.touched[strain.id] = true;
+  state.picks[strain.id] = formIndex;
+
+  /* A type tag resolves to the first form of that type, which the FORM filter can
+     still exclude even while the tag itself is available. Relax that one axis so
+     the click the user just made is legal. Committing never touches the TYPE
+     filter — silently changing filter state the user did not set is a magic trick. */
+  if (!matchesForm(form, state.form)) state.form = "All forms";
+
+  render();
+}
+
+
+/* ==========================================================================
+   13. RESET
+   ========================================================================== */
+
+function resetFilters() {
+  state.type = "All";
+  state.form = "All forms";
+  state.effect = "All effects";
+  state.picks = Object.create(null);
+  state.frozen = Object.create(null);
+  state.touched = Object.create(null);
+  state.preview = null;
+  state.effectOpen = false;
+  state.effectKeyNav = false;
+  render();
+}
+
+resetEl.addEventListener("click", resetFilters);
+document.getElementById("empty-reset").addEventListener("click", resetFilters);
+
+
+/* ==========================================================================
+   14. IDLE CYCLE (05-interaction-spec.md § Idle cycle)
+   One page-level interval, staggered per card by strain index so the grid never
+   pulses in unison. It only ever walks forms that pass the current filters.
+   ========================================================================== */
+
+var reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+var gridOnScreen = true;
+var cycleTimer = null;
+
+function cycleShouldRun() {
+  return gridOnScreen && !reducedMotion.matches;
+}
+
+function syncIdleCycle() {
+  if (cycleShouldRun() && cycleTimer === null) {
+    cycleTimer = window.setInterval(function () {
+      /* Every card may already be frozen — all touched, or no strain left with
+         two in-filter forms. Advancing the tick and re-rendering would then be
+         pure churn. The timer stays armed rather than being torn down, because
+         Reset returns the page to the load state and re-arms the cycle. */
+      var cycling = STRAINS.some(function (strain) { return resolveCard(strain).cycling; });
+      if (!cycling) return;
+      state.tick += 1;
+      renderGrid();
+    }, IDLE_CYCLE_MS);
+  } else if (!cycleShouldRun() && cycleTimer !== null) {
+    window.clearInterval(cycleTimer);
+    cycleTimer = null;
+  }
+}
+
+function startIdleCycle() {
+  if (typeof IntersectionObserver === "function") {
+    new IntersectionObserver(function (entries) {
+      gridOnScreen = entries[0].isIntersecting;
+      syncIdleCycle();
+    }, { rootMargin: "120px" }).observe(gridEl);
+  }
+
+  /* Re-render as well as re-arm. resolveCard suppresses the cycle under reduced
+     motion, so a card that was mid-cycle when the preference flipped has to be
+     re-resolved back to its declared default; clearing the timer alone would
+     strand it on an arbitrary form, and with the timer stopped nothing else
+     would ever come along to correct it. */
+  if (typeof reducedMotion.addEventListener === "function") {
+    reducedMotion.addEventListener("change", function () {
+      syncIdleCycle();
+      renderGrid();
+    });
+  }
+
+  // The interval is page-scoped, so this is the equivalent of clearing on unmount.
+  window.addEventListener("pagehide", function () {
+    if (cycleTimer !== null) window.clearInterval(cycleTimer);
+    cycleTimer = null;
+  });
+
+  syncIdleCycle();
+}
+
+
+/* ==========================================================================
+   15. RENDER + BOOT
+   ========================================================================== */
+
+function render() {
+  renderTriCode();
+  renderFormFilter();
+  renderEffectDropdown();
+  setAttr(resetEl, "data-active", anyFilterActive() ? "true" : "false");
+  renderGrid();
+}
+
+/* Every link on this page is a stub: there is no PDP and no sibling category
+   page in this static demo. A real implementation routes the card links to
+   /products/{strain}/{form} and the nav to /product-types/{slug}. */
+document.addEventListener("click", function (event) {
+  var target = event.target instanceof Element ? event.target.closest("[data-stub-link]") : null;
+  if (target) event.preventDefault();
+});
+
+buildTriCode();
+buildFormFilter();
+buildEffectDropdown();
+cardViews = STRAINS.map(buildCard);
+render();
+startIdleCycle();
+
+})();
+</script>
+
+</body>
+</html>

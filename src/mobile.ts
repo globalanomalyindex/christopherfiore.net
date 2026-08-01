@@ -64,6 +64,7 @@ import {
 import { STUDIO, PROFILE_LINKS, CONTACT_TABLE } from './data/studio.ts';
 import { ABOUT, ABOUT_SECTIONS, AT_A_GLANCE } from './data/about.ts';
 import { DF2TM, DF2TM_GLANCE, DF2TM_SECTIONS } from './data/df2tm.ts';
+import { MFNY, MFNY_GLANCE, MFNY_SECTIONS } from './data/mfny.ts';
 import type { TableRow } from './data/types.ts';
 
 /** Viewport width below which the fixed stage stops being legible. */
@@ -434,14 +435,65 @@ function df2tmStudy(): (Node | null)[] {
   ];
 }
 
+/**
+ * MFNY, inlined like the other two subpage rows.
+ *
+ * The before/after is a flip on the stage and cannot be here, so both images
+ * are simply printed in order with their captions — which is arguably the
+ * better reading of a comparison anyway, since a phone can hold them one above
+ * the other and the stage cannot.
+ *
+ * The two boundaries ride with the entry rather than waiting for the sections:
+ * this is a redesign the client never shipped, and the THC numbers are invented.
+ */
+function mfnyStudy(): (Node | null)[] {
+  const rec = CASES.find((c) => c.id === 'mfny-concentrates');
+  return [
+    el(
+      'article',
+      { class: 'm-case m-entry' },
+      el('div', { class: 'm-caseidx' }, rec ? rec.idx : '', el('span', {}, 'built')),
+      el('h3', { class: 'm-casename' }, MFNY.title),
+      el('p', { class: 'm-caseline' }, rec ? rec.line : MFNY.descriptor),
+      el('span', { class: 'm-meta' }, `${MFNY.role} · ${MFNY.surface}`),
+      el('p', { class: 'm-boundary' }, `${MFNY.state}. THC values in the demo are placeholders — every live PDP renders that field empty.`),
+      el(
+        'div',
+        { class: 'm-caselinks' },
+        link(asset(MFNY.demoHref), MFNY.demoLabel),
+        link(MFNY.originalHref, `the live page · ${MFNY.originalLabel}`),
+      ),
+    ),
+    figure(
+      'projects/mfny-before.webp',
+      'The live MFNY concentrates page: two adjacent cards for the same strain, tagged Indica and Sativa',
+      'before · the same strain twice, tagged Indica on one card and Sativa on the other',
+      1456,
+      874,
+    ),
+    figure(
+      'projects/live/mfny.webp',
+      'The redesigned grid: eleven strain cards, each with its type tags and an in-card form switcher',
+      'after · one card per strain, with the forms inside it',
+      1456,
+      874,
+    ),
+    block('mfny-short', 'the short version', null, el('p', { class: 'm-stand' }, MFNY.standfirst)),
+    ...MFNY_SECTIONS.map((sec) =>
+      block(`mfny-${sec.id}`, sec.name, null, ...sec.paras.map((t) => body(t))),
+    ),
+    block('mfny-glance', 'at a glance', null, table(MFNY_GLANCE)),
+  ];
+}
+
 /* ------------------------------------------------------------------ 01 */
 
 function productsSection(): HTMLElement {
   /*
-    Seven rows, not nine. Two records carry `subpage` instead of `href` —
-    chellbook and df2tm. On the stage each opens a screen of its own; there are
-    no subpages here, so both are printed in full below instead of appearing as
-    rows with nothing to link to.
+    Seven rows, not ten. Three records carry `subpage` instead of `href` —
+    chellbook, MFNY and df2tm. On the stage each opens a screen of its own;
+    there are no subpages here, so all three are printed in full below instead
+    of appearing as rows with nothing to link to.
   */
   const rows = CASES.filter((c) => !c.subpage).map((c) =>
     el(
@@ -473,6 +525,7 @@ function productsSection(): HTMLElement {
     el('p', { class: 'm-thesis' }, CASES_THESIS),
     ...rows,
     ...chellbookStudy(),
+    ...mfnyStudy(),
     ...df2tmStudy(),
   );
 }

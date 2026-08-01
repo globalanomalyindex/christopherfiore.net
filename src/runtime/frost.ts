@@ -132,7 +132,7 @@ interface Frost {
 
 /** Everything that can be covered, as a unit, by something drawn over it. */
 const SCREEN_SEL =
-  '[data-evidence],[data-chellbook],[data-about],[data-df2tm],[data-page],[data-menu]';
+  '[data-evidence],[data-chellbook],[data-about],[data-df2tm],[data-mfny],[data-page],[data-menu]';
 
 const HANDLES = new WeakMap<HTMLCanvasElement, FrostHandle>();
 const FROSTS = new WeakMap<HTMLCanvasElement, Frost>();

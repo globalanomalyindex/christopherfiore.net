@@ -30,6 +30,7 @@ import {
 } from './chellbook';
 import { aboutOpen, closeAbout, goAbout, openAbout } from './about';
 import { closeDf2tm, df2tmOpen, goDf2tm, openDf2tm } from './df2tm';
+import { closeMfny, mfnyOpen, openMfny, setMfnyView } from './mfny';
 import { closePage, nextPage, openPage, runIntro } from './transitions';
 import { locked, state } from './state';
 
@@ -174,6 +175,7 @@ export function bindActions(stage: HTMLElement): void {
         else if (chellbookOpen(stage)) closeChellbook(stage);
         else if (aboutOpen(stage)) closeAbout(stage);
         else if (df2tmOpen(stage)) closeDf2tm(stage);
+        else if (mfnyOpen(stage)) closeMfny(stage);
         else closePage(stage);
         break;
       case 'evidence':
@@ -201,6 +203,16 @@ export function bindActions(stage: HTMLElement): void {
         break;
       case 'chellbook-step':
         stepChellbook(stage, num(t, 'data-step'));
+        break;
+      case 'mfny':
+        // the MFNY row — the screen grows out of the row that opened it
+        openMfny(stage, t);
+        break;
+      case 'mfny-close':
+        closeMfny(stage);
+        break;
+      case 'mfny-view':
+        setMfnyView(stage, num(t, 'data-view'));
         break;
       case 'df2tm':
         // the df2tm row — the screen grows out of the row that opened it
@@ -339,6 +351,11 @@ export function bindActions(stage: HTMLElement): void {
         closeDf2tm(stage);
         return;
       }
+      if (mfnyOpen(stage)) {
+        e.preventDefault();
+        closeMfny(stage);
+        return;
+      }
       if (s.open === null) return;
       e.preventDefault();
       closePage(stage);
@@ -363,6 +380,21 @@ export function bindActions(stage: HTMLElement): void {
          still load-bearing: without it they would fall through to nextPage and
          change the channel underneath an open modal. Not prevented — the arrows
          belong to whatever the visitor has focused. */
+      /* The MFNY screen's before/after is a two-option radiogroup. Arrows move
+         within it while it holds focus, which is what role="radio" promises;
+         anywhere else on that screen they do nothing rather than falling
+         through to nextPage. */
+      if (mfnyOpen(stage)) {
+        const on = document.activeElement;
+        const radio = on instanceof HTMLElement ? on.closest<HTMLElement>('[data-act="mfny-view"]') : null;
+        if (!radio) return;
+        e.preventDefault();
+        const next = (num(radio, 'data-view') + (step > 0 ? 1 : -1) + 2) % 2;
+        setMfnyView(stage, next);
+        const target = q(stage, `[data-act="mfny-view"][data-view="${next}"]`);
+        target?.focus();
+        return;
+      }
       if (aboutOpen(stage) || df2tmOpen(stage)) return;
       // Only meaningful with a page open — on the menu the arrows belong to
       // the browser (and to whatever the user has focused).

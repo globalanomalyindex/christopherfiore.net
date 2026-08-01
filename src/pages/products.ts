@@ -32,6 +32,7 @@ import { COLOR, RULE, rgba } from '../design/tokens.ts';
 import { MODULE, MOTION_SHEET, PAGE1 } from '../design/layout.ts';
 import * as chellbookPage from './chellbook.ts';
 import * as df2tmPage from './df2tm.ts';
+import * as mfnyPage from './mfny.ts';
 import {
   CASES,
   CASES_THESIS,
@@ -941,5 +942,6 @@ export function build(): HTMLElement {
     chellbookPage.build(),
     // the df2tm row's screen, mounted the same way and for the same reasons
     df2tmPage.build(),
+    mfnyPage.build(),
   );
 }
