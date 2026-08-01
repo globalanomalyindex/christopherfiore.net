@@ -34,14 +34,21 @@ export interface MfnySection {
 }
 
 export const MFNY = {
-  name: 'MFNY concentrates',
+  name: 'mfny concentrates',
   /** What the row and the subpage call the work. */
-  title: 'MFNY product page redesign',
+  title: 'mfny product page redesign',
   descriptor: 'a duplicated catalog grid, rebuilt around the strain',
   state: 'self-directed redesign · not shipped by the client',
   role: 'product design — research, IA, interaction, visual, prototype',
   surface: 'desktop catalog page, 1440px',
-  /** The page the work critiques. Real, live, and someone else's. */
+  /**
+   * The page the work critiques. Recorded because the case is meaningless
+   * without naming what was redesigned, but deliberately NOT rendered as a
+   * link any more: this screen carries one call to action, the demo, and
+   * pointing a visitor at a real company's live storefront from a page
+   * criticising it is not the portfolio's job. The "before" capture is the
+   * evidence; it does not need a click-through to be checkable.
+   */
   originalHref: 'https://www.mfny.co/product-types/concentrates',
   originalLabel: 'mfny.co/product-types/concentrates',
   /** The working demo, hosted alongside this site. */
@@ -59,17 +66,20 @@ export const MFNY_SECTIONS: MfnySection[] = [
     id: 'found',
     name: 'what the page was doing',
     paras: [
-      'chemdog appears twice, once as live resin and once as live rosin, adjacent in the grid ' +
-        'with the same photo treatment and nothing on either card explaining the relationship. ' +
-        'electric lime does the same thing. they read as two unrelated products that happen to ' +
-        'share a name.',
-      'the card title is doing four jobs at once. "chemdog live resin concentrate 1g" packs the ' +
+      'thirteen SKUs render as thirteen cards for eleven strains, so the grid is longer than the ' +
+        'catalog is. every strain that exists in more than one form appears more than once, ' +
+        'adjacent, with the same photo treatment and nothing on either card explaining the ' +
+        'relationship. chemdog is the clearest instance, sitting in the grid twice as live resin ' +
+        'and live rosin, and electric lime does the same thing. they read as unrelated products ' +
+        'that happen to share a name.',
+      'the titles are doing four jobs at once. "chemdog live resin concentrate 1g" packs the ' +
         'strain, the extraction method, the product category and the weight into one line, so the ' +
         'strain name, the only part a returning customer is scanning for, is seven characters of ' +
-        'a thirty-eight character string.',
-      'and the live page tags one chemdog card Indica and the other Sativa. i do not know which ' +
-        'is correct. that is a data question for the team rather than a design one, but the ' +
-        'shopper sees the contradiction, and it undermines the type tag everywhere else.',
+        'a thirty-eight character string. every title on the page has that shape.',
+      'and where a strain is split across cards, the type tags can contradict each other. chemdog ' +
+        'is tagged Indica on one and Sativa on the other. i do not know which is correct. that is ' +
+        'a data question for the team rather than a design one, but the shopper sees the ' +
+        'contradiction, and it undermines the type tag everywhere else.',
     ],
   },
   {
@@ -139,9 +149,12 @@ export const MFNY_SECTIONS: MfnySection[] = [
     id: 'second-form',
     name: 'making the second form impossible to miss',
     paras: [
-      'multi-type strains carry both tags. the selected one fills and slides to the leftmost slot ' +
-        'while the other stays outlined, both on the same curve, so switching forms visibly moves ' +
-        'the type and you can watch the card change character.',
+      'a strain whose forms differ in type carries a tag for each. the selected one fills and ' +
+        'slides to the leftmost slot while the other stays outlined, both on the same curve, so ' +
+        'switching forms visibly moves the type and you can watch the card change character. ' +
+        'chemdog is the card where that reads hardest, because its two forms are the two ' +
+        'contradicting tags from the old grid, now sitting on one card where they can be ' +
+        'compared instead of stumbled across.',
       'hover previews and click commits. hovering either the tag or the form pill swaps the photo, ' +
         'the THC, the terpenes and the switcher, and reverts on mouse-out. nothing commits until ' +
         'you click, which makes exploring the second form free. early on hover and click did the ' +
@@ -194,7 +207,7 @@ export const MFNY_SECTIONS: MfnySection[] = [
 
 /** The scannable column: what the work was and what it produced. */
 export const MFNY_GLANCE: { field: string; value: string }[] = [
-  { field: 'client', value: 'MFNY (Marijuana Farms New York). self-directed, not commissioned' },
+  { field: 'client', value: 'mfny (Marijuana Farms New York). self-directed, not commissioned' },
   { field: 'surface', value: 'the /product-types/concentrates catalog page, desktop, 1440px' },
   { field: 'the problem', value: '13 SKUs rendering as 13 cards for 11 strains' },
   { field: 'the change', value: '11 strain cards, form selection moved inside the card' },

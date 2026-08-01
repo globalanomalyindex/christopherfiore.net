@@ -457,17 +457,14 @@ function mfnyStudy(): (Node | null)[] {
       el('p', { class: 'm-caseline' }, rec ? rec.line : MFNY.descriptor),
       el('span', { class: 'm-meta' }, `${MFNY.role} · ${MFNY.surface}`),
       el('p', { class: 'm-boundary' }, `${MFNY.state}. THC values in the demo are placeholders — every live PDP renders that field empty.`),
-      el(
-        'div',
-        { class: 'm-caselinks' },
-        link(asset(MFNY.demoHref), MFNY.demoLabel),
-        link(MFNY.originalHref, `the live page · ${MFNY.originalLabel}`),
-      ),
+      // One link, matching the stage: the live-page door was removed there
+      // deliberately, and a phone should not be the one place it survives.
+      el('div', { class: 'm-caselinks' }, link(asset(MFNY.demoHref), MFNY.demoLabel)),
     ),
     figure(
       'projects/mfny-before.webp',
-      'The live MFNY concentrates page: two adjacent cards for the same strain, tagged Indica and Sativa',
-      'before · the same strain twice, tagged Indica on one card and Sativa on the other',
+      'The live mfny concentrates page: two adjacent cards for the same strain, tagged Indica and Sativa',
+      'before · chemdog is one of the split strains, here twice, tagged Indica on one and Sativa on the other',
       1456,
       874,
     ),
@@ -491,7 +488,7 @@ function mfnyStudy(): (Node | null)[] {
 function productsSection(): HTMLElement {
   /*
     Seven rows, not ten. Three records carry `subpage` instead of `href` —
-    chellbook, MFNY and df2tm. On the stage each opens a screen of its own;
+    chellbook, mfny and df2tm. On the stage each opens a screen of its own;
     there are no subpages here, so all three are printed in full below instead
     of appearing as rows with nothing to link to.
   */

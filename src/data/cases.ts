@@ -50,7 +50,7 @@ export const CASES: CaseRecord[] = [
   {
     id: 'mfny-concentrates',
     idx: '03',
-    name: 'MFNY concentrates',
+    name: 'mfny concentrates',
     line: 'product page redesign: one card per SKU becomes one card per strain',
     year: '2026',
     discipline: 'product design, IA, interaction',

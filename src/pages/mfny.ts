@@ -2,8 +2,9 @@
  * Page 01 subpage — the MFNY concentrates redesign.
  *
  * The third screen inside channel 01, and the only one whose argument is
- * visual: the case rests on two cards of the same strain sitting next to each
- * other on the live site, one tagged Indica and one tagged Sativa. So this
+ * visual: the case is that a catalog of eleven strains renders as thirteen
+ * cards, and the fastest way to show it is two cards of one strain sitting
+ * next to each other on the live site with contradicting type tags. So this
  * takes the chellbook shape rather than the background screen's — a plate on
  * the left, prose beside it — and spends the plate on a before/after the reader
  * can flip. Geometry from MFNY_PAGE in `src/design/layout.ts`.
@@ -13,10 +14,8 @@
  * white while the new file decodes, which is exactly wrong for a comparison
  * someone is going to flip back and forth.
  *
- * TWO DOORS, IN THIS ORDER. The working demo first, because it is the
- * deliverable; the live MFNY page second, because a reader who has just been
- * told what is wrong with it will want to check. The second is marked as
- * someone else's site and opens in a new tab.
+ * ONE DOOR: the working demo. See `doors()` for why the live-page link is
+ * deliberately absent.
  *
  * Every claim boundary in `src/data/mfny.ts` is printed, not paraphrased. The
  * footer carries the one that matters most — that this was never shipped —
@@ -71,10 +70,10 @@ const VIEWS = [
     label: 'before',
     src: 'projects/mfny-before.webp',
     alt:
-      'The live MFNY concentrates page: two adjacent cards both titled Classics Chemdog Live ' +
+      'The live mfny concentrates page: two adjacent cards both titled Classics Chemdog Live ' +
       'Rosin Concentrate and Classics Chemdog Live Resin Concentrate, tagged Indica and Sativa',
     caption:
-      'the live page · the same strain twice, tagged Indica on one card and Sativa on the other',
+      'the live page · chemdog is one of the split strains, here twice, tagged Indica on one card and Sativa on the other',
   },
   {
     id: 'after',
@@ -460,47 +459,57 @@ function toggle(): HTMLElement {
   );
 }
 
+/**
+ * The one door: the working demo.
+ *
+ * There was a second, to MFNY's live page, and it is gone deliberately. This
+ * screen should carry a single call to action, and sending a visitor to a real
+ * company's storefront straight off a page criticising it is not this
+ * portfolio's job. The "before" plate is the evidence and it is checkable
+ * without a click-through; `MFNY.originalHref` still records what was
+ * redesigned, unlinked.
+ */
 function doors(): HTMLElement[] {
-  const door = (label: string, note: string, href: string, i: number): HTMLElement =>
+  return [
     el(
       'a',
       {
-        href,
+        href: asset(MFNY.demoHref),
         target: '_blank',
         rel: 'noopener noreferrer',
-        'aria-label': `${label}, ${note}, opens in a new tab`,
+        'aria-label': 'Open the working demo, built for this case and hosted here, opens in a new tab',
         class: 'ps-hov-invert-dark',
         'data-intro': 'wipeX',
-        'data-in-delay': 380 + i * 50,
+        'data-in-delay': 380,
         'data-in-dur': 340,
         style: css({
           ...BTN,
           'clip-path': 'inset(0 100% 0 0)',
           position: 'absolute',
-          left: MP.doors.x + i * (MP.doors.w / 2 + MP.doors.gap / 2),
+          left: MP.doors.x,
           top: MP.doors.y,
-          width: MP.doors.w / 2 - MP.doors.gap / 2,
+          width: MP.doors.w,
           height: MP.doors.h,
           display: 'flex',
-          'flex-direction': 'column',
-          'justify-content': 'center',
-          gap: 4,
-          padding: '0 16px',
-          border: `1px solid ${i ? MAJOR : COLOR.lavender}`,
+          'align-items': 'center',
+          'justify-content': 'space-between',
+          padding: '0 20px',
+          border: `1px solid ${COLOR.lavender}`,
           transition: 'background 150ms linear,color 150ms linear',
         }),
       },
       el(
         'span',
-        { style: css({ 'font-size': 14, 'letter-spacing': '.14em' }) },
-        `${label}  ↗`,
+        { style: css({ display: 'flex', 'flex-direction': 'column', gap: 4 }) },
+        el('span', { style: css({ 'font-size': 15, 'letter-spacing': '.14em' }) }, 'the working demo'),
+        el(
+          'span',
+          { style: css({ 'font-size': 11.5, 'letter-spacing': '.1em', opacity: '.62' }) },
+          'built for this case, hosted here',
+        ),
       ),
-      el('span', { style: css({ 'font-size': 11.5, 'letter-spacing': '.1em', opacity: '.62' }) }, note),
-    );
-
-  return [
-    door('the working demo', 'built for this case, hosted here', asset(MFNY.demoHref), 0),
-    door('the live page', "MFNY's own site, unchanged", MFNY.originalHref, 1),
+      el('span', { 'aria-hidden': 'true', style: css({ 'font-size': 20, 'line-height': '1' }) }, '↗'),
+    ),
   ];
 }
 
