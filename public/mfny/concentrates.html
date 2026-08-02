@@ -373,6 +373,22 @@ button { font-family: inherit; font-size: inherit; color: inherit; }
   transition: opacity .2s ease, transform .3s var(--ease-move), visibility 0s;
 }
 
+/* The menu hangs 5px clear of the trigger, and that gap is outside the
+   wrapper's own box. The menu closes on mouseleave of the wrapper, so a cursor
+   travelling from the trigger down to an option crossed 5px of open ground and
+   shut the menu before it could ever arrive — leaving the pointer over whatever
+   card sat underneath. This bridges the gap. It belongs to the menu, so it only
+   exists while the menu is open, and it keeps the whole trip inside the
+   dropdown without moving the menu or closing the visual gap. */
+.dd-menu::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -7px;
+  height: 7px;
+}
+
 .dd-option {
   height: 30px;
   padding: 0 12px;
@@ -693,7 +709,16 @@ button { font-family: inherit; font-size: inherit; color: inherit; }
 
 /* ==========================================================================
    1. DATA
-   The real MFNY catalog: 11 strains, 13 SKUs. Verbatim from catalog.json.
+   The real MFNY catalog: 11 strains, 13 SKUs, as the page stood when it was
+   captured. Structure and SKU list are from catalog.json; the `effect` values
+   and Yuzu Gold's `type` were corrected against the client afterwards, so those
+   fields are his, not the scrape's.
+
+   The live catalog has moved on since the capture — it now carries Gelato 41,
+   MFNY Skunk and Gelonade, and no longer lists Turbo Blueberry, The "Belafonte"
+   or Yuzu Gold. This is deliberately the snapshot the redesign was made
+   against, not a mirror of the page today.
+
    `type` lives on the FORM, not the strain — Chemdog's rosin is Indica and its
    resin is Sativa, and a strain-level field cannot express that.
    `forms[0]` is the default form. Terpenes are ordered, dominant first.
@@ -702,17 +727,20 @@ button { font-family: inherit; font-size: inherit; color: inherit; }
 
 var CATALOG = [
   {
-    id: "chemdog", name: "Chemdog", type: "Indica", effect: "Heady", line: "Classics",
+    id: "chemdog", name: "Chemdog", type: "Indica", effect: "Euphoria", line: "Classics",
     forms: [
       { label: "Live Rosin Concentrate", short: "Live Rosin", extraction: "Live Rosin", texture: "Concentrate", type: "Indica", thcPercent: 79.8, size: "1g", terpenes: ["Caryophyllene", "Myrcene"], image: "https://cdn.prod.website-files.com/65ef2b75c351263c36848600/69e00ac150bdd50ddfa8a085_image.png" },
       { label: "Live Resin Concentrate", short: "Live Resin", extraction: "Live Resin", texture: "Concentrate", type: "Sativa", thcPercent: 83.1, size: "1g", terpenes: ["Caryophyllene", "Limonene"], image: "https://cdn.prod.website-files.com/65ef2b75c351263c36848600/69d6381bd770fcd2ae9234d2_image.png" }
     ]
   },
   {
-    id: "electric-lime", name: "Electric Lime", type: "Sativa", effect: "Energy",
+    id: "electric-lime", name: "Electric Lime", type: "Sativa", effect: "Euphoria",
+    /* Its two SKUs are a Badder and a Live Resin Concentrate. They used to be
+       recorded as two Badders, which the taxonomy cannot tell apart: same
+       extraction, same texture, two chips reading as one product twice. */
     forms: [
       { label: "Badder", short: "Badder", extraction: "Live Resin", texture: "Badder", type: "Sativa", thcPercent: 80.3, size: "1g", terpenes: ["Terpinolene", "Limonene"], image: "https://cdn.prod.website-files.com/65ef2b75c351263c36848600/68fa4776498da3df91d0e28c_image.png" },
-      { label: "Live Resin Badder", short: "Resin Badder", extraction: "Live Resin", texture: "Badder", type: "Sativa", thcPercent: 82.1, size: "1g", terpenes: ["Terpinolene", "Pinene"], image: "https://cdn.prod.website-files.com/65ef2b75c351263c36848600/683582de6a5dd0ba4895131b_MFNY%20Live%20Resin%20Concentrate%20Electric%20Lime%201g.png" }
+      { label: "Live Resin Concentrate", short: "Live Resin", extraction: "Live Resin", texture: "Concentrate", type: "Sativa", thcPercent: 82.1, size: "1g", terpenes: ["Terpinolene", "Pinene"], image: "https://cdn.prod.website-files.com/65ef2b75c351263c36848600/683582de6a5dd0ba4895131b_MFNY%20Live%20Resin%20Concentrate%20Electric%20Lime%201g.png" }
     ]
   },
   {
@@ -722,49 +750,49 @@ var CATALOG = [
     ]
   },
   {
-    id: "candy-rain", name: "Candy Rain", type: "Indica", effect: "Calm",
+    id: "candy-rain", name: "Candy Rain", type: "Indica", effect: "Relaxation",
     forms: [
       { label: "Live Resin Badder", short: "Resin Badder", extraction: "Live Resin", texture: "Badder", type: "Indica", thcPercent: 80.5, size: "1g", terpenes: ["Linalool", "Myrcene"], image: "https://cdn.prod.website-files.com/65ef2b75c351263c36848600/67e2dcf0f4b124f73e2af276_MFNY%20Live%20Resin%20Concentrate%20Candy%20Rain%201g.png" }
     ]
   },
   {
-    id: "turbo-blueberry", name: "Turbo Blueberry", type: "Indica", effect: "Calm",
+    id: "turbo-blueberry", name: "Turbo Blueberry", type: "Indica", effect: "Relief",
     forms: [
       { label: "Live Resin Badder", short: "Resin Badder", extraction: "Live Resin", texture: "Badder", type: "Indica", thcPercent: 79.4, size: "1g", terpenes: ["Myrcene", "Pinene"], image: "https://cdn.prod.website-files.com/65ef2b75c351263c36848600/67e2dd13af43e85422842777_MFNY%20Live%20Resin%20Concentrate%20Turbo%20Blueberry%201g.png" }
     ]
   },
   {
-    id: "the-belafonte", name: "The \"Belafonte\"", type: "Sativa", effect: "Uplift",
+    id: "the-belafonte", name: "The \"Belafonte\"", type: "Sativa", effect: "Relief",
     forms: [
       { label: "Live Resin Badder", short: "Resin Badder", extraction: "Live Resin", texture: "Badder", type: "Sativa", thcPercent: 81.2, size: "1g", terpenes: ["Limonene", "Terpinolene"], image: "https://cdn.prod.website-files.com/65ef2b75c351263c36848600/67e2dc5725ef1b6585b86840_MFNY%20Live%20Resin%20Concentrate%20The%20Belafonte%201g.png" }
     ]
   },
   {
-    id: "mfny-yuzu-gold", name: "MFNY Yuzu Gold", type: "Indica", effect: "Body",
+    id: "mfny-yuzu-gold", name: "MFNY Yuzu Gold", type: "Sativa", effect: "Energy",
     forms: [
-      { label: "Live Resin Badder", short: "Resin Badder", extraction: "Live Resin", texture: "Badder", type: "Indica", thcPercent: 80.9, size: "1g", terpenes: ["Limonene", "Caryophyllene"], image: "https://cdn.prod.website-files.com/65ef2b75c351263c36848600/67e2dc0dacfd47af0471530b_MFNY%20Live%20Resin%20Concentrate%20MFNY%20Yuza%20Gold%201g.png" }
+      { label: "Live Resin Badder", short: "Resin Badder", extraction: "Live Resin", texture: "Badder", type: "Sativa", thcPercent: 80.9, size: "1g", terpenes: ["Limonene", "Caryophyllene"], image: "https://cdn.prod.website-files.com/65ef2b75c351263c36848600/67e2dc0dacfd47af0471530b_MFNY%20Live%20Resin%20Concentrate%20MFNY%20Yuza%20Gold%201g.png" }
     ]
   },
   {
-    id: "oishii", name: "Oishii", type: "Indica", effect: "Focus",
+    id: "oishii", name: "Oishii", type: "Indica", effect: "Relaxation",
     forms: [
       { label: "Badder", short: "Badder", extraction: "Live Resin", texture: "Badder", type: "Indica", thcPercent: 78.8, size: "1g", terpenes: ["Pinene", "Limonene"], image: "https://cdn.prod.website-files.com/65ef2b75c351263c36848600/68fa479df2d22ef3332f1a67_image.png" }
     ]
   },
   {
-    id: "shishkaberry", name: "Shishkaberry", type: "Indica", effect: "Sleep", line: "Classics",
+    id: "shishkaberry", name: "Shishkaberry", type: "Indica", effect: "Relaxation", line: "Classics",
     forms: [
       { label: "Live Resin Concentrate", short: "Live Resin", extraction: "Live Resin", texture: "Concentrate", type: "Indica", thcPercent: 80.7, size: "1g", terpenes: ["Myrcene", "Linalool"], image: "https://cdn.prod.website-files.com/65ef2b75c351263c36848600/6a1d5d8d55e6cee0c3dea826_image.png" }
     ]
   },
   {
-    id: "sour-diesel", name: "Sour Diesel", type: "Sativa", effect: "Energy", line: "Classics",
+    id: "sour-diesel", name: "Sour Diesel", type: "Sativa", effect: "Focus", line: "Classics",
     forms: [
       { label: "Live Resin Concentrate", short: "Live Resin", extraction: "Live Resin", texture: "Concentrate", type: "Sativa", thcPercent: 82.9, size: "1g", terpenes: ["Limonene", "Caryophyllene"], image: "https://cdn.prod.website-files.com/65ef2b75c351263c36848600/699dea7a61b95bb147d306be_image.png" }
     ]
   },
   {
-    id: "superboof", name: "Superboof", type: "Hybrid", effect: "Uplift",
+    id: "superboof", name: "Superboof", type: "Hybrid", effect: "Energy",
     forms: [
       { label: "Live Resin Concentrate", short: "Live Resin", extraction: "Live Resin", texture: "Concentrate", type: "Hybrid", thcPercent: 82.4, size: "1g", terpenes: ["Limonene", "Caryophyllene"], image: "https://cdn.prod.website-files.com/65ef2b75c351263c36848600/6a5e5139c25ece7ed2578807_b59e4af1-e747-412d-8075-2dce61008991.webp" }
     ]
@@ -1293,6 +1321,18 @@ function buildEffectDropdown() {
     setDropdownOpen(!state.effectOpen, false);
   });
   effectTrigger.addEventListener("keydown", onEffectKeydown);
+
+  /* Focus has to stay on the trigger through the whole click, and this is what
+     makes the menu selectable at all. The options are <li>s: they take no
+     focus, so pressing the mouse on one moved focus off the trigger, the
+     focusout below closed the menu, `pointer-events: none` landed before the
+     button came back up, and the browser never dispatched a click at all. The
+     option's own handler simply never ran. Suppressing the default focus move
+     is also what the aria-activedescendant pattern wants — the trigger is
+     supposed to hold focus for as long as the listbox is open. */
+  effectListbox.addEventListener("mousedown", function (event) {
+    event.preventDefault();
+  });
 
   /* Spec'd behaviour: the menu closes on select and on mouse-leave of the
      wrapper. A keyboard-only user never generates mouseleave, so this is safe. */
