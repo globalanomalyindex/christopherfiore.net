@@ -17,7 +17,7 @@
 
 import { el, qq } from '../dom.ts';
 import { COLOR, FLASH, FONT, LIGHTS, MARA } from '../design/tokens.ts';
-import { dfxSeq } from './dither.ts';
+import { dfxRelease, dfxSeq } from './dither.ts';
 import { state } from './state.ts';
 
 /* ------------------------------------------------------------------ state */
@@ -471,7 +471,7 @@ export function flashAlt(
       hlOn(sp, rr < 0.22 ? col2 : rr < 0.34 ? col3 : col);
       sp.style.color = COLOR.nearBlack;
       sp.style.transform = `translate(${(Math.random() * 2.6 - 1.3).toFixed(1)}px,0)`;
-      dfxSeq(sp, FLASH_SEQ, 11);
+      dfxSeq(sp, FLASH_SEQ, 11, true);
       hlSync(sp.parentElement);
       window.setTimeout(() => {
         if (!sp.isConnected) return;
@@ -481,7 +481,7 @@ export function flashAlt(
       }, 130);
       window.setTimeout(() => {
         if (!sp.isConnected) return;
-        dfxSeq(sp, FLASH_SEQ, 11);
+        dfxSeq(sp, FLASH_SEQ, 11, true);
         hlOff(sp);
         swapLetter(sp, k, false);
         hlSync(sp.parentElement);
@@ -528,7 +528,7 @@ export function glitchFont(line: HTMLElement, toAlt: boolean, step?: number, noH
     const sp = ls[li];
     gt.push(
       window.setTimeout(() => {
-        dfxSeq(sp, GLITCH_SEQ, 9);
+        dfxSeq(sp, GLITCH_SEQ, 9, true);
         swapLetter(sp, k, toAlt, true);
         if (!noHl) {
           if (toAlt) {
@@ -594,7 +594,9 @@ export function resetTitleFont(line: HTMLElement): void {
     sp.style.width = '';
     sp.style.color = '';
     sp.style.transform = '';
-    sp.style.filter = '';
+    // Not `sp.style.filter = ''`: this is the hard reset, so the letter's
+    // filter goes back to the pool instead of being stranded in the defs.
+    dfxRelease(sp);
     sp.style.display = 'inline-block';
     lm.sx = 1;
   });

@@ -43,14 +43,109 @@ interface DfxNodes {
   id: string;
 }
 
-/** Per-element cloned filter, its animation frame, and playIn bookkeeping. */
+/** Per-element cloned filter, and playIn bookkeeping. */
 const NODES = new WeakMap<HTMLElement, DfxNodes>();
-const RAFS = new WeakMap<HTMLElement, number>();
 const TIMERS = new WeakMap<HTMLElement, number[]>();
 const SRC = new WeakMap<HTMLElement, string>();
 
 /** Filter ids are minted in sequence (psd1, psd2, …), never randomly. */
 let filterSeq = 0;
+
+/* ----------------------------------------------------------------- budget */
+
+/**
+ * How many elements may carry a live dither at the same moment.
+ *
+ * An applied SVG filter costs the renderer a fixed amount per element per
+ * frame, and that is the whole story — measured on this machine at 1728×1080,
+ * two screens deep, while sweeping the cursor across the buttons:
+ *
+ *     budget  32 40 48 56 | 64   72   80   96   none
+ *     fps     60 60 60 60 | 55   50   46   42   40   (peak 134 concurrent)
+ *
+ * The cliff is the count and nothing else. Blurring a smaller region does not
+ * help (a 124%×132% region measured 38.8fps against the real 160%×190%
+ * region's 38.3), a retina backing store does not hurt (DPR 1 and DPR 2 both
+ * measured 38fps), holding a few thousand unused filters in the defs costs
+ * nothing, and stepping the animation down to 12–30 updates a second saves
+ * nothing at all — Chrome re-runs the graph every frame whether or not the
+ * numbers in it changed. What *is* expensive is `feGaussianBlur`: pinning its
+ * radius to 0 while leaving the rest of the graph alone took the same scene
+ * from 41fps to 55, and a filter that is applied but does no work is free.
+ *
+ * 48 sits below the 56 knee so a slower machine than this one has somewhere to
+ * fall, and well above the ~20 elements a single button's hover puts in flight,
+ * which is the point: one hover, or two at once, never reaches the budget and
+ * is pixel-for-pixel what it always was. Only a cursor thrown across several
+ * buttons at once gets there, and what it loses is the speckle on individual
+ * letters at a moment when a dozen of them are speckling.
+ */
+const BUDGET = 48;
+
+interface Run {
+  /** the pending frame */
+  raf: number;
+  /**
+   * A per-letter pulse, which yields its slot to page-scale work. Sequences
+   * driving a transition are never optional and are never evicted: several of
+   * them end dissolved rather than resolved, so cutting one short would leave
+   * a title or a plate stranded in noise.
+   */
+  optional: boolean;
+  /** stop the frames and put the element where the sequence would have ended */
+  land: () => void;
+}
+
+/** Insertion-ordered, so the first optional entry found is the oldest one. */
+const RUNS = new Map<HTMLElement, Run>();
+
+/** Stop an element's frame loop, leaving it looking exactly as it does now. */
+function stop(el: HTMLElement): void {
+  const run = RUNS.get(el);
+  if (!run) return;
+  cancelAnimationFrame(run.raf);
+  RUNS.delete(el);
+}
+
+/**
+ * Free one slot by landing the longest-running letter. Returns false when the
+ * budget is entirely spoken for by transition work, which the caller reads as
+ * "skip this pulse" rather than as licence to interrupt a transition.
+ */
+function evict(): boolean {
+  for (const run of RUNS.values()) {
+    if (!run.optional) continue;
+    run.land();
+    return true;
+  }
+  return false;
+}
+
+/* ------------------------------------------------------------------- pool */
+
+/**
+ * Filters no element points at any more, ready to be handed out again.
+ *
+ * Cloning is cheap; leaving the clones behind was not. Every letter that ever
+ * glitched used to strand a six-node filter in the defs for the life of the
+ * page — a single minute of hovering took the document from 137 of them to
+ * 389, climbing, with nothing that ever removed one. It costs no frame time
+ * (a few thousand idle filters measured identically), so this is a leak fix
+ * rather than a speed fix, but it is unbounded and worth closing.
+ *
+ * Keyed by the `<defs>` that owns them, so a rebuilt stage can never be handed
+ * a filter that now lives in a detached tree.
+ */
+const POOL = new WeakMap<Element, DfxNodes[]>();
+
+function pool(defs: Element): DfxNodes[] {
+  let p = POOL.get(defs);
+  if (!p) {
+    p = [];
+    POOL.set(defs, p);
+  }
+  return p;
+}
 
 /* ------------------------------------------------------------------ defs */
 
@@ -129,7 +224,19 @@ function defsHost(el: HTMLElement): Element | null {
   return (stage && q<SVGSVGElement>(stage, DEFS_SEL)) || document.querySelector(DEFS_SEL);
 }
 
-/** Clone the prototype filter for `el` (once) and point `el` at it. */
+function mint(proto: SVGElement, defs: Element): DfxNodes | null {
+  const filter = proto.cloneNode(true) as SVGElement;
+  const id = `psd${++filterSeq}`;
+  filter.setAttribute('id', id);
+  filter.removeAttribute('data-dithproto');
+  defs.appendChild(filter);
+  const blur = q<SVGFEGaussianBlurElement>(filter, 'feGaussianBlur');
+  const comp = q<SVGElement>(filter, "feComposite[operator='arithmetic']");
+  if (!blur || !comp) return null;
+  return { filter, blur, comp, id };
+}
+
+/** Give `el` a filter of its own (from the pool if there is one) and point it there. */
 function ensureNodes(el: HTMLElement): DfxNodes | null {
   const host = defsHost(el);
   if (!host) return null;
@@ -141,19 +248,30 @@ function ensureNodes(el: HTMLElement): DfxNodes | null {
   let nodes = NODES.get(el);
   // Re-mint if the defs block was replaced under us (stage rebuilt).
   if (!nodes || !nodes.filter.isConnected || nodes.filter.parentNode !== defs) {
-    const filter = proto.cloneNode(true) as SVGElement;
-    const id = `psd${++filterSeq}`;
-    filter.setAttribute('id', id);
-    filter.removeAttribute('data-dithproto');
-    defs.appendChild(filter);
-    const blur = q<SVGFEGaussianBlurElement>(filter, 'feGaussianBlur');
-    const comp = q<SVGElement>(filter, "feComposite[operator='arithmetic']");
-    if (!blur || !comp) return null;
-    nodes = { filter, blur, comp, id };
+    const next = pool(defs).pop() || mint(proto, defs);
+    if (!next) return null;
+    nodes = next;
     NODES.set(el, nodes);
   }
   el.style.filter = `url(#${nodes.id})`;
   return nodes;
+}
+
+/**
+ * Drop `el`'s filter and hand it back to the pool.
+ *
+ * Stops the frame loop first: releasing a filter another element could pick up
+ * while a sequence is still writing to it would have the two of them driving
+ * one blur.
+ */
+export function dfxRelease(el: HTMLElement): void {
+  stop(el);
+  el.style.filter = '';
+  const nodes = NODES.get(el);
+  if (!nodes) return;
+  NODES.delete(el);
+  const defs = nodes.filter.parentNode as Element | null;
+  if (defs && nodes.filter.isConnected) pool(defs).push(nodes);
 }
 
 /** Give `el` its own cloned filter instance; returns its feGaussianBlur node. */
@@ -187,9 +305,23 @@ function isReduced(el: Element): boolean {
 /**
  * Drive the dither amount through `stops` — `[timeMs, amount]` pairs, amount
  * 0 = fully dissolved, 1 = fully resolved. Segments ease in-out quad.
+ *
+ * `optional` marks a per-letter pulse. Those compete for `BUDGET` and are cut
+ * short, oldest first, when more of them are in flight than the renderer can
+ * carry; everything driving a transition is unmarked and always runs.
  */
-export function dfxSeq(el: HTMLElement, stops: [number, number][], mb?: number): void {
+export function dfxSeq(
+  el: HTMLElement,
+  stops: [number, number][],
+  mb?: number,
+  optional?: boolean,
+): void {
   if (!el || !stops.length) return;
+
+  // A re-entered button restarts its own run rather than queueing behind it,
+  // and keeps its slot instead of competing with itself for a new one.
+  stop(el);
+
   const nodes = ensureNodes(el);
   if (!nodes) return;
 
@@ -200,18 +332,33 @@ export function dfxSeq(el: HTMLElement, stops: [number, number][], mb?: number):
     nodes.comp.setAttribute('k4', (K4_BASE + K4_SPAN * u).toFixed(4));
   };
 
-  const running = RAFS.get(el);
-  if (running !== undefined) cancelAnimationFrame(running);
-  RAFS.delete(el);
-
   const last = stops[stops.length - 1];
   const end = last[0];
   const uEnd = last[1];
 
+  /**
+   * Where this sequence would have left the element, applied right now. Stops
+   * the frames first, so an evicted run frees its slot rather than carrying on
+   * against the value just written.
+   */
+  const settle = () => {
+    stop(el);
+    if (uEnd > 0.995) dfxRelease(el);
+    else set(uEnd);
+  };
+
   // Reduced motion: land on the settled state now, no frames at all.
   if (isReduced(el)) {
-    if (uEnd > 0.995) el.style.filter = '';
-    else set(uEnd);
+    settle();
+    return;
+  }
+
+  // Over budget with no letter left to take a slot from: skip the pulse. The
+  // element still ends up exactly where the sequence would have put it, so a
+  // skipped letter is a letter that did not speckle, never a letter stuck in
+  // noise.
+  if (optional && RUNS.size >= BUDGET && !evict()) {
+    settle();
     return;
   }
 
@@ -236,16 +383,19 @@ export function dfxSeq(el: HTMLElement, stops: [number, number][], mb?: number):
       break;
     }
     set(u);
-    if (t < end) RAFS.set(el, requestAnimationFrame(step));
-    else {
-      RAFS.delete(el);
-      // Fully resolved → drop the filter so the element stops paying for it.
-      if (u > 0.995) el.style.filter = '';
+    const run = RUNS.get(el);
+    if (t < end) {
+      if (run) run.raf = requestAnimationFrame(step);
+    } else {
+      RUNS.delete(el);
+      // Fully resolved → drop the filter so the element stops paying for it,
+      // and hand it back for the next letter to use.
+      if (u > 0.995) dfxRelease(el);
     }
   };
 
   set(stops[0][1]);
-  RAFS.set(el, requestAnimationFrame(step));
+  RUNS.set(el, { raf: requestAnimationFrame(step), optional: !!optional, land: settle });
 }
 
 /**

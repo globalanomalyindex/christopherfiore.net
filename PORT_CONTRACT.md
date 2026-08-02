@@ -87,12 +87,39 @@ export function autoMb(el: HTMLElement): number;
  * replace with a plain ease-out.
  */
 export function dIn(el: HTMLElement, hold: number, tEnd: number, mb?: number): void;
-export function dfxSeq(el: HTMLElement, stops: [number, number][], mb?: number): void;
+/**
+ * `optional` marks a per-letter pulse: those compete for a budget of 48 live
+ * filters and are cut short, oldest first, when more are in flight than the
+ * renderer can carry. Only the three per-letter sites in `glitch.ts` pass it.
+ * Anything driving a transition must not — several of those sequences end
+ * dissolved rather than resolved, so cutting one short strands its element.
+ */
+export function dfxSeq(el: HTMLElement, stops: [number, number][], mb?: number, optional?: boolean): void;
+/** Drop `el`'s filter and return it to the pool. Stops any run first. */
+export function dfxRelease(el: HTMLElement): void;
 /** Run every [data-intro]/[data-dfx] inside `scope` on its own delay. */
 export function playIn(scope: HTMLElement, shift?: number, dither?: boolean): void;
 export function killAnim(el: Element | null | undefined): void;
 export function bbox(el: Element): { left: number; top: number; w: number; h: number };
 ```
+
+**The budget is the one thing here with a measured number behind it.** An
+applied SVG filter costs the renderer a fixed amount per element per frame, and
+the element count is the only variable that moves it. Two screens deep with the
+cursor thrown across the buttons, peak concurrency reached 134 and the stage ran
+at 40fps; capping it holds 60fps at any budget up to 56. Nothing else measured
+made a difference — not a tighter filter region (38.8fps vs 38.3), not the
+backing-store density (DPR 1 and DPR 2 both 38fps), not thousands of idle
+filters in the defs, and not stepping the animation down to 12–30 updates a
+second, because Chrome re-runs the graph every frame whether the numbers in it
+changed or not. `feGaussianBlur` is the expensive primitive: pinning its radius
+to 0 and leaving the rest of the graph alone took the same scene from 41 to 55,
+and a filter that is applied but does no work is free.
+
+48 sits under the 56 knee so slower hardware has somewhere to fall, and well
+over the ~20 elements one button's hover puts in flight — a single hover, or two
+at once, never reaches it. Verified 57–60fps from a 1440×900 laptop to a 3440
+ultrawide, and to a 4× CPU throttle.
 
 ### `src/runtime/frost.ts`
 The background canvases. Port `startFrost` / `setMode` / `tween` / `trackFrost`
