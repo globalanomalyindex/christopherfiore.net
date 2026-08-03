@@ -346,6 +346,50 @@ function swapLetter(sp: HTMLElement, k: number, toAlt: boolean, free?: boolean):
 }
 
 /**
+ * Hand kerns for the alternate face, in em, keyed by the character pair.
+ *
+ * The alternate is a display italic whose `i` (under salt/ss01) is a swash
+ * form: a detached teardrop that floats high and right, and a stem whose tail
+ * sweeps below the baseline. Against a `p` that leaves a 21px hole at x-height
+ * at 152px, and it is the only hole in the word, so "chipotle" reads as "chi
+ * potle". Tracking cannot fix it, because tightening the whole line to close
+ * one pair crushes every other one.
+ *
+ * So it is hand kerned, which is what display type gets. Measured by rendering
+ * the word and looking for blank column runs inside the x-height band, then
+ * tuned by eye against -0.04 / -0.07 / -0.10 / -0.13em.
+ *
+ * This cannot be automated in the browser: the only API that can measure a
+ * glyph run, canvas `measureText`, has no way to express
+ * `font-feature-settings`, so it measures the default glyphs rather than the
+ * alternates the design actually renders. Add pairs here as they are found.
+ */
+const ALT_KERN: Record<string, number> = {
+  ip: -0.1,
+};
+
+/**
+ * Apply (or clear) the hand kerns across a line.
+ *
+ * Only on the alternate, and only at display sizes: the pairs were measured
+ * there, and a hover button running this on every pointerenter would pay for
+ * measurement it cannot show.
+ */
+function altKern(line: HTMLElement, toAlt: boolean): void {
+  const ls = qq(line, '[data-l]');
+  if (!ls.length) return;
+  const fsz = parseFloat(getComputedStyle(line).fontSize) || 0;
+  const on = toAlt && fsz >= 60;
+  for (let i = 0; i < ls.length; i++) {
+    const pair = on && i + 1 < ls.length
+      ? (ls[i].textContent || '') + (ls[i + 1].textContent || '')
+      : '';
+    const k = pair ? ALT_KERN[pair] : undefined;
+    ls[i].style.marginRight = k ? `${(k * fsz).toFixed(2)}px` : '';
+  }
+}
+
+/**
  * Tracking for the alternate face at display sizes.
  *
  * The alternate's letterforms are wider than Karrik's and carry more
@@ -545,6 +589,7 @@ export function glitchFont(line: HTMLElement, toAlt: boolean, step?: number, noH
 
   if (isReduced(line)) {
     ls.forEach((sp) => swapLetter(sp, k, toAlt, true));
+    altKern(line, toAlt);
     fitLine(line, k, track);
     return;
   }
@@ -594,6 +639,9 @@ export function glitchFont(line: HTMLElement, toAlt: boolean, step?: number, noH
   gt.push(
     window.setTimeout(
       () => {
+        // kern first: fitLine measures the line and tightens tracking from
+        // that width, so it has to see the kerned width
+        altKern(line, toAlt);
         fitLine(line, k, track);
       },
       40 + n * st + 380,
@@ -631,6 +679,7 @@ export function resetTitleFont(line: HTMLElement): void {
     sp.style.width = '';
     sp.style.color = '';
     sp.style.transform = '';
+    sp.style.marginRight = '';
     // Not `sp.style.filter = ''`: this is the hard reset, so the letter's
     // filter goes back to the pool instead of being stranded in the defs.
     dfxRelease(sp);

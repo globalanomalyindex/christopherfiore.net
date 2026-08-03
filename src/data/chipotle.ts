@@ -76,10 +76,14 @@ export const CHIPOTLE = {
     'tiles are placeholders, and none of this shipped.',
 } as const;
 
-/** The plate the standfirst opens on. It is scroll section 0, not a member of
- *  CHIPOTLE_SECTIONS, so it needs its own value: the redesign, because the
- *  standfirst is the summary of what the work produced. */
-export const CHIPOTLE_LEAD_VIEW = 1;
+/**
+ * The plate the standfirst opens on, and it is `before` deliberately: the
+ * screen opens on the problem and the reader walks forward to the answer.
+ *
+ * Scroll section 0, not a member of CHIPOTLE_SECTIONS, so it carries its own
+ * value.
+ */
+export const CHIPOTLE_LEAD_VIEW = 0;
 
 export const CHIPOTLE_SECTIONS: ChipotleSection[] = [
   {
@@ -182,7 +186,7 @@ export const CHIPOTLE_SECTIONS: ChipotleSection[] = [
   },
   {
     id: 'explorations',
-    view: 3,
+    view: 1,
     name: 'three takes, built rather than argued about',
     paras: [
       'i built three checkout takes plus a redesigned confirmation screen, all interactive, ' +
@@ -213,7 +217,7 @@ export const CHIPOTLE_SECTIONS: ChipotleSection[] = [
   },
   {
     id: 'confirmation',
-    view: 1,
+    view: 2,
     name: 'one clock',
     paras: [
       'the confirmation screen has one job: say when the food will be ready. so it carries one ETA ' +
@@ -240,7 +244,7 @@ export const CHIPOTLE_SECTIONS: ChipotleSection[] = [
   },
   {
     id: 'reversal',
-    view: 1,
+    view: 2,
     name: 'the map i deleted, then made four times bigger',
     paras: [
       'round five compacted my own confirmation screen. i removed the small shelf and map ' +
@@ -264,7 +268,7 @@ export const CHIPOTLE_SECTIONS: ChipotleSection[] = [
   },
   {
     id: 'iteration',
-    view: 2,
+    view: 3,
     name: 'the rest of the log',
     paras: [
       'the total breakdown started as a second thing to tap. it ended up sitting open by default ' +
@@ -284,8 +288,13 @@ export const CHIPOTLE_SECTIONS: ChipotleSection[] = [
     ],
   },
   {
+    /*
+      No `view`, deliberately. The result and the open questions hold whatever
+      the log left up: neither argues over a specific screen, and sending the
+      plate back to an earlier view here is exactly the backwards jump the walk
+      order exists to prevent.
+    */
     id: 'result',
-    view: 1,
     name: 'what it measures out at',
     paras: [
       'nothing here shipped, so none of these are outcomes. they are measurements of the redesign ' +
@@ -311,7 +320,6 @@ export const CHIPOTLE_SECTIONS: ChipotleSection[] = [
   },
   {
     id: 'open',
-    view: 1,
     name: 'what is still open',
     paras: [
       'the confirmation screen’s central fix depends on a number i do not control. does the ' +

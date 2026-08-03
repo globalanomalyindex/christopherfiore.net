@@ -39,9 +39,13 @@ export interface MfnySection {
   view?: number;
 }
 
-/** The plate the standfirst opens on. It is scroll section 0, not a member of
- *  MFNY_SECTIONS, so it carries its own value. */
-export const MFNY_LEAD_VIEW = 1;
+/**
+ * The plate the standfirst opens on: the live page, so the screen opens on the
+ * problem and the reader walks forward to the redesign rather than being sent
+ * backwards at the first section. Scroll section 0, not a member of
+ * MFNY_SECTIONS, so it carries its own value.
+ */
+export const MFNY_LEAD_VIEW = 0;
 
 export const MFNY = {
   name: 'mfny concentrates',

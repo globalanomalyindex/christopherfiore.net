@@ -78,13 +78,19 @@ const microLabel = (text: string, opacity = '.6') =>
 /**
  * The four plate views, in walk order.
  *
+ * THE ORDER IS THE NARRATIVE, and the scroll sync depends on it. Reading the
+ * column walks this list forward and never back: the original screens for the
+ * whole audit, the explorations, the two final screens, then the checkout's
+ * states. A view moved out of this order makes the plate jump backwards while
+ * someone is reading straight down, which is exactly what it used to do.
+ *
  * `before` is the only one showing the real shipped app. Everything after it is
  * a design render with an original visual identity and striped placeholder
  * tiles, and each caption says which it is: a reader who lands mid-walk should
  * never have to work out whether they are looking at a product or a proposal.
  */
 const VIEWS = [
-  {
+{
     id: 'before',
     label: 'before',
     src: 'projects/chipotle-before.webp',
@@ -95,7 +101,17 @@ const VIEWS = [
     caption:
       'the original screens · three of these four are one page at three scroll positions, and the total appears on every one of them',
   },
-  {
+{
+    id: 'explorations',
+    label: 'explorations',
+    src: 'projects/chipotle-explorations.webp',
+    alt:
+      'The two rejected explorations beside the chosen direction: a card based ledger layout, a ' +
+      'receipt and ticket layout, and the hairline layout that was chosen',
+    caption:
+      'the two rejected directions, and the one that won · ledger, ticket, then the stepper',
+  },
+{
     id: 'after',
     label: 'after',
     src: 'projects/live/chipotle.webp',
@@ -105,7 +121,7 @@ const VIEWS = [
     caption:
       'the redesign, as design renders · one screen to order, one to wait, and nothing below the fold on either',
   },
-  {
+{
     id: 'states',
     label: 'states',
     src: 'projects/chipotle-states.webp',
@@ -114,16 +130,6 @@ const VIEWS = [
       'breakdown folded away, the Later today sheet, and the order placed confirmation',
     caption:
       'the checkout states, as design renders · the bag list and the total breakdown share one pocket of space, so the pay button never moves',
-  },
-  {
-    id: 'explorations',
-    label: 'explorations',
-    src: 'projects/chipotle-explorations.webp',
-    alt:
-      'The two rejected explorations beside the chosen direction: a card based ledger layout, a ' +
-      'receipt and ticket layout, and the hairline layout that was chosen',
-    caption:
-      'the two rejected directions, and the one that won · ledger, ticket, then the stepper',
   },
 ] as const;
 
