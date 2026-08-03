@@ -23,6 +23,7 @@
  */
 
 import { asset, css, el, letters } from '../dom.ts';
+import { zoomTrigger } from '../runtime/lightbox.ts';
 import { COLOR, rgba } from '../design/tokens.ts';
 import { MFNY_PAGE as MP } from '../design/layout.ts';
 import { MFNY, MFNY_GLANCE, MFNY_LEAD_VIEW, MFNY_SECTIONS } from '../data/mfny.ts';
@@ -383,6 +384,10 @@ function plate(): HTMLElement {
         }),
       ),
     ),
+    // the whole plate is the control that opens the plate full size; it is the
+    // last child so it covers the slots, and `data-nohl` keeps wireHovers from
+    // building a hover band stack behind a photograph
+    zoomTrigger('Open this image at full size'),
   );
 }
 

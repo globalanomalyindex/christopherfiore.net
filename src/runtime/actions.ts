@@ -33,6 +33,7 @@ import { closeDf2tm, df2tmOpen, goDf2tm, openDf2tm } from './df2tm';
 import { closeMfny, mfnyOpen, openMfny, setMfnyView } from './mfny';
 import { chipotleOpen, closeChipotle, openChipotle, setChipotleView } from './chipotle';
 import { CHIPOTLE_VIEWS } from '../pages/chipotle.ts';
+import { closeLightbox, lightboxOpen, openLightbox } from './lightbox';
 import { closePage, nextPage, openPage, runIntro } from './transitions';
 import { locked, state } from './state';
 
@@ -168,8 +169,19 @@ export function bindActions(stage: HTMLElement): void {
   /* ---- click ---- */
 
   stage.addEventListener('click', (e) => {
-    const t = e.target instanceof Element ? e.target.closest<HTMLElement>('[data-act]') : null;
+    const t =
+      e.target instanceof Element
+        ? e.target.closest<HTMLElement>('[data-act],[data-lbground]')
+        : null;
     if (!t) return;
+
+    // The viewer's ground is the "click anywhere outside" control. It is
+    // checked before the switch because it has no data-act of its own: giving
+    // it one would put a second closer in the chain for no gain.
+    if (t.hasAttribute('data-lbground')) {
+      closeLightbox(stage);
+      return;
+    }
 
     switch (t.getAttribute('data-act')) {
       case 'open':
@@ -231,6 +243,13 @@ export function bindActions(stage: HTMLElement): void {
         break;
       case 'chipotle-view':
         setChipotleView(stage, num(t, 'data-view'));
+        break;
+      case 'zoom':
+        // every plate on the site; the viewer reads whichever slot is showing
+        openLightbox(stage, t);
+        break;
+      case 'zoom-close':
+        closeLightbox(stage);
         break;
       case 'df2tm':
         // the df2tm row — the screen grows out of the row that opened it
@@ -349,6 +368,12 @@ export function bindActions(stage: HTMLElement): void {
 
     if (e.key === 'Escape') {
       if (locked(stage)) return;
+      // topmost first: the viewer sits over whichever screen opened it
+      if (lightboxOpen(stage)) {
+        e.preventDefault();
+        closeLightbox(stage);
+        return;
+      }
       if (s.evidence !== null) {
         e.preventDefault();
         closeEvidence(stage);
@@ -387,6 +412,10 @@ export function bindActions(stage: HTMLElement): void {
 
     if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
       if (locked(stage)) return;
+      /* The viewer owns the arrows while it is up. Without this they would
+         reach the plate underneath and step it, changing the image behind an
+         open viewer that is still showing the old one. */
+      if (lightboxOpen(stage)) return;
       const step = e.key === 'ArrowRight' ? 1 : -1;
       if (s.evidence !== null) {
         e.preventDefault();

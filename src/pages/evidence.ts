@@ -44,6 +44,7 @@
  */
 
 import { asset, css, el, letters } from '../dom.ts';
+import { zoomTrigger } from '../runtime/lightbox.ts';
 import { COLOR, LIGHTS, RULE } from '../design/tokens.ts';
 import { EVIDENCE, MODULE, STAGE } from '../design/layout.ts';
 import { EV_META, EV_SHEETS } from '../data/competizione.ts';
@@ -181,6 +182,10 @@ function plate(): HTMLElement {
         style: css({ '--ps-cross': 'rgba(223,203,250,.62)' }),
       }),
     ),
+    // the whole plate is the control that opens the sheet full size; it is the
+    // last child so it covers the slots, and `data-nohl` keeps wireHovers from
+    // building a hover band stack behind a photograph
+    zoomTrigger('Open this sheet at full size'),
   );
 }
 

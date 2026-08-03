@@ -56,6 +56,7 @@
  */
 
 import { asset, css, el, letters } from '../dom.ts';
+import { zoomTrigger } from '../runtime/lightbox.ts';
 import { COLOR, LIGHTS, RULE } from '../design/tokens.ts';
 import { MODULE, PAGE3, STAGE } from '../design/layout.ts';
 import {
@@ -335,6 +336,10 @@ function plate(): HTMLElement {
         style: css({ '--ps-cross': 'rgba(223,203,250,.62)' }),
       }),
     ),
+    // the whole plate is the control that opens the board full size; it is the
+    // last child so it covers the slots, and `data-nohl` keeps wireHovers from
+    // building a hover band stack behind a photograph
+    zoomTrigger('Open this board at full size'),
   );
 }
 

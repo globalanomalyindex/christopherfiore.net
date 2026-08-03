@@ -18,6 +18,7 @@ import * as competizionePage from '../pages/competizione';
 import * as contactPage from '../pages/contact';
 import { bindActions } from './actions';
 import { installDitherDefs } from './dither';
+import { installLightbox } from './lightbox';
 import { startFrost, trackFrost } from './frost';
 import { wireHovers } from './hover';
 
@@ -44,6 +45,10 @@ export function mountStage(root: HTMLElement): HTMLElement {
 
   // The shared <defs> must exist before any dfxFilter() call clones from it.
   installDitherDefs(stage);
+
+  // One viewer for every plate on the site. After the pages, so it is the last
+  // child and sits above them without needing a larger z-index than it has.
+  installLightbox(stage);
 
   // Every canvas, menu and page alike. trackFrost only adopts the menu's, so
   // the page canvases would otherwise stay dark until their first transition.

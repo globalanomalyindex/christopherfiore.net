@@ -368,6 +368,49 @@ it covers, and `navParts()` locates a page's own title with a document-order
 query, so sharing the marker would let a subpage's title be mistaken for its
 host page's.
 
+### `src/runtime/lightbox.ts`
+
+The image viewer, shared by every subpage that carries a plate: the Kona N
+evidence sheets, chellbook's boards, and the mfny and chipotle plates.
+
+```ts
+export function installLightbox(stage: HTMLElement): void;
+export function openLightbox(stage: HTMLElement, trigger: HTMLElement): void;
+export function closeLightbox(stage: HTMLElement): void;
+export function lightboxOpen(stage: HTMLElement): boolean;
+/** The plate's cover control. Append as the plate's LAST child. */
+export function zoomTrigger(label: string): HTMLElement;
+```
+
+**This is the one module that is deliberately not per-screen.** Four screens
+would have meant four copies of the same overlay, so instead each plate carries
+a single `data-act="zoom"` button and this reads whichever slot is showing at
+the moment it opens. Nothing keeps a copy of the current image in sync, which
+is why the plate can be walked, stepped or scroll-synced underneath without the
+viewer knowing anything about it.
+
+It lives **inside** the stage. Everything on this site is drawn in 1920 × 1080
+and scaled as a unit, and an overlay outside that would be the only element
+that does not move with the letterbox.
+
+Sizing is two rules, in order. Natural size is the ceiling: a 1456px capture
+opens at 1456 and never at the box's 1792, because upscaling is the opposite of
+what "full resolution" means. Then fit to height when that still leaves an
+image worth looking at (`MIN_HEIGHT_FIT`, 0.55 of the box width), and only fall
+back to fitting the width and scrolling when it would not. Without the second
+rule chellbook's 1600 × 3338 flow boards get squeezed to 437px wide; with only
+the second rule, a board overflowing by 30px becomes a scrolling page over
+30px.
+
+Three things it has to keep doing:
+
+- The trigger carries `data-nohl`. It sits inside `[data-page]`, so
+  `wireHovers` would otherwise build a hover band stack behind a photograph.
+- `[data-lightbox]` is in frost's `SCREEN_SEL`, so canvases park under it.
+- It is FIRST in the Escape chain in `actions.ts`, and it swallows the arrows,
+  because it is the topmost thing on the stage. Without the arrow guard they
+  reach the plate underneath and step the image behind an open viewer.
+
 ### The plate follows the reading position
 
 Three subpages carry both a scrolling text column and a set of screenshots:
