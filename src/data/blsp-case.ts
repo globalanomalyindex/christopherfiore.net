@@ -160,7 +160,7 @@ export const BLSP_STATEMENT: string[] = [
  * the page honest; shipping them as anchors would ship fourteen dead links.
  */
 export const BLSP_PACKAGE = {
-  note: 'the master publication is here in full. the archive volumes — CAD repository, engineering records, revision history — are not published on this site; ask for them directly.',
+  note: 'the master publication is here in full. the archive volumes (CAD repository, engineering records, revision history) are not published on this site; ask for them directly.',
   master: {
     label: 'revision h · system-overview corrected visual master',
     size: '44.4 MB',

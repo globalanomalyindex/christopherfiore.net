@@ -31,6 +31,8 @@ import {
 import { aboutOpen, closeAbout, goAbout, openAbout } from './about';
 import { closeDf2tm, df2tmOpen, goDf2tm, openDf2tm } from './df2tm';
 import { closeMfny, mfnyOpen, openMfny, setMfnyView } from './mfny';
+import { chipotleOpen, closeChipotle, openChipotle, setChipotleView } from './chipotle';
+import { CHIPOTLE_VIEWS } from '../pages/chipotle.ts';
 import { closePage, nextPage, openPage, runIntro } from './transitions';
 import { locked, state } from './state';
 
@@ -59,7 +61,12 @@ function swapSlot(row: HTMLElement, attr: 'data-case' | 'data-system'): void {
   if (n === null) return;
 
   for (const slot of qq(page, '[data-cslot]')) {
-    slot.style.opacity = slot.getAttribute('data-cslot') === n ? '1' : '0';
+    const on = slot.getAttribute('data-cslot') === n;
+    slot.style.opacity = on ? '1' : '0';
+    // opacity:0 does not leave the accessibility tree. Without this, every
+    // key-frame's alt text is announced at once, which is what the four
+    // sibling slot swappers already guard against.
+    slot.setAttribute('aria-hidden', on ? 'false' : 'true');
   }
 
   const cap = q(page, '[data-ccap]');
@@ -176,6 +183,7 @@ export function bindActions(stage: HTMLElement): void {
         else if (aboutOpen(stage)) closeAbout(stage);
         else if (df2tmOpen(stage)) closeDf2tm(stage);
         else if (mfnyOpen(stage)) closeMfny(stage);
+        else if (chipotleOpen(stage)) closeChipotle(stage);
         else closePage(stage);
         break;
       case 'evidence':
@@ -192,7 +200,7 @@ export function bindActions(stage: HTMLElement): void {
         stepEvidence(stage, num(t, 'data-step'));
         break;
       case 'chellbook':
-        // row 08 — the case study grows out of the row that opened it
+        // the chellbook row — the case study grows out of the row that opened it
         openChellbook(stage, t);
         break;
       case 'chellbook-close':
@@ -213,6 +221,16 @@ export function bindActions(stage: HTMLElement): void {
         break;
       case 'mfny-view':
         setMfnyView(stage, num(t, 'data-view'));
+        break;
+      case 'chipotle':
+        // the chipotle row — the screen grows out of the row that opened it
+        openChipotle(stage, t);
+        break;
+      case 'chipotle-close':
+        closeChipotle(stage);
+        break;
+      case 'chipotle-view':
+        setChipotleView(stage, num(t, 'data-view'));
         break;
       case 'df2tm':
         // the df2tm row — the screen grows out of the row that opened it
@@ -356,6 +374,11 @@ export function bindActions(stage: HTMLElement): void {
         closeMfny(stage);
         return;
       }
+      if (chipotleOpen(stage)) {
+        e.preventDefault();
+        closeChipotle(stage);
+        return;
+      }
       if (s.open === null) return;
       e.preventDefault();
       closePage(stage);
@@ -392,6 +415,22 @@ export function bindActions(stage: HTMLElement): void {
         const next = (num(radio, 'data-view') + (step > 0 ? 1 : -1) + 2) % 2;
         setMfnyView(stage, next);
         const target = q(stage, `[data-act="mfny-view"][data-view="${next}"]`);
+        target?.focus();
+        return;
+      }
+      /* Same contract on the chipotle screen, but its plate carries four views
+         rather than two, so the wrap is taken from the list's own length
+         instead of a literal. */
+      if (chipotleOpen(stage)) {
+        const on = document.activeElement;
+        const radio =
+          on instanceof HTMLElement ? on.closest<HTMLElement>('[data-act="chipotle-view"]') : null;
+        if (!radio) return;
+        e.preventDefault();
+        const n = CHIPOTLE_VIEWS.length;
+        const next = (num(radio, 'data-view') + (step > 0 ? 1 : -1) + n) % n;
+        setChipotleView(stage, next);
+        const target = q(stage, `[data-act="chipotle-view"][data-view="${next}"]`);
         target?.focus();
         return;
       }

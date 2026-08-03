@@ -215,7 +215,7 @@ export interface StageState {
   nav: boolean;             // transition in flight, blocks input
   introUntil: number;       // performance.now() timestamp
   hovered: number | null;   // 1–3
-  selectedCase: number;     // 1–7, drives the key-frame slot
+  selectedCase: number;     // 1-based row index, drives the key-frame slot
   selectedSystem: number;   // 0–4, drives page 03's hero render
   evidence: number | null;  // 0–11 sheet, or null — non-null means the viewer
                             // owns Escape and the arrows and the page is inert
@@ -229,7 +229,7 @@ One delegated `click` / `pointerenter` / `pointerleave` / `keydown` binder that
 maps `data-act` and `data-hov` to the functions above.
 
 ### `src/pages/chellbook.ts` + `src/runtime/chellbook.ts`
-Channel 01's in-stage case study, opened from row 08 (`data-act="chellbook"`).
+Channel 01's in-stage case study, opened from the chellbook row (`data-act="chellbook"`).
 Mirrors `pages/evidence.ts` / `runtime/evidence.ts` in shape and choreography;
 keeps its own open-board state locally rather than in `StageState`, and exposes
 `chellbookOpen(stage)` so `actions.ts` can route Escape and the arrows to
@@ -260,10 +260,12 @@ export function mfnyOpen(stage: HTMLElement): boolean;
 ```
 
 `setMfnyView` reads its captions from `MFNY_VIEWS`, exported by the page module
-— which makes `runtime/mfny.ts` import from `pages/mfny.ts`, the only
-runtime→page import in the codebase. It is deliberate: the caption names which
-of the two pages you are looking at, and a caption assembled at runtime can
-lose the clause that says "the live page".
+— which makes `runtime/mfny.ts` import from `pages/mfny.ts`. That is one of
+three runtime→page imports in the codebase, all for the same reason and all
+deliberate: the other two are `runtime/chipotle.ts` reading `CHIPOTLE_VIEWS`,
+and `runtime/actions.ts` reading it as well to size the arrow-key wrap. A
+caption names which page you are looking at, and a caption assembled at runtime
+can lose the clause that says which one.
 
 The before/after is a two-option `radiogroup`, so `actions.ts` routes
 ArrowLeft/Right to it **only while one of its radios holds focus**, and
@@ -276,6 +278,41 @@ dependency beyond the product photography, served at `/mfny/concentrates.html`.
 Hosted here rather than on a separate Pages repo, exactly as chellbook's two
 prototypes are. Its own spec is the handoff kit it was built from; the file's
 header comment says which parts of that kit are binding.
+
+### `src/pages/chipotle.ts` + `src/runtime/chipotle.ts`
+Channel 01's fourth in-stage screen, opened from the chipotle row
+(`data-act="chipotle"`). A structural clone of the MFNY pair, same shape and
+same choreography, with one divergence: the plate carries **four** views rather
+than two, so `CHIPOTLE_VIEWS` is walked rather than flipped and the arrow-key
+handler takes its wrap from `CHIPOTLE_VIEWS.length` instead of a literal `2`.
+
+```ts
+export function openChipotle(stage: HTMLElement, trigger: HTMLElement): void;
+export function closeChipotle(stage: HTMLElement): void;
+export function setChipotleView(stage: HTMLElement, n: number): void;
+export function chipotleOpen(stage: HTMLElement): boolean;
+```
+
+Its data attributes are `cp`-prefixed (`data-cpplate`, `data-cpchrome`,
+`data-cpscroll`, `data-cpthumb`, `data-cpsec`, `data-cpsec-name`,
+`data-cpsecat`, `data-cpcap`, `data-cpslot`). They have to differ from mfny's
+`mf`-prefixed set: both screens live inside page 01 at once, and a shared
+attribute would let one screen's runtime query the other's nodes.
+
+Two things in it are measured, not chosen. The glance column tops out at
+**seven rows** between `glanceRowsY` (380) and the band end (976): nine rows of
+these values wrapped to 686px and ran 90px into the footer. And the footer's
+boundary cell is `white-space: nowrap` with `overflow: hidden`, so it carries
+`CHIPOTLE.state` alone; appending the identity boundary to it clipped 48px off
+the end. Both are recorded at their definitions.
+
+### `public/chipotle/checkout.html`
+The interactive prototype, served at `/chipotle/checkout.html`. Self-contained:
+no external requests at all, with its fonts and images inlined. It is the
+author's own design artifact and its copy is **not** edited to house rules; the
+only additions are a `<title>`, a meta description, and a short script that
+holds the title, because the bundler's runtime adopts an inner document whose
+head has none and the tab would otherwise be blank.
 
 ### `src/pages/about.ts` + `src/runtime/about.ts`
 Channel 04's in-stage background, opened from the page-04 control
@@ -345,10 +382,25 @@ silently if missed:
 4. `mobile.ts` — a row with `subpage` is filtered out of the case table, so
    without an inline section its content is simply absent on a phone.
 
-A fifth thing is not automatic either: `PAGE1.rowH` and `PAGE1.nameSize` are
+5. `pages/products.ts` — import the page module and call its `build()` beside
+   the others, or the screen is never mounted and the row opens nothing.
+
+A sixth thing is not automatic either: `PAGE1.rowH` and `PAGE1.nameSize` are
 divided from the fixed band between `rowsY` (640.79) and the motion band
 (931.7). Adding a case row means re-dividing both — the rows must still land
-exactly on 931.7, and the name has to shrink with them.
+exactly on 931.7, and the name has to shrink with them. At eleven rows that is
+`290.91 / 11 = 26.4464` with the name at 23.
+
+The binding dimension is not the name, which has ~148px spare in its 363.636px
+track at 23px. It is `CaseRecord.line`: its column is 581.818 less 40 of
+padding, so a `line` past roughly **82 characters** wraps to two lines and
+overflows a 25.4px cell by about 13.7px, colliding with the rows above and
+below. Keep every `line` inside that, and check it when the row height drops
+again.
+
+A new screen also needs its own data-attribute prefix. Every subpage lives
+inside its host page simultaneously, so two screens sharing `data-*` names
+would let one runtime's `q(screen, …)` reach the other's nodes.
 
 ### `src/pages/*.ts`
 `menu.ts`, `products.ts`, `paintings.ts`, `competizione.ts`, `contact.ts` —

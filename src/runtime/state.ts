@@ -9,7 +9,7 @@ export interface StageState {
   introUntil: number;
   /** hovered menu channel, 1–3 — drives the background field mode */
   hovered: number | null;
-  /** selected case row on page 01, 1–8 — drives the key-frame slot */
+  /** selected case row on page 01, 1-based — drives the key-frame slot */
   selectedCase: number;
   /** selected system row on page 03, 0–4 — drives the hero render */
   selectedSystem: number;

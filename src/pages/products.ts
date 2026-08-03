@@ -2,19 +2,21 @@
  * Screen 2 · Page 01 — Product designs.
  *
  * Geometry from `src/design/layout.ts` (PAGE1) and the prototype markup. The
- * row band is this build's one adaptation: the real inventory is eight cases
- * plus a 58-study motion archive, so eight 36.364px rows and a 90.9px
+ * row band is this build's one adaptation: the real inventory is eleven cases
+ * plus a 58-study motion archive, so eleven 26.4464px rows and a 90.9px
  * full-bleed motion band fill the distance the design gave to four 72.727px
- * rows. Everything else — title, thesis, key-frame panel, header, footer, grid
- * overlay — keeps its handoff geometry.
+ * rows. `PAGE1.rowH` is redivided every time a case is added; see the note
+ * there for the ceiling on `CaseRecord.line`. Everything else — title, thesis,
+ * key-frame panel, header, footer, grid overlay — keeps its handoff geometry.
  *
  * Every row on this page is a real control, which is what earns it the glitchy
  * band-stack hover: `wireHovers` auto-binds any element that turns the cursor
  * to pointer, so nothing here hand-rolls a hover state.
  *
- * Seven of the eight rows are anchors to a deployed demo. Row 08 — chellbook —
- * is not: it is concept-stage, 30 designed screens and two prototypes, with no
- * app to link to. Its record carries `href: null` and `subpage: 'chellbook'`,
+ * Seven of the eleven rows are anchors to a deployed demo. The other four are
+ * not: chellbook, mfny, chipotle and df2tm each carry `href: null` and a
+ * `subpage`, because there is no deployed app to point at. Chellbook, for
+ * instance, is concept-stage: 30 designed screens and two prototypes,
  * so it renders as a real `<button>` that opens a case study inside the stage,
  * and its trailing cell reads "case study →" rather than "source". The
  * distinction is not decoration — an anchor promises somewhere to go, and there
@@ -33,6 +35,7 @@ import { MODULE, MOTION_SHEET, PAGE1 } from '../design/layout.ts';
 import * as chellbookPage from './chellbook.ts';
 import * as df2tmPage from './df2tm.ts';
 import * as mfnyPage from './mfny.ts';
+import * as chipotlePage from './chipotle.ts';
 import {
   CASES,
   CASES_THESIS,
@@ -112,6 +115,10 @@ const slotShell = (n: number, ...kids: (Node | string | null)[]) =>
     'div',
     {
       'data-cslot': n,
+      // Every slot is mounted at once and crossfaded, so the ten that are not
+      // showing have to leave the accessibility tree or a screen reader walks
+      // all eleven captions in a row. `actions.ts` flips this with the opacity.
+      'aria-hidden': n === 1 ? 'false' : 'true',
       style: css({
         position: 'absolute',
         inset: '0',
@@ -943,5 +950,6 @@ export function build(): HTMLElement {
     // the df2tm row's screen, mounted the same way and for the same reasons
     df2tmPage.build(),
     mfnyPage.build(),
+    chipotlePage.build(),
   );
 }

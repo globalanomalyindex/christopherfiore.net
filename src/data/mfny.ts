@@ -39,7 +39,7 @@ export const MFNY = {
   title: 'mfny product page redesign',
   descriptor: 'a duplicated catalog grid, rebuilt around the strain',
   state: 'self-directed redesign · not shipped by the client',
-  role: 'product design — research, IA, interaction, visual, prototype',
+  role: 'product design: research, IA, interaction, visual, prototype',
   surface: 'desktop catalog page, 1440px',
   /**
    * The page the work critiques. Recorded because the case is meaningless

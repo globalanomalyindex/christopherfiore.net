@@ -69,8 +69,33 @@ export const CASES: CaseRecord[] = [
     subpage: 'mfny',
   },
   {
-    id: 'one-master-affordance',
+    id: 'chipotle',
     idx: '04',
+    name: 'chipotle app ui cleanup',
+    // 78 characters. PAGE1's line column takes about 82 before it wraps and
+    // overflows the row; see the note on PAGE1 in `src/design/layout.ts`.
+    line: 'pickup checkout redesign: nineteen findings, rebuilt to fit one screen',
+    year: '2026',
+    discipline: 'product design, audit, interaction',
+    // An interactive prototype exists and is hosted here, so the row is "built"
+    // in this vocabulary's sense: something you can open and use. It is a
+    // concept. Nothing shipped, nobody commissioned it, and there is no
+    // affiliation with the app or its owner. `src/data/chipotle.ts` carries
+    // that boundary in full, four times over.
+    evidence: 'concept',
+    image: 'projects/live/chipotle.webp',
+    imageAlt:
+      'Design renders of the two final screens: a checkout with one pickup time between a minus and a plus button, and a confirmation screen with a single ETA',
+    caption: 'chipotle app ui cleanup · design renders · 2026',
+    // The prototype is hosted in this site's own public/ directory, as
+    // chellbook's and mfny's are. The row opens the case study in the stage.
+    href: null,
+    source: null,
+    subpage: 'chipotle',
+  },
+  {
+    id: 'one-master-affordance',
+    idx: '05',
     name: 'one master affordance',
     line: 'one persistent control does activation, targeting and a safe abort',
     year: '2026',
@@ -85,7 +110,7 @@ export const CASES: CaseRecord[] = [
   },
   {
     id: 'adhd-mode',
-    idx: '05',
+    idx: '06',
     name: 'adhd mode',
     line: 'a feed becomes a bounded session with a visible end and a return queue',
     year: '2026',
@@ -100,7 +125,7 @@ export const CASES: CaseRecord[] = [
   },
   {
     id: 'df2tm',
-    idx: '06',
+    idx: '07',
     name: 'df2tm',
     line: 'a learning layer for claude code that teaches the concept behind the work',
     year: '2026',
@@ -118,7 +143,7 @@ export const CASES: CaseRecord[] = [
   },
   {
     id: 'campeon',
-    idx: '07',
+    idx: '08',
     name: 'campeón',
     line: 'four aim drills converge on one range without hiding disagreement',
     year: '2026',
@@ -133,7 +158,7 @@ export const CASES: CaseRecord[] = [
   },
   {
     id: 'chickpea',
-    idx: '08',
+    idx: '09',
     name: 'chickpea',
     line: 'a seeded studio that exposes the grid, palette and math behind output',
     year: '2026',
@@ -155,7 +180,7 @@ export const CASES: CaseRecord[] = [
   },
   {
     id: 'wildcard',
-    idx: '09',
+    idx: '10',
     name: 'wildcard',
     line: 'freeze the problem, draw from outside, keep only what survives',
     year: '2026',
@@ -171,7 +196,7 @@ export const CASES: CaseRecord[] = [
   },
   {
     id: 'dither',
-    idx: '10',
+    idx: '11',
     name: 'dither',
     line: 'a dependency-free studio for dithering, grain, palette and paint',
     year: '2026',

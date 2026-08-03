@@ -65,6 +65,7 @@ import { STUDIO, PROFILE_LINKS, CONTACT_TABLE } from './data/studio.ts';
 import { ABOUT, ABOUT_SECTIONS, AT_A_GLANCE } from './data/about.ts';
 import { DF2TM, DF2TM_GLANCE, DF2TM_SECTIONS } from './data/df2tm.ts';
 import { MFNY, MFNY_GLANCE, MFNY_SECTIONS } from './data/mfny.ts';
+import { CHIPOTLE, CHIPOTLE_GLANCE, CHIPOTLE_SECTIONS } from './data/chipotle.ts';
 import type { TableRow } from './data/types.ts';
 
 /** Viewport width below which the fixed stage stops being legible. */
@@ -456,7 +457,7 @@ function mfnyStudy(): (Node | null)[] {
       el('h3', { class: 'm-casename' }, MFNY.title),
       el('p', { class: 'm-caseline' }, rec ? rec.line : MFNY.descriptor),
       el('span', { class: 'm-meta' }, `${MFNY.role} · ${MFNY.surface}`),
-      el('p', { class: 'm-boundary' }, `${MFNY.state}. THC values in the demo are placeholders — every live PDP renders that field empty.`),
+      el('p', { class: 'm-boundary' }, `${MFNY.state}. THC values in the demo are placeholders; every live PDP renders that field empty.`),
       // One link, matching the stage: the live-page door was removed there
       // deliberately, and a phone should not be the one place it survives.
       el('div', { class: 'm-caselinks' }, link(asset(MFNY.demoHref), MFNY.demoLabel)),
@@ -483,14 +484,85 @@ function mfnyStudy(): (Node | null)[] {
   ];
 }
 
+/**
+ * chipotle, inlined like the other three subpage rows.
+ *
+ * The stage walks four plate views; a phone cannot, so all four are printed in
+ * order with their captions, which is arguably the better reading of a
+ * comparison anyway. The first is the only one showing the real shipped app and
+ * its caption says so, because on a phone a reader can land on any one of them
+ * without the surrounding argument.
+ *
+ * Both boundaries ride with the entry rather than waiting for the sections:
+ * nothing shipped, nobody commissioned it, and the identity in the renders is
+ * original rather than the app's own.
+ */
+function chipotleStudy(): (Node | null)[] {
+  const rec = CASES.find((c) => c.id === 'chipotle');
+  return [
+    el(
+      'article',
+      { class: 'm-case m-entry' },
+      el('div', { class: 'm-caseidx' }, rec ? rec.idx : '', el('span', {}, 'concept')),
+      el('h3', { class: 'm-casename' }, CHIPOTLE.title),
+      el('p', { class: 'm-caseline' }, rec ? rec.line : CHIPOTLE.descriptor),
+      el('span', { class: 'm-meta' }, `${CHIPOTLE.role} · ${CHIPOTLE.surface}`),
+      el(
+        'p',
+        { class: 'm-boundary' },
+        `${CHIPOTLE.state}. the visual identity in the renders is original and deliberately not the app's brand, and the striped tiles are placeholders, not final art.`,
+      ),
+      el('div', { class: 'm-caselinks' }, link(asset(CHIPOTLE.demoHref), CHIPOTLE.demoLabel)),
+    ),
+    figure(
+      'projects/chipotle-before.webp',
+      'The four original screens side by side: three are the same checkout page at three scroll positions, and the fourth is the order confirmation',
+      'the original screens · three of these four are one page at three scroll positions, and the total appears on every one of them',
+      1456,
+      874,
+    ),
+    figure(
+      'projects/live/chipotle.webp',
+      'Design renders of the two final screens: a checkout with one pickup time between a minus and a plus button, and a confirmation screen with a single ETA',
+      'the redesign, as design renders · one screen to order, one to wait, and nothing below the fold on either',
+      1456,
+      874,
+    ),
+    figure(
+      'projects/chipotle-states.webp',
+      'Four states of the redesigned checkout: the default, the bag list expanded, the Later today sheet, and the order placed state',
+      'the checkout states · the bag list and the total breakdown share one pocket of space, so the pay button never moves',
+      1456,
+      874,
+    ),
+    figure(
+      'projects/chipotle-explorations.webp',
+      'The two rejected explorations beside the chosen direction: a card based ledger layout, a receipt and ticket layout, and the hairline layout that was chosen',
+      'the two rejected directions, and the one that won · ledger, ticket, then the stepper',
+      1456,
+      874,
+    ),
+    block(
+      'chipotle-short',
+      'the short version',
+      null,
+      el('p', { class: 'm-stand' }, CHIPOTLE.standfirst),
+    ),
+    ...CHIPOTLE_SECTIONS.map((sec) =>
+      block(`chipotle-${sec.id}`, sec.name, null, ...sec.paras.map((t) => body(t))),
+    ),
+    block('chipotle-glance', 'at a glance', null, table(CHIPOTLE_GLANCE)),
+  ];
+}
+
 /* ------------------------------------------------------------------ 01 */
 
 function productsSection(): HTMLElement {
   /*
-    Seven rows, not ten. Three records carry `subpage` instead of `href` —
-    chellbook, mfny and df2tm. On the stage each opens a screen of its own;
-    there are no subpages here, so all three are printed in full below instead
-    of appearing as rows with nothing to link to.
+    Seven rows, not eleven. Four records carry `subpage` instead of `href`:
+    chellbook, mfny, chipotle and df2tm. On the stage each opens a screen of
+    its own; there are no subpages here, so all four are printed in full below
+    instead of appearing as rows with nothing to link to.
   */
   const rows = CASES.filter((c) => !c.subpage).map((c) =>
     el(
@@ -523,6 +595,7 @@ function productsSection(): HTMLElement {
     ...rows,
     ...chellbookStudy(),
     ...mfnyStudy(),
+    ...chipotleStudy(),
     ...df2tmStudy(),
   );
 }
@@ -601,7 +674,9 @@ function paintingsSection(): HTMLElement {
         'span',
         { class: 'm-plaque' },
         el('span', {}, p.wall),
-        el('span', { class: 'm-plaqueyear' }, p.year ?? '–'),
+        // '' rather than a dash, matching pages/paintings.ts: a missing year
+        // is an empty cell, and an en dash here breaks the no-dash rule too.
+        el('span', { class: 'm-plaqueyear' }, p.year ?? ''),
       ),
     ),
   );
