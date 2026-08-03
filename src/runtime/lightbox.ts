@@ -108,28 +108,52 @@ export function installLightbox(stage: HTMLElement): void {
     }),
   });
 
-  // The scroll box. A board taller than the stage is fitted to width and
-  // scrolled rather than shrunk to 470px, which is what `contain` would do to
-  // chellbook's 1600 × 3338 flows and would defeat the point of opening it.
-  const scroll = el('div', {
-    'data-lbscroll': true,
-    tabindex: '0',
-    role: 'group',
-    'aria-label': 'The image, scrollable',
+  /*
+    The scroll box shrinks to the image; the frame around it only centres.
+
+    This used to be one box filling the whole 1792 × 912 area with the image
+    centred inside it, and that box sat ABOVE the ground. Every click in the
+    empty space around the image therefore landed on a transparent div with no
+    handler and did nothing, which made "click anywhere outside" a lie
+    everywhere except the last 64px at the very edge of the stage.
+
+    So the frame takes the space and `pointer-events: none`, and the scroll box
+    takes back `auto`. Anything that is not the image or its scrollbar now falls
+    through to the ground, which is the only element that closes.
+  */
+  const frame = el('div', {
+    'data-lbframe': true,
     style: css({
       position: 'absolute',
       left: PAD_X,
       top: PAD_TOP,
       width: BOX_W,
       height: BOX_H,
-      overflow: 'auto',
-      'overscroll-behavior': 'contain',
       display: 'flex',
-      'align-items': 'flex-start',
+      'align-items': 'center',
       'justify-content': 'center',
+      'pointer-events': 'none',
       'z-index': '2',
     }),
   });
+
+  // A board taller than the stage is fitted to width and scrolled rather than
+  // shrunk to 437px, which is what fitting its height would do to chellbook's
+  // 1600 × 3338 flows and would defeat the point of opening it.
+  const scroll = el('div', {
+    'data-lbscroll': true,
+    tabindex: '0',
+    role: 'group',
+    'aria-label': 'The image, scrollable',
+    style: css({
+      'max-width': '100%',
+      'max-height': '100%',
+      overflow: 'auto',
+      'overscroll-behavior': 'contain',
+      'pointer-events': 'auto',
+    }),
+  });
+  frame.appendChild(scroll);
 
   const img = el('img', {
     'data-lbimg': true,
@@ -189,23 +213,6 @@ export function installLightbox(stage: HTMLElement): void {
     'close',
   );
 
-  const hint = el(
-    'span',
-    {
-      'aria-hidden': 'true',
-      style: css({
-        position: 'absolute',
-        right: PAD_X + 132,
-        top: STAGE.h - PAD_BOTTOM + 20,
-        'font-size': 11.5,
-        'letter-spacing': '.22em',
-        opacity: '.5',
-        'z-index': '2',
-      }),
-    },
-    'click anywhere outside · esc',
-  );
-
   const root = el(
     'div',
     {
@@ -223,9 +230,8 @@ export function installLightbox(stage: HTMLElement): void {
       }),
     },
     ground,
-    scroll,
+    frame,
     cap,
-    hint,
     close,
   );
 

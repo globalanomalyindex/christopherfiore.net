@@ -402,7 +402,15 @@ rule chellbook's 1600 × 3338 flow boards get squeezed to 437px wide; with only
 the second rule, a board overflowing by 30px becomes a scrolling page over
 30px.
 
-Three things it has to keep doing:
+The frame around the image is `pointer-events: none` and the scroll box shrinks
+to the image. That is not cosmetic. It used to be one box filling the whole
+1792 x 912 area with the image centred inside it, sitting ABOVE the ground, so
+every click in the empty space around the image landed on a transparent div
+with no handler and did nothing. "Click anywhere outside" worked only in the
+last 64px at the very edge of the stage. Anything that is not the image or its
+scrollbar has to fall through to the ground.
+
+Four things it has to keep doing:
 
 - The trigger carries `data-nohl`. It sits inside `[data-page]`, so
   `wireHovers` would otherwise build a hover band stack behind a photograph.
