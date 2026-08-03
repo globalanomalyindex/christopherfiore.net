@@ -346,6 +346,35 @@ function swapLetter(sp: HTMLElement, k: number, toAlt: boolean, free?: boolean):
 }
 
 /**
+ * Tracking for the alternate face at display sizes.
+ *
+ * The alternate's letterforms are wider than Karrik's and carry more
+ * sidebearing, so a display line set in it wants at least -0.015em to hold
+ * together. That used to be applied as a flat REPLACEMENT, and on this site
+ * every display title rests tighter than it: -.05em on the subpages, -.06em on
+ * pages 01 and 03. So swapping to the alternate loosened them. At 152px it
+ * opened every gap by 5.32px, which on a word whose widest pair is already
+ * i→p reads as a space dropped into the middle of it.
+ *
+ * Never loosen. Take whichever of the two is tighter, so the -0.015em is a
+ * floor for titles that rest loose and a no-op for titles that do not.
+ */
+const ALT_TRACK_EM = -0.015;
+
+/** A letter-spacing string as a multiple of the font size. */
+function trackEm(v: string, fsz: number): number {
+  const raw = (v || '').trim();
+  if (!raw || raw === 'normal') return 0;
+  const n = parseFloat(raw);
+  if (!Number.isFinite(n)) return 0;
+  return raw.endsWith('em') ? n : fsz ? n / fsz : 0;
+}
+
+function altTrack(rest: string, fsz: number): string {
+  return `${Math.min(trackEm(rest, fsz), ALT_TRACK_EM)}em`;
+}
+
+/**
  * Keep a line inside the stage after a swap by tightening tracking, never by
  * letting it run wide. `base` is the letter-spacing to start from (omit for the
  * line's resting value). Only fires when the line actually overflows the
@@ -512,8 +541,7 @@ export function glitchFont(line: HTMLElement, toAlt: boolean, step?: number, noH
 
   if (m.ls0 == null) m.ls0 = line.style.letterSpacing || '';
   const fsz = parseFloat(getComputedStyle(line).fontSize) || 0;
-  // Display sizes need a touch more negative tracking in the alternate.
-  const track = toAlt && fsz > 60 ? '-.015em' : m.ls0;
+  const track = toAlt && fsz > 60 ? altTrack(m.ls0 ?? '', fsz) : m.ls0;
 
   if (isReduced(line)) {
     ls.forEach((sp) => swapLetter(sp, k, toAlt, true));
@@ -583,7 +611,16 @@ export function resetTitleFont(line: HTMLElement): void {
   const m = meta(line);
   (m.gt || []).forEach((t) => window.clearTimeout(t));
   m.gt = [];
-  line.style.letterSpacing = m.ls0 == null ? '' : m.ls0;
+  /*
+    Capture before restoring. This used to write '' whenever nothing had been
+    captured yet, which on a title's FIRST open threw away the tracking the
+    page builder authored inline. Everything downstream then read the resting
+    tracking as 0: `altTrack`'s -0.015em floor stopped being a floor and became
+    the value, and a title that rests at -.05em came back 5.32px looser per
+    letter at 152px.
+  */
+  if (m.ls0 == null) m.ls0 = line.style.letterSpacing || '';
+  line.style.letterSpacing = m.ls0;
   qq(line, '[data-l]').forEach((sp) => {
     const lm = meta(sp);
     window.clearTimeout(lm.hlT);

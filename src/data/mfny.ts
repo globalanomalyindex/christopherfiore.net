@@ -31,7 +31,17 @@ export interface MfnySection {
   id: string;
   name: string;
   paras: string[];
+  /**
+   * Which plate view this section is arguing over, by `MFNY_VIEWS` index:
+   * 0 the live page, 1 the redesign. Reading the column moves the plate to it;
+   * touching the plate never moves the column.
+   */
+  view?: number;
 }
+
+/** The plate the standfirst opens on. It is scroll section 0, not a member of
+ *  MFNY_SECTIONS, so it carries its own value. */
+export const MFNY_LEAD_VIEW = 1;
 
 export const MFNY = {
   name: 'mfny concentrates',
@@ -64,6 +74,7 @@ export const MFNY = {
 export const MFNY_SECTIONS: MfnySection[] = [
   {
     id: 'found',
+    view: 0,
     name: 'what the page was doing',
     paras: [
       'thirteen SKUs render as thirteen cards for eleven strains, so the grid is longer than the ' +
@@ -84,6 +95,7 @@ export const MFNY_SECTIONS: MfnySection[] = [
   },
   {
     id: 'taxonomy',
+    view: 0,
     name: 'the category error',
     paras: [
       'this is the real problem and it took a while to see. live resin and live rosin are ' +
@@ -99,6 +111,7 @@ export const MFNY_SECTIONS: MfnySection[] = [
   },
   {
     id: 'stakes',
+    view: 0,
     name: 'why it costs money',
     paras: [
       'live rosin is the premium, low-yield, high-cost product. on the current page it sits next ' +
@@ -112,6 +125,7 @@ export const MFNY_SECTIONS: MfnySection[] = [
   },
   {
     id: 'reframe',
+    view: 1,
     name: 'the reframe',
     paras: [
       'one card is one strain. form is an attribute of the card, not a reason to make another ' +
@@ -130,6 +144,7 @@ export const MFNY_SECTIONS: MfnySection[] = [
   },
   {
     id: 'pill',
+    view: 1,
     name: 'the tri-code filter',
     paras: [
       'the type filter wanted four states and i did not want four more grey pills competing with ' +
@@ -147,6 +162,7 @@ export const MFNY_SECTIONS: MfnySection[] = [
   },
   {
     id: 'second-form',
+    view: 1,
     name: 'making the second form impossible to miss',
     paras: [
       'a strain whose forms differ in type carries a tag for each. the selected one fills and ' +
@@ -173,6 +189,7 @@ export const MFNY_SECTIONS: MfnySection[] = [
   },
   {
     id: 'open',
+    view: 1,
     name: 'what is still open',
     paras: [
       'the THC percentages are invented. every live PDP renders that field empty, so there was no ' +
@@ -190,6 +207,7 @@ export const MFNY_SECTIONS: MfnySection[] = [
   },
   {
     id: 'measure',
+    view: 1,
     name: 'how it would be judged',
     paras: [
       'nothing here is a measured result. the page was never shipped, so the honest version of ' +

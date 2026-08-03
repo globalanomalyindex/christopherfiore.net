@@ -1056,12 +1056,19 @@ const listItem = (border: string | null, ...kids: (Node | string | null)[]) =>
   );
 
 let secSeq = 0;
-const section = (name: string, ...kids: (Node | string)[]) =>
+/**
+ * `board` is the board this section is talking about, by `CHELL_BOARDS` index.
+ * Reading the column moves the plate to it; stepping the plate never moves the
+ * column. A section with no board leaves the plate wherever it was, which is
+ * the right answer for the two that no board illustrates.
+ */
+const section = (name: string, board: number | null, ...kids: (Node | string)[]) =>
   el(
     'section',
     {
       'data-cbsec': secSeq++,
       'data-cbsec-name': name,
+      'data-cbsec-board': board,
       style: css({ 'padding-bottom': 42 }),
     },
     ...kids,
@@ -1145,6 +1152,7 @@ function textSections(): HTMLElement[] {
   */
   const lead = section(
     'the product',
+    0,
     secLabel('the product'),
     el(
       'p',
@@ -1165,6 +1173,7 @@ function textSections(): HTMLElement[] {
 
   const loop = section(
     'the core loop',
+    2,
     secLabel('the core loop'),
     bareList(
       ...CHELL_LOOP.map((step, i) =>
@@ -1197,24 +1206,28 @@ function textSections(): HTMLElement[] {
   */
   const rules = section(
     'structural rules',
+    1,
     bandLabel('structural rules', light(0)),
     bareList(...CHELL_RULES.map((r) => numbered(r.n, r.name, null, r.body))),
   );
 
   const ia = section(
     'information architecture',
+    7,
     secLabel('information architecture · five tabs'),
     fieldRows(CHELL_IA, 15),
   );
 
   const flows = section(
     'the five flows',
+    2,
     secLabel('the five flows'),
     bareList(...CHELL_FLOWS.map((f) => numbered(f.n, f.name, f.screens, f.body))),
   );
 
   const motion = section(
     'motion',
+    0,
     secLabel('motion · calm, no spring'),
     fieldRows(CHELL_MOTION, 15),
   );
@@ -1225,6 +1238,7 @@ function textSections(): HTMLElement[] {
   */
   const open = section(
     'still undesigned',
+    null,
     bandLabel('still undesigned', light(2)),
     bareList(
       ...CHELL_OPEN.map((line, i) =>
@@ -1256,6 +1270,7 @@ function textSections(): HTMLElement[] {
   */
   const caveats = section(
     'caveats',
+    null,
     bandLabel('caveats', light(4)),
     bareList(
       ...CHELL_CAVEATS.map((line) =>

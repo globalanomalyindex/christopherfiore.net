@@ -159,6 +159,17 @@ function boardOf(trigger: HTMLElement): number {
 const SCROLLED = new WeakSet<HTMLElement>();
 
 /**
+ * The section the board was last synced to.
+ *
+ * The sync fires on a CHANGE of section, not on every scroll event. Someone
+ * who steps the boards by hand keeps their choice for as long as they stay in
+ * the section they are reading; the board only takes over again when the
+ * reading position moves on. The binding is one way: nothing here writes
+ * `scrollTop`, and `goChellbook` never touches the column.
+ */
+const SYNCED = new WeakMap<HTMLElement, number>();
+
+/**
  * Draw the rail thumb and the section readout for the column's current
  * position. Cheap enough to run straight off the scroll event: two style
  * writes and one text write, no layout reads beyond the container's own
@@ -190,8 +201,6 @@ function paintScroll(screen: HTMLElement): void {
     }
   }
 
-  const at = q(screen, '[data-cbsecat]');
-  if (!at) return;
   const secs = qq(region, '[data-cbsec]');
   if (!secs.length) return;
   // whichever section owns the top of the window, not the middle: the heading
@@ -205,8 +214,31 @@ function paintScroll(screen: HTMLElement): void {
   // which would leave the final section — the caveats — never named. Scrolled
   // to the end means you are in the last one.
   if (over > 0 && region.scrollTop >= over - 1) cur = secs.length - 1;
+
+  syncBoardTo(screen, secs, cur);
+
+  const at = q(screen, '[data-cbsecat]');
+  if (!at) return;
   const name = secs[cur].getAttribute('data-cbsec-name') || '';
   at.textContent = `${two(cur + 1)} / ${two(secs.length)} · ${name}`;
+}
+
+/**
+ * Move the plate to the board the section now under the reader is describing.
+ * "still undesigned" and "caveats" carry no board, because none illustrates
+ * them, and they leave the plate on whatever was already up.
+ */
+function syncBoardTo(screen: HTMLElement, secs: HTMLElement[], cur: number): void {
+  if (SYNCED.get(screen) === cur) return;
+  SYNCED.set(screen, cur);
+  const raw = secs[cur].getAttribute('data-cbsec-board');
+  if (raw === null || raw === '') return;
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return;
+  const stage = screen.closest<HTMLElement>('[data-stage]');
+  // goChellbook is already a no-op when the board is unchanged or a
+  // transition owns the screen, so this needs no further guard.
+  if (stage) goChellbook(stage, n);
 }
 
 function wireScroll(screen: HTMLElement): void {
@@ -223,6 +255,9 @@ function wireScroll(screen: HTMLElement): void {
 function resetScroll(screen: HTMLElement): void {
   const region = q(screen, '[data-cbscroll]');
   if (region) region.scrollTop = 0;
+  // Forget the synced section, or a re-open at section 0 would look already
+  // synced and leave the board wherever the last reader left it.
+  SYNCED.delete(screen);
   paintScroll(screen);
 }
 

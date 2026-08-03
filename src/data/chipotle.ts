@@ -44,6 +44,13 @@ export interface ChipotleSection {
   id: string;
   name: string;
   paras: string[];
+  /**
+   * Which plate view this section is arguing over, by `CHIPOTLE_VIEWS` index.
+   * Reading the column moves the plate to it; touching the plate never moves
+   * the column. A section with no honest match leaves the plate alone, which
+   * is why this is optional rather than defaulted.
+   */
+  view?: number;
 }
 
 export const CHIPOTLE = {
@@ -69,9 +76,15 @@ export const CHIPOTLE = {
     'tiles are placeholders, and none of this shipped.',
 } as const;
 
+/** The plate the standfirst opens on. It is scroll section 0, not a member of
+ *  CHIPOTLE_SECTIONS, so it needs its own value: the redesign, because the
+ *  standfirst is the summary of what the work produced. */
+export const CHIPOTLE_LEAD_VIEW = 1;
+
 export const CHIPOTLE_SECTIONS: ChipotleSection[] = [
   {
     id: 'rule',
+    view: 0,
     name: 'the rule, and what it disqualifies',
     paras: [
       'one governing rule, the same one i hold every consumer product to: a five year old should ' +
@@ -87,6 +100,7 @@ export const CHIPOTLE_SECTIONS: ChipotleSection[] = [
   },
   {
     id: 'audit',
+    view: 0,
     name: 'nineteen findings, and the four that mattered',
     paras: [
       'i went through the four screenshots and wrote up nineteen findings. the first one is the ' +
@@ -113,6 +127,7 @@ export const CHIPOTLE_SECTIONS: ChipotleSection[] = [
   },
   {
     id: 'consistency',
+    view: 0,
     name: 'the rules you have to learn twice',
     paras: [
       'the rest of the nineteen are consistency errors, and they are the part i most wanted ' +
@@ -145,6 +160,7 @@ export const CHIPOTLE_SECTIONS: ChipotleSection[] = [
   },
   {
     id: 'system',
+    view: 0,
     name: 'the system i set before drawing',
     paras: [
       'i settled the scope first, because each of these changes the layout completely. full ' +
@@ -166,6 +182,7 @@ export const CHIPOTLE_SECTIONS: ChipotleSection[] = [
   },
   {
     id: 'explorations',
+    view: 3,
     name: 'three takes, built rather than argued about',
     paras: [
       'i built three checkout takes plus a redesigned confirmation screen, all interactive, ' +
@@ -196,6 +213,7 @@ export const CHIPOTLE_SECTIONS: ChipotleSection[] = [
   },
   {
     id: 'confirmation',
+    view: 1,
     name: 'one clock',
     paras: [
       'the confirmation screen has one job: say when the food will be ready. so it carries one ETA ' +
@@ -222,6 +240,7 @@ export const CHIPOTLE_SECTIONS: ChipotleSection[] = [
   },
   {
     id: 'reversal',
+    view: 1,
     name: 'the map i deleted, then made four times bigger',
     paras: [
       'round five compacted my own confirmation screen. i removed the small shelf and map ' +
@@ -245,6 +264,7 @@ export const CHIPOTLE_SECTIONS: ChipotleSection[] = [
   },
   {
     id: 'iteration',
+    view: 2,
     name: 'the rest of the log',
     paras: [
       'the total breakdown started as a second thing to tap. it ended up sitting open by default ' +
@@ -265,6 +285,7 @@ export const CHIPOTLE_SECTIONS: ChipotleSection[] = [
   },
   {
     id: 'result',
+    view: 1,
     name: 'what it measures out at',
     paras: [
       'nothing here shipped, so none of these are outcomes. they are measurements of the redesign ' +
@@ -290,6 +311,7 @@ export const CHIPOTLE_SECTIONS: ChipotleSection[] = [
   },
   {
     id: 'open',
+    view: 1,
     name: 'what is still open',
     paras: [
       'the confirmation screen’s central fix depends on a number i do not control. does the ' +

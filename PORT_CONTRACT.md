@@ -368,6 +368,42 @@ it covers, and `navParts()` locates a page's own title with a document-order
 query, so sharing the marker would let a subpage's title be mistaken for its
 host page's.
 
+### The plate follows the reading position
+
+Three subpages carry both a scrolling text column and a set of screenshots:
+chellbook (nine boards), mfny (two plate views) and chipotle (four). On all
+three the plate now tracks what is being read.
+
+**The binding is one way, and that is the whole design.** Scrolling the column
+moves the plate. Touching the plate never moves the column: the setters
+(`goChellbook`, `setMfnyView`, `setChipotleView`) do not write `scrollTop`, and
+must not start.
+
+The target lives on the section element, so the runtime never has to import
+content: `data-cbsec-board`, `data-mfsec-view`, `data-cpsec-view`. A section
+with **no** attribute leaves the plate where it is, which is the right answer
+for the two chellbook sections ("still undesigned", "caveats") that no board
+illustrates. Never default it to 0.
+
+The sync fires on a **change of section**, not on every scroll event. Someone
+who steps the plate by hand keeps their choice for as long as they stay in the
+section they are reading; the plate only takes over again when the reading
+position genuinely moves on. Firing per event would snatch the plate back a
+pixel after they touched it.
+
+Two traps, both already sprung once:
+
+- `resetScroll` runs inside `finishClose`, while the screen is still displayed
+  for one more statement. An animated plate change there dithers the plate
+  while the screen collapses. mfny and chipotle therefore split their setter
+  into `applyView(P, n, animate)` plus the exported wrapper, exactly as
+  chellbook already had `showBoard(P, n, animate)`, and reset silently.
+  chellbook needs no such guard: `goChellbook` bails on `locked(stage)`, which
+  is true through both transitions.
+- The sync must sit **before** any early return that guards the readout. On
+  chellbook the `[data-cbsecat]` lookup used to return early and would have
+  skipped it.
+
 ### Adding a screen
 Four places have to learn about a new full-stage screen, and three of them fail
 silently if missed:

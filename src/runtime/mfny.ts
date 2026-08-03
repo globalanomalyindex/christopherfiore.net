@@ -22,6 +22,7 @@ import { COLOR, rgba } from '../design/tokens.ts';
 import { dIn, killAnim, playIn } from './dither.ts';
 import { frostFor } from './frost.ts';
 import { MFNY_VIEWS } from '../pages/mfny.ts';
+import { MFNY_LEAD_VIEW as LEAD_VIEW } from '../data/mfny.ts';
 import { locked, state } from './state.ts';
 import { subtitleIn, subtitleOut, subtitleReset } from './glitch.ts';
 import { REDUCED_FADE, resetVeil, veilOpen, veilRest } from './transitions.ts';
@@ -121,6 +122,40 @@ function clipFrom(page: HTMLElement, trigger: HTMLElement | null): string {
 const SCROLLED = new WeakSet<HTMLElement>();
 
 /**
+ * The section the plate was last synced to, and the view it is on.
+ *
+ * The sync fires on a CHANGE of section, not on every scroll event. Someone
+ * who flips the plate by hand keeps their choice for as long as they stay in
+ * the section they are reading; the plate only takes over again when the
+ * reading position moves on. The binding is one way: nothing here writes
+ * `scrollTop`, and `setMfnyView` never touches the column.
+ */
+const SYNCED = new WeakMap<HTMLElement, number>();
+/** The view the plate is on, so a sync can skip a no-op and its dither. */
+const VIEW = new WeakMap<HTMLElement, number>();
+
+/** `partsFor`, from the screen rather than the stage. */
+function partsFor2(screen: HTMLElement): Parts | null {
+  const stage = screen.closest<HTMLElement>('[data-stage]');
+  return stage ? partsFor(stage) : null;
+}
+
+/**
+ * Flip the plate to whatever the section now under the reader argues over.
+ * A section with no `data-mfsec-view` leaves the plate alone.
+ */
+function syncPlateTo(screen: HTMLElement, secs: HTMLElement[], cur: number): void {
+  if (SYNCED.get(screen) === cur) return;
+  SYNCED.set(screen, cur);
+  const raw = secs[cur].getAttribute('data-mfsec-view');
+  if (raw === null || raw === '') return;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || VIEW.get(screen) === n) return;
+  const P = partsFor2(screen);
+  if (P) applyView(P, n, true);
+}
+
+/**
  * Draw the rail thumb, the section readout, and the index's current row. Cheap
  * enough to run straight off the scroll event: a handful of style writes and
  * one text write, no layout reads beyond the container's own metrics.
@@ -163,6 +198,8 @@ function paintScroll(screen: HTMLElement): void {
   // which would leave the final section never named.
   if (over > 0 && region.scrollTop >= over - 1) cur = secs.length - 1;
 
+  syncPlateTo(screen, secs, cur);
+
   const at = q(screen, '[data-mfsecat]');
   if (at) {
     const name = secs[cur].getAttribute('data-mfsec-name') || '';
@@ -184,10 +221,19 @@ function wireScroll(screen: HTMLElement): void {
   region.addEventListener('scroll', () => paintScroll(screen), { passive: true });
 }
 
-/** Send the column back to the top, while the screen is still displayed. */
+/**
+ * Send the column back to the top, while the screen is still displayed, and
+ * put the plate back on the view section 0 opens with.
+ *
+ * The plate reset is silent: this also runs inside `finishClose`, where an
+ * animated change would dither the plate while the screen collapses.
+ */
 function resetScroll(screen: HTMLElement): void {
   const region = q(screen, '[data-mfscroll]');
   if (region) region.scrollTop = 0;
+  SYNCED.delete(screen);
+  const P = partsFor2(screen);
+  if (P) applyView(P, LEAD_VIEW, false);
   paintScroll(screen);
 }
 
@@ -200,13 +246,11 @@ function resetScroll(screen: HTMLElement): void {
  * which page you are looking at and a built sentence can lose the clause that
  * says "the live page".
  */
-export function setMfnyView(stage: HTMLElement, n: number): void {
-  if (!OPEN.has(stage)) return;
-  const P = partsFor(stage);
-  if (!P) return;
+function applyView(P: Parts, n: number, animate: boolean): void {
   const { screen } = P;
   const view = MFNY_VIEWS[n];
   if (!view) return;
+  VIEW.set(screen, n);
 
   for (const slot of qq(screen, '[data-mfslot]')) {
     const on = Number(slot.getAttribute('data-mfslot')) === n;
@@ -224,7 +268,16 @@ export function setMfnyView(stage: HTMLElement, n: number): void {
   }
 
   // the plate re-resolves out of noise, as a board change does on chellbook
-  if (P.plate && !state(stage).reduced) dIn(P.plate, 30, 340, PLATE_MB);
+  const stage = screen.closest<HTMLElement>('[data-stage]');
+  if (animate && P.plate && !(stage && state(stage).reduced)) dIn(P.plate, 30, 340, PLATE_MB);
+}
+
+/** Flip the plate to view `n`. Never touches the text column. */
+export function setMfnyView(stage: HTMLElement, n: number): void {
+  if (!OPEN.has(stage)) return;
+  const P = partsFor(stage);
+  if (!P) return;
+  applyView(P, n, true);
 }
 
 /* -------------------------------------------------------------------- open */

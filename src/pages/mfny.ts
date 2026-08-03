@@ -25,7 +25,7 @@
 import { asset, css, el, letters } from '../dom.ts';
 import { COLOR, rgba } from '../design/tokens.ts';
 import { MFNY_PAGE as MP } from '../design/layout.ts';
-import { MFNY, MFNY_GLANCE, MFNY_SECTIONS } from '../data/mfny.ts';
+import { MFNY, MFNY_GLANCE, MFNY_LEAD_VIEW, MFNY_SECTIONS } from '../data/mfny.ts';
 import { STUDIO } from '../data/studio.ts';
 
 const KARRIK = "'Karrik',sans-serif";
@@ -577,6 +577,7 @@ function textSections(): HTMLElement[] {
     {
       'data-mfsec': 0,
       'data-mfsec-name': 'the short version',
+      'data-mfsec-view': MFNY_LEAD_VIEW,
       style: css({ 'padding-bottom': 40 }),
     },
     microLabel('the short version'),
@@ -603,6 +604,8 @@ function textSections(): HTMLElement[] {
         // +1: the standfirst above is section 0 of the scroll column
         'data-mfsec': i + 1,
         'data-mfsec-name': sec.name,
+        // the plate follows the reading position; the reverse never happens
+        'data-mfsec-view': sec.view ?? null,
         style: css({ 'padding-bottom': 40 }),
       },
       microLabel(`${two(i + 1)} · ${sec.name}`),

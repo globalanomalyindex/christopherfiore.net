@@ -23,6 +23,7 @@ import { COLOR, rgba } from '../design/tokens.ts';
 import { dIn, killAnim, playIn } from './dither.ts';
 import { frostFor } from './frost.ts';
 import { CHIPOTLE_VIEWS } from '../pages/chipotle.ts';
+import { CHIPOTLE_LEAD_VIEW as LEAD_VIEW } from '../data/chipotle.ts';
 import { locked, state } from './state.ts';
 import { subtitleIn, subtitleOut, subtitleReset } from './glitch.ts';
 import { REDUCED_FADE, resetVeil, veilOpen, veilRest } from './transitions.ts';
@@ -118,6 +119,50 @@ function clipFrom(page: HTMLElement, trigger: HTMLElement | null): string {
 const SCROLLED = new WeakSet<HTMLElement>();
 
 /**
+ * The section the plate was last synced to, per screen.
+ *
+ * The sync fires on a CHANGE of section, not on every scroll event, and that
+ * is the whole design. Someone who walks the plate by hand to study a view
+ * keeps it for as long as they stay in the section they are reading; the plate
+ * only takes over again when the reading position genuinely moves on. Firing
+ * every frame would snatch the plate back a pixel after they touched it.
+ *
+ * The binding is one way. Nothing here ever writes `scrollTop`, and
+ * `setChipotleView` never touches the column, so the toggle can be walked
+ * freely without the prose moving under it.
+ */
+const SYNCED = new WeakMap<HTMLElement, number>();
+
+/** The view the plate is on, so a sync can skip a no-op and its dither. */
+const VIEW = new WeakMap<HTMLElement, number>();
+
+/**
+ * Move the plate to whatever the section now under the reader argues over.
+ *
+ * A section with no `data-cpsec-view` leaves the plate alone: the sections
+ * that have no honest match are better served by whatever was already up than
+ * by a jump to something irrelevant.
+ */
+function syncPlateTo(screen: HTMLElement, secs: HTMLElement[], cur: number): void {
+  if (SYNCED.get(screen) === cur) return;
+  SYNCED.set(screen, cur);
+  const raw = secs[cur].getAttribute('data-cpsec-view');
+  if (raw === null || raw === '') return;
+  const n = Number(raw);
+  // Already there: skip, so landing back on a section the plate is already
+  // showing does not fire a dither for no visible change.
+  if (!Number.isFinite(n) || VIEW.get(screen) === n) return;
+  const P = partsFor2(screen);
+  if (P) applyView(P, n, true);
+}
+
+/** `partsFor`, from the screen rather than the stage. */
+function partsFor2(screen: HTMLElement): Parts | null {
+  const stage = screen.closest<HTMLElement>('[data-stage]');
+  return stage ? partsFor(stage) : null;
+}
+
+/**
  * Draw the rail thumb and the section readout. Cheap enough to run straight
  * off the scroll event: a handful of style writes and one text write, no
  * layout reads beyond the container's own metrics.
@@ -160,6 +205,8 @@ function paintScroll(screen: HTMLElement): void {
   // which would leave the final section never named.
   if (over > 0 && region.scrollTop >= over - 1) cur = secs.length - 1;
 
+  syncPlateTo(screen, secs, cur);
+
   const at = q(screen, '[data-cpsecat]');
   if (at) {
     const name = secs[cur].getAttribute('data-cpsec-name') || '';
@@ -180,10 +227,22 @@ function wireScroll(screen: HTMLElement): void {
   region.addEventListener('scroll', () => paintScroll(screen), { passive: true });
 }
 
-/** Send the column back to the top, while the screen is still displayed. */
+/**
+ * Send the column back to the top, while the screen is still displayed, and
+ * put the plate back on the view section 0 opens with.
+ *
+ * The plate reset is silent. This runs inside `finishClose` too, where the
+ * screen is still displayed for one more statement, and an animated change
+ * there would dither the plate while the screen collapses.
+ */
 function resetScroll(screen: HTMLElement): void {
   const region = q(screen, '[data-cpscroll]');
   if (region) region.scrollTop = 0;
+  // Forget the synced section, or a re-open at section 0 would look already
+  // synced and leave the plate wherever the last reader left it.
+  SYNCED.delete(screen);
+  const P = partsFor2(screen);
+  if (P) applyView(P, LEAD_VIEW, false);
   paintScroll(screen);
 }
 
@@ -196,13 +255,11 @@ function resetScroll(screen: HTMLElement): void {
  * which screens you are looking at and a built sentence can lose the clause
  * that says these are design renders rather than a shipped app.
  */
-export function setChipotleView(stage: HTMLElement, n: number): void {
-  if (!OPEN.has(stage)) return;
-  const P = partsFor(stage);
-  if (!P) return;
+function applyView(P: Parts, n: number, animate: boolean): void {
   const { screen } = P;
   const view = CHIPOTLE_VIEWS[n];
   if (!view) return;
+  VIEW.set(screen, n);
 
   for (const slot of qq(screen, '[data-cpslot]')) {
     const on = Number(slot.getAttribute('data-cpslot')) === n;
@@ -223,7 +280,16 @@ export function setChipotleView(stage: HTMLElement, n: number): void {
   }
 
   // the plate re-resolves out of noise, as a board change does on chellbook
-  if (P.plate && !state(stage).reduced) dIn(P.plate, 30, 340, PLATE_MB);
+  const stage = screen.closest<HTMLElement>('[data-stage]');
+  if (animate && P.plate && !(stage && state(stage).reduced)) dIn(P.plate, 30, 340, PLATE_MB);
+}
+
+/** Walk the plate to view `n`. Never touches the text column. */
+export function setChipotleView(stage: HTMLElement, n: number): void {
+  if (!OPEN.has(stage)) return;
+  const P = partsFor(stage);
+  if (!P) return;
+  applyView(P, n, true);
 }
 
 /* -------------------------------------------------------------------- open */

@@ -32,7 +32,12 @@
 import { asset, css, el, letters } from '../dom.ts';
 import { COLOR, rgba } from '../design/tokens.ts';
 import { CHIPOTLE_PAGE as CP } from '../design/layout.ts';
-import { CHIPOTLE, CHIPOTLE_GLANCE, CHIPOTLE_SECTIONS } from '../data/chipotle.ts';
+import {
+  CHIPOTLE,
+  CHIPOTLE_GLANCE,
+  CHIPOTLE_LEAD_VIEW,
+  CHIPOTLE_SECTIONS,
+} from '../data/chipotle.ts';
 import { STUDIO } from '../data/studio.ts';
 
 const KARRIK = "'Karrik',sans-serif";
@@ -638,6 +643,7 @@ function textSections(): HTMLElement[] {
     {
       'data-cpsec': 0,
       'data-cpsec-name': 'the short version',
+      'data-cpsec-view': CHIPOTLE_LEAD_VIEW,
       style: css({ 'padding-bottom': 40 }),
     },
     microLabel('the short version'),
@@ -664,6 +670,9 @@ function textSections(): HTMLElement[] {
         // +1: the standfirst above is section 0 of the scroll column
         'data-cpsec': i + 1,
         'data-cpsec-name': sec.name,
+        // The plate follows the reading position. A section with no view
+        // leaves the plate wherever it was.
+        'data-cpsec-view': sec.view ?? null,
         style: css({ 'padding-bottom': 40 }),
       },
       microLabel(`${two(i + 1)} · ${sec.name}`),
