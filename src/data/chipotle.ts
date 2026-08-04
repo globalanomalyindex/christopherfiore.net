@@ -251,7 +251,8 @@ export const CHIPOTLE_SECTIONS: ChipotleSection[] = [
         'thumbnails, because at 52 pixels they carried no information. i made the receipt ' +
         'permanently open, on the grounds that a receipt you have to tap is not a receipt. between ' +
         'them those two changes freed enough height for a real map at roughly 280 pixels, full ' +
-        'bleed to the frame edges, with the address on a white chip and a Directions button on it.',
+        'bleed to the frame edges, with the address on a white chip and a Directions button on it. ' +
+        'that button has since become an icon, which is the next entry.',
       'so in one round i deleted a map for being useless and then put a map back at four times the ' +
         'size. i have kept that in the log rather than tidying it away, because it is the most ' +
         'useful thing in the project.',
@@ -267,8 +268,40 @@ export const CHIPOTLE_SECTIONS: ChipotleSection[] = [
     ],
   },
   {
-    id: 'iteration',
+    id: 'icons',
     view: 3,
+    name: 'when an icon costs less than a sentence',
+    paras: [
+      'the confirmation screen still had two wordy controls on it. the original app has a tracked ' +
+        'caps text link for saving the store. my version had a button with the word Directions on ' +
+        'it. both are now 44 pixel circles sitting together on the map, a heart and an arrow. the ' +
+        'gap between them dropped from 10 pixels to 9, so the two circles read as one pair.',
+      'the rule behind it is that an action can drop its words when the action is obvious from ' +
+        'the thing it acts on. a heart means save. an arrow in a diamond means go there. both sit ' +
+        'right next to the address they act on, so neither one has to say which store it means.',
+      'i turned that into four questions, and a control has to pass all four. is the symbol one ' +
+        'people already know, or would they have to learn it here? is the thing it acts on named ' +
+        'right beside it? is the action easy to undo? can you see the state without reading ' +
+        'anything? the filled heart answers that last one by itself, which is the whole reason it ' +
+        'can go without a label.',
+      'a control that fails any of those keeps its words. the pay button is a full sentence with ' +
+        'the amount in it. "Something wrong?" is still a button with the words on it. the tip ' +
+        'presets are still dollar amounts. money and mistakes get words. i also wrote down where ' +
+        'the rule stops, because this is the kind of rule that is easy to run too far. Edit bag ' +
+        'and Change stay as text. if a five year old would have to be told what a control does, ' +
+        'it needs a word on it.',
+      'the same rule did two bigger things earlier in the flow. a 440 pixel black card carrying ' +
+        'one sentence about Apple Pay became a 38 by 25 pixel mark and two words in a 25 pixel ' +
+        'row. the pickup time scroller became a minus and a plus around one time. but the line ' +
+        'about grabbing your order off the shelf failed the first question, because a shelf is ' +
+        'not a symbol anyone knows, so it stayed a sentence and just got smaller and moved. what ' +
+        'i was after was less reading. an icon is one way to get there and a shorter sentence in ' +
+        'a better place is another.',
+    ],
+  },
+  {
+    id: 'iteration',
+    view: 4,
     name: 'the rest of the log',
     paras: [
       'the total breakdown started as a second thing to tap. it ended up sitting open by default ' +
@@ -342,6 +375,10 @@ export const CHIPOTLE_SECTIONS: ChipotleSection[] = [
         'against the surface before anyone ships them. the screen is drawn to fit without ' +
         'scrolling at default dynamic type, and at the largest sizes it should scroll rather than ' +
         'compress.',
+      'one more that only real data can settle. the saved heart fills with the same green as the ' +
+        'map pin, and the two sit in the same corner about 250 pixels apart. it reads fine over ' +
+        'the striped placeholder. over a real map with roads and labels behind it, it might not, ' +
+        'and then the saved state should move to the ocher the links already use.',
       'five things are not designed at all: the change location sheet, the change payment method ' +
         'sheet, the round up ask this redesign moves to after payment, delivery mode (which shares ' +
         'this screen in the current app, and which the audit argues belongs back in the bag one ' +

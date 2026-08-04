@@ -7,15 +7,20 @@
  * checkout page at three scroll positions, and the fastest way to show that is
  * to put all four side by side and let the reader count the repeated total.
  *
- * WHERE IT DIVERGES: the plate carries FOUR views rather than mfny's two, so
- * the toggle is a four-way radiogroup and `CHIPOTLE_VIEWS` is walked rather
- * than flipped. The four are the original screens, the two final screens, the
- * checkout's own states, and the two rejected explorations.
+ * WHERE IT DIVERGES: the plate carries FIVE views rather than mfny's two, so
+ * the toggle is a five-way radiogroup and `CHIPOTLE_VIEWS` is walked rather
+ * than flipped. The five are the original screens, the two rejected
+ * explorations, the two final screens, the store controls on the confirmation
+ * map, and the checkout's own states.
  *
- * All four are composites laid out at 1456 × 874, the plate's ratio, but they
+ * All five are composites laid out at 1456 × 874, the plate's ratio, but they
  * are not all the same kind of picture. `before` is built from screenshots of
- * the real shipped app; the other three are built from the handoff's design
+ * the real shipped app; the other four are built from the handoff's design
  * renders. Their captions carry that distinction and must keep carrying it.
+ *
+ * `store-actions` is the odd one: a detail rather than a set of whole screens.
+ * It has to be, because the change it shows is two 44px controls, and at the
+ * scale the other four are drawn you cannot tell a heart from a smudge.
  *
  * Every image is mounted at once and crossfaded rather than swapped by `src`:
  * a hard swap flashes white while the new file decodes, which is exactly wrong
@@ -77,13 +82,14 @@ const microLabel = (text: string, opacity = '.6') =>
   );
 
 /**
- * The four plate views, in walk order.
+ * The five plate views, in walk order.
  *
  * THE ORDER IS THE NARRATIVE, and the scroll sync depends on it. Reading the
  * column walks this list forward and never back: the original screens for the
- * whole audit, the explorations, the two final screens, then the checkout's
- * states. A view moved out of this order makes the plate jump backwards while
- * someone is reading straight down, which is exactly what it used to do.
+ * whole audit, the explorations, the two final screens, the store controls the
+ * icon rule produced, then the checkout's states. A view moved out of this
+ * order makes the plate jump backwards while someone is reading straight down,
+ * which is exactly what it used to do.
  *
  * `before` is the only one showing the real shipped app. Everything after it is
  * a design render with an original visual identity and striped placeholder
@@ -121,6 +127,17 @@ const VIEWS = [
       'and a plus button, and a confirmation screen with a single ETA, a status tag and a map',
     caption:
       'the redesign, as design renders · one screen to order, one to wait, and nothing below the fold on either',
+  },
+{
+    id: 'store-actions',
+    label: 'store actions',
+    src: 'projects/chipotle-store-actions.webp',
+    alt:
+      'Two design renders of the same confirmation screen detail, side by side: a map with the ' +
+      'store address on a white chip and two round buttons beside it, a heart and a directions ' +
+      'arrow. On the left the heart is an outline. On the right it is filled green',
+    caption:
+      'the store controls, as design renders · not saved on the left, saved on the right, and the fill is the whole state',
   },
 {
     id: 'states',
@@ -389,7 +406,7 @@ function titleBlock(): HTMLElement[] {
 /* ------------------------------------------------------------------- plate */
 
 /**
- * All four views, every one mounted, crossfaded between. `object-fit: contain`
+ * All five views, every one mounted, crossfaded between. `object-fit: contain`
  * is not needed — the composites are cut to 1456 × 874 and the box is the same
  * ratio — but `cover` would still crop on a rounding error, so `contain` it is.
  */
@@ -474,13 +491,14 @@ function plateCaption(): HTMLElement {
   );
 }
 
-/** A radiogroup: four exclusive views, one of which is showing at any time. */
+/** A radiogroup: five exclusive views, one of which is showing at any time. */
 function toggle(): HTMLElement {
   return el(
     'div',
     {
       role: 'radiogroup',
-      'aria-label': 'Walk the original screens, the redesign, its states, and the rejected explorations',
+      'aria-label':
+        'Walk the original screens, the rejected explorations, the redesign, its store controls, and its states',
       'data-intro': 'wipeX',
       'data-in-delay': 340,
       'data-in-dur': 320,
@@ -502,8 +520,8 @@ function toggle(): HTMLElement {
           'aria-checked': i === 0 ? 'true' : 'false',
           /*
             Roving tabindex: a radiogroup is one tab stop, and the arrows move
-            within it. Four separate stops would make Tab walk the same control
-            four times. `setChipotleView` moves this with the checked state.
+            within it. Five separate stops would make Tab walk the same control
+            five times. `setChipotleView` moves this with the checked state.
           */
           tabindex: i === 0 ? 0 : -1,
           'data-act': 'chipotle-view',

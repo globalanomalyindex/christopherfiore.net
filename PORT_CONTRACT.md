@@ -282,9 +282,15 @@ header comment says which parts of that kit are binding.
 ### `src/pages/chipotle.ts` + `src/runtime/chipotle.ts`
 Channel 01's fourth in-stage screen, opened from the chipotle row
 (`data-act="chipotle"`). A structural clone of the MFNY pair, same shape and
-same choreography, with one divergence: the plate carries **four** views rather
+same choreography, with one divergence: the plate carries **five** views rather
 than two, so `CHIPOTLE_VIEWS` is walked rather than flipped and the arrow-key
 handler takes its wrap from `CHIPOTLE_VIEWS.length` instead of a literal `2`.
+Nothing in the runtime counts the views, so adding one is an entry in `VIEWS`
+plus a `view:` on the section that argues over it. The fifth, `store-actions`,
+is a **detail** rather than a set of whole screens: it shows the favorite
+control saved and unsaved, because at the scale the other four are drawn a 44px
+icon is a smudge. Measured at 1920: five labels come to 543.9px against a
+727.3px plate, so there is room for one more before the row has to wrap.
 
 ```ts
 export function openChipotle(stage: HTMLElement, trigger: HTMLElement): void;
@@ -308,11 +314,28 @@ the end. Both are recorded at their definitions.
 
 ### `public/chipotle/checkout.html`
 The interactive prototype, served at `/chipotle/checkout.html`. Self-contained:
-no external requests at all, with its fonts and images inlined. It is the
-author's own design artifact and its copy is **not** edited to house rules; the
-only additions are a `<title>`, a meta description, and a short script that
-holds the title, because the bundler's runtime adopts an inner document whose
-head has none and the tab would otherwise be blank.
+no external requests at all, with its fonts and images inlined. Additions on top
+of the author's export are a `<title>`, a meta description, and a short script
+that holds the title, because the bundler's runtime adopts an inner document
+whose head has none and the tab would otherwise be blank.
+
+It is the author's own design artifact, so its existing copy is left as he
+wrote it — including its British spellings, which are his. Two house rules do
+reach into it. Dashes are stripped from anything a visitor can read, and any
+string added here later is written in American spelling, which is why the
+favorite control's labels read "favorite" while the kit that specified them
+said "favourite". The em dashes still in the file are all inside the bundler
+runtime's own source comments and one `console.error`, none of which render.
+
+**Editing it.** The page is a bundler export. Line 409 is a single JSON string
+holding the entire document, and the app lives inside it. Decode with
+`JSON.parse`, patch, then re-encode with
+`JSON.stringify(html).replace(/<\//g, '<\\u002F')` — that escape is the
+bundler's own and is what stops a nested `</script>` closing the outer tag.
+Round-tripping without it is byte-identical, so the escape is the only thing to
+get right. Inside that document the bundler renames camelCase attributes:
+`onClick` is `sc-camel-on-click` and `viewBox` is `sc-camel-view-box`. Kebab
+SVG attributes (`fill-rule`, `stroke-linejoin`) pass through untouched.
 
 ### `src/pages/about.ts` + `src/runtime/about.ts`
 Channel 04's in-stage background, opened from the page-04 control
@@ -422,7 +445,7 @@ Four things it has to keep doing:
 ### The plate follows the reading position
 
 Three subpages carry both a scrolling text column and a set of screenshots:
-chellbook (nine boards), mfny (two plate views) and chipotle (four). On all
+chellbook (nine boards), mfny (two plate views) and chipotle (five). On all
 three the plate now tracks what is being read.
 
 **The binding is one way, and that is the whole design.** Scrolling the column
