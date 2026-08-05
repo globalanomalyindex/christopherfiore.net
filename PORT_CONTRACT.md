@@ -390,12 +390,12 @@ Two other repairs, both recorded because they look like bugs otherwise:
 
 - `.image-slots.state.json` is an empty `{}`. `image-slot.js` polls for it and
   logs a 404 without it.
-- `uploads/crop-simple-svgrepo-com.svg` is **redrawn, not shipped**. The
-  handoff references it for the framing button on the Record screen and does
-  not include the file. Without it the button paints a blank disc in Chrome and
-  a solid white square in the handoff's own render `08-record-setup.png`. The
-  replacement is a 24-unit crop mark used the same way, as a CSS mask, so it
-  takes its color from the button.
+- `uploads/crop-simple-svgrepo-com.svg` is **missing from the handoff zip**.
+  It is referenced for the framing button on the Record screen, and without it
+  the button paints a blank disc in Chrome and a solid white square in the
+  handoff's own render `08-record-setup.png`. The author supplied the original
+  file afterwards and it is the one in here now. If a future kit arrives
+  without it again, that is the same gap and not a regression here.
 
 The author's own copy is otherwise untouched, and neither page contains a dash
 in anything a visitor reads.
