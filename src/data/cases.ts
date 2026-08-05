@@ -1,8 +1,8 @@
 /**
  * Channel 01 · Product designs.
  *
- * Eight cases transcribed from devkit `data/projects.json`, plus df2tm, which
- * postdates the devkit. The devkit's branchial lateral spine record
+ * Eight cases transcribed from devkit `data/projects.json`, plus df2tm, lee and
+ * chipotle, which postdate the devkit. The devkit's branchial lateral spine record
  * lives on channel 03 (Competizione) instead, because it is automotive work.
  *
  * `evidence` carries the devkit's `evidenceStatus` verbatim. "simulated" and
@@ -48,8 +48,32 @@ export const CASES: CaseRecord[] = [
     subpage: 'chellbook',
   },
   {
-    id: 'mfny-concentrates',
+    id: 'lee',
     idx: '03',
+    name: 'lee',
+    // 76 characters. PAGE1's line column takes about 82 before it wraps and
+    // overflows the row; see the note on PAGE1 in `src/design/layout.ts`.
+    line: 'self-tape studio for actors: the notes become color you read while acting',
+    year: '2026',
+    discipline: 'product design, macOS, prototyping',
+    // An interactive prototype exists and is hosted here, but there is no mac
+    // app: nothing was built, nobody commissioned it, and the prototype is
+    // html standing in for the program. `src/data/lee.ts` carries that
+    // boundary in full, four times over.
+    evidence: 'concept',
+    image: 'projects/live/lee.webp',
+    imageAlt:
+      'A design render of the Lee record screen: a teleprompter line under the lens, an eyeline guide across the camera feed, glyph controls and a centered record button, with the reader panel on the right',
+    caption: 'lee · design renders · 2026',
+    // The prototype is hosted in this site's own public/ directory, as
+    // chellbook's, mfny's and chipotle's are. The row opens the case study.
+    href: null,
+    source: null,
+    subpage: 'lee',
+  },
+  {
+    id: 'mfny-concentrates',
+    idx: '04',
     name: 'mfny concentrates',
     line: 'product page redesign: one card per SKU becomes one card per strain',
     year: '2026',
@@ -70,7 +94,7 @@ export const CASES: CaseRecord[] = [
   },
   {
     id: 'chipotle',
-    idx: '04',
+    idx: '05',
     name: 'chipotle app ui cleanup',
     // 78 characters. PAGE1's line column takes about 82 before it wraps and
     // overflows the row; see the note on PAGE1 in `src/design/layout.ts`.
@@ -95,7 +119,7 @@ export const CASES: CaseRecord[] = [
   },
   {
     id: 'one-master-affordance',
-    idx: '05',
+    idx: '06',
     name: 'one master affordance',
     line: 'one persistent control does activation, targeting and a safe abort',
     year: '2026',
@@ -110,7 +134,7 @@ export const CASES: CaseRecord[] = [
   },
   {
     id: 'adhd-mode',
-    idx: '06',
+    idx: '07',
     name: 'adhd mode',
     line: 'a feed becomes a bounded session with a visible end and a return queue',
     year: '2026',
@@ -125,7 +149,7 @@ export const CASES: CaseRecord[] = [
   },
   {
     id: 'df2tm',
-    idx: '07',
+    idx: '08',
     name: 'df2tm',
     line: 'a learning layer for claude code that teaches the concept behind the work',
     year: '2026',
@@ -143,7 +167,7 @@ export const CASES: CaseRecord[] = [
   },
   {
     id: 'campeon',
-    idx: '08',
+    idx: '09',
     name: 'campeón',
     line: 'four aim drills converge on one range without hiding disagreement',
     year: '2026',
@@ -158,7 +182,7 @@ export const CASES: CaseRecord[] = [
   },
   {
     id: 'chickpea',
-    idx: '09',
+    idx: '10',
     name: 'chickpea',
     line: 'a seeded studio that exposes the grid, palette and math behind output',
     year: '2026',
@@ -180,7 +204,7 @@ export const CASES: CaseRecord[] = [
   },
   {
     id: 'wildcard',
-    idx: '10',
+    idx: '11',
     name: 'wildcard',
     line: 'freeze the problem, draw from outside, keep only what survives',
     year: '2026',
@@ -196,7 +220,7 @@ export const CASES: CaseRecord[] = [
   },
   {
     id: 'dither',
-    idx: '11',
+    idx: '12',
     name: 'dither',
     line: 'a dependency-free studio for dithering, grain, palette and paint',
     year: '2026',

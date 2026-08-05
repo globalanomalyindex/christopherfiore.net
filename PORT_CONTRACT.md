@@ -337,6 +337,69 @@ get right. Inside that document the bundler renames camelCase attributes:
 `onClick` is `sc-camel-on-click` and `viewBox` is `sc-camel-view-box`. Kebab
 SVG attributes (`fill-rule`, `stroke-linejoin`) pass through untouched.
 
+### `src/pages/lee.ts` + `src/runtime/lee.ts`
+Channel 01's fifth in-stage screen, opened from the lee row (`data-act="lee"`).
+A structural clone of the chipotle pair, same shape and same choreography.
+
+```ts
+export function openLee(stage: HTMLElement, trigger: HTMLElement): void;
+export function closeLee(stage: HTMLElement): void;
+export function setLeeView(stage: HTMLElement, n: number): void;
+export function leeOpen(stage: HTMLElement): boolean;
+```
+
+Its data attributes are `le`-prefixed (`data-leplate`, `data-lechrome`,
+`data-lescroll`, `data-lethumb`, `data-lesec`, `data-lesec-name`,
+`data-lesecat`, `data-lecap`, `data-leslot`). Like `mf` and `cp`, the prefix has
+to be its own: every subpage lives inside page 01 at once, and a shared
+attribute would let one screen's runtime query another's nodes.
+
+Two things differ from chipotle.
+
+The plate walks **six** views, and the toggle row measures about 592px of the
+plate's 727.27 at 1920. A seventh view means shortening labels rather than
+adding a second row. Nothing in the runtime counts views, so a view is one
+entry in `VIEWS` plus a `view:` on the section that argues over it, and the
+arrow-key wrap takes its length from `LEE_VIEWS.length`.
+
+And it carries **two doors** rather than one, so `LEE_PAGE.doors.w` is half the
+band less the gap. The second door is the wireframe document, and it earns its
+place because the case argues from what was rejected and the rejected options
+only exist in that file.
+
+The title is three characters at the family's 152px, which leaves the title
+block emptier than its siblings. That is deliberate; see the note on
+`LEE_PAGE` in `src/design/layout.ts`.
+
+### `public/lee/`
+The Lee prototype, served at `/lee/studio.html` and `/lee/wireframes.html`.
+Unlike the chipotle prototype this arrived as raw design-tool output rather
+than a bundler export, so it is a folder rather than one file: the two HTML
+pages, `support.js` (the same DC runtime the chipotle export inlines),
+`image-slot.js`, `uploads/`, and `vendor/`.
+
+**It is self-contained, and that took one shim.** `support.js` loads React and
+ReactDOM from unpkg. It checks `window.__resources[url]` for a local copy
+first, so each page sets that map in a `<script>` ahead of the `support.js`
+tag and points the two URLs at `vendor/`. The vendored files are byte for byte
+what unpkg serves, checked against the SHA-384 hashes `support.js` already
+carries for them. Babel is listed in `cdn.ts` but never fetched by either page,
+so it is not vendored. Verified: **zero offsite requests** on both pages.
+
+Two other repairs, both recorded because they look like bugs otherwise:
+
+- `.image-slots.state.json` is an empty `{}`. `image-slot.js` polls for it and
+  logs a 404 without it.
+- `uploads/crop-simple-svgrepo-com.svg` is **redrawn, not shipped**. The
+  handoff references it for the framing button on the Record screen and does
+  not include the file. Without it the button paints a blank disc in Chrome and
+  a solid white square in the handoff's own render `08-record-setup.png`. The
+  replacement is a 24-unit crop mark used the same way, as a CSS mask, so it
+  takes its color from the button.
+
+The author's own copy is otherwise untouched, and neither page contains a dash
+in anything a visitor reads.
+
 ### `src/pages/about.ts` + `src/runtime/about.ts`
 Channel 04's in-stage background, opened from the page-04 control
 (`data-act="about"`). Same shape and choreography as the chellbook screen with
@@ -444,14 +507,14 @@ Four things it has to keep doing:
 
 ### The plate follows the reading position
 
-Three subpages carry both a scrolling text column and a set of screenshots:
-chellbook (nine boards), mfny (two plate views) and chipotle (five). On all
-three the plate now tracks what is being read.
+Four subpages carry both a scrolling text column and a set of screenshots:
+chellbook (nine boards), mfny (two plate views), chipotle (five) and lee (six).
+On all four the plate tracks what is being read.
 
 **The binding is one way, and that is the whole design.** Scrolling the column
 moves the plate. Touching the plate never moves the column: the setters
-(`goChellbook`, `setMfnyView`, `setChipotleView`) do not write `scrollTop`, and
-must not start.
+(`goChellbook`, `setMfnyView`, `setChipotleView`, `setLeeView`) do not write
+`scrollTop`, and must not start.
 
 The target lives on the section element, so the runtime never has to import
 content: `data-cbsec-board`, `data-mfsec-view`, `data-cpsec-view`. A section
@@ -498,15 +561,15 @@ silently if missed:
 A sixth thing is not automatic either: `PAGE1.rowH` and `PAGE1.nameSize` are
 divided from the fixed band between `rowsY` (640.79) and the motion band
 (931.7). Adding a case row means re-dividing both — the rows must still land
-exactly on 931.7, and the name has to shrink with them. At eleven rows that is
-`290.91 / 11 = 26.4464` with the name at 23.
+exactly on 931.7, and the name has to shrink with them. At twelve rows that is
+`290.91 / 12 = 24.2425` with the name at 21.
 
-The binding dimension is not the name, which has ~148px spare in its 363.636px
-track at 23px. It is `CaseRecord.line`: its column is 581.818 less 40 of
-padding, so a `line` past roughly **82 characters** wraps to two lines and
-overflows a 25.4px cell by about 13.7px, colliding with the rows above and
-below. Keep every `line` inside that, and check it when the row height drops
-again.
+The binding dimension is not the name, which has spare track to give at every
+size it has taken. It is `CaseRecord.line`, and it does NOT shrink with the
+rows: `cellLine` is a flat 14px in a column of 581.818 less 40 of padding, so
+the ceiling is the same at every row count. A `line` past roughly **82
+characters** wraps to two lines and overflows a 24.2px cell into the rows above
+and below. Keep every `line` inside that.
 
 A new screen also needs its own data-attribute prefix. Every subpage lives
 inside its host page simultaneously, so two screens sharing `data-*` names

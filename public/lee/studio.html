@@ -1,0 +1,1688 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>lee · self-tape studio prototype</title>
+<meta name="description" content="A concept for a macOS program that helps actors record self-tape auditions. Mark up the script, record against a teleprompter under the lens, review takes. Interactive prototype. A concept, not a shipped product.">
+<meta name="robots" content="index,follow">
+<script>
+/*
+  Hosting shim, added for this site. Nothing below it is modified: the
+  prototype is the design artifact exactly as it was authored.
+
+  The runtime asks window.__resources for a local copy of each CDN script
+  before it reaches for the network, so pointing react and react-dom at the
+  vendored files makes this page self-contained with no external requests. The
+  two files are byte for byte what unpkg serves, checked against the SHA-384
+  integrity hashes support.js already carries for them.
+*/
+window.__resources = {
+  "https://unpkg.com/react@18.3.1/umd/react.production.min.js": "./vendor/react.production.min.js",
+  "https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js": "./vendor/react-dom.production.min.js"
+};
+</script>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<style>
+@font-face{font-family:'Monaco';src:url('uploads/Monaco.ttf') format('truetype');font-display:swap}
+body{margin:0;background:#d8d8da;font-family:-apple-system,'SF Pro Text','SF Pro Display','Helvetica Neue',system-ui,sans-serif;color:#1d1d1f;-webkit-font-smoothing:antialiased}
+a{color:#5d7590}a:hover{color:#48596e}
+textarea{font-family:inherit;border:none;resize:none;background:transparent}textarea:focus{outline:none}
+::selection{background:rgba(29,29,31,.15)}
+@keyframes leeBreathe{0%,100%{transform:scale(.82);opacity:.5}50%{transform:scale(1.28);opacity:.95}}
+@keyframes leeUp{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+@keyframes leeFade{from{opacity:0}to{opacity:1}}
+@keyframes leePop{from{opacity:0}to{opacity:1}}
+@keyframes leeSheet{from{transform:translateX(102%)}to{transform:translateX(0)}}
+@keyframes leePulse{0%,100%{opacity:.5}50%{opacity:1}}
+@keyframes leeCd{0%{opacity:1}92%{opacity:1}100%{opacity:0}}
+@keyframes leeLvl{0%,100%{transform:scaleY(.22)}50%{transform:scaleY(1)}}
+</style>
+<script src="./image-slot.js"></script>
+</helmet>
+
+<div ref="{{ winRef }}" onMouseMove="{{ onWinMove }}" style="width:1440px;height:900px;margin:0 auto;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 32px 74px rgba(0,0,0,.3),0 0 0 .5px rgba(0,0,0,.2);display:flex;flex-direction:column;position:relative">
+<sc-if value="{{ charPreview }}" hint-placeholder-val="{{ true }}">
+<div style="{{ charPreviewStyle }}">
+<div style="display:flex;align-items:center;gap:7px;margin-bottom:7px">
+<div style="{{ charPreviewDot }}"></div>
+<span style="font:400 11px 'Monaco',monospace;letter-spacing:.05em;color:#fff;flex:1">{{ charPreviewName }}</span>
+<span style="font:400 10px 'Monaco',monospace;color:rgba(255,255,255,.45)">{{ charPreviewMeta }}</span>
+</div>
+<div style="{{ charPreviewNoteStyle }}">{{ charPreviewNote }}</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ ringOn }}" hint-placeholder-val="{{ true }}">
+<div style="{{ ringWashStyle }}"></div>
+</sc-if>
+<sc-if value="{{ ringBandsOn }}" hint-placeholder-val="{{ true }}">
+<div style="{{ ringGlowStyle }}"></div>
+<div style="{{ ringStyle }}"></div>
+<div style="{{ ringLipStyle }}"></div>
+</sc-if>
+
+<div style="height:52px;flex:none;display:flex;align-items:center;background:linear-gradient(#f8f8f9,#ececee);border-bottom:.5px solid rgba(0,0,0,.17);box-shadow:inset 0 .5px 0 rgba(255,255,255,.8);position:relative;z-index:50">
+<div style="width:246px;flex:none;display:flex;align-items:center;gap:8px;padding-left:20px">
+<div style="width:12px;height:12px;border-radius:50%;background:#ff5f57;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.13)"></div>
+<div style="width:12px;height:12px;border-radius:50%;background:#febc2e;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.13)"></div>
+<div style="width:12px;height:12px;border-radius:50%;background:#28c840;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.13)"></div>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px">
+<span style="font-size:13px;font-weight:590;letter-spacing:-.01em">{{ winTitle }}</span>
+<span style="font:400 10.5px 'Monaco',monospace;color:#8e8e93">{{ winSub }}</span>
+</div>
+<div style="width:246px;flex:none;display:flex;align-items:center;justify-content:flex-end;padding-right:16px">
+<div onClick="{{ goSettings }}" style="width:27px;height:27px;border-radius:6px;display:grid;place-items:center;cursor:pointer;transition:background .15s" style-hover="background:rgba(0,0,0,.07)">
+<div style="{{ gearStyle }}"></div>
+</div>
+</div>
+</div>
+
+<div style="flex:1;display:flex;min-height:0;position:relative">
+
+<div style="{{ sidebarStyle }}">
+<div onClick="{{ goHome }}" style="{{ homeRowStyle }}">
+<div style="width:16px;flex:none;display:flex;align-items:center;justify-content:center"><div style="width:11px;height:9px;border:1.4px solid currentColor;border-radius:1.5px;border-top-width:3px"></div></div>
+<span style="flex:1">Home</span>
+</div>
+<div style="height:27px;border-radius:6px;background:#fff;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.14);display:flex;align-items:center;gap:5px;padding:0 8px;margin:14px 0 16px">
+<div style="width:9px;height:9px;border:1.3px solid #a1a1a6;border-radius:50%;flex:none"></div>
+<div style="width:4px;height:1.3px;background:#a1a1a6;transform:rotate(45deg);margin-left:-3px"></div>
+<span style="font-size:11.5px;color:#a1a1a6;margin-left:3px">Search</span>
+</div>
+<span style="font-size:11px;font-weight:590;color:#8e8e93;padding:0 8px 6px">Projects</span>
+<sc-for list="{{ projects }}" as="p" hint-placeholder-count="3">
+<div style="margin-bottom:1px">
+<div onClick="{{ p.onClick }}" style="{{ p.rowStyle }}">
+<div style="{{ p.caretStyle }}"></div>
+<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ p.name }}</span>
+<sc-if value="{{ p.roleTag }}" hint-placeholder-val="{{ true }}"><span style="font:400 9.5px 'Monaco',monospace;color:#a1a1a6;flex:none">{{ p.roleTag }}</span></sc-if>
+</div>
+<sc-if value="{{ p.open }}" hint-placeholder-val="{{ true }}">
+<div style="padding:2px 0 7px 6px;display:flex;flex-direction:column;gap:1px">
+<sc-for list="{{ stages }}" as="s" hint-placeholder-count="4">
+<div onClick="{{ s.onClick }}" style="{{ s.style }}">
+<div style="width:16px;flex:none;display:flex;align-items:center;justify-content:center">{{ s.glyph }}</div>
+<span>{{ s.name }}</span>
+<sc-if value="{{ s.badge }}" hint-placeholder-val="{{ true }}"><span style="margin-left:auto;font:400 9.5px 'Monaco',monospace;color:#a1a1a6">{{ s.badge }}</span></sc-if>
+</div>
+</sc-for>
+</div>
+</sc-if>
+</div>
+</sc-for>
+<div onClick="{{ goHome }}" style="margin-top:auto;display:flex;align-items:center;gap:4px;padding:9px 6px 2px;border-top:.5px solid rgba(0,0,0,.09);cursor:pointer">
+<div style="width:24px;height:24px;display:grid;place-items:center;position:relative">
+<div style="width:11px;height:1.4px;background:#6e6e73;position:absolute"></div>
+<div style="width:1.4px;height:11px;background:#6e6e73;position:absolute"></div>
+</div>
+<span style="font-size:11.5px;color:#8e8e93">New script</span>
+</div>
+</div>
+
+<div style="flex:1;min-width:0;position:relative;background:#fbfbfc;overflow:hidden">
+
+<sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+<div style="position:absolute;inset:0;overflow:auto;animation:leeFade .22s ease">
+<div style="max-width:820px;margin:0 auto;padding:54px 40px 60px">
+<div style="font-size:27px;font-weight:660;letter-spacing:-.024em;margin-bottom:26px">Lee</div>
+<div onClick="{{ onImport }}" style="{{ dropStyle }}">
+<sc-if value="{{ importIdle }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-direction:column;align-items:center;gap:12px">
+<div style="width:32px;height:40px;border:1.6px solid #c7c7cc;border-radius:3px;display:grid;place-items:center;position:relative">
+<div style="width:12px;height:1.6px;background:#c7c7cc;position:absolute"></div>
+<div style="width:1.6px;height:12px;background:#c7c7cc;position:absolute"></div>
+</div>
+<div style="font:400 11px 'Monaco',monospace;color:#a1a1a6">pdf</div>
+</div>
+</sc-if>
+<sc-if value="{{ importBusy }}" hint-placeholder-val="{{ true }}">
+<div style="width:260px;animation:leeFade .2s ease">
+<div style="height:4px;border-radius:2px;background:rgba(0,0,0,.09);position:relative;overflow:hidden"><div style="{{ importFill }}"></div></div>
+</div>
+</sc-if>
+</div>
+<div style="margin:34px 0 14px;font-size:15px;font-weight:610;letter-spacing:-.012em">Recent</div>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px">
+<sc-for list="{{ homeCards }}" as="h" hint-placeholder-count="3">
+<div onClick="{{ h.onClick }}" style="{{ h.style }}">
+<div style="{{ h.thumbStyle }}">
+<div style="{{ h.stripStyle }}"></div>
+<sc-if value="{{ h.due }}" hint-placeholder-val="{{ true }}"><div style="{{ h.dueStyle }}">{{ h.due }}</div></sc-if>
+</div>
+<div style="padding:12px 13px 14px">
+<div style="font-size:13.5px;font-weight:560;letter-spacing:-.01em">{{ h.name }}</div>
+<div style="display:flex;align-items:center;gap:8px;margin-top:6px">
+<span style="{{ h.roleStyle }}">{{ h.role }}</span>
+<span style="font:400 10px 'Monaco',monospace;color:#b0b0b5">{{ h.meta }}</span>
+</div>
+<div style="margin-top:5px;font:400 10px 'Monaco',monospace;color:#b0b0b5">{{ h.edited }}</div>
+</div>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isScript }}" hint-placeholder-val="{{ true }}">
+<div style="position:absolute;inset:0;display:flex;animation:leeFade .22s ease">
+<div style="flex:1;min-width:0;overflow:auto;background:#e9e9eb;padding:34px 0 70px">
+<div style="position:relative;width:720px;margin:0 auto">
+<div ref="{{ sheetRef }}" onMouseUp="{{ onScriptUp }}" style="width:720px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.11),0 12px 34px rgba(0,0,0,.07);padding:74px 72px 96px;box-sizing:border-box;min-height:940px;position:relative;font:400 13px/1.55 'Monaco',monospace">
+<sc-for list="{{ scriptRows }}" as="row" hint-placeholder-count="9">
+<div style="{{ row.wrapStyle }}">
+<sc-if value="{{ row.charName }}" hint-placeholder-val="{{ true }}">
+<div style="{{ row.charStyle }}"><span onClick="{{ row.onCharClick }}" onMouseEnter="{{ row.onCharEnter }}" onMouseLeave="{{ row.onCharLeave }}" style="{{ row.charInkStyle }}">{{ row.charName }}</span></div>
+</sc-if>
+<sc-if value="{{ row.paren }}" hint-placeholder-val="{{ true }}"><div style="{{ row.parenStyle }}">{{ row.paren }}</div></sc-if>
+<div style="{{ row.bodyStyle }}">
+<sc-for list="{{ row.segs }}" as="seg" hint-placeholder-count="2">
+<span data-seg="{{ seg.id }}" style="{{ seg.style }}">{{ seg.text }}</span>
+</sc-for>
+</div>
+</div>
+</sc-for>
+<sc-if value="{{ scriptPopup }}" hint-placeholder-val="{{ true }}">
+<div style="{{ scriptPopupStyle }}">
+<sc-for list="{{ selMarkOpts }}" as="mo" hint-placeholder-count="3">
+<div onClick="{{ mo.onClick }}" style="{{ mo.style }}"></div>
+</sc-for>
+<div style="width:.5px;height:19px;background:rgba(255,255,255,.2);flex:none"></div>
+<div onClick="{{ onNewNote }}" onMouseEnter="{{ showPlusHint }}" onMouseLeave="{{ hidePlusHint }}" style="width:25px;height:25px;border-radius:6px;display:grid;place-items:center;cursor:pointer;position:relative;flex:none;transition:background .15s" style-hover="background:rgba(255,255,255,.16)">
+<div style="width:12px;height:1.6px;background:#fff;position:absolute;border-radius:1px"></div>
+<div style="width:1.6px;height:12px;background:#fff;position:absolute;border-radius:1px"></div>
+<sc-if value="{{ plusHint }}" hint-placeholder-val="{{ true }}">
+<div style="{{ plusHintStyle }}">Create note</div>
+</sc-if>
+</div>
+</div>
+</sc-if>
+</div>
+<sc-if value="{{ noteDraft }}" hint-placeholder-val="{{ true }}">
+<div style="{{ noteDraftStyle }}">
+<div style="display:flex;align-items:center;gap:7px;padding:10px 12px;border-bottom:.5px solid rgba(0,0,0,.09)">
+<div style="{{ noteDraftDot }}"></div>
+<span style="font:400 9.5px 'Monaco',monospace;color:#6e6e73;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ noteDraftTie }}</span>
+<div onClick="{{ cancelNote }}" style="width:19px;height:19px;border-radius:50%;background:rgba(0,0,0,.07);display:grid;place-items:center;cursor:pointer;font-size:11px;color:#6e6e73;line-height:1">&times;</div>
+</div>
+<textarea value="{{ noteDraftText }}" onChange="{{ onNoteDraftChange }}" style="width:100%;box-sizing:border-box;padding:12px;font-size:13.5px;line-height:1.5;color:#1d1d1f;min-height:92px"></textarea>
+<div style="display:flex;gap:7px;padding:0 12px 12px">
+<div onClick="{{ saveNote }}" style="flex:1;height:29px;border-radius:7px;background:linear-gradient(#3a3a3c,#1d1d1f);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:510;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.2)">Add</div>
+<div onClick="{{ saveNoteImage }}" style="width:38px;height:29px;border-radius:7px;background:#fff;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.16);display:grid;place-items:center;cursor:pointer">
+<div style="width:13px;height:10px;border:1.3px solid #6e6e73;border-radius:1.5px"></div>
+</div>
+</div>
+</div>
+</sc-if>
+</div>
+</div>
+
+<div style="width:298px;flex:none;border-left:.5px solid rgba(0,0,0,.13);background:#f5f5f7;overflow:auto;padding:20px 16px">
+<span style="font-size:11px;font-weight:590;color:#8e8e93">Characters</span>
+<div style="margin-top:9px;background:#fff;border-radius:8px;box-shadow:0 0 0 .5px rgba(0,0,0,.12),0 1px 2px rgba(0,0,0,.04);overflow:hidden">
+<sc-for list="{{ charRows }}" as="c" hint-placeholder-count="3">
+<div onClick="{{ c.onClick }}" onMouseEnter="{{ c.onEnter }}" onMouseLeave="{{ c.onLeave }}" style="{{ c.style }}">
+<div style="{{ c.dotStyle }}"></div>
+<span style="font:400 12px 'Monaco',monospace;flex:1">{{ c.name }}</span>
+<sc-if value="{{ c.you }}" hint-placeholder-val="{{ true }}"><span style="font-size:10.5px;color:#8e8e93;background:rgba(0,0,0,.05);padding:2px 7px;border-radius:4px">you</span></sc-if>
+<sc-if value="{{ c.hasNote }}" hint-placeholder-val="{{ true }}"><div style="width:5px;height:5px;border-radius:50%;background:#c7c7cc"></div></sc-if>
+<span style="font-size:14px;color:#c7c7cc;line-height:1">&#8250;</span>
+</div>
+</sc-for>
+</div>
+<span style="display:block;margin-top:22px;font-size:11px;font-weight:590;color:#8e8e93">Marks</span>
+<div style="margin-top:9px;background:#fff;border-radius:8px;box-shadow:0 0 0 .5px rgba(0,0,0,.12),0 1px 2px rgba(0,0,0,.04);overflow:hidden">
+<sc-for list="{{ markRows }}" as="m" hint-placeholder-count="3">
+<div style="{{ m.style }}">
+<div style="{{ m.dotStyle }}"></div>
+<span style="font-size:12.5px;flex:1">{{ m.name }}</span>
+<span style="font:400 10.5px 'Monaco',monospace;color:#a1a1a6">{{ m.count }}</span>
+</div>
+</sc-for>
+</div>
+<div onClick="{{ goNotes }}" style="margin-top:22px;height:32px;border-radius:7px;background:linear-gradient(#3a3a3c,#1d1d1f);color:#fff;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;font-size:12.5px;font-weight:510;box-shadow:0 1px 2px rgba(0,0,0,.2);transition:opacity .15s" style-hover="opacity:.86">
+<span>Notes</span><span style="font-size:12px;opacity:.55">&#8250;</span>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isNotes }}" hint-placeholder-val="{{ true }}">
+<div style="position:absolute;inset:0;display:flex;animation:leeFade .22s ease">
+<div style="width:376px;flex:none;overflow:auto;background:#fff;border-right:.5px solid rgba(0,0,0,.13)">
+<div ref="{{ notesRef }}" onMouseUp="{{ onNotesUp }}" style="position:relative;padding:28px 28px 60px;font:400 10.5px/1.6 'Monaco',monospace">
+<sc-for list="{{ scriptRowsSm }}" as="row" hint-placeholder-count="9">
+<div style="{{ row.wrapStyle }}">
+<sc-if value="{{ row.charName }}" hint-placeholder-val="{{ true }}"><div style="{{ row.charStyle }}"><span onClick="{{ row.onCharClick }}" onMouseEnter="{{ row.onCharEnter }}" onMouseLeave="{{ row.onCharLeave }}" style="{{ row.charInkStyle }}">{{ row.charName }}</span></div></sc-if>
+<sc-if value="{{ row.paren }}" hint-placeholder-val="{{ true }}"><div style="{{ row.parenStyle }}">{{ row.paren }}</div></sc-if>
+<div style="{{ row.bodyStyle }}">
+<sc-for list="{{ row.segs }}" as="seg" hint-placeholder-count="2">
+<span data-seg="{{ seg.id }}" style="{{ seg.style }}">{{ seg.text }}</span>
+</sc-for>
+</div>
+</div>
+</sc-for>
+<sc-if value="{{ notesPopup }}" hint-placeholder-val="{{ true }}">
+<div style="{{ notesPopupStyle }}">
+<sc-for list="{{ selMarkOpts }}" as="mo" hint-placeholder-count="3">
+<div onClick="{{ mo.onClick }}" style="{{ mo.style }}"></div>
+</sc-for>
+<div style="width:.5px;height:19px;background:rgba(255,255,255,.2);flex:none"></div>
+<div onClick="{{ onNoteFromNotes }}" onMouseEnter="{{ showPlusHint }}" onMouseLeave="{{ hidePlusHint }}" style="width:25px;height:25px;border-radius:6px;display:grid;place-items:center;cursor:pointer;position:relative;flex:none;transition:background .15s" style-hover="background:rgba(255,255,255,.16)">
+<div style="width:12px;height:1.6px;background:#fff;position:absolute;border-radius:1px"></div>
+<div style="width:1.6px;height:12px;background:#fff;position:absolute;border-radius:1px"></div>
+<sc-if value="{{ plusHint }}" hint-placeholder-val="{{ true }}">
+<div style="{{ plusHintStyle }}">Create note</div>
+</sc-if>
+</div>
+</div>
+</sc-if>
+</div>
+</div>
+
+<div ref="{{ canvasRef }}" onMouseDown="{{ onCanvasDown }}" style="{{ canvasStyle }}">
+<sc-for list="{{ cards }}" as="c" hint-placeholder-count="3">
+<div onMouseDown="{{ c.onWrapDown }}" onDoubleClick="{{ c.onDouble }}" style="{{ c.wrapStyle }}">
+<div onMouseDown="{{ c.onDown }}" style="{{ c.headStyle }}">
+<span style="{{ c.tieTextStyle }}">{{ c.tieLabel }}</span>
+<div onMouseDown="{{ c.onTieDown }}" style="{{ c.tieBtnStyle }}">&#9662;</div>
+</div>
+<sc-if value="{{ c.isImage }}" hint-placeholder-val="{{ true }}">
+<div style="{{ c.bodyStyle }}"><image-slot id="{{ c.slotId }}" shape="rect" placeholder="Drop an image"></image-slot></div>
+</sc-if>
+<sc-if value="{{ c.isText }}" hint-placeholder-val="{{ true }}">
+<div onDoubleClick="{{ c.onEdit }}" style="{{ c.bodyStyle }}">
+<sc-if value="{{ c.editing }}" hint-placeholder-val="{{ true }}">
+<textarea autoFocus="{{ true }}" value="{{ c.text }}" onChange="{{ c.onTextChange }}" onBlur="{{ c.onBlur }}" style="{{ c.textAreaStyle }}"></textarea>
+</sc-if>
+<sc-if value="{{ c.notEditing }}" hint-placeholder-val="{{ true }}">
+<div style="{{ c.textViewStyle }}">{{ c.text }}</div>
+</sc-if>
+</div>
+</sc-if>
+<sc-if value="{{ c.selected }}" hint-placeholder-val="{{ true }}">
+<div onMouseDown="{{ c.onResize }}" style="position:absolute;right:0;bottom:0;width:16px;height:16px;cursor:nwse-resize;display:grid;place-items:end">
+<div style="width:8px;height:8px;border-right:1.8px solid rgba(29,29,31,.4);border-bottom:1.8px solid rgba(29,29,31,.4);border-bottom-right-radius:2px;margin:0 3px 3px 0"></div>
+</div>
+</sc-if>
+<sc-if value="{{ c.tieOpen }}" hint-placeholder-val="{{ true }}">
+<div style="position:absolute;left:6px;top:30px;width:210px;background:#fff;border-radius:8px;box-shadow:0 0 0 .5px rgba(0,0,0,.13),0 8px 24px rgba(0,0,0,.18);padding:6px;z-index:5;animation:leeFade .14s ease">
+<sc-for list="{{ c.tieOpts }}" as="o" hint-placeholder-count="5">
+<div onMouseDown="{{ o.onClick }}" style="{{ o.style }}">
+<div style="{{ o.dotStyle }}"></div>
+<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ o.text }}</span>
+</div>
+</sc-for>
+</div>
+</sc-if>
+</div>
+</sc-for>
+
+<sc-if value="{{ frameDraft }}" hint-placeholder-val="{{ true }}">
+<div style="{{ frameDraftStyle }}"></div>
+</sc-if>
+
+<div style="position:absolute;right:18px;top:18px;width:56px;background:rgba(255,255,255,.96);border-radius:14px;box-shadow:0 0 0 .5px rgba(0,0,0,.13),0 6px 22px rgba(0,0,0,.12);padding:9px 0;display:flex;flex-direction:column;align-items:center;gap:4px;backdrop-filter:blur(18px)">
+<sc-for list="{{ tools }}" as="t" hint-placeholder-count="5">
+<div onClick="{{ t.onClick }}" style="{{ t.style }}">{{ t.glyph }}</div>
+</sc-for>
+<div style="height:.5px;background:rgba(0,0,0,.12);align-self:stretch;margin:6px 11px"></div>
+<sc-for list="{{ actions }}" as="ac" hint-placeholder-count="2">
+<div onClick="{{ ac.onClick }}" style="{{ ac.style }}">{{ ac.glyph }}</div>
+</sc-for>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isRecord }}" hint-placeholder-val="{{ true }}">
+<div style="position:absolute;inset:0;display:flex;animation:leeFade .22s ease">
+<div ref="{{ feedRef }}" style="flex:1;min-width:0;position:relative;overflow:hidden;background:#2c2c2e;background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.035) 0 9px,rgba(255,255,255,0) 9px 18px)">
+<div style="{{ feedInnerStyle }}"><span style="font:400 11px 'Monaco',monospace;color:rgba(255,255,255,.2);letter-spacing:.05em">camera feed</span></div>
+<sc-if value="{{ cropOn }}" hint-placeholder-val="{{ true }}">
+<div style="{{ cropFrameStyle }}"></div>
+</sc-if>
+<sc-if value="{{ gridOn }}" hint-placeholder-val="{{ true }}">
+<div style="{{ gridWrapStyle }}">
+<div style="position:absolute;left:33.33%;top:0;bottom:0;width:1px;background:rgba(255,255,255,.16)"></div>
+<div style="position:absolute;left:66.66%;top:0;bottom:0;width:1px;background:rgba(255,255,255,.16)"></div>
+<div style="position:absolute;top:33.33%;left:0;right:0;height:1px;background:rgba(255,255,255,.16)"></div>
+<div style="position:absolute;top:66.66%;left:0;right:0;height:1px;background:rgba(255,255,255,.16)"></div>
+</div>
+</sc-if>
+
+<sc-if value="{{ eyelineOn }}" hint-placeholder-val="{{ true }}">
+<div style="{{ eyelineStyle }}">
+<div style="position:absolute;left:0;top:-5px;width:1px;height:11px;background:rgba(217,164,65,.9)"></div>
+<div style="position:absolute;right:0;top:-5px;width:1px;height:11px;background:rgba(217,164,65,.9)"></div>
+<div onMouseDown="{{ onEyelineDown }}" style="{{ eyePillStyle }}">
+<span style="font:400 10.5px 'Monaco',monospace;color:#d9a441">Eyeline</span>
+<div style="display:flex;flex-direction:column;gap:2px"><div style="width:9px;height:1px;background:rgba(217,164,65,.6)"></div><div style="width:9px;height:1px;background:rgba(217,164,65,.6)"></div></div>
+</div>
+</div>
+</sc-if>
+
+{{ stageNode }}
+
+<div style="{{ countdownStyle }}">
+<div style="display:flex;align-items:center;gap:30px">
+<sc-for list="{{ orbs }}" as="o" hint-placeholder-count="3"><div style="{{ o.style }}"></div></sc-for>
+</div>
+<span data-lee-count="1" style="font:400 25px 'Monaco',monospace;color:rgba(255,255,255,.36)"></span>
+</div>
+
+<sc-if value="{{ lookawayOn }}" hint-placeholder-val="{{ true }}">
+<sc-for list="{{ pins }}" as="pn" hint-placeholder-count="2">
+<div style="{{ pn.wrapStyle }}">
+<div onMouseDown="{{ pn.onDown }}" style="{{ pn.pinStyle }}">
+<span style="{{ pn.initStyle }}">{{ pn.init }}</span>
+<div style="{{ pn.tailStyle }}"></div>
+</div>
+<div onMouseDown="{{ pn.onDelete }}" style="{{ pn.xStyle }}">&times;</div>
+</div>
+</sc-for>
+</sc-if>
+
+<div style="{{ controlBarStyle }}">
+<div style="{{ leftClusterStyle }}">
+<div onClick="{{ toggleCam }}" style="{{ camBtnStyle }}">{{ camGlyph }}</div>
+<div onClick="{{ toggleMic }}" style="{{ micBtnStyle }}">{{ micGlyph }}</div>
+<div style="position:relative">
+<div onClick="{{ toggleLight }}" style="{{ lightBtnStyle }}">
+<svg width="17" height="17" viewBox="-2 0 15.998 15.998"><path d="M-10.217,1.343A6.039,6.039,0,0,0-15.284.134a5.979,5.979,0,0,0-4.6,4.673A5.967,5.967,0,0,0-18,10.472V10.5a2.488,2.488,0,0,0,1,1.989l0,.011v1A1.5,1.5,0,0,0-15.5,15h.355A1.168,1.168,0,0,0-14,16a1.168,1.168,0,0,0,1.145-1h.355A1.5,1.5,0,0,0-11,13.5v-1l0-.011A2.488,2.488,0,0,0-10,10.5v-.028A5.982,5.982,0,0,0-8,6,5.979,5.979,0,0,0-10.217,1.343ZM-12,13v.5a.5.5,0,0,1-.5.5h-3a.5.5,0,0,1-.5-.5V13h4Zm1.182-3.143a.5.5,0,0,0-.182.386V10.5A1.5,1.5,0,0,1-12.5,12h-3A1.5,1.5,0,0,1-17,10.5v-.257a.5.5,0,0,0-.182-.386A4.981,4.981,0,0,1-18.9,5a4.968,4.968,0,0,1,3.821-3.884A5.267,5.267,0,0,1-14.012,1a5,5,0,0,1,3.164,1.117A4.983,4.983,0,0,1-9,6,4.988,4.988,0,0,1-10.818,9.857ZM-13.5,3.5A.5.5,0,0,1-14,4a2,2,0,0,0-2,2,.5.5,0,0,1-.5.5A.5.5,0,0,1-17,6a3,3,0,0,1,3-3A.5.5,0,0,1-13.5,3.5Z" transform="translate(20.002 -0.002)" fill="{{ lightGlyphFill }}"></path></svg>
+</div>
+<sc-if value="{{ lightOpen }}" hint-placeholder-val="{{ true }}">
+<div onMouseDown="{{ stopIt }}" style="position:absolute;bottom:52px;left:-60px;width:198px;background:rgba(44,44,46,.96);border-radius:12px;box-shadow:0 0 0 .5px rgba(255,255,255,.15),0 14px 36px rgba(0,0,0,.45);padding:15px;backdrop-filter:blur(24px);animation:leeUp .17s ease">
+<div style="display:flex;align-items:center;gap:11px;margin-bottom:16px">
+<div style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.36);flex:none"></div>
+<div onMouseDown="{{ onIntensityDown }}" style="flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,.18);position:relative;cursor:pointer">
+<div style="{{ intensityFill }}"></div><div style="{{ intensityKnob }}"></div>
+</div>
+<div style="width:12px;height:12px;border-radius:50%;background:rgba(255,255,255,.36);flex:none"></div>
+</div>
+<div style="display:flex;align-items:center;gap:11px">
+<div style="width:11px;height:11px;border-radius:50%;background:#a8c6dd;flex:none"></div>
+<div onMouseDown="{{ onTempDown }}" style="flex:1;height:4px;border-radius:2px;background:linear-gradient(90deg,#a8c6dd,#f0d9a8);position:relative;cursor:pointer"><div style="{{ tempKnob }}"></div></div>
+<div style="width:11px;height:11px;border-radius:50%;background:#f0d9a8;flex:none"></div>
+</div>
+<div style="position:absolute;left:69px;bottom:-4px;transform:rotate(45deg);width:9px;height:9px;background:rgba(44,44,46,.96)"></div>
+</div>
+</sc-if>
+</div>
+<div style="position:relative">
+<div onClick="{{ toggleEyePanel }}" style="{{ eyeBtnStyle }}">
+<div style="position:relative;width:17px;height:11px">
+<div style="position:absolute;left:0;right:0;top:5px;height:1.6px;border-radius:1px;background:currentColor"></div>
+<div style="position:absolute;left:0;top:1px;width:1.6px;height:9px;border-radius:1px;background:currentColor"></div>
+<div style="position:absolute;right:0;top:1px;width:1.6px;height:9px;border-radius:1px;background:currentColor"></div>
+</div>
+</div>
+<sc-if value="{{ eyePanelOpen }}" hint-placeholder-val="{{ true }}">
+<div onMouseDown="{{ stopIt }}" style="position:absolute;bottom:52px;left:-84px;width:244px;background:rgba(44,44,46,.96);border-radius:12px;box-shadow:0 0 0 .5px rgba(255,255,255,.15),0 14px 36px rgba(0,0,0,.45);padding:14px;backdrop-filter:blur(24px);animation:leeUp .17s ease;display:flex;flex-direction:column;gap:13px">
+<div style="display:flex;align-items:center;justify-content:space-between">
+<span style="font-size:11.5px;color:rgba(255,255,255,.78)">Eyeline</span>
+<div onClick="{{ toggleEyeline }}" style="{{ eyeTrackDark }}"><div style="{{ eyeKnob }}"></div></div>
+</div>
+<div style="height:.5px;background:rgba(255,255,255,.12)"></div>
+<div style="display:flex;align-items:center;justify-content:space-between">
+<span style="font-size:11.5px;color:rgba(255,255,255,.78)">Lookaway points</span>
+<div onClick="{{ toggleLookaway }}" style="{{ lookTrack }}"><div style="{{ lookKnob }}"></div></div>
+</div>
+<sc-if value="{{ lookawayOn }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-direction:column;gap:5px;animation:leeFade .18s ease">
+<sc-for list="{{ pinRows }}" as="pr" hint-placeholder-count="2">
+<div style="display:flex;align-items:center;gap:7px;height:20px">
+<div style="{{ pr.dotStyle }}"></div>
+<span style="font:400 10px 'Monaco',monospace;color:rgba(255,255,255,.8);flex:1">{{ pr.name }}</span>
+<div onClick="{{ pr.onToggle }}" style="{{ pr.btnStyle }}">{{ pr.btn }}</div>
+</div>
+</sc-for>
+</div>
+</sc-if>
+<div style="position:absolute;left:93px;bottom:-4px;transform:rotate(45deg);width:9px;height:9px;background:rgba(44,44,46,.96)"></div>
+</div>
+</sc-if>
+</div>
+<div style="position:relative">
+<div onClick="{{ togglePrompt }}" style="{{ promptBtnStyle }}">
+<div style="display:flex;flex-direction:column;gap:2.5px;align-items:center">
+<div style="width:15px;height:1.6px;border-radius:1px;background:currentColor"></div>
+<div style="width:11px;height:1.6px;border-radius:1px;background:currentColor;opacity:.55"></div>
+<div style="width:13px;height:1.6px;border-radius:1px;background:currentColor;opacity:.3"></div>
+</div>
+</div>
+<sc-if value="{{ promptPanelOpen }}" hint-placeholder-val="{{ true }}">
+<div onMouseDown="{{ stopIt }}" style="position:absolute;bottom:52px;left:-78px;width:232px;background:rgba(44,44,46,.96);border-radius:12px;box-shadow:0 0 0 .5px rgba(255,255,255,.15),0 14px 36px rgba(0,0,0,.45);padding:14px;backdrop-filter:blur(24px);animation:leeUp .17s ease;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;background:rgba(255,255,255,.12);border-radius:7px;padding:2px">
+<sc-for list="{{ surfaceOpts }}" as="so" hint-placeholder-count="2"><div onClick="{{ so.onClick }}" style="{{ so.style }}">{{ so.name }}</div></sc-for>
+</div>
+<div style="display:flex;background:rgba(255,255,255,.12);border-radius:7px;padding:2px">
+<sc-for list="{{ depthOpts }}" as="dp" hint-placeholder-count="4"><div onClick="{{ dp.onClick }}" style="{{ dp.style }}">{{ dp.name }}</div></sc-for>
+</div>
+<div style="display:flex;align-items:center;justify-content:space-between">
+<span style="font-size:11.5px;color:rgba(255,255,255,.72)">Auto&#8209;advance</span>
+<div onClick="{{ toggleAuto }}" style="{{ autoTrack }}"><div style="{{ autoKnob }}"></div></div>
+</div>
+<div onClick="{{ togglePreview }}" style="{{ previewBtnStyle }}">
+<div style="{{ previewGlyphStyle }}"></div>
+<span>{{ previewLabel }}</span>
+</div>
+<div style="position:absolute;left:87px;bottom:-4px;transform:rotate(45deg);width:9px;height:9px;background:rgba(44,44,46,.96)"></div>
+</div>
+</sc-if>
+</div>
+</div>
+<div style="{{ rightClusterStyle }}">
+<div style="position:relative">
+<div onClick="{{ toggleCropPanel }}" style="{{ cropBtnStyle }}"><div style="{{ cropGlyphStyle }}"></div></div>
+<sc-if value="{{ cropPanelOpen }}" hint-placeholder-val="{{ true }}">
+<div onMouseDown="{{ stopIt }}" style="position:absolute;bottom:46px;right:-6px;width:176px;background:rgba(44,44,46,.96);border-radius:12px;box-shadow:0 0 0 .5px rgba(255,255,255,.15),0 14px 36px rgba(0,0,0,.45);padding:12px;backdrop-filter:blur(24px);animation:leeUp .17s ease">
+<div style="display:flex;background:rgba(255,255,255,.12);border-radius:7px;padding:2px">
+<sc-for list="{{ cropOpts }}" as="co" hint-placeholder-count="3"><div onClick="{{ co.onClick }}" style="{{ co.style }}">{{ co.name }}</div></sc-for>
+</div>
+<div style="position:absolute;right:20px;bottom:-4px;transform:rotate(45deg);width:9px;height:9px;background:rgba(44,44,46,.96)"></div>
+</div>
+</sc-if>
+</div>
+<div style="{{ meterStyle }}">
+<sc-for list="{{ meterBars }}" as="mb" hint-placeholder-count="5"><div style="{{ mb.style }}"></div></sc-for>
+</div>
+<div onClick="{{ toggleMirror }}" style="{{ mirrorBtnStyle }}">
+<div style="display:flex;align-items:center;gap:2.5px">
+<div style="width:0;height:0;border-right:6px solid currentColor;border-top:5px solid transparent;border-bottom:5px solid transparent"></div>
+<div style="width:1.4px;height:13px;background:currentColor;opacity:.45"></div>
+<div style="width:0;height:0;border-left:6px solid currentColor;border-top:5px solid transparent;border-bottom:5px solid transparent"></div>
+</div>
+</div>
+<div onClick="{{ toggleGrid }}" style="{{ gridBtnStyle }}">
+<div style="width:15px;height:15px;display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr 1fr 1fr">
+<div style="border-right:1px solid currentColor;border-bottom:1px solid currentColor"></div><div style="border-right:1px solid currentColor;border-bottom:1px solid currentColor"></div><div style="border-bottom:1px solid currentColor"></div>
+<div style="border-right:1px solid currentColor;border-bottom:1px solid currentColor"></div><div style="border-right:1px solid currentColor;border-bottom:1px solid currentColor"></div><div style="border-bottom:1px solid currentColor"></div>
+<div style="border-right:1px solid currentColor"></div><div style="border-right:1px solid currentColor"></div><div></div>
+</div>
+</div>
+</div>
+<div style="{{ recClusterStyle }}">
+<span data-lee-timer="1" style="{{ timeStyle }}">{{ timeLabel }}</span>
+<div onClick="{{ onRecord }}" style="{{ recBtnStyle }}"><div style="{{ recInnerStyle }}"></div></div>
+</div>
+</div>
+</div>
+
+<div style="{{ readerPanelStyle }}">
+<div onClick="{{ toggleReader }}" style="height:44px;flex:none;display:flex;align-items:center;gap:8px;padding:0 16px;border-bottom:.5px solid rgba(0,0,0,.11);cursor:pointer">
+<span style="font-size:12.5px;font-weight:590;flex:1">Reader</span>
+<div style="{{ readerCaret }}"></div>
+</div>
+<sc-if value="{{ readerOpen }}" hint-placeholder-val="{{ true }}">
+<div style="padding:16px;display:flex;flex-direction:column;gap:19px;overflow:auto;animation:leeFade .2s ease">
+<div style="background:#fff;border-radius:8px;box-shadow:0 0 0 .5px rgba(0,0,0,.12),0 1px 2px rgba(0,0,0,.04);overflow:hidden">
+<div onClick="{{ toggleVoiceList }}" style="height:35px;display:flex;align-items:center;gap:9px;padding:0 11px;cursor:pointer">
+<span style="font-size:12.5px;flex:1">{{ voice }}</span>
+<div style="{{ voiceCaret }}"></div>
+</div>
+<sc-if value="{{ voiceListOpen }}" hint-placeholder-val="{{ true }}">
+<div style="border-top:.5px solid rgba(0,0,0,.08);animation:leeUp .15s ease">
+<sc-for list="{{ voices }}" as="v" hint-placeholder-count="4">
+<div onClick="{{ v.onClick }}" style="{{ v.style }}"><span style="flex:1">{{ v.name }}</span><span style="{{ v.checkStyle }}">&#10003;</span></div>
+</sc-for>
+</div>
+</sc-if>
+</div>
+<div>
+<div style="display:flex;align-items:center;gap:11px">
+<svg width="15" height="15" viewBox="0 0 24 24" style="flex:none"><path d="M12 1C9.79 1 8 2.79 8 5V12C8 14.21 9.79 16 12 16C14.21 16 16 14.21 16 12V5C16 2.79 14.21 1 12 1ZM10 5C10 3.9 10.9 3 12 3C13.1 3 14 3.9 14 5V12C14 13.1 13.1 14 12 14C10.9 14 10 13.1 10 12V5Z" fill="#6e6e73"></path><path d="M5 9C5.55 9 6 9.45 6 10V12C6 13.59 6.63 15.12 7.76 16.24C8.88 17.37 10.41 18 12 18C13.59 18 15.12 17.37 16.24 16.24C17.37 15.12 18 13.59 18 12V10C18 9.45 18.45 9 19 9C19.55 9 20 9.45 20 10V12C20 14.12 19.16 16.16 17.66 17.66C16.39 18.92 14.75 19.72 13 19.94V22C13 22.55 12.55 23 12 23C11.45 23 11 22.55 11 22V19.94C9.25 19.72 7.61 18.92 6.34 17.66C4.84 16.16 4 14.12 4 12V10C4 9.45 4.45 9 5 9Z" fill="#6e6e73"></path></svg>
+<div onMouseDown="{{ onVolumeDown }}" style="flex:1;height:4px;border-radius:2px;background:rgba(0,0,0,.11);position:relative;cursor:pointer">
+<div style="{{ volFill }}"></div><div style="{{ volKnob }}"></div>
+</div>
+</div>
+<div style="display:flex;align-items:center;justify-content:space-between;margin-top:16px">
+<span style="font-size:12.5px;color:#3a3a3c">Include in file</span>
+<div onClick="{{ toggleInFile }}" style="{{ inFileTrack }}"><div style="{{ inFileKnob }}"></div></div>
+</div>
+</div>
+<div>
+<div onClick="{{ toggleChars }}" style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:8px">
+<span style="font-size:11px;font-weight:590;color:#8e8e93;flex:1">Reads for</span>
+<div style="{{ charsCaret }}"></div>
+</div>
+<sc-if value="{{ charsOpen }}" hint-placeholder-val="{{ true }}">
+<div style="background:#fff;border-radius:8px;box-shadow:0 0 0 .5px rgba(0,0,0,.12),0 1px 2px rgba(0,0,0,.04);overflow:hidden;animation:leeUp .15s ease">
+<sc-for list="{{ readerChars }}" as="rc" hint-placeholder-count="2">
+<div onClick="{{ rc.onClick }}" style="{{ rc.style }}">
+<div style="{{ rc.dotStyle }}"></div>
+<span style="font:400 11.5px 'Monaco',monospace;flex:1">{{ rc.name }}</span>
+<span style="{{ rc.checkStyle }}">&#10003;</span>
+</div>
+</sc-for>
+</div>
+</sc-if>
+</div>
+<div style="border-top:.5px solid rgba(0,0,0,.11);padding-top:16px;display:flex;align-items:center;justify-content:space-between">
+<span style="font-size:12.5px;color:#3a3a3c">Countdown</span>
+<div style="{{ stepperStyle }}">
+<div onClick="{{ cdDown }}" style="width:26px;height:24px;display:grid;place-items:center;cursor:pointer;font-size:13px;color:#6e6e73;border-right:.5px solid rgba(0,0,0,.11)">&minus;</div>
+<span style="font:400 11px 'Monaco',monospace;padding:0 9px;min-width:24px;text-align:center">{{ cdLabel }}</span>
+<div onClick="{{ cdUp }}" style="width:26px;height:24px;display:grid;place-items:center;cursor:pointer;font-size:13px;color:#6e6e73;border-left:.5px solid rgba(0,0,0,.11)">+</div>
+</div>
+</div>
+<div style="display:flex;align-items:center;justify-content:space-between">
+<span style="font-size:12.5px;color:#3a3a3c">Slate</span>
+<div onClick="{{ toggleSlate }}" style="{{ slateTrack }}"><div style="{{ slateKnob }}"></div></div>
+</div>
+<div style="display:flex;align-items:center;justify-content:space-between">
+<span style="font-size:12.5px;color:#3a3a3c">Roll again</span>
+<div onClick="{{ toggleRetake }}" style="{{ retakeTrack }}"><div style="{{ retakeKnob }}"></div></div>
+</div>
+<div style="margin-top:auto;padding-top:16px;border-top:.5px solid rgba(0,0,0,.11);display:flex;flex-direction:column;gap:9px">
+<div style="display:flex;align-items:baseline;justify-content:space-between">
+<span style="font:400 10.5px 'Monaco',monospace;color:#8e8e93">{{ diskLabel }}</span>
+<span style="font:400 10.5px 'Monaco',monospace;color:#a1a1a6">{{ diskRight }}</span>
+</div>
+<div style="height:3px;border-radius:2px;background:rgba(0,0,0,.09);position:relative;overflow:hidden"><div style="{{ diskFill }}"></div></div>
+</div>
+</div>
+</sc-if>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isTakes }}" hint-placeholder-val="{{ true }}">
+<div style="position:absolute;inset:0;display:flex;animation:leeFade .22s ease">
+<div style="width:250px;flex:none;border-right:.5px solid rgba(0,0,0,.13);background:#f5f5f7;padding:18px 11px;overflow:auto">
+<sc-for list="{{ takeRows }}" as="t" hint-placeholder-count="3">
+<div onClick="{{ t.onClick }}" style="{{ t.style }}">
+<div style="{{ t.thumbStyle }}"></div>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px">
+<span style="font-size:12.5px;font-weight:510">{{ t.label }}</span>
+<span style="font:400 10.5px 'Monaco',monospace;color:#a1a1a6">{{ t.meta }}</span>
+</div>
+<div onClick="{{ t.onStar }}" style="{{ t.starStyle }}">&#9733;</div>
+</div>
+</sc-for>
+</div>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;background:#1d1d1f">
+<div style="flex:1;min-height:0;position:relative;background:#2c2c2e;background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.035) 0 9px,rgba(255,255,255,0) 9px 18px)">
+<sc-if value="{{ playing }}" hint-placeholder-val="{{ true }}">
+<div style="position:absolute;left:22px;top:20px;width:8px;height:8px;border-radius:50%;background:#c8553d;animation:leePulse 1.4s ease-in-out infinite"></div>
+</sc-if>
+</div>
+<div style="height:76px;flex:none;display:flex;align-items:center;gap:17px;padding:0 26px;border-top:.5px solid rgba(255,255,255,.1)">
+<div onClick="{{ togglePlay }}" style="width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.13);display:grid;place-items:center;cursor:pointer;transition:background .15s" style-hover="background:rgba(255,255,255,.21)">
+<div style="{{ playGlyphStyle }}"></div>
+</div>
+<span style="font:400 12px 'Monaco',monospace;color:rgba(255,255,255,.85);min-width:44px">{{ playheadLabel }}</span>
+<div onMouseDown="{{ onScrubDown }}" style="flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,.17);position:relative;cursor:pointer">
+<div style="{{ scrubFill }}"></div><div style="{{ scrubKnob }}"></div>
+</div>
+<span style="font:400 12px 'Monaco',monospace;color:rgba(255,255,255,.38);min-width:44px;text-align:right">{{ durLabel }}</span>
+</div>
+</div>
+<div style="width:298px;flex:none;border-left:.5px solid rgba(0,0,0,.13);background:#f5f5f7;padding:20px 16px;overflow:auto;display:flex;flex-direction:column">
+<span style="font-size:11px;font-weight:590;color:#8e8e93">Export</span>
+<div style="margin-top:9px;background:#fff;border-radius:8px;box-shadow:0 0 0 .5px rgba(0,0,0,.12),0 1px 2px rgba(0,0,0,.04);overflow:hidden">
+<sc-for list="{{ exportRows }}" as="e" hint-placeholder-count="2">
+<div onClick="{{ e.onClick }}" style="{{ e.style }}">
+<div style="{{ e.boxStyle }}"><span style="{{ e.checkStyle }}">&#10003;</span></div>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
+<span style="font-size:12.5px">{{ e.name }}</span>
+<span style="font:400 10px 'Monaco',monospace;color:#a1a1a6">{{ e.spec }}</span>
+</div>
+</div>
+</sc-for>
+</div>
+<span style="display:block;margin-top:22px;font-size:11px;font-weight:590;color:#8e8e93">Checklist</span>
+<div style="margin-top:9px;background:#fff;border-radius:8px;box-shadow:0 0 0 .5px rgba(0,0,0,.12),0 1px 2px rgba(0,0,0,.04);overflow:hidden">
+<sc-for list="{{ checkRows }}" as="ck" hint-placeholder-count="5">
+<div onClick="{{ ck.onClick }}" style="{{ ck.style }}">
+<div style="{{ ck.markStyle }}"><span style="{{ ck.tickStyle }}">&#10003;</span></div>
+<span style="{{ ck.labelStyle }}">{{ ck.label }}</span>
+<sc-if value="{{ ck.fixable }}" hint-placeholder-val="{{ true }}"><span style="font-size:10.5px;color:#8e8e93">Fix</span></sc-if>
+</div>
+</sc-for>
+</div>
+<div style="margin-top:9px;display:flex;align-items:center;gap:7px">
+<sc-for list="{{ presetOpts }}" as="po" hint-placeholder-count="3"><div onClick="{{ po.onClick }}" style="{{ po.style }}">{{ po.name }}</div></sc-for>
+</div>
+<div style="margin-top:16px;background:#fff;border-radius:8px;box-shadow:0 0 0 .5px rgba(0,0,0,.12);padding:11px 12px;font:400 10.5px/1.7 'Monaco',monospace;color:#3a3a3c;word-break:break-all">
+<div style="color:#8e8e93">{{ bundleFolder }}</div>
+<sc-for list="{{ bundleFiles }}" as="bf" hint-placeholder-count="2"><div style="padding-left:12px">{{ bf.name }}</div></sc-for>
+</div>
+<div style="margin-top:auto;padding-top:20px">
+<sc-if value="{{ exportIdle }}" hint-placeholder-val="{{ true }}">
+<div onClick="{{ onExport }}" style="height:36px;border-radius:8px;background:linear-gradient(#3a3a3c,#1d1d1f);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;font-weight:510;box-shadow:0 1px 2px rgba(0,0,0,.2);transition:opacity .15s" style-hover="opacity:.86">{{ exportBtnLabel }}</div>
+</sc-if>
+<sc-if value="{{ exportBusy }}" hint-placeholder-val="{{ true }}">
+<div style="height:4px;border-radius:2px;background:rgba(0,0,0,.1);position:relative;overflow:hidden;animation:leeFade .2s ease"><div style="{{ exportFill }}"></div></div>
+</sc-if>
+<sc-if value="{{ exportDone }}" hint-placeholder-val="{{ true }}">
+<div style="height:36px;border-radius:8px;background:rgba(0,0,0,.05);display:flex;align-items:center;justify-content:center;gap:8px;font-size:12.5px;color:#3a3a3c;animation:leeFade .25s ease">
+<span style="color:#6f8a6d;font-size:13px">&#10003;</span><span>{{ bundleDone }}</span>
+</div>
+</sc-if>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ charSheet }}" hint-placeholder-val="{{ true }}">
+<div onClick="{{ closeCharSheet }}" style="position:absolute;inset:0;background:rgba(0,0,0,.12);z-index:70;animation:leeFade .2s ease"></div>
+<div style="position:absolute;right:0;top:0;bottom:0;width:380px;background:#f5f5f7;box-shadow:-1px 0 0 rgba(0,0,0,.14),-18px 0 46px rgba(0,0,0,.18);z-index:71;display:flex;flex-direction:column;animation:leeSheet .3s cubic-bezier(.3,.9,.25,1)">
+<div style="height:52px;flex:none;display:flex;align-items:center;gap:10px;padding:0 16px;border-bottom:.5px solid rgba(0,0,0,.12);background:linear-gradient(#f9f9fa,#efeff1)">
+<div style="{{ sheetDotStyle }}"></div>
+<span style="font:400 13px 'Monaco',monospace;letter-spacing:.04em;flex:1">{{ sheetName }}</span>
+<div onClick="{{ closeCharSheet }}" style="width:22px;height:22px;flex:none;border-radius:50%;background:rgba(0,0,0,.07);position:relative;cursor:pointer">
+<div style="position:absolute;left:50%;top:50%;width:9px;height:1.4px;border-radius:1px;background:#6e6e73;transform:translate(-50%,-50%) rotate(45deg)"></div>
+<div style="position:absolute;left:50%;top:50%;width:9px;height:1.4px;border-radius:1px;background:#6e6e73;transform:translate(-50%,-50%) rotate(-45deg)"></div>
+</div>
+</div>
+<div style="flex:1;min-height:0;padding:14px 16px 16px;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;align-items:center;gap:11px;background:#fff;border-radius:8px;box-shadow:0 0 0 .5px rgba(0,0,0,.12),0 1px 2px rgba(0,0,0,.04);padding:0 11px;height:42px;flex:none">
+<sc-for list="{{ sheetSwatches }}" as="sw" hint-placeholder-count="5"><div onClick="{{ sw.onClick }}" title="{{ sw.title }}" style="{{ sw.style }}"><span style="{{ sw.takenStyle }}">{{ sw.taken }}</span></div></sc-for>
+<div style="width:.5px;height:20px;background:rgba(0,0,0,.11);margin-left:auto"></div>
+<span style="font-size:12px;color:#6e6e73">My part</span>
+<div onClick="{{ toggleSheetYou }}" style="{{ sheetYouTrack }}"><div style="{{ sheetYouKnob }}"></div></div>
+</div>
+
+<textarea value="{{ sheetNote }}" onChange="{{ onSheetNote }}" placeholder="{{ sheetPlaceholder }}" style="flex:1;min-height:120px;width:100%;box-sizing:border-box;background:#fff;border-radius:8px;box-shadow:0 0 0 .5px rgba(0,0,0,.12),0 1px 2px rgba(0,0,0,.04);padding:13px;font-size:13.5px;line-height:1.55;color:#1d1d1f;resize:none"></textarea>
+
+<div style="flex:none;background:#fff;border-radius:8px;box-shadow:0 0 0 .5px rgba(0,0,0,.12),0 1px 2px rgba(0,0,0,.04);overflow:hidden">
+<div style="height:32px;display:flex;align-items:center;gap:8px;padding:0 12px;border-bottom:.5px solid rgba(0,0,0,.08)">
+<span style="font-size:11px;font-weight:590;color:#8e8e93;flex:1">{{ sheetCueTitle }}</span>
+<span style="font:400 10.5px 'Monaco',monospace;color:#a1a1a6">{{ sheetLineCount }}</span>
+</div>
+<div style="max-height:174px;overflow:auto;padding:4px 0">
+<sc-for list="{{ sheetCues }}" as="q" hint-placeholder-count="2">
+<div style="display:flex;gap:9px;padding:7px 12px">
+<span style="{{ q.markStyle }}">{{ q.glyph }}</span>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px">
+<span style="{{ q.cueStyle }}">{{ q.cue }}</span>
+<span style="font:400 10.5px/1.45 'Monaco',monospace;color:#a1a1a6;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ q.mine }}</span>
+</div>
+</div>
+</sc-for>
+<sc-if value="{{ sheetNoCues }}" hint-placeholder-val="{{ true }}">
+<div style="padding:9px 12px 11px;font-size:11.5px;line-height:1.5;color:#a1a1a6">{{ sheetNoCueText }}</div>
+</sc-if>
+</div>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isSettings }}" hint-placeholder-val="{{ true }}">
+<div style="position:absolute;inset:0;background:rgba(0,0,0,.16);display:grid;place-items:center;z-index:80;animation:leeFade .18s ease">
+<div style="{{ settingsCardStyle }}">
+<div onMouseDown="{{ onSettingsDrag }}" style="height:46px;display:flex;align-items:center;padding:0 16px;border-bottom:.5px solid rgba(0,0,0,.12);background:linear-gradient(#f9f9fa,#efeff1);cursor:grab">
+<span style="font-size:13px;font-weight:590;flex:1">Settings</span>
+<div onClick="{{ closeSettings }}" style="width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.07);display:grid;place-items:center;cursor:pointer;font-size:12px;color:#6e6e73;line-height:1">&times;</div>
+</div>
+<div style="padding:16px 18px 18px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;align-items:center;justify-content:space-between">
+<span style="font-size:13px">Countdown</span>
+<div style="{{ stepperStyle }}">
+<div onClick="{{ cdDown }}" style="width:28px;height:26px;display:grid;place-items:center;cursor:pointer;font-size:13px;color:#6e6e73;border-right:.5px solid rgba(0,0,0,.11)">&minus;</div>
+<span style="font:400 11px 'Monaco',monospace;padding:0 10px;min-width:26px;text-align:center">{{ cdLabel }}</span>
+<div onClick="{{ cdUp }}" style="width:28px;height:26px;display:grid;place-items:center;cursor:pointer;font-size:13px;color:#6e6e73;border-left:.5px solid rgba(0,0,0,.11)">+</div>
+</div>
+</div>
+<div style="height:.5px;background:rgba(0,0,0,.1)"></div>
+<div style="display:flex;align-items:center;gap:7px">
+<span style="font-size:13px">Ring light</span>
+<div onMouseEnter="{{ tipRing }}" onMouseLeave="{{ tipOff }}" style="{{ tipDotRing }}">i
+<sc-if value="{{ tipRingOn }}" hint-placeholder-val="{{ true }}"><div style="{{ tipStyle }}">Simulate a ring light on your display for more direct lighting</div></sc-if>
+</div>
+<div style="flex:1"></div>
+<div onClick="{{ toggleLightOnly }}" style="{{ lightTrackS }}"><div style="{{ lightKnobS }}"></div></div>
+</div>
+<div style="display:flex;align-items:center;gap:7px">
+<span style="font-size:13px">Eyeline guide</span>
+<div onMouseEnter="{{ tipEye }}" onMouseLeave="{{ tipOff }}" style="{{ tipDotEye }}">i
+<sc-if value="{{ tipEyeOn }}" hint-placeholder-val="{{ true }}"><div style="{{ tipStyle }}">Leave a guide mark on your screen for eyeline consistency (only visible to you)</div></sc-if>
+</div>
+<div style="flex:1"></div>
+<div onClick="{{ toggleEyeline }}" style="{{ eyeTrack }}"><div style="{{ eyeKnob }}"></div></div>
+</div>
+<div style="display:flex;align-items:center;gap:7px">
+<span style="font-size:13px">Lookaway points</span>
+<div onMouseEnter="{{ tipLook }}" onMouseLeave="{{ tipOff }}" style="{{ tipDotLook }}">i
+<sc-if value="{{ tipLookOn }}" hint-placeholder-val="{{ true }}"><div style="{{ tipStyle }}">Place markers for individual character&#8217;s line prompts around the viewfinder. Useful for multi-character scenes</div></sc-if>
+</div>
+<div style="flex:1"></div>
+<div onClick="{{ toggleLookaway }}" style="{{ lookTrackLight }}"><div style="{{ lookKnob }}"></div></div>
+</div>
+<sc-if value="{{ lookawayOn }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-direction:column;gap:2px;background:#fff;border-radius:8px;box-shadow:0 0 0 .5px rgba(0,0,0,.12);padding:4px 0;animation:leeFade .18s ease">
+<sc-for list="{{ pinRows }}" as="pr" hint-placeholder-count="2">
+<div style="height:28px;display:flex;align-items:center;gap:9px;padding:0 10px">
+<div style="{{ pr.dotStyle }}"></div>
+<span style="font:400 11px 'Monaco',monospace;flex:1">{{ pr.name }}</span>
+<div onClick="{{ pr.onToggle }}" style="{{ pr.btnStyleLight }}">{{ pr.btn }}</div>
+</div>
+</sc-for>
+</div>
+</sc-if>
+<div style="display:flex;align-items:center;justify-content:space-between">
+<span style="font-size:13px">Camera</span>
+<span style="font:400 11px 'Monaco',monospace;color:#8e8e93">FaceTime HD</span>
+</div>
+<div style="display:flex;align-items:center;justify-content:space-between">
+<span style="font-size:13px">Microphone</span>
+<span style="font:400 11px 'Monaco',monospace;color:#8e8e93">MacBook Pro</span>
+</div>
+</div>
+</div>
+</div>
+</sc-if>
+
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900},&quot;countdownSeconds&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:3,&quot;min&quot;:1,&quot;max&quot;:9,&quot;unit&quot;:&quot;s&quot;,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Recording&quot;},&quot;promptSurface&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;bar&quot;,&quot;clear&quot;],&quot;default&quot;:&quot;bar&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Recording&quot;}}">
+const SCENE = [
+  { type: 'heading', text: 'INT. BOARDING SCHOOL - DINING HALL - NIGHT' },
+  { type: 'action', text: 'Long tables, stripped for the holiday. PAUL sits alone with a plate he has not touched. MARY stops in the doorway with her coat still on.' },
+  { type: 'dialogue', char: 'PAUL', segs: [{ id: 'p1', text: "You've had a rough year." }] },
+  { type: 'dialogue', char: 'MARY', segs: [{ id: 'm1', text: "I'm not asking you to forgive him." }, { id: 'm2', text: " I'm asking you to sit in the same room as him for one hour." }] },
+  { type: 'dialogue', char: 'PAUL', paren: '(not looking up)', segs: [{ id: 'p2', text: 'And then what.' }] },
+  { type: 'dialogue', char: 'MARY', segs: [{ id: 'm3', text: 'Then nothing.' }, { id: 'm4', text: " Then you've done it." }] },
+  { type: 'action', text: 'He turns the fork over. Sets it down.' },
+  { type: 'dialogue', char: 'PAUL', segs: [{ id: 'p3', text: 'You always make it sound simple.' }] },
+  { type: 'dialogue', char: 'ANGUS', paren: '(from the hall)', segs: [{ id: 'a1', text: 'Is this about me?' }] },
+  { type: 'dialogue', char: 'MARY', segs: [{ id: 'm5', text: 'It is simple.' }, { id: 'm6', text: " It's just not easy." }] },
+];
+
+const MARKS = [
+  { id: 'push', name: 'push', hex: '#cf9a3c' },
+  { id: 'hold', name: 'hold back', hex: '#8a6a86' },
+  { id: 'warm', name: 'warmer', hex: '#4f8384' },
+];
+const SWATCHES = ['#c1553f', '#5d7590', '#6f8a6d', '#8a6a86', '#8a7c5e'];
+const VOICES = ['Mara', 'Ellis', 'Wren', 'Tobias'];
+const POPW = 142;
+
+function hexA(h, a) { const n = parseInt(h.slice(1), 16); return 'rgba(' + (n >> 16 & 255) + ',' + (n >> 8 & 255) + ',' + (n & 255) + ',' + a + ')'; }
+function mmss(s) { s = Math.max(0, Math.floor(s)); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); }
+const REC = { active: false, t0: 0, cd: 3 };
+function armTick() {} function stopTick() {}
+function useNow(active, ms) {
+  const [, bump] = React.useState(0);
+  React.useEffect(() => {
+    if (!active) return undefined;
+    const id = setInterval(() => bump(n => n + 1), ms || 200);
+    return () => clearInterval(id);
+  }, [active, ms]);
+}
+const KELVIN = [[255, 157, 63], [255, 190, 120], [255, 219, 186], [255, 240, 233], [248, 247, 255], [214, 229, 255]];
+function kelvinRGB(t) {
+  const n = KELVIN.length - 1;
+  const f = Math.max(0, Math.min(1, t)) * n;
+  const i = Math.min(n - 1, Math.floor(f));
+  const k = f - i;
+  return KELVIN[i].map((v, j) => Math.round(v + (KELVIN[i + 1][j] - v) * k));
+}
+function recRun() { return REC.active ? Math.max(0, (Date.now() - REC.t0) / 1000 - REC.cd) : 0; }
+function recCounting() { return REC.active && (Date.now() - REC.t0) / 1000 < REC.cd; }
+
+function paintClock() {
+  const t = document.querySelector('[data-lee-timer]');
+  if (t) t.textContent = mmss(recRun());
+  const c = document.querySelector('[data-lee-count]');
+  if (c) c.textContent = recCounting() ? String(Math.max(1, Math.ceil(REC.cd - (Date.now() - REC.t0) / 1000))) : '';
+}
+function LeeStage(p) {
+  const n = p.lines.length;
+  const idx = p.baseIdx + ((REC.active && p.auto) ? Math.floor(recRun() / 3.8) : 0);
+  const at = i => p.lines[(((i % n) + n) % n)];
+  const cur = at(idx);
+  const pin = (p.lookaway && !cur.isYou && p.pins[cur.char]) ? p.pins[cur.char] : null;
+  let base = idx;
+  if (pin) for (let k = 1; k <= n; k++) { if (at(idx + k).isYou) { base = idx + k - 1; break; } }
+  const ahead = [];
+  const aheadN = pin ? Math.max(1, p.depth - 1) : p.depth - 1;
+  for (let i = 1; i <= aheadN; i++) {
+    ahead.push(React.createElement('div', { key: 'a' + i, style: p.aheadStyle(i) }, at(base + i).flat));
+  }
+  const kids = [];
+  if (p.depth > 0) {
+    if (!pin) kids.push(React.createElement('div', { key: 'cur', style: p.curStyle },
+      cur.parts.map((g, i) => React.createElement('span', { key: i, style: p.partStyle(g, cur.isYou) }, g.text))));
+    kids.push.apply(kids, ahead);
+    kids.push(React.createElement('div', { key: 'b', onClick: p.stepBack, style: p.backStyle }, '\u2039'));
+    kids.push(React.createElement('div', { key: 'f', onClick: p.stepFwd, style: p.fwdStyle }, '\u203A'));
+  }
+  const out = [React.createElement('div', { key: 'wrap', style: p.wrapStyle }, kids)];
+  if (pin) out.push(React.createElement('div', { key: 'pin', style: p.pinStyle(pin) },
+    cur.parts.map((g, i) => React.createElement('span', { key: i, style: { color: g.hex || p.charColor(cur.char) } }, g.text))));
+  return React.createElement(React.Fragment, null, out);
+}
+
+function allSegs() { const o = []; SCENE.forEach(b => (b.segs || []).forEach(g => o.push(g))); return o; }
+function segText(id) { const f = allSegs().find(g => g.id === id); return f ? f.text.trim() : ''; }
+
+class Component extends DCLogic {
+  state = {
+    screen: 'home', settingsOpen: false, projectIdx: 0,
+    importState: 'idle', importPct: 0,
+    chars: [{ name: 'MARY', color: '#c1553f', you: true }, { name: 'PAUL', color: '#5d7590', you: false }, { name: 'ANGUS', color: '#6f8a6d', you: false }],
+    charNotes: { MARY: '', PAUL: '', ANGUS: '' },
+    charSheet: null,
+    marks: { m1: 'push', m2: 'hold', m5: 'warm' },
+    sel: null, selRect: null, selIn: 'script', plusHint: false, charHover: null, charHoverPos: null, tip: null,
+    noteDraft: null, noteDraftText: '', noteDraftY: 40,
+    cards: [
+      { id: 'c1', type: 'image', x: 48, y: 30, w: 214, h: 150, tie: 'm1' },
+      { id: 'c2', type: 'text', x: 292, y: 200, w: 220, h: 110, tie: 'm2', text: 'the drive home from the hospital' },
+      { id: 'c3', type: 'image', x: 86, y: 288, w: 198, h: 136, tie: null },
+    ],
+    selCard: 'c1', tieOpen: null, editCard: null, frameDraft: null,
+    tool: 'select',
+    surface: 'bar', depth: 2, auto: true, promptPanel: false, lightPanel: false, previewing: false,
+    light: 0.58, temp: 0.62, cam: true, mic: true,
+    eyelineOn: true, eyelineY: 268, eyePanel: false, lookaway: false, mirror: false, grid: false, crop: 'fit', cropPanel: false,
+    pins: { PAUL: { x: 0.79, y: 0.33 }, ANGUS: { x: 0.21, y: 0.47 } },
+    cursor: { x: -400, y: -400 }, lightOn: false, setPos: { x: 0, y: 0 },
+    phase: 'idle', count: 3, countdown: 3, elapsed: 0, lineIdx: 0,
+    readerOpen: true, charsOpen: true, voiceList: false, voice: 'Mara', volume: 0.68, inFile: true,
+    slate: true, autoRetake: false,
+    readFor: { PAUL: true, ANGUS: true },
+    takes: [{ id: 2, label: 'Take 2', dur: 47, starred: true }, { id: 1, label: 'Take 1', dur: 52, starred: false }],
+    selTake: 0, playhead: 0, playing: false,
+    formats: { video: true, audio: false }, exportState: 'idle', exportPct: 0, preset: 'standard',
+  };
+
+  constructor(props) {
+    super(props);
+    if (props.countdownSeconds) this.state.countdown = props.countdownSeconds;
+    if (props.promptSurface) this.state.surface = props.promptSurface;
+    this.winRef = React.createRef();
+    this.sheetRef = React.createRef();
+    this.notesRef = React.createRef();
+    this.feedRef = React.createRef();
+    this.canvasRef = React.createRef();
+    this.onScriptUp = this.selUp(this.sheetRef, 'script');
+    this.onNotesUp = this.selUp(this.notesRef, 'notes');
+  }
+  startClock() {
+    clearInterval(this.clockT);
+    let step = -1;
+    this.clockT = setInterval(() => {
+      paintClock();
+      const i = Math.floor(recRun() / 3.8);
+      if (i !== step) { step = i; this.setState({ tick: Date.now() }); }
+    }, 200);
+  }
+  componentDidMount() {
+    this._wake = () => { paintClock(); if (REC.active) { this.startClock(); this.setState({ tick: Date.now() }); } };
+    document.addEventListener('visibilitychange', this._wake);
+    window.addEventListener('focus', this._wake);
+    window.addEventListener('pointerdown', this._wake);
+    if (REC.active) this.startClock();
+  }
+  componentWillUnmount() { [this.playT, this.expT, this.impT, this.prevT, this.clockT].forEach(clearInterval); }
+
+  go = s => () => this.setState({ screen: s, settingsOpen: false, sel: null, noteDraft: null, tieOpen: null, editCard: null });
+
+  onImport = () => {
+    if (this.state.importState !== 'idle') return;
+    this.setState({ importState: 'busy', importPct: 0 });
+    this.impT = setInterval(() => this.setState(s => {
+      if (s.importPct >= 100) { clearInterval(this.impT); return { importState: 'idle', screen: 'script' }; }
+      return { importPct: Math.min(100, s.importPct + 6) };
+    }), 55);
+  };
+
+  dragTrack(e, cb) {
+    const r = e.currentTarget.getBoundingClientRect();
+    const set = ev => cb(Math.max(0, Math.min(1, (ev.clientX - r.left) / r.width)));
+    set(e);
+    const up = () => { document.removeEventListener('mousemove', set); document.removeEventListener('mouseup', up); };
+    document.addEventListener('mousemove', set); document.addEventListener('mouseup', up);
+  }
+
+  selUp = (ref, where) => () => {
+    const sel = window.getSelection();
+    const el = ref.current;
+    if (!sel || sel.isCollapsed || !el) { this.setState({ sel: null, plusHint: false }); return; }
+    let node = sel.anchorNode;
+    if (node && node.nodeType === 3) node = node.parentNode;
+    const host = node && node.closest ? node.closest('[data-seg]') : null;
+    if (!host || !host.getAttribute('data-seg')) { this.setState({ sel: null, plusHint: false }); return; }
+    const sr = sel.getRangeAt(0).getBoundingClientRect();
+    const pr = el.getBoundingClientRect(), k = this.scaleOf(el);
+    this.setState({ sel: host.getAttribute('data-seg'), selRect: { x: (sr.left - pr.left + sr.width / 2) / k, y: (sr.top - pr.top) / k }, selIn: where, noteDraft: null, plusHint: false });
+  };
+
+  closeAll = () => {
+    if (this._closer) { document.removeEventListener('mousedown', this._closer); this._closer = null; }
+    this.setState({ lightPanel: false, promptPanel: false, eyePanel: false, cropPanel: false });
+  };
+  openOnly = key => {
+    if (this._closer) { document.removeEventListener('mousedown', this._closer); this._closer = null; }
+    this.setState({ lightPanel: key === 'lightPanel', promptPanel: key === 'promptPanel', eyePanel: key === 'eyePanel', cropPanel: key === 'cropPanel' });
+    this._closer = () => { document.removeEventListener('mousedown', this._closer); this._closer = null; this.setState({ lightPanel: false, promptPanel: false, eyePanel: false, cropPanel: false }); };
+    setTimeout(() => { if (this._closer) document.addEventListener('mousedown', this._closer); }, 0);
+  };
+  onLight = () => {
+    if (this.state.lightOn) { this.closeAll(); this.setState({ lightOn: false }); }
+    else { this.setState({ lightOn: true }); this.openOnly('lightPanel'); }
+  };
+  scaleOf(el) { const r = el.getBoundingClientRect(); return el.offsetWidth ? r.width / el.offsetWidth : 1; }
+  onWinMove = e => {
+    if (this._mvRaf) return;
+    const cx = e.clientX, cy = e.clientY;
+    this._mvRaf = requestAnimationFrame(() => {
+      this._mvRaf = null;
+      const el = this.winRef.current; if (!el) return;
+      const r = el.getBoundingClientRect(), k = this.scaleOf(el);
+      this.setState({ cursor: { x: (cx - r.left) / k, y: (cy - r.top) / k } });
+    });
+  };
+  onSettingsDrag = e => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    const sx = e.clientX, sy = e.clientY;
+    const o = this.state.setPos || { x: 0, y: 0 };
+    const move = ev => this.setState({ setPos: { x: o.x + ev.clientX - sx, y: o.y + ev.clientY - sy } });
+    const up = () => { document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up); };
+    document.addEventListener('mousemove', move); document.addEventListener('mouseup', up);
+  };
+  startPin = name => e => {
+    e.preventDefault(); e.stopPropagation();
+    const el = this.feedRef.current; if (!el) return;
+    const r = el.getBoundingClientRect();
+    const move = ev => this.setState(st => ({ pins: Object.assign({}, st.pins, { [name]: {
+      x: Math.max(0.07, Math.min(0.93, (ev.clientX - r.left) / r.width)),
+      y: Math.max(0.11, Math.min(0.74, (ev.clientY - r.top) / r.height)) } }) }));
+    const up = () => { document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up); };
+    document.addEventListener('mousemove', move); document.addEventListener('mouseup', up);
+  };
+
+  startEyeline = e => {
+    e.preventDefault(); e.stopPropagation();
+    const el = this.feedRef.current; if (!el) return;
+    const r = el.getBoundingClientRect(), k = this.scaleOf(el);
+    const move = ev => this.setState({ eyelineY: Math.max(118, Math.min(el.offsetHeight - 128, (ev.clientY - r.top) / k)) });
+    const up = () => { document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up); };
+    document.addEventListener('mousemove', move); document.addEventListener('mouseup', up);
+  };
+
+  startCard = id => e => {
+    if (e.button !== 0) return;
+    e.preventDefault(); e.stopPropagation();
+    const el = this.canvasRef.current; if (!el) return;
+    const r = el.getBoundingClientRect(), k = this.scaleOf(el);
+    const card = this.state.cards.find(c => c.id === id);
+    const dx = (e.clientX - r.left) / k - card.x, dy = (e.clientY - r.top) / k - card.y;
+    this.setState({ selCard: id, tieOpen: null });
+    const move = ev => {
+      const x = Math.max(6, Math.min(el.offsetWidth - card.w - 86, (ev.clientX - r.left) / k - dx));
+      const y = Math.max(6, Math.min(el.offsetHeight - 64, (ev.clientY - r.top) / k - dy));
+      this.setState(s => ({ cards: s.cards.map(c => c.id === id ? Object.assign({}, c, { x, y }) : c) }));
+    };
+    const up = () => { document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up); };
+    document.addEventListener('mousemove', move); document.addEventListener('mouseup', up);
+  };
+
+  startResize = id => e => {
+    e.preventDefault(); e.stopPropagation();
+    const el = this.canvasRef.current; if (!el) return;
+    const r = el.getBoundingClientRect(), k = this.scaleOf(el);
+    const card = this.state.cards.find(c => c.id === id);
+    const move = ev => {
+      const w = Math.max(130, Math.min(el.offsetWidth - card.x - 86, (ev.clientX - r.left) / k - card.x));
+      const h = Math.max(72, Math.min(el.offsetHeight - card.y - 10, (ev.clientY - r.top) / k - card.y));
+      this.setState(s => ({ cards: s.cards.map(c => c.id === id ? Object.assign({}, c, { w: Math.round(w), h: Math.round(h) }) : c) }));
+    };
+    const up = () => { document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up); };
+    document.addEventListener('mousemove', move); document.addEventListener('mouseup', up);
+  };
+
+  onCanvasDown = e => {
+    if (e.target !== e.currentTarget) return;
+    const tool = this.state.tool;
+    if (tool !== 'note' && tool !== 'image') { this.setState({ selCard: null, tieOpen: null, editCard: null }); return; }
+    e.preventDefault();
+    const el = this.canvasRef.current; if (!el) return;
+    const r = el.getBoundingClientRect();
+    const x0 = e.clientX - r.left, y0 = e.clientY - r.top;
+    this.setState({ frameDraft: { x: x0, y: y0, w: 0, h: 0 }, selCard: null, editCard: null });
+    const move = ev => {
+      const cx = Math.max(0, Math.min(r.width, ev.clientX - r.left));
+      const cy = Math.max(0, Math.min(r.height, ev.clientY - r.top));
+      this.setState({ frameDraft: { x: Math.min(x0, cx), y: Math.min(y0, cy), w: Math.abs(cx - x0), h: Math.abs(cy - y0) } });
+    };
+    const up = () => {
+      document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up);
+      this.setState(st => {
+        const d = st.frameDraft;
+        if (!d || d.w < 44 || d.h < 40) return { frameDraft: null };
+        const id = 'n' + Date.now();
+        const card = tool === 'image'
+          ? { id, type: 'image', x: Math.round(d.x), y: Math.round(d.y), w: Math.round(d.w), h: Math.round(d.h), tie: null }
+          : { id, type: 'text', x: Math.round(d.x), y: Math.round(d.y), w: Math.round(d.w), h: Math.round(d.h), tie: null, text: '' };
+        return { frameDraft: null, cards: st.cards.concat([card]), selCard: id, editCard: tool === 'image' ? null : id, tool: 'select' };
+      });
+    };
+    document.addEventListener('mousemove', move); document.addEventListener('mouseup', up);
+  };
+
+  hoverEnter = name => e => {
+    const w = this.winRef && this.winRef.current;
+    const r = e.currentTarget.getBoundingClientRect();
+    const wr = w ? w.getBoundingClientRect() : { left: 0, top: 0 };
+    const left = r.left - wr.left, right = r.right - wr.left;
+    const x = left - 241 >= 274 ? left - 241 : Math.min(right + 9, 1440 - 240);
+    const y = Math.max(8, Math.min(r.top - wr.top - 4, 828));
+    this.setState({ charHover: name, charHoverPos: { x, y } });
+  };
+  hoverLeave = name => () => this.setState(st => (st.charHover === name ? { charHover: null } : null));
+
+  addCard(type, tie, text) {
+    const id = 'n' + Date.now();
+    const w = type === 'image' ? 206 : 214, h = type === 'image' ? 142 : 108;
+    const cs = this.state.cards;
+    const hits = (x, y) => cs.some(c => x < c.x + c.w + 16 && x + w + 16 > c.x && y < c.y + (c.h || 120) + 16 && y + h + 16 > c.y);
+    let px = 24, py = 24, placed = false;
+    for (let gy = 24; gy <= 600 && !placed; gy += 22) {
+      for (let gx = 24; gx <= 540 && !placed; gx += 22) { if (!hits(gx, gy)) { px = gx; py = gy; placed = true; } }
+    }
+    const card = type === 'image'
+      ? { id, type: 'image', x: px, y: py, w: w, h: h, tie: tie || null }
+      : { id, type: 'text', x: px, y: py, w: w, h: h, tie: tie || null, text: text || '' };
+    this.setState(st => ({ cards: st.cards.concat([card]), selCard: id, editCard: type === 'image' ? null : id, sel: null, plusHint: false, noteDraft: null, noteDraftText: '', screen: 'notes' }));
+  }
+
+  onRecord = () => {
+    clearInterval(this.prevT);
+    if (!REC.active) {
+      REC.active = true; REC.cd = this.state.countdown; REC.t0 = Date.now();
+      this.setState({ lineIdx: 0, promptPanel: false, lightPanel: false, eyePanel: false, previewing: false });
+      this.startClock();
+      return;
+    }
+    const el = (Date.now() - REC.t0) / 1000;
+    REC.active = false; clearInterval(this.clockT); this.clockT = null; paintClock();
+    if (el < REC.cd) { this.setState({ tick: Date.now() }); return; }
+    const dur = Math.max(1, Math.round(el - REC.cd));
+    const again = this.state.autoRetake, slated = this.state.slate;
+    this.setState(s => ({
+      screen: again ? 'record' : 'takes', selTake: 0, playhead: 0, playing: false, exportState: 'idle',
+      takes: [{ id: s.takes.length + 1, label: 'Take ' + (s.takes.length + 1), dur, starred: false, slate: slated }].concat(s.takes),
+    }));
+    if (again) setTimeout(() => { if (!REC.active) this.onRecord(); }, 500);
+  };
+
+  togglePreview = () => {
+    if (this.state.previewing) { clearInterval(this.prevT); this.setState({ previewing: false }); return; }
+    this.setState({ previewing: true });
+    this.prevT = setInterval(() => this.setState(s => ({ lineIdx: s.lineIdx + 1 })), 3400);
+  };
+
+  togglePlay = () => {
+    if (this.state.playing) { clearInterval(this.playT); this.setState({ playing: false }); return; }
+    this.setState({ playing: true });
+    this.playT = setInterval(() => this.setState(s => {
+      const d = (s.takes[s.selTake] || {}).dur || 1;
+      if (s.playhead >= d) { clearInterval(this.playT); return { playing: false, playhead: d }; }
+      return { playhead: s.playhead + 0.1 };
+    }), 100);
+  };
+
+  onExport = () => {
+    this.setState({ exportState: 'busy', exportPct: 0 });
+    this.expT = setInterval(() => this.setState(s => {
+      if (s.exportPct >= 100) { clearInterval(this.expT); return { exportState: 'done' }; }
+      return { exportPct: Math.min(100, s.exportPct + 7) };
+    }), 65);
+  };
+
+  markHex(id) { const f = MARKS.find(x => x.id === this.state.marks[id]); return f ? f.hex : null; }
+
+  renderVals() {
+    const s = this.state;
+    const you = s.chars.find(c => c.you) || s.chars[0];
+    const charOf = n => s.chars.find(c => c.name === n) || { color: '#8e8e93' };
+    const rolling = REC.active;
+    const elapsedD = recRun();
+
+
+    const knob = p => ({ position: 'absolute', left: 'calc(' + (p * 100) + '% - 7px)', top: '-5px', width: '14px', height: '14px', borderRadius: '50%', background: '#fff', boxShadow: '0 0 0 .5px rgba(0,0,0,.16),0 1px 4px rgba(0,0,0,.3)' });
+    const fill = (p, c) => ({ position: 'absolute', left: 0, top: 0, bottom: 0, width: (p * 100) + '%', borderRadius: '2px', background: c });
+    const swTrack = (on, dark) => ({ width: '38px', height: '22px', borderRadius: '11px', display: 'flex', alignItems: 'center', padding: '0 2px', boxSizing: 'border-box', cursor: 'pointer', flex: 'none', background: on ? '#6f8a6d' : (dark ? 'rgba(255,255,255,.22)' : 'rgba(0,0,0,.15)'), transition: 'background .2s' });
+    const swKnob = on => ({ width: '18px', height: '18px', borderRadius: '50%', background: '#fff', boxShadow: '0 0 0 .5px rgba(0,0,0,.1),0 1px 3px rgba(0,0,0,.26)', transform: on ? 'translateX(16px)' : 'translateX(0)', transition: 'transform .2s cubic-bezier(.3,1.4,.5,1)' });
+    const caret = o => ({ width: 0, height: 0, flex: 'none', borderTop: '4px solid #b0b0b5', borderLeft: '3.5px solid transparent', borderRight: '3.5px solid transparent', transform: o ? 'rotate(180deg)' : 'none', transition: 'transform .2s ease' });
+    const segBtn = on => ({ flex: 1, height: '25px', display: 'grid', placeItems: 'center', borderRadius: '5px', cursor: 'pointer', fontSize: '11.5px', fontWeight: on ? 590 : 400, color: on ? '#1d1d1f' : 'rgba(255,255,255,.68)', background: on ? '#fff' : 'transparent', boxShadow: on ? '0 1px 2px rgba(0,0,0,.22)' : 'none', transition: 'background .15s' });
+    const iconBtn = on => ({ width: '38px', height: '38px', borderRadius: '50%', display: 'grid', placeItems: 'center', cursor: 'pointer', flex: 'none', background: on ? 'rgba(255,255,255,.15)' : 'rgba(200,85,61,.85)', transition: 'background .18s' });
+    const popStyle = (x, y, maxX) => ({ position: 'absolute', left: Math.max(4, Math.min(maxX, x - POPW / 2)) + 'px', top: (y - 48) + 'px', width: POPW + 'px', height: '38px', boxSizing: 'border-box', padding: '0 9px', borderRadius: '10px', background: '#2c2c2e', boxShadow: '0 6px 22px rgba(0,0,0,.32)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '7px', zIndex: 30, animation: 'leePop .14s ease' });
+
+    const pj = [
+      { name: 'The Holdovers', roleTag: 'MARY', edited: 'Tue Aug 4', due: 'Thu Aug 6', urgent: true },
+      { name: 'Blue Hour', roleTag: 'JUNE', edited: 'Sun Aug 2', due: 'Mon Aug 10', urgent: false },
+      { name: 'Untitled pilot', roleTag: '', edited: 'Fri Jul 31', due: '', urgent: false },
+    ];
+    const projects = pj.map((p, i) => {
+      const sl = i === s.projectIdx && s.screen !== 'home';
+      return {
+        name: p.name, roleTag: p.roleTag || null, open: sl,
+        onClick: () => this.setState({ projectIdx: i, screen: s.screen === 'home' ? 'script' : s.screen }),
+        rowStyle: { height: '29px', display: 'flex', alignItems: 'center', gap: '7px', padding: '0 9px', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: sl ? 590 : 400, background: sl ? 'rgba(0,0,0,.065)' : 'transparent' },
+        caretStyle: { width: 0, height: 0, flex: 'none', borderLeft: '4px solid ' + (sl ? '#48484a' : '#aeaeb2'), borderTop: '3.5px solid transparent', borderBottom: '3.5px solid transparent', transform: sl ? 'rotate(90deg)' : 'none', transition: 'transform .2s ease' },
+      };
+    });
+
+    const bars = React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '2px' } }, [10, 7, 9].map((w, i) => React.createElement('div', { key: i, style: { width: w + 'px', height: '1.5px', borderRadius: '1px', background: 'currentColor' } })));
+    const dots = React.createElement('div', { style: { display: 'flex', gap: '2px' } }, MARKS.map((m, i) => React.createElement('div', { key: i, style: { width: '4px', height: '4px', borderRadius: '50%', background: m.hex } })));
+    const recDot = React.createElement('div', { style: { width: '9px', height: '9px', borderRadius: '50%', background: '#c8553d' } });
+    const film = React.createElement('div', { style: { position: 'relative', width: '12px', height: '10px' } },
+      React.createElement('div', { style: { position: 'absolute', left: 0, top: '2px', width: '8px', height: '8px', border: '1.3px solid currentColor', borderRadius: '2px' } }),
+      React.createElement('div', { style: { position: 'absolute', left: '4px', top: 0, width: '8px', height: '8px', border: '1.3px solid currentColor', borderRadius: '2px', background: '#f2f2f4' } }));
+
+    const stages = [
+      { k: 'script', n: 'Script', g: bars, b: null },
+      { k: 'notes', n: 'Notes', g: dots, b: String(s.cards.length) },
+      { k: 'record', n: 'Record', g: recDot, b: null },
+      { k: 'takes', n: 'Takes', g: film, b: String(s.takes.length) },
+    ].map(d => {
+      const on = s.screen === d.k;
+      return { name: d.n, glyph: d.g, badge: d.b, onClick: this.go(d.k),
+        style: { height: '27px', display: 'flex', alignItems: 'center', gap: '9px', padding: '0 9px', borderRadius: '6px', cursor: 'pointer', fontSize: '12.5px', fontWeight: on ? 510 : 400, color: on ? '#1d1d1f' : '#5a5a5f', background: on ? '#fff' : 'transparent', boxShadow: on ? '0 0 0 .5px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.07)' : 'none', transition: 'background .15s' } };
+    });
+
+    const mkRow = (b, f) => {
+      const c = b.char ? charOf(b.char) : null;
+      return {
+        charName: b.char || null, paren: b.paren || null,
+        onCharClick: b.char ? () => this.setState({ charSheet: b.char, sel: null, charHover: null }) : null,
+        onCharEnter: b.char ? this.hoverEnter(b.char) : null,
+        onCharLeave: b.char ? this.hoverLeave(b.char) : null,
+        wrapStyle: { marginBottom: (b.type === 'heading' ? 24 : 16) * f + 'px' },
+        charStyle: { marginLeft: 196 * f + 'px' },
+        charInkStyle: { color: c ? c.color : '#1d1d1f', letterSpacing: '.06em', cursor: 'pointer', borderRadius: '2px', padding: '0 3px', marginLeft: '-3px', transition: 'background .15s', background: s.charSheet === b.char ? hexA(c ? c.color : '#000', .15) : 'transparent' },
+        parenStyle: { marginLeft: 150 * f + 'px', color: '#6e6e73' },
+        bodyStyle: b.type === 'dialogue' ? { marginLeft: 100 * f + 'px', width: 330 * f + 'px' }
+          : (b.type === 'heading' ? { fontWeight: 700, letterSpacing: '.05em' } : {}),
+        segs: b.segs ? b.segs.map(g => {
+          const hex = this.markHex(g.id);
+          const on = s.sel === g.id;
+          return { id: g.id, text: g.text, style: { background: hex ? hexA(hex, .27) : (on ? 'rgba(29,29,31,.09)' : 'transparent'), boxShadow: hex ? 'inset 0 -2px 0 ' + hexA(hex, .72) : 'none', borderRadius: '2px', transition: 'background .16s' } };
+        }) : [{ id: '', text: b.text, style: {} }],
+      };
+    };
+
+    const lineTally = {};
+    SCENE.forEach(b => { if (b.type === 'dialogue') lineTally[b.char] = (lineTally[b.char] || 0) + 1; });
+    const charRows = s.chars.map((c, i) => {
+      const note = (s.charNotes[c.name] || '').trim();
+      const n = lineTally[c.name] || 0;
+      return {
+        name: c.name, you: c.you || null, hasNote: note.length ? true : null,
+        onClick: () => this.setState({ charSheet: c.name, charHover: null }),
+        onEnter: this.hoverEnter(c.name), onLeave: this.hoverLeave(c.name),
+        style: { position: 'relative', height: '40px', display: 'flex', alignItems: 'center', gap: '9px', padding: '0 11px', cursor: 'pointer', background: s.charHover === c.name ? 'rgba(0,0,0,.03)' : 'transparent', borderBottom: i < s.chars.length - 1 ? '.5px solid rgba(0,0,0,.08)' : 'none', transition: 'background .14s' },
+        dotStyle: { width: '11px', height: '11px', borderRadius: '50%', flex: 'none', background: c.color },
+      };
+    });
+    const hovC = s.charHover ? s.chars.find(c => c.name === s.charHover) : null;
+    const hovNote = hovC ? (s.charNotes[hovC.name] || '').trim() : '';
+    const hovN = hovC ? (lineTally[hovC.name] || 0) : 0;
+
+    const counts = {};
+    Object.keys(s.marks).forEach(k => { counts[s.marks[k]] = (counts[s.marks[k]] || 0) + 1; });
+    const markRows = MARKS.map((m, i) => ({
+      name: m.name, count: String(counts[m.id] || 0),
+      style: { height: '38px', display: 'flex', alignItems: 'center', gap: '10px', padding: '0 11px', borderBottom: i < MARKS.length - 1 ? '.5px solid rgba(0,0,0,.08)' : 'none' },
+      dotStyle: { width: '11px', height: '11px', borderRadius: '50%', flex: 'none', background: m.hex },
+    }));
+
+    const cards = s.cards.map(c => {
+      const hex = c.tie ? this.markHex(c.tie) : null;
+      const on = s.selCard === c.id;
+      const editing = s.editCard === c.id;
+      return {
+        isImage: c.type === 'image' || null, isText: c.type === 'text' || null,
+        editing: editing || null, notEditing: editing ? null : true,
+        selected: on || null,
+        slotId: 'lee-note-' + c.id, text: c.text,
+        tieLabel: c.tie ? segText(c.tie) : 'Untied',
+        onWrapDown: () => this.setState({ selCard: c.id }),
+        onDown: this.startCard(c.id),
+        onResize: this.startResize(c.id),
+        onEdit: e => { e.stopPropagation(); this.setState({ editCard: c.id, selCard: c.id, tieOpen: null }); },
+        onBlur: () => this.setState({ editCard: null }),
+        onTextChange: e => { const v = e.target.value; this.setState(st => ({ cards: st.cards.map(x => x.id === c.id ? Object.assign({}, x, { text: v }) : x) })); },
+        onTieDown: e => { e.preventDefault(); e.stopPropagation(); this.setState({ tieOpen: s.tieOpen === c.id ? null : c.id, selCard: c.id }); },
+        tieOpen: s.tieOpen === c.id || null,
+        tieOpts: allSegs().map(g => {
+          const gh = this.markHex(g.id);
+          return { text: g.text.trim(),
+            onClick: e => { e.preventDefault(); e.stopPropagation(); this.setState(st => ({ cards: st.cards.map(x => x.id === c.id ? Object.assign({}, x, { tie: g.id }) : x), tieOpen: null })); },
+            style: { height: '25px', display: 'flex', alignItems: 'center', gap: '6px', padding: '0 5px', borderRadius: '5px', cursor: 'pointer', font: "400 10px 'Monaco',monospace", color: c.tie === g.id ? '#1d1d1f' : '#6e6e73', background: c.tie === g.id ? 'rgba(0,0,0,.07)' : 'transparent' },
+            dotStyle: { width: '6px', height: '6px', borderRadius: '50%', flex: 'none', background: gh || '#d1d1d6' } };
+        }),
+        wrapStyle: { position: 'absolute', left: c.x + 'px', top: c.y + 'px', width: c.w + 'px', height: c.h + 'px', background: '#fff', borderRadius: '9px', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: 'inset 3px 0 0 ' + (hex || '#dcdce0') + (on ? ',0 0 0 .5px rgba(0,0,0,.1),0 0 0 2px rgba(29,29,31,.5),0 8px 26px rgba(0,0,0,.16)' : ',0 0 0 .5px rgba(0,0,0,.1),0 3px 12px rgba(0,0,0,.1)'), transition: 'box-shadow .16s' },
+        headStyle: { height: '27px', flex: 'none', display: 'flex', alignItems: 'center', gap: '6px', padding: '0 6px 0 12px', cursor: 'grab', borderBottom: '.5px solid rgba(0,0,0,.07)' },
+        onDouble: e => { e.stopPropagation(); this.setState({ tieOpen: s.tieOpen === c.id ? null : c.id, selCard: c.id }); },
+        tieBtnStyle: { width: '24px', height: '24px', flex: 'none', borderRadius: '6px', display: 'grid', placeItems: 'center', cursor: 'pointer', font: '400 12px/1 -apple-system,system-ui', color: '#6e6e73', background: s.tieOpen === c.id ? 'rgba(0,0,0,.09)' : 'transparent', transition: 'background .15s' },
+        tieTextStyle: { font: "400 9.5px 'Monaco',monospace", flex: 1, minWidth: 0, color: hex ? '#3a3a3c' : '#b0b0b5', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
+        bodyStyle: { flex: 1, minHeight: 0, position: 'relative' },
+        textAreaStyle: { width: '100%', height: '100%', boxSizing: 'border-box', padding: '11px 13px', fontSize: '13.5px', lineHeight: 1.5, color: '#1d1d1f' },
+        textViewStyle: { padding: '11px 13px', fontSize: '13.5px', lineHeight: 1.5, color: c.text ? '#3a3a3c' : '#c7c7cc', cursor: 'text', height: '100%', boxSizing: 'border-box', overflow: 'hidden' },
+      };
+    });
+
+    const clear = s.surface === 'clear';
+    const sh = '0 1px 9px rgba(0,0,0,.75)';
+    const lineData = SCENE.filter(b => b.type === 'dialogue').map(b => ({
+      char: b.char, isYou: b.char === you.name,
+      parts: b.segs.map(g => ({ text: g.text, hex: this.markHex(g.id) })),
+      flat: b.segs.map(g => g.text).join(''),
+    }));
+    const frameGeom = s.crop === 'fit'
+      ? { position: 'absolute', inset: 0 }
+      : (s.crop === 'wide'
+        ? { position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: '100%', aspectRatio: '16 / 9', maxHeight: '100%' }
+        : { position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', height: '100%', aspectRatio: '9 / 16', maxWidth: '100%' });
+    const stepArrow = side => ({ position: 'absolute', [side]: '18px', top: '50%', transform: 'translateY(-50%)', width: '30px', height: '30px', borderRadius: '50%', display: 'grid', placeItems: 'center', cursor: 'pointer', fontSize: '17px', lineHeight: 1, color: 'rgba(255,255,255,.5)', background: 'rgba(255,255,255,.09)', transition: 'background .15s, color .15s' });
+
+    const ringRGB = kelvinRGB(1 - s.temp);
+    const ringCol = a => 'rgba(' + ringRGB.join(',') + ',' + Math.max(0, Math.min(1, a)).toFixed(3) + ')';
+    const I = Math.pow(s.light, 0.62);
+    const ringW = Math.round(30 + s.light * 46);
+    const holeR = 168;
+    const ringMask = 'radial-gradient(circle ' + holeR + 'px at ' + Math.round(s.cursor.x) + 'px ' + Math.round(s.cursor.y) + 'px, rgba(0,0,0,0) 0, rgba(0,0,0,0) ' + Math.round(holeR * 0.5) + 'px, rgba(0,0,0,1) ' + holeR + 'px)';
+    const bandsOn = s.lightOn && s.light > 0.03 && s.screen === 'record';
+    const bandW = bandsOn ? ringW + 28 : 0;
+
+
+    const st2 = { stroke: '#fff', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' };
+    const svg = (w, ch) => React.createElement('svg', { width: w, height: w, viewBox: '0 0 24 24', fill: 'none' }, ch);
+    const camGlyph = s.cam
+      ? svg(18, [React.createElement('path', Object.assign({ key: 1, d: 'M12 16C13.66 16 15 14.66 15 13C15 11.34 13.66 10 12 10C10.34 10 9 11.34 9 13C9 14.66 10.34 16 12 16Z' }, st2)),
+                 React.createElement('path', Object.assign({ key: 2, d: 'M3 16.8V9.2C3 8.08 3 7.52 3.22 7.09C3.41 6.72 3.72 6.41 4.09 6.22C4.52 6 5.08 6 6.2 6H7.25C7.38 6 7.44 6 7.5 5.99C7.79 5.96 8.06 5.8 8.22 5.55C8.25 5.5 8.28 5.44 8.33 5.33C8.44 5.11 8.5 5 8.56 4.91C8.89 4.41 9.42 4.08 10.01 4.01C10.12 4 10.24 4 10.49 4H13.51C13.76 4 13.88 4 13.99 4.01C14.58 4.08 15.11 4.41 15.44 4.91C15.5 5 15.56 5.11 15.67 5.33C15.72 5.44 15.75 5.5 15.78 5.55C15.94 5.8 16.21 5.96 16.5 5.99C16.56 6 16.62 6 16.75 6H17.8C18.92 6 19.48 6 19.91 6.22C20.28 6.41 20.59 6.72 20.78 7.09C21 7.52 21 8.08 21 9.2V16.8C21 17.92 21 18.48 20.78 18.91C20.59 19.28 20.28 19.59 19.91 19.78C19.48 20 18.92 20 17.8 20H6.2C5.08 20 4.52 20 4.09 19.78C3.72 19.59 3.41 19.28 3.22 18.91C3 18.48 3 17.92 3 16.8Z' }, st2))])
+      : svg(18, [React.createElement('path', Object.assign({ key: 1, d: 'M3 3L6 6M21 21L19.85 19.82M9.74 4.07C9.84 4.04 9.93 4.02 10.03 4.01C10.15 4 10.27 4 10.51 4H13.53C13.78 4 13.9 4 14.01 4.01C14.61 4.08 15.14 4.41 15.46 4.91C15.53 5 15.58 5.11 15.69 5.33C15.75 5.44 15.77 5.5 15.8 5.55C15.97 5.8 16.23 5.96 16.53 5.99C16.58 6 16.65 6 16.77 6H17.82C18.94 6 19.5 6 19.93 6.22C20.31 6.41 20.61 6.72 20.81 7.09C21.02 7.52 21.02 8.08 21.02 9.2V15.35M19.85 19.82C19.43 20 18.87 20 17.82 20H6.22C5.1 20 4.54 20 4.12 19.78C3.74 19.59 3.43 19.28 3.24 18.91C3.02 18.48 3.02 17.92 3.02 16.8V9.2C3.02 8.08 3.02 7.52 3.24 7.09C3.43 6.72 3.74 6.41 4.12 6.22C4.51 6.02 5.03 6 6 6M19.85 19.82L14.56 14.56M14.56 14.56C14.03 15.42 13.08 16 12 16C10.34 16 9 14.66 9 13C9 11.92 9.58 10.97 10.44 10.44M14.56 14.56L10.44 10.44M10.44 10.44L6 6' }, st2))]);
+    const micGlyph = s.mic
+      ? svg(17, [React.createElement('path', { key: 1, d: 'M12 1C9.79 1 8 2.79 8 5V12C8 14.21 9.79 16 12 16C14.21 16 16 14.21 16 12V5C16 2.79 14.21 1 12 1ZM10 5C10 3.9 10.9 3 12 3C13.1 3 14 3.9 14 5V12C14 13.1 13.1 14 12 14C10.9 14 10 13.1 10 12V5Z', fill: '#fff' }),
+                 React.createElement('path', { key: 2, d: 'M5 9C5.55 9 6 9.45 6 10V12C6 13.59 6.63 15.12 7.76 16.24C8.88 17.37 10.41 18 12 18C13.59 18 15.12 17.37 16.24 16.24C17.37 15.12 18 13.59 18 12V10C18 9.45 18.45 9 19 9C19.55 9 20 9.45 20 10V12C20 14.12 19.16 16.16 17.66 17.66C16.39 18.92 14.75 19.72 13 19.94V22C13 22.55 12.55 23 12 23C11.45 23 11 22.55 11 22V19.94C9.25 19.72 7.61 18.92 6.34 17.66C4.84 16.16 4 14.12 4 12V10C4 9.45 4.45 9 5 9Z', fill: '#fff' })])
+      : svg(17, [React.createElement('path', { key: 1, d: 'M12 1C13.65 1 15.06 1.99 15.67 3.41L8 11.09V5C8 2.79 9.79 1 12 1Z', fill: '#fff' }),
+                 React.createElement('path', { key: 2, d: 'M6.25 12C6.25 12.26 6.27 12.52 6.3 12.78L4.25 14.83C3.92 13.93 3.75 12.98 3.75 12V11.84C3.75 11.29 4.2 10.84 4.75 10.84H5.25C5.8 10.84 6.25 11.29 6.25 11.84V12Z', fill: '#fff' }),
+                 React.createElement('path', { key: 3, d: 'M7.32 18.8L3.77 22.35C3.38 22.74 2.74 22.74 2.35 22.35L1.65 21.65C1.26 21.26 1.26 20.62 1.65 20.23L20.23 1.65C20.62 1.26 21.26 1.26 21.65 1.65L22.35 2.35C22.74 2.74 22.74 3.38 22.35 3.77L16 10.12V12C16 14.21 14.21 16 12 16C11.45 16 10.92 15.89 10.44 15.68L9.14 16.99C10 17.48 10.99 17.75 12 17.75C13.53 17.75 14.99 17.14 16.07 16.07C17.14 14.99 17.75 13.53 17.75 12V11.84C17.75 11.29 18.2 10.84 18.75 10.84H19.25C19.8 10.84 20.25 11.29 20.25 11.84V12C20.25 14.19 19.38 16.29 17.83 17.83C16.58 19.08 14.98 19.89 13.25 20.15V23H10.75V20.15C9.52 19.97 8.35 19.5 7.32 18.8Z', fill: '#fff' })]);
+
+    const used = MARKS.filter(m => Object.keys(s.marks).some(k => s.marks[k] === m.id)).map(m => m.hex);
+    const orbHexes = used.length ? used : MARKS.map(m => m.hex);
+    const take = s.takes[s.selTake] || { dur: 1, label: 'Take 1' };
+    const ext = s.formats.video ? 'mp4' : (s.formats.audio ? 'wav' : 'mp4');
+    const infoDot = on => ({ position: 'relative', width: '15px', height: '15px', flex: 'none', borderRadius: '50%', display: 'grid', placeItems: 'center', cursor: 'help', font: '400 9.5px/1 Georgia,serif', fontStyle: 'italic', color: on ? '#fff' : '#8e8e93', background: on ? '#8e8e93' : 'rgba(0,0,0,.07)', transition: 'background .14s, color .14s' });
+    const sheetChar = s.charSheet ? charOf(s.charSheet) : null;
+    const dlg = SCENE.filter(b => b.type === 'dialogue');
+    const flat = b => b.segs.map(g => g.text).join('').trim();
+    const trim = (t, n) => t.length > n ? t.slice(0, n - 1).trimEnd() + '\u2026' : t;
+    const sheetIsYou = !!(sheetChar && sheetChar.you);
+    const sheetLines = s.charSheet ? dlg.filter(b => b.char === s.charSheet) : [];
+    const sheetCues = [];
+    if (s.charSheet) {
+      dlg.forEach((b, i) => {
+        const nxt = dlg[i + 1];
+        if (!nxt) return;
+        const hit = sheetIsYou ? (nxt.char === s.charSheet && b.char !== s.charSheet)
+                               : (b.char === s.charSheet && nxt.char === you.name);
+        if (!hit) return;
+        const spk = charOf(b.char);
+        sheetCues.push({
+          glyph: '',
+          markStyle: { width: '7px', height: '7px', borderRadius: '50%', flex: 'none', marginTop: '5px', background: spk.color },
+          cue: trim(flat(b), 44),
+          cueStyle: { font: "400 11.5px/1.45 'Monaco',monospace", color: '#3a3a3c', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+          mine: '\u21b3 ' + trim(flat(nxt), 40),
+        });
+      });
+    }
+
+    const toolDefs = [
+      { k: 'select', g: React.createElement('div', { style: { width: 0, height: 0, borderLeft: '7px solid currentColor', borderTop: '5px solid transparent', borderBottom: '5px solid transparent', transform: 'rotate(-45deg)' } }) },
+      { k: 'note', g: React.createElement('div', { style: { width: '17px', height: '13px', border: '1.6px solid currentColor', borderRadius: '2px', position: 'relative' } },
+          React.createElement('div', { style: { position: 'absolute', left: '2.5px', top: '3px', right: '2.5px', height: '1.4px', background: 'currentColor', opacity: .55 } }),
+          React.createElement('div', { style: { position: 'absolute', left: '2.5px', top: '6.5px', width: '8px', height: '1.4px', background: 'currentColor', opacity: .55 } })) },
+      { k: 'image', g: React.createElement('div', { style: { width: '17px', height: '13px', border: '1.6px solid currentColor', borderRadius: '2px', position: 'relative', overflow: 'hidden' } },
+          React.createElement('div', { style: { position: 'absolute', left: '2px', bottom: '2px', width: 0, height: 0, borderLeft: '5px solid transparent', borderRight: '5px solid transparent', borderBottom: '6px solid currentColor', opacity: .6 } })) },
+    ];
+    const tidyGlyph = React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2.5px', width: '15px', height: '15px' } },
+      [0, 1, 2, 3].map(i => React.createElement('div', { key: i, style: { border: '1.4px solid currentColor', borderRadius: '1.5px' } })));
+    const trashGlyph = React.createElement('div', { style: { position: 'relative', width: '15px', height: '16px' } },
+      React.createElement('div', { style: { position: 'absolute', left: '1px', top: '3px', width: '13px', height: '1.6px', background: 'currentColor', borderRadius: '1px' } }),
+      React.createElement('div', { style: { position: 'absolute', left: '5px', top: '0.5px', width: '5px', height: '1.6px', background: 'currentColor', borderRadius: '1px' } }),
+      React.createElement('div', { style: { position: 'absolute', left: '2.5px', top: '5px', width: '10px', height: '10px', borderLeft: '1.6px solid currentColor', borderRight: '1.6px solid currentColor', borderBottom: '1.6px solid currentColor', borderRadius: '0 0 2px 2px' } }));
+
+    return {
+      winTitle: s.screen === 'home' ? 'Lee' : pj[s.projectIdx].name,
+      winSub: s.screen === 'home' ? '' : ('Scene 14 · ' + you.name + (pj[s.projectIdx].due ? ' · due ' + pj[s.projectIdx].due : '')),
+      settingsCardStyle: { width: '436px', background: '#f6f6f7', borderRadius: '11px', boxShadow: '0 26px 60px rgba(0,0,0,.34),0 0 0 .5px rgba(0,0,0,.2)', overflow: 'hidden', transform: 'translate(' + (s.setPos.x) + 'px,' + (s.setPos.y) + 'px)' },
+      onSettingsDrag: this.onSettingsDrag,
+      gearStyle: { width: '16px', height: '16px', background: '#6e6e73', WebkitMaskImage: 'url(uploads/gear-svgrepo-com.svg)', maskImage: 'url(uploads/gear-svgrepo-com.svg)', WebkitMaskSize: 'contain', maskSize: 'contain', WebkitMaskPosition: 'center', maskPosition: 'center', WebkitMaskRepeat: 'no-repeat', maskRepeat: 'no-repeat' },
+      goSettings: () => this.setState({ settingsOpen: true }),
+      closeSettings: () => this.setState({ settingsOpen: false }),
+      isSettings: s.settingsOpen || null,
+      goHome: this.go('home'), goNotes: this.go('notes'), goRecord: this.go('record'),
+      homeRowStyle: { height: '29px', display: 'flex', alignItems: 'center', gap: '7px', padding: '0 9px', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: s.screen === 'home' ? 590 : 400, color: s.screen === 'home' ? '#1d1d1f' : '#48484a', background: s.screen === 'home' ? '#fff' : 'transparent', boxShadow: s.screen === 'home' ? '0 0 0 .5px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.07)' : 'none' },
+      projects, stages,
+      isHome: s.screen === 'home' || null, isScript: s.screen === 'script' || null,
+      isNotes: s.screen === 'notes' || null, isRecord: s.screen === 'record' || null, isTakes: s.screen === 'takes' || null,
+
+      onImport: this.onImport,
+      importIdle: s.importState === 'idle' || null, importBusy: s.importState === 'busy' || null,
+      importFill: { position: 'absolute', left: 0, top: 0, bottom: 0, width: s.importPct + '%', background: '#1d1d1f', borderRadius: '2px', transition: 'width .06s linear' },
+      dropStyle: { height: '200px', borderRadius: '13px', border: '1.5px dashed ' + (s.importState === 'busy' ? 'rgba(0,0,0,.1)' : '#d1d1d6'), background: s.importState === 'busy' ? 'rgba(0,0,0,.02)' : '#fff', display: 'grid', placeItems: 'center', cursor: 'pointer', transition: 'border-color .2s, background .2s' },
+      homeCards: pj.map((p, i) => ({
+        name: p.name, role: p.roleTag || '·', meta: i === 0 ? '3 takes' : (i === 1 ? '1 take' : ''),
+        edited: 'Edited ' + p.edited, due: p.due ? 'Due ' + p.due : null,
+        dueStyle: { position: 'absolute', right: '9px', bottom: '9px', padding: '3px 8px', borderRadius: '11px', font: "400 9.5px 'Monaco',monospace", letterSpacing: '.02em', color: p.urgent ? '#fff' : 'rgba(255,255,255,.82)', background: p.urgent ? 'rgba(200,85,61,.92)' : 'rgba(255,255,255,.16)', backdropFilter: 'blur(6px)' },
+        onClick: () => this.setState({ projectIdx: i, screen: 'script' }),
+        style: { background: '#fff', borderRadius: '11px', overflow: 'hidden', cursor: 'pointer', boxShadow: '0 0 0 .5px rgba(0,0,0,.11),0 1px 3px rgba(0,0,0,.06)' },
+        thumbStyle: { height: '104px', background: '#2c2c2e', backgroundImage: 'repeating-linear-gradient(45deg,rgba(255,255,255,.04) 0 8px,rgba(255,255,255,0) 8px 16px)', position: 'relative' },
+        stripStyle: { position: 'absolute', left: 0, right: 0, top: 0, height: '4px', background: SWATCHES[i % SWATCHES.length] },
+        roleStyle: { font: "400 10px 'Monaco',monospace", color: p.roleTag ? SWATCHES[i % SWATCHES.length] : '#b0b0b5' },
+      })),
+
+      sheetRef: this.sheetRef, notesRef: this.notesRef,
+      onScriptUp: this.onScriptUp, onNotesUp: this.onNotesUp,
+      scriptRows: SCENE.map(b => mkRow(b, 1)), scriptRowsSm: SCENE.map(b => mkRow(b, .74)),
+      charRows, markRows, winRef: this.winRef,
+      charPreview: (hovC && !s.charSheet) || null,
+      charPreviewName: hovC ? hovC.name : '',
+      charPreviewMeta: hovN + (hovN === 1 ? ' line' : ' lines'),
+      charPreviewStyle: { position: 'absolute', left: (s.charHoverPos ? s.charHoverPos.x : 0) + 'px', top: (s.charHoverPos ? s.charHoverPos.y : 0) + 'px', width: '232px', padding: '11px 12px', boxSizing: 'border-box', borderRadius: '9px', background: 'rgba(20,20,22,.95)', boxShadow: '0 8px 26px rgba(0,0,0,.34)', zIndex: 100, pointerEvents: 'none', animation: 'leeFade .14s ease' },
+      charPreviewDot: { width: '9px', height: '9px', borderRadius: '50%', flex: 'none', background: hovC ? hovC.color : '#8e8e93' },
+      charPreviewNote: hovNote ? (hovNote.length > 132 ? hovNote.slice(0, 131).trimEnd() + '\u2026' : hovNote) : 'No notes yet',
+      charPreviewNoteStyle: { font: '400 11.5px/1.5 -apple-system,system-ui', color: hovNote ? 'rgba(255,255,255,.72)' : 'rgba(255,255,255,.38)', whiteSpace: 'pre-wrap' },
+      scriptPopup: (s.sel && s.selRect && s.selIn === 'script') || null,
+      scriptPopupStyle: popStyle(s.selRect ? s.selRect.x : 0, s.selRect ? s.selRect.y : 0, 720 - POPW - 4),
+      notesPopup: (s.sel && s.selRect && s.selIn === 'notes') || null,
+      notesPopupStyle: popStyle(s.selRect ? s.selRect.x : 0, s.selRect ? s.selRect.y : 0, 376 - POPW - 4),
+      selMarkOpts: MARKS.map(m => ({
+        onClick: () => this.setState(st => { const n = Object.assign({}, st.marks); if (n[st.sel] === m.id) delete n[st.sel]; else n[st.sel] = m.id; return { marks: n }; }),
+        style: { width: '22px', height: '22px', borderRadius: '50%', background: m.hex, cursor: 'pointer', flex: 'none', boxShadow: s.marks[s.sel] === m.id ? '0 0 0 2px #2c2c2e,0 0 0 3.5px ' + m.hex : 'none', transition: 'box-shadow .15s' },
+      })),
+      onNewNote: () => this.addCard('text', s.sel, ''),
+      plusHint: s.plusHint || null,
+      showPlusHint: () => this.setState({ plusHint: true }),
+      hidePlusHint: () => this.setState({ plusHint: false }),
+      plusHintStyle: { position: 'absolute', bottom: '31px', left: '50%', transform: 'translateX(-50%)', whiteSpace: 'nowrap', padding: '5px 9px', borderRadius: '6px', background: 'rgba(12,12,14,.95)', boxShadow: '0 3px 12px rgba(0,0,0,.4)', color: 'rgba(255,255,255,.92)', font: '400 11px -apple-system,system-ui', pointerEvents: 'none', animation: 'leeFade .13s ease' },
+      onNoteFromNotes: () => this.addCard('text', s.sel, ''),
+      noteDraft: s.noteDraft || null, noteDraftText: s.noteDraftText,
+      noteDraftTie: s.noteDraft ? segText(s.noteDraft) : '',
+      noteDraftDot: { width: '8px', height: '8px', borderRadius: '50%', flex: 'none', background: (s.noteDraft && this.markHex(s.noteDraft)) || '#dadade' },
+      noteDraftStyle: { position: 'absolute', right: '-56px', top: s.noteDraftY + 'px', width: '250px', background: '#fff', borderRadius: '10px', boxShadow: '0 0 0 .5px rgba(0,0,0,.14),0 12px 34px rgba(0,0,0,.2)', overflow: 'hidden', zIndex: 32, animation: 'leeUp .2s ease' },
+      onNoteDraftChange: e => this.setState({ noteDraftText: e.target.value }),
+      cancelNote: () => this.setState({ noteDraft: null, noteDraftText: '' }),
+      saveNote: () => this.addCard('text', s.noteDraft, s.noteDraftText),
+      saveNoteImage: () => this.addCard('image', s.noteDraft),
+
+      canvasRef: this.canvasRef, cards,
+      canvasStyle: { flex: 1, minWidth: 0, position: 'relative', overflow: 'hidden', background: '#f2f2f4', backgroundImage: 'radial-gradient(rgba(0,0,0,.075) .8px,transparent .8px)', backgroundSize: '22px 22px', cursor: (s.tool === 'note' || s.tool === 'image') ? 'crosshair' : 'default' },
+      onCanvasDown: this.onCanvasDown,
+      frameDraft: s.frameDraft || null,
+      frameDraftStyle: s.frameDraft ? { position: 'absolute', left: s.frameDraft.x + 'px', top: s.frameDraft.y + 'px', width: s.frameDraft.w + 'px', height: s.frameDraft.h + 'px', borderRadius: '9px', background: 'rgba(29,29,31,.05)', boxShadow: '0 0 0 1.5px rgba(29,29,31,.5)' } : {},
+      tools: toolDefs.map(t => ({ glyph: t.g, onClick: () => this.setState({ tool: t.k }),
+        style: { width: '38px', height: '38px', borderRadius: '10px', display: 'grid', placeItems: 'center', cursor: 'pointer', color: s.tool === t.k ? '#fff' : '#6e6e73', background: s.tool === t.k ? '#1d1d1f' : 'transparent', transition: 'background .15s, color .15s' } })),
+      actions: [
+        { g: tidyGlyph, on: true, act: () => this.setState(st => ({ cards: st.cards.map((c, i) => Object.assign({}, c, { x: 24 + (i % 2) * 244, y: 24 + Math.floor(i / 2) * 176 })) })) },
+        { g: trashGlyph, on: !!s.selCard, act: () => this.setState(st => ({ cards: st.cards.filter(c => c.id !== st.selCard), selCard: null, editCard: null, tieOpen: null })) },
+      ].map(a => ({ glyph: a.g, onClick: a.on ? a.act : null,
+        style: { width: '38px', height: '38px', borderRadius: '10px', display: 'grid', placeItems: 'center', cursor: a.on ? 'pointer' : 'default', color: a.on ? '#6e6e73' : '#d1d1d6', background: 'transparent', transition: 'color .15s' } })),
+
+      feedRef: this.feedRef,
+      eyelineOn: s.eyelineOn || null,
+      toggleEyeline: () => this.setState(st => ({ eyelineOn: !st.eyelineOn })),
+      eyeTrack: swTrack(s.eyelineOn), eyeKnob: swKnob(s.eyelineOn),
+      eyeBtnStyle: { width: '38px', height: '38px', borderRadius: '50%', display: 'grid', placeItems: 'center', cursor: 'pointer', flex: 'none', color: s.eyePanel ? '#1d1d1f' : ((s.eyelineOn || s.lookaway) ? '#d9a441' : 'rgba(255,255,255,.75)'), background: s.eyePanel ? '#fff' : ((s.eyelineOn || s.lookaway) ? 'rgba(217,164,65,.2)' : 'rgba(255,255,255,.15)'), transition: 'background .18s, color .18s' },
+      eyelineStyle: { position: 'absolute', left: 0, right: 0, top: s.eyelineY + 'px', height: '1px', background: 'rgba(217,164,65,.85)', zIndex: 10 },
+      onEyelineDown: this.startEyeline,
+
+      stageNode: React.createElement(LeeStage, {
+        lines: lineData, baseIdx: s.lineIdx, auto: s.auto, depth: s.depth,
+        lookaway: s.lookaway, pins: s.pins,
+        charColor: n => charOf(n).color,
+        wrapStyle: { position: 'absolute', left: 0, right: 0, top: 0, minHeight: '80px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '9px', paddingTop: (bandW + (clear ? 24 : 19)) + 'px', paddingBottom: (clear ? 16 : 21) + 'px', paddingLeft: (bandW + 90) + 'px', paddingRight: (bandW + 90) + 'px', boxSizing: 'border-box', background: clear ? 'transparent' : 'rgba(24,24,26,.95)', zIndex: 12, transition: 'background .28s ease, padding .28s ease' },
+        curStyle: { font: "400 27px/1.38 'Monaco',monospace", textAlign: 'center', maxWidth: '880px' },
+        partStyle: (g, isYou) => ({ color: g.hex || (isYou ? '#fff' : 'rgba(255,255,255,.48)'), textShadow: clear ? sh : 'none' }),
+        aheadStyle: i => ({ font: '400 ' + (i === 1 ? 17 : 15) + "px/1.45 'Monaco',monospace", color: 'rgba(255,255,255,' + (i === 1 ? .36 : .2) + ')', textAlign: 'center', textShadow: clear ? sh : 'none', maxWidth: '880px' }),
+        pinStyle: p => {
+          const fitsRight = p.x <= 0.66;
+          const base = { position: 'absolute', top: 'calc(' + (p.y * 100) + '% + 34px)', maxWidth: '360px', padding: clear ? '0' : '11px 15px', borderRadius: clear ? '0' : '10px', background: clear ? 'transparent' : 'rgba(24,24,26,.95)', font: "400 19px/1.45 'Monaco',monospace", zIndex: 14, textShadow: clear ? '0 1px 12px rgba(0,0,0,.85)' : 'none', textAlign: fitsRight ? 'left' : 'right' };
+          if (fitsRight) base.left = 'calc(' + (p.x * 100) + '% + 4px)';
+          else base.right = 'calc(' + ((1 - p.x) * 100) + '% + 4px)';
+          return base;
+        },
+        backStyle: stepArrow('left'), fwdStyle: stepArrow('right'),
+        stepBack: () => this.setState(st => ({ lineIdx: st.lineIdx - 1 })),
+        stepFwd: () => this.setState(st => ({ lineIdx: st.lineIdx + 1 })),
+      }),
+      countdownStyle: { position: 'absolute', inset: 0, background: 'rgba(22,22,24,.97)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '36px', zIndex: 20, pointerEvents: 'none', opacity: 0, animation: REC.active ? 'leeCd ' + REC.cd + 's linear forwards' : 'none' },
+      timeStyle: { font: "400 12px 'Monaco',monospace", letterSpacing: '.05em', color: rolling ? 'rgba(255,255,255,.95)' : 'rgba(255,255,255,.4)', transition: 'color .2s' },
+      timeLabel: mmss(elapsedD),
+      orbs: orbHexes.map(h => ({ style: { width: '44px', height: '44px', borderRadius: '50%', background: h, boxShadow: '0 0 34px ' + hexA(h, .42), animation: 'leeBreathe 1s ease-in-out infinite' } })),
+      camGlyph, micGlyph, camBtnStyle: iconBtn(s.cam), micBtnStyle: iconBtn(s.mic),
+      toggleCam: () => this.setState(st => ({ cam: !st.cam })), toggleMic: () => this.setState(st => ({ mic: !st.mic })),
+      lightBtnStyle: Object.assign(iconBtn(true), { background: s.lightPanel ? '#fff' : (s.lightOn ? ringCol(.34) : 'rgba(255,255,255,.15)') }),
+      lightGlyphFill: s.lightPanel ? '#1d1d1f' : (s.lightOn ? ringCol(1) : 'rgba(255,255,255,.8)'),
+      toggleLight: this.onLight,
+      lightOpen: s.lightPanel || null,
+      ringOn: (s.lightOn && s.light > 0.03) || null,
+      ringBandsOn: bandsOn || null,
+      ringWashStyle: { position: 'absolute', left: 0, right: 0, bottom: 0, top: '52px', background: ringCol(0.09 * I), mixBlendMode: 'screen', pointerEvents: 'none', zIndex: 93, transition: 'background .3s ease' },
+      ringGlowStyle: { position: 'absolute', left: 0, right: 0, bottom: 0, top: '52px', borderRadius: '34px', border: (ringW + 26) + 'px solid ' + ringCol(0.42 * I), filter: 'blur(34px)', pointerEvents: 'none', zIndex: 98, WebkitMaskImage: ringMask, maskImage: ringMask, transition: 'border-width .3s ease, border-color .3s ease' },
+      ringStyle: { position: 'absolute', left: 0, right: 0, bottom: 0, top: '52px', borderRadius: '30px', border: ringW + 'px solid ' + ringCol(0.5 + 0.44 * I), boxShadow: 'inset 0 0 ' + Math.round(ringW * 1.05) + 'px ' + ringCol(0.4 * I) + ', inset 0 0 ' + Math.round(ringW * 0.4) + 'px ' + ringCol(0.78 * I), pointerEvents: 'none', zIndex: 99, WebkitMaskImage: ringMask, maskImage: ringMask, transition: 'border-width .3s ease, border-color .3s ease, box-shadow .3s ease' },
+      ringLipStyle: { position: 'absolute', left: (ringW - 1) + 'px', right: (ringW - 1) + 'px', top: (52 + ringW - 1) + 'px', bottom: (ringW - 1) + 'px', borderRadius: '8px', border: '1.5px solid ' + ringCol(0.72 * I), boxShadow: '0 0 14px ' + ringCol(0.5 * I), pointerEvents: 'none', zIndex: 100, WebkitMaskImage: ringMask, maskImage: ringMask, transition: 'all .3s ease' },
+      cropBtnStyle: { width: '34px', height: '34px', borderRadius: '50%', display: 'grid', placeItems: 'center', cursor: 'pointer', flex: 'none', background: s.cropPanel ? '#fff' : (s.crop !== 'fit' ? 'rgba(255,255,255,.28)' : 'rgba(255,255,255,.13)'), transition: 'background .18s' },
+      cropGlyphStyle: { width: '17px', height: '17px', background: s.cropPanel ? '#1d1d1f' : 'rgba(255,255,255,.85)', WebkitMaskImage: 'url(uploads/crop-simple-svgrepo-com.svg)', maskImage: 'url(uploads/crop-simple-svgrepo-com.svg)', WebkitMaskSize: 'contain', maskSize: 'contain', WebkitMaskPosition: 'center', maskPosition: 'center', WebkitMaskRepeat: 'no-repeat', maskRepeat: 'no-repeat' },
+      toggleCropPanel: () => { if (s.cropPanel) this.closeAll(); else this.openOnly('cropPanel'); },
+      cropPanelOpen: s.cropPanel || null,
+      cropOpts: [{ k: 'fit', n: 'Fit' }, { k: 'wide', n: '16:9' }, { k: 'tall', n: '9:16' }].map(o => ({
+        name: o.n, onClick: () => this.setState({ crop: o.k }), style: segBtn(s.crop === o.k) })),
+      cropOn: s.crop !== 'fit' || null,
+      cropFrameStyle: Object.assign({}, frameGeom, { boxShadow: '0 0 0 9999px #000', pointerEvents: 'none', zIndex: 8 }),
+      gridWrapStyle: Object.assign({}, frameGeom, { pointerEvents: 'none', zIndex: 9 }),
+      feedInnerStyle: { position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', transform: s.mirror ? 'scaleX(-1)' : 'none', transition: 'transform .3s cubic-bezier(.4,.9,.3,1)' },
+      gridOn: s.grid || null,
+      toggleGrid: () => this.setState(st => ({ grid: !st.grid })),
+      toggleMirror: () => this.setState(st => ({ mirror: !st.mirror })),
+      mirrorBtnStyle: { width: '34px', height: '34px', borderRadius: '50%', display: 'grid', placeItems: 'center', cursor: 'pointer', flex: 'none', color: s.mirror ? '#1d1d1f' : 'rgba(255,255,255,.8)', background: s.mirror ? '#fff' : 'rgba(255,255,255,.13)', transition: 'background .18s, color .18s' },
+      gridBtnStyle: { width: '34px', height: '34px', borderRadius: '50%', display: 'grid', placeItems: 'center', cursor: 'pointer', flex: 'none', color: s.grid ? '#1d1d1f' : 'rgba(255,255,255,.8)', background: s.grid ? '#fff' : 'rgba(255,255,255,.13)', transition: 'background .18s, color .18s' },
+      meterStyle: { display: 'flex', alignItems: 'flex-end', gap: '3px', height: '20px', opacity: s.mic ? 1 : .3, transition: 'opacity .2s' },
+      meterBars: [0, 1, 2, 3, 4].map(i => ({ style: { width: '3px', height: [9, 15, 20, 14, 8][i] + 'px', borderRadius: '2px', background: i > 3 ? 'rgba(200,85,61,.85)' : 'rgba(255,255,255,.62)', transformOrigin: 'bottom', animation: s.mic ? 'leeLvl ' + (0.62 + i * 0.13) + 's ease-in-out infinite' : 'none', transform: s.mic ? 'none' : 'scaleY(.22)' } })),
+      lightTrackS: swTrack(s.lightOn), lightKnobS: swKnob(s.lightOn),
+      tipRing: () => this.setState({ tip: 'ring' }), tipEye: () => this.setState({ tip: 'eye' }),
+      tipLook: () => this.setState({ tip: 'look' }), tipOff: () => this.setState({ tip: null }),
+      tipRingOn: s.tip === 'ring' || null, tipEyeOn: s.tip === 'eye' || null, tipLookOn: s.tip === 'look' || null,
+      tipDotRing: infoDot(s.tip === 'ring'), tipDotEye: infoDot(s.tip === 'eye'), tipDotLook: infoDot(s.tip === 'look'),
+      tipStyle: { position: 'absolute', left: '-8px', top: '24px', width: '218px', padding: '9px 11px', borderRadius: '8px', background: 'rgba(20,20,22,.95)', boxShadow: '0 6px 20px rgba(0,0,0,.28)', font: '400 11.5px/1.45 -apple-system,system-ui', color: 'rgba(255,255,255,.86)', letterSpacing: 0, zIndex: 90, pointerEvents: 'none', animation: 'leeFade .13s ease' },
+      toggleLightOnly: () => this.setState(st => ({ lightOn: !st.lightOn })),
+      eyePillStyle: { position: 'absolute', right: '20px', top: '-13px', height: '26px', padding: '0 10px', borderRadius: '13px', background: 'rgba(28,28,30,.82)', boxShadow: 'inset 0 0 0 .5px rgba(217,164,65,.45)', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'ns-resize', backdropFilter: 'blur(8px)', transition: 'right .28s ease' },
+      winRef: this.winRef, onWinMove: this.onWinMove,
+      stopIt: e => e.stopPropagation(),
+      lookawayOn: s.lookaway || null,
+      toggleLookaway: () => this.setState(st => ({ lookaway: !st.lookaway })),
+      lookTrack: swTrack(s.lookaway, true), lookTrackLight: swTrack(s.lookaway), lookKnob: swKnob(s.lookaway),
+      toggleEyePanel: () => { if (s.eyePanel) this.closeAll(); else this.openOnly('eyePanel'); },
+      eyePanelOpen: s.eyePanel || null,
+      eyeTrackDark: swTrack(s.eyelineOn, true),
+      pins: Object.keys(s.pins).map(name => {
+        const c = charOf(name), p = s.pins[name];
+        return { name, init: name.charAt(0), onDown: this.startPin(name),
+          onDelete: e => { e.preventDefault(); e.stopPropagation(); this.setState(st => { const n = Object.assign({}, st.pins); delete n[name]; return { pins: n }; }); },
+          wrapStyle: { position: 'absolute', left: (p.x * 100) + '%', top: (p.y * 100) + '%', width: '30px', height: '30px', zIndex: 15 },
+          pinStyle: { position: 'absolute', left: 0, top: 0, width: '30px', height: '30px', borderRadius: '50% 50% 50% 2px', background: c.color, display: 'grid', placeItems: 'center', cursor: 'grab', boxShadow: '0 2px 8px rgba(0,0,0,.4), inset 0 0 0 1px rgba(255,255,255,.22)' },
+          initStyle: { font: "400 12px 'Monaco',monospace", color: '#fff', letterSpacing: '.04em' },
+          tailStyle: { display: 'none' },
+          xStyle: { position: 'absolute', left: '23px', top: '-7px', width: '17px', height: '17px', borderRadius: '50%', background: 'rgba(28,28,30,.9)', boxShadow: 'inset 0 0 0 .5px rgba(255,255,255,.28)', color: 'rgba(255,255,255,.8)', display: 'grid', placeItems: 'center', font: '400 11px/1 -apple-system,system-ui', cursor: 'pointer' } };
+      }),
+      pinRows: s.chars.filter(c => !c.you).map(c => {
+        const has = !!s.pins[c.name];
+        return { name: c.name, btn: has ? '\u00D7' : '+',
+          onToggle: () => this.setState(st => {
+            const n = Object.assign({}, st.pins);
+            if (n[c.name]) delete n[c.name]; else n[c.name] = { x: 0.5, y: 0.4 };
+            return { pins: n };
+          }),
+          btnStyle: { width: '16px', height: '16px', borderRadius: '50%', flex: 'none', display: 'grid', placeItems: 'center', cursor: 'pointer', font: '400 11px/1 -apple-system,system-ui', color: has ? 'rgba(255,255,255,.6)' : c.color, background: has ? 'rgba(255,255,255,.1)' : hexA(c.color, .22) },
+          btnStyleLight: { width: '16px', height: '16px', borderRadius: '50%', flex: 'none', display: 'grid', placeItems: 'center', cursor: 'pointer', font: '400 11px/1 -apple-system,system-ui', color: has ? '#6e6e73' : c.color, background: has ? 'rgba(0,0,0,.07)' : hexA(c.color, .16) },
+          dotStyle: { width: '8px', height: '8px', borderRadius: '50%', background: c.color, flex: 'none', opacity: has ? 1 : .4 } };
+      }),
+
+      intensityFill: fill(s.light, 'rgba(255,255,255,.82)'), intensityKnob: knob(s.light), tempKnob: knob(s.temp),
+      onIntensityDown: e => this.dragTrack(e, v => this.setState({ light: v })),
+      onTempDown: e => this.dragTrack(e, v => this.setState({ temp: v })),
+      promptBtnStyle: Object.assign(iconBtn(true), { background: s.promptPanel ? '#fff' : 'rgba(255,255,255,.15)', color: s.promptPanel ? '#1d1d1f' : '#fff' }),
+      togglePrompt: () => { if (s.promptPanel) this.closeAll(); else this.openOnly('promptPanel'); },
+      promptPanelOpen: s.promptPanel || null,
+      surfaceOpts: [{ k: 'bar', n: 'Bar' }, { k: 'clear', n: 'Clear' }].map(o => ({ name: o.n, onClick: () => this.setState({ surface: o.k }), style: segBtn(s.surface === o.k) })),
+      depthOpts: [0, 1, 2, 3].map(d => ({ name: d === 0 ? 'Off' : String(d), onClick: () => this.setState({ depth: d }), style: segBtn(s.depth === d) })),
+      toggleAuto: () => this.setState(st => ({ auto: !st.auto })), autoTrack: swTrack(s.auto, true), autoKnob: swKnob(s.auto),
+      togglePreview: this.togglePreview,
+      previewLabel: s.previewing ? 'Stop' : 'Preview',
+      previewBtnStyle: { height: '30px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', fontSize: '11.5px', fontWeight: 510, color: s.previewing ? '#1d1d1f' : '#fff', background: s.previewing ? '#fff' : 'rgba(255,255,255,.16)', transition: 'background .16s, color .16s' },
+      previewGlyphStyle: s.previewing
+        ? { width: '9px', height: '11px', borderLeft: '3px solid #1d1d1f', borderRight: '3px solid #1d1d1f', boxSizing: 'border-box' }
+        : { width: 0, height: 0, borderLeft: '9px solid #fff', borderTop: '6px solid transparent', borderBottom: '6px solid transparent' },
+
+      recBtnStyle: { width: '54px', height: '54px', borderRadius: '50%', boxShadow: 'inset 0 0 0 2.5px rgba(255,255,255,.7)', display: 'grid', placeItems: 'center', cursor: 'pointer', flex: 'none' },
+      recInnerStyle: rolling
+        ? { width: '18px', height: '18px', borderRadius: '3px', background: '#c8553d', transition: 'all .22s cubic-bezier(.3,1.3,.5,1)' }
+        : { width: '40px', height: '40px', borderRadius: '50%', background: '#c8553d', transition: 'all .22s cubic-bezier(.3,1.3,.5,1)' },
+      onRecord: this.onRecord,
+
+      readerPanelStyle: { width: s.readerOpen ? '282px' : '176px', flex: 'none', borderLeft: '.5px solid rgba(0,0,0,.13)', background: '#f5f5f7', display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 97, boxSizing: 'border-box', transition: 'width .26s cubic-bezier(.3,.9,.3,1)' },
+      controlBarStyle: { position: 'absolute', left: 0, right: 0, bottom: 0, height: '98px', zIndex: 18, padding: '0 24px', background: 'linear-gradient(rgba(18,18,20,0),rgba(18,18,20,.8))' },
+      leftClusterStyle: { position: 'absolute', left: '24px', bottom: '28px', display: 'flex', alignItems: 'center', gap: '13px' },
+      rightClusterStyle: { position: 'absolute', right: '24px', bottom: '28px', display: 'flex', alignItems: 'center', gap: '11px' },
+      recClusterStyle: { position: 'absolute', left: '50%', bottom: '20px', transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '9px' },
+      sidebarStyle: { width: '246px', flex: 'none', background: 'rgba(242,242,244,.92)', borderRight: '.5px solid rgba(0,0,0,.13)', display: 'flex', flexDirection: 'column', padding: '12px 10px 10px', backdropFilter: 'blur(24px)', position: 'relative', zIndex: 97, boxSizing: 'border-box' },
+      toggleReader: () => this.setState(st => ({ readerOpen: !st.readerOpen })),
+      readerOpen: s.readerOpen || null, readerCaret: caret(s.readerOpen),
+      voice: s.voice, voiceCaret: caret(s.voiceList), voiceListOpen: s.voiceList || null,
+      toggleVoiceList: () => this.setState(st => ({ voiceList: !st.voiceList })),
+      voices: VOICES.map(v => ({ name: v, onClick: () => this.setState({ voice: v, voiceList: false }),
+        style: { height: '31px', display: 'flex', alignItems: 'center', padding: '0 11px', cursor: 'pointer', fontSize: '12.5px', color: '#3a3a3c' },
+        checkStyle: { fontSize: '11px', color: '#6f8a6d', opacity: s.voice === v ? 1 : 0 } })),
+      volFill: fill(s.volume, 'rgba(0,0,0,.55)'), volKnob: knob(s.volume),
+      onVolumeDown: e => this.dragTrack(e, v => this.setState({ volume: v })),
+      toggleInFile: () => this.setState(st => ({ inFile: !st.inFile })), inFileTrack: swTrack(s.inFile), inFileKnob: swKnob(s.inFile),
+      toggleChars: () => this.setState(st => ({ charsOpen: !st.charsOpen })), charsOpen: s.charsOpen || null, charsCaret: caret(s.charsOpen),
+      readerChars: s.chars.filter(c => !c.you).map((c, i, arr) => ({
+        name: c.name, onClick: () => this.setState(st => ({ readFor: Object.assign({}, st.readFor, { [c.name]: !st.readFor[c.name] }) })),
+        style: { height: '33px', display: 'flex', alignItems: 'center', gap: '9px', padding: '0 11px', cursor: 'pointer', borderBottom: i < arr.length - 1 ? '.5px solid rgba(0,0,0,.08)' : 'none' },
+        dotStyle: { width: '9px', height: '9px', borderRadius: '50%', flex: 'none', background: c.color },
+        checkStyle: { fontSize: '11px', color: '#6f8a6d', opacity: s.readFor[c.name] ? 1 : 0 },
+      })),
+      stepperStyle: { display: 'flex', alignItems: 'center', borderRadius: '6px', overflow: 'hidden', background: '#fff', boxShadow: '0 0 0 .5px rgba(0,0,0,.16),0 1px 1px rgba(0,0,0,.05)', flex: 'none' },
+      cdLabel: s.countdown + 's',
+      toggleSlate: () => this.setState(st => ({ slate: !st.slate })),
+      slateTrack: swTrack(s.slate), slateKnob: swKnob(s.slate),
+      toggleRetake: () => this.setState(st => ({ autoRetake: !st.autoRetake })),
+      retakeTrack: swTrack(s.autoRetake), retakeKnob: swKnob(s.autoRetake),
+      diskLabel: s.takes.length + (s.takes.length === 1 ? ' take' : ' takes'),
+      diskRight: (Math.round(s.takes.reduce((a, t) => a + t.dur, 0) * 0.042 * 10) / 10).toFixed(1) + ' GB / 64',
+      diskFill: { position: 'absolute', left: 0, top: 0, bottom: 0, width: Math.min(100, s.takes.reduce((a, t) => a + t.dur, 0) * 0.066) + '%', borderRadius: '2px', background: '#6f8a6d', transition: 'width .3s ease' },
+      cdDown: () => this.setState({ countdown: Math.max(1, s.countdown - 1) }),
+      cdUp: () => this.setState({ countdown: Math.min(9, s.countdown + 1) }),
+
+      takeRows: s.takes.map((t, i) => ({
+        label: t.label, meta: mmss(t.dur) + (t.slate ? ' · slate' : ''),
+        onClick: () => { clearInterval(this.playT); this.setState({ selTake: i, playhead: 0, playing: false, exportState: 'idle' }); },
+        onStar: e => { e.stopPropagation(); this.setState(st => ({ takes: st.takes.map((x, j) => j === i ? Object.assign({}, x, { starred: !x.starred }) : x) })); },
+        style: { height: '58px', display: 'flex', alignItems: 'center', gap: '10px', padding: '0 10px', borderRadius: '8px', cursor: 'pointer', marginBottom: '3px', background: s.selTake === i ? '#fff' : 'transparent', boxShadow: s.selTake === i ? '0 0 0 .5px rgba(0,0,0,.09),0 1px 3px rgba(0,0,0,.08)' : 'none', transition: 'background .15s' },
+        thumbStyle: { width: '54px', height: '38px', flex: 'none', borderRadius: '5px', background: '#2c2c2e', backgroundImage: 'repeating-linear-gradient(45deg,rgba(255,255,255,.05) 0 6px,rgba(255,255,255,0) 6px 12px)' },
+        starStyle: { fontSize: '13px', flex: 'none', cursor: 'pointer', color: t.starred ? '#cf9a3c' : '#d1d1d6' },
+      })),
+      playing: s.playing || null, togglePlay: this.togglePlay,
+      playGlyphStyle: s.playing
+        ? { width: '11px', height: '13px', borderLeft: '3.5px solid #fff', borderRight: '3.5px solid #fff', boxSizing: 'border-box' }
+        : { width: 0, height: 0, borderLeft: '11px solid #fff', borderTop: '7px solid transparent', borderBottom: '7px solid transparent', marginLeft: '3px' },
+      playheadLabel: mmss(s.playhead), durLabel: mmss(take.dur),
+      scrubFill: fill(Math.min(1, s.playhead / (take.dur || 1)), 'rgba(255,255,255,.85)'),
+      scrubKnob: knob(Math.min(1, s.playhead / (take.dur || 1))),
+      onScrubDown: e => this.dragTrack(e, v => this.setState({ playhead: v * (take.dur || 1) })),
+      exportBtnLabel: 'Export bundle',
+      exportRows: [{ k: 'video', name: 'Video', spec: '1080p · h.264' }, { k: 'audio', name: 'Audio', spec: '48 kHz · wav' }].map((f, i) => ({
+        name: f.name, spec: f.spec,
+        onClick: () => this.setState(st => ({ formats: Object.assign({}, st.formats, { [f.k]: !st.formats[f.k] }), exportState: 'idle' })),
+        style: { height: '50px', display: 'flex', alignItems: 'center', gap: '11px', padding: '0 12px', cursor: 'pointer', borderBottom: i === 0 ? '.5px solid rgba(0,0,0,.08)' : 'none' },
+        boxStyle: { width: '17px', height: '17px', flex: 'none', borderRadius: '5px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: s.formats[f.k] ? '#1d1d1f' : 'transparent', boxShadow: s.formats[f.k] ? 'none' : 'inset 0 0 0 1.3px #c7c7cc', transition: 'background .15s' },
+        checkStyle: { fontSize: '9.5px', lineHeight: 1, color: '#fff', opacity: s.formats[f.k] ? 1 : 0 },
+      })),
+      checkRows: [
+        { label: 'Slate attached', ok: !!take.slate, fix: () => this.setState({ slate: true }) },
+        { label: 'Vertical 9:16', ok: s.crop === 'tall', fix: () => this.setState({ crop: 'tall' }) },
+        { label: 'Separate audio', ok: !!s.formats.audio, fix: () => this.setState(st => ({ formats: Object.assign({}, st.formats, { audio: true }) })) },
+        { label: 'Named for casting', ok: true, fix: null },
+        { label: 'Under two minutes', ok: take.dur <= 120, fix: null },
+      ].map((c, i, arr) => ({
+        label: c.label, fixable: (!c.ok && c.fix) ? true : null,
+        onClick: () => { if (!c.ok && c.fix) { c.fix(); this.setState({ exportState: 'idle' }); } },
+        style: { height: '34px', display: 'flex', alignItems: 'center', gap: '10px', padding: '0 12px', cursor: (!c.ok && c.fix) ? 'pointer' : 'default', borderBottom: i < arr.length - 1 ? '.5px solid rgba(0,0,0,.07)' : 'none' },
+        markStyle: { width: '15px', height: '15px', flex: 'none', borderRadius: '50%', display: 'grid', placeItems: 'center', background: c.ok ? '#6f8a6d' : 'transparent', boxShadow: c.ok ? 'none' : 'inset 0 0 0 1.3px #d1d1d6' },
+        tickStyle: { fontSize: '8.5px', lineHeight: 1, color: '#fff', opacity: c.ok ? 1 : 0 },
+        labelStyle: { fontSize: '12px', flex: 1, color: c.ok ? '#3a3a3c' : '#8e8e93' },
+      })),
+      presetOpts: [{ k: 'standard', n: 'Standard' }, { k: 'vertical', n: 'Vertical' }, { k: 'package', n: 'Package' }].map(p => ({
+        name: p.n,
+        onClick: () => this.setState({
+          preset: p.k, exportState: 'idle',
+          crop: p.k === 'vertical' ? 'tall' : 'wide',
+          slate: p.k !== 'standard',
+          formats: { video: true, audio: p.k === 'package' },
+        }),
+        style: { flex: 1, height: '26px', display: 'grid', placeItems: 'center', borderRadius: '7px', cursor: 'pointer', fontSize: '11.5px', fontWeight: s.preset === p.k ? 590 : 400, color: s.preset === p.k ? '#fff' : '#3a3a3c', background: s.preset === p.k ? '#1d1d1f' : '#fff', boxShadow: s.preset === p.k ? 'none' : '0 0 0 .5px rgba(0,0,0,.14)' },
+      })),
+      bundleFolder: 'Holdovers_' + you.name + '_sc14/',
+      bundleFiles: [{ name: 'Holdovers_' + you.name + '_sc14_' + take.label.toLowerCase().replace(' ', '') + '.mp4' }]
+        .concat(s.formats.audio ? [{ name: 'Holdovers_' + you.name + '_sc14_' + take.label.toLowerCase().replace(' ', '') + '.wav' }] : [])
+        .concat(s.cards.length ? [{ name: 'sides_marked.pdf' }] : []),
+      bundleDone: 'Holdovers_' + you.name + '_sc14.zip',
+      fileName: 'Holdovers_' + you.name + '_sc14_' + take.label.toLowerCase().replace(' ', '') + '.' + ext,
+      exportIdle: s.exportState === 'idle' || null,
+      exportBusy: s.exportState === 'busy' || null,
+      exportDone: s.exportState === 'done' || null,
+      exportFill: { position: 'absolute', left: 0, top: 0, bottom: 0, width: s.exportPct + '%', background: '#1d1d1f', borderRadius: '2px', transition: 'width .07s linear' },
+      onExport: this.onExport,
+
+      charSheet: s.charSheet || null,
+      closeCharSheet: () => this.setState({ charSheet: null }),
+      sheetName: s.charSheet || '',
+      sheetDotStyle: { width: '11px', height: '11px', borderRadius: '50%', flex: 'none', background: sheetChar ? sheetChar.color : '#8e8e93' },
+      sheetSwatches: SWATCHES.map(hex => {
+        const owner = s.chars.find(c => c.color === hex && c.name !== s.charSheet);
+        const mine = !!(sheetChar && sheetChar.color === hex);
+        return {
+          onClick: owner ? null : () => this.setState(st => ({ chars: st.chars.map(c => c.name === st.charSheet ? Object.assign({}, c, { color: hex }) : c) })),
+          title: owner ? 'Used by ' + owner.name : '',
+          taken: owner ? owner.name.slice(0, 1) : '',
+          takenStyle: owner
+            ? { width: '15px', height: '15px', borderRadius: '50%', background: '#fff', display: 'grid', placeItems: 'center', font: "400 9.5px 'Monaco',monospace", color: '#1d1d1f', lineHeight: 1 }
+            : { display: 'none' },
+          style: { width: '22px', height: '22px', borderRadius: '50%', background: hex, display: 'grid', placeItems: 'center', cursor: owner ? 'default' : 'pointer', flex: 'none', boxShadow: mine ? '0 0 0 2px #fff,0 0 0 3.5px ' + hex : 'none', transition: 'box-shadow .15s' },
+        };
+      }),
+      sheetNote: s.charSheet ? (s.charNotes[s.charSheet] || '') : '',
+      sheetPlaceholder: 'Nothing written yet. Click here to type. Suggestions: history, wants/needs, relationship.',
+      sheetLineCount: sheetLines.length + (sheetLines.length === 1 ? ' line' : ' lines'),
+      sheetCueTitle: sheetIsYou ? 'Your cues' : 'Cues your lines',
+      sheetCues: sheetCues,
+      sheetNoCues: sheetCues.length ? null : true,
+      sheetNoCueText: sheetIsYou ? 'No one cues you in this scene.' : 'None of ' + (s.charSheet || '') + '\u2019s lines cue yours.',
+      onSheetNote: e => { const v = e.target.value; this.setState(st => ({ charNotes: Object.assign({}, st.charNotes, { [st.charSheet]: v }) })); },
+      toggleSheetYou: () => this.setState(st => ({ chars: st.chars.map(c => Object.assign({}, c, { you: c.name === st.charSheet ? !c.you : false })) })),
+      sheetYouTrack: swTrack(!!(sheetChar && sheetChar.you)), sheetYouKnob: swKnob(!!(sheetChar && sheetChar.you)),
+    };
+  }
+}
+</script>
+</body>
+</html>

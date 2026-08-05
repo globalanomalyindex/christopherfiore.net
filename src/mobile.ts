@@ -66,6 +66,7 @@ import { ABOUT, ABOUT_SECTIONS, AT_A_GLANCE } from './data/about.ts';
 import { DF2TM, DF2TM_GLANCE, DF2TM_SECTIONS } from './data/df2tm.ts';
 import { MFNY, MFNY_GLANCE, MFNY_SECTIONS } from './data/mfny.ts';
 import { CHIPOTLE, CHIPOTLE_GLANCE, CHIPOTLE_SECTIONS } from './data/chipotle.ts';
+import { LEE, LEE_GLANCE, LEE_SECTIONS } from './data/lee.ts';
 import type { TableRow } from './data/types.ts';
 
 /** Viewport width below which the fixed stage stops being legible. */
@@ -555,14 +556,74 @@ function chipotleStudy(): (Node | null)[] {
   ];
 }
 
+/**
+ * lee, inlined like the other four subpage rows.
+ *
+ * The stage walks six plate views; a phone cannot, so all six are printed in
+ * order with their captions. The boundary rides with the entry rather than
+ * waiting for the sections, because on a phone a reader can land on any one of
+ * these six pictures of an app window without the surrounding argument, and
+ * there is no app.
+ */
+function leeStudy(): (Node | null)[] {
+  const rec = CASES.find((c) => c.id === 'lee');
+  const shots: [string, string, string][] = [
+    ['projects/lee-script.webp',
+     'The script screen: a scene in standard screenplay format on a white page with three phrases highlighted in different colors, and the character and mark panels on the right',
+     'the script, as a design render · marks go on a phrase, not a line, and the actor names the colors'],
+    ['projects/lee-notes.webp',
+     'The notes screen: the script in a column on the left and a dotted canvas on the right holding note frames, empty image slots and a tool strip',
+     'the notes canvas, as a design render · every note is tied to a phrase, and the tie is what carries the color'],
+    ['projects/lee-record.webp',
+     'The record screen: the current line in a bar at the top of the camera feed under the lens, an amber eyeline guide, glyph buttons and a centered record button, with the reader panel on the right',
+     'the record screen, as a design render · the lines sit under the lens, and the camera feed is a placeholder'],
+    ['projects/lee-light.webp',
+     'The same record screen with the ring light on: a warm emissive border framing the feed, a wash over the window, and a soft hole in the light around the pointer',
+     'the ring light, as a design render · the display is the light, and it cuts a hole around the cursor so the interface stays usable'],
+    ['projects/lee-takes.webp',
+     'The takes screen: takes listed with durations and stars, a player in the middle, and an export panel with format checkboxes, a casting checklist and the generated file names',
+     'takes and export, as a design render · export is a panel here, not a place, because you export the take you just picked'],
+    ['projects/lee-wireframes.webp',
+     'The wireframe document: a round of low fidelity options side by side, each with a short id and a numbered list of what it argues',
+     'the exploration · three rounds of options, newest at the top, and every rejected one kept its id'],
+  ];
+  return [
+    el(
+      'article',
+      { class: 'm-case m-entry' },
+      el('div', { class: 'm-caseidx' }, rec ? rec.idx : '', el('span', {}, 'concept')),
+      el('h3', { class: 'm-casename' }, LEE.title),
+      el('p', { class: 'm-caseline' }, rec ? rec.line : LEE.descriptor),
+      el('span', { class: 'm-meta' }, `${LEE.role} · ${LEE.surface}`),
+      el(
+        'p',
+        { class: 'm-boundary' },
+        `${LEE.state}. the prototype is html standing in for a mac app, and every camera feed in the renders is a placeholder.`,
+      ),
+      el(
+        'div',
+        { class: 'm-caselinks' },
+        link(asset(LEE.demoHref), LEE.demoLabel),
+        link(asset(LEE.wireHref), 'the wireframes'),
+      ),
+    ),
+    ...shots.map(([src, alt, cap]) => figure(src, alt, cap, 1456, 874)),
+    block('lee-short', 'the short version', null, el('p', { class: 'm-stand' }, LEE.standfirst)),
+    ...LEE_SECTIONS.map((sec) =>
+      block(`lee-${sec.id}`, sec.name, null, ...sec.paras.map((t) => body(t))),
+    ),
+    block('lee-glance', 'at a glance', null, table(LEE_GLANCE)),
+  ];
+}
+
 /* ------------------------------------------------------------------ 01 */
 
 function productsSection(): HTMLElement {
   /*
-    Seven rows, not eleven. Four records carry `subpage` instead of `href`:
-    chellbook, mfny, chipotle and df2tm. On the stage each opens a screen of
-    its own; there are no subpages here, so all four are printed in full below
-    instead of appearing as rows with nothing to link to.
+    Seven rows, not twelve. Five records carry `subpage` instead of `href`:
+    chellbook, lee, mfny, chipotle and df2tm. On the stage each opens a screen
+    of its own; there are no subpages here, so all five are printed in full
+    below instead of appearing as rows with nothing to link to.
   */
   const rows = CASES.filter((c) => !c.subpage).map((c) =>
     el(
@@ -594,6 +655,7 @@ function productsSection(): HTMLElement {
     el('p', { class: 'm-thesis' }, CASES_THESIS),
     ...rows,
     ...chellbookStudy(),
+    ...leeStudy(),
     ...mfnyStudy(),
     ...chipotleStudy(),
     ...df2tmStudy(),

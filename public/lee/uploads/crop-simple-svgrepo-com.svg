@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<!--
+  Redrawn. The handoff references uploads/crop-simple-svgrepo-com.svg for the
+  framing button on the Record screen but does not ship the file, so the button
+  paints as a blank disc here and as a solid white square in the handoff's own
+  render 08-record-setup.png. Same geometry as the icon it replaces: a 24 unit
+  box, two crossed crop marks, used as a CSS mask so it takes its color from
+  the button.
+-->
+<svg width="800px" height="800px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M5.6 1.5V18.4H22.5" stroke="#000000" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M1.5 5.6H18.4V22.5" stroke="#000000" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

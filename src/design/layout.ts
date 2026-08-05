@@ -41,19 +41,20 @@ export const MENU = {
  *   tableHeaderY  608.97                  clears the fig caption
  *   tableHeaderH   31.818   =  7/16       the column labels are one 11.5px line
  *   rowsY         640.79    = 608.97 + 31.818
- *   rowH          26.4464   = 290.91 / 11 cases, ending at 931.70
+ *   rowH          24.2425   = 290.91 / 12 cases, ending at 931.70
  *   motion.y      931.70
  *   motion.h       90.9     = 20/16       ≈ 3.4 case rows, landing on 1022.6
  *
  * `rowH` is the only one of these that moves. The band from `rowsY` to the
  * motion band is fixed at 290.91, so every case added redivides it: 36.364 at
- * eight, 32.323 at nine, 29.091 at ten, 26.4464 at eleven. The case name goes
- * down with it, 34 to 28 to 25 to 23.
+ * eight, 32.323 at nine, 29.091 at ten, 26.4464 at eleven, 24.2425 at twelve.
+ * The case name goes down with it, 34 to 28 to 25 to 23 to 21.
  *
- * The tight dimension is not the name, which has ~148px of spare track at 23px.
- * It is the `line` column: 581.818 less 40 of padding is 541.8 usable, and a
- * `line` past roughly 82 characters wraps to two lines, overflowing a 25.4px
- * cell by about 13.7px and colliding with the rows above and below it. Keep
+ * The tight dimension is not the name, which has spare track to give at every
+ * size it has taken. It is the `line` column, and it does not shrink with the
+ * rows: `cellLine` is a flat 14px in 581.818 less 40 of padding, so 541.8 is
+ * usable at every row count, and a `line` past roughly 82 characters wraps to
+ * two lines and overflows a 24.2px cell into the rows above and below it. Keep
  * every `CaseRecord.line` inside that.
  *
  * `rowSplit` is what lets the case rows be links. Each row is now an anchor to
@@ -70,7 +71,7 @@ export const MENU = {
  * the footer's.
  *
  * The key-frame panel, title, thesis, header and footer keep their handoff
- * geometry. Case names drop from 34px to 23px to sit in the shorter row.
+ * geometry. Case names drop from 34px to 21px to sit in the shorter row.
  */
 export const PAGE1 = {
   headerH: 77.18, // handoff
@@ -80,19 +81,24 @@ export const PAGE1 = {
   panel: { x: 1090.9, y: 122, w: 727.27, h: 436.36 }, // adapted y (was 149.9)
   figCaption: { x: 1090.9, y: 572, w: 727.27 },
   /*
-    Eleven cases now. The band between `rowsY` and the motion band is fixed at
+    Twelve cases now. The band between `rowsY` and the motion band is fixed at
     931.7 - 640.79 = 290.91, so the row height is that divided by the case
     count, and the name size follows it down: 36.364/34, then 32.323/28, then
-    29.091/25, now 290.91/11 = 26.4464 with the name at 23. 11 × 26.4464 =
-    290.9104, which puts the last rule on 931.70, still the motion band.
+    29.091/25, then 26.4464/23, now 290.91/12 = 24.2425 with the name at 21.
+    12 × 24.2425 = 290.91, which puts the last rule on 931.70, still the
+    motion band.
+
+    The `line` column does NOT follow: `cellLine` is a flat 14px in a fixed
+    581.818px column, so its ~82 character ceiling is the same at every row
+    count. Only the name shrinks.
   */
-  rowH: 26.4464,
+  rowH: 24.2425,
   tableHeaderY: 608.97, // adapted
   tableHeaderH: 31.818, // adapted, 7/16 module (was one full row)
   rowsY: 640.79, // adapted — the rows fill exactly to the motion band at 931.7
   rowCols: '145.455px 363.636px 581.818px 145.455px 1fr', // handoff, inside the row anchor
   rowSplit: '1fr 218.181px', // adapted — row anchor, then the source column (3 modules)
-  nameSize: 23,
+  nameSize: 21,
   /** The motion archive band: full bleed, 20/16 module, sitting on the footer. */
   motion: { y: 931.7, h: 90.9, cols: '472.727px 1fr 327.272px', still: 68 },
   footer: { y: 1022.6, h: 57.4 }, // handoff
@@ -294,6 +300,51 @@ export const CHIPOTLE_PAGE = {
   toggleY: 828,
   /** the one door: the interactive prototype */
   doors: { x: MODULE, y: 886, w: 727.27, h: 66, gap: 12 },
+  text: { x: 836.36, y: 336, w: 654.54 },
+  glance: { x: 1527.27, y: 336, w: STAGE.w - MODULE - 1527.27 },
+  glanceRowsY: 380,
+  secBarH: 34,
+  secBarGap: 12,
+  railW: 6,
+} as const;
+
+/**
+ * The lee subpage.
+ *
+ * CHIPOTLE_PAGE's numbers, for the same reason chipotle took MFNY_PAGE's: the
+ * three screens are one shape and should stay legible as a family. Written out
+ * rather than aliased so any one of them can diverge without dragging the
+ * others with it.
+ *
+ * Two things differ.
+ *
+ * The plate walks SIX views rather than four, so the toggle row is longer. Its
+ * six labels (script, notes, record, ring light, takes, wireframes) measure
+ * about 660px of the plate's 727.27 at 13px with .16em tracking, which fits on
+ * one row but is close enough that a seventh would have to wrap. A seventh view
+ * means shortening labels, not adding a row.
+ *
+ * And the title is three characters against chipotle's twenty three. At 152px
+ * it draws about 240px wide, which leaves the title block far emptier than its
+ * siblings, so the descriptor beneath it does more of the work here. The size
+ * stays 152 anyway: a short word set at the family's own display size is the
+ * whole point of having a family.
+ */
+export const LEE_PAGE = {
+  headerH: 62,
+  footerH: 88,
+  title: { x: MODULE, y: 88, size: 152, lh: 146, track: '-.05em' },
+  descriptorY: 246,
+  metaY: 286,
+  ruleY: 318,
+  bandY: 336,
+  bandEnd: 976,
+  plate: { x: MODULE, y: 336, w: 727.27, h: 436.36 },
+  plateCaptionY: 788,
+  /** the six-way view walk, directly under the caption it changes */
+  toggleY: 828,
+  /** two doors: the prototype and the wireframe exploration beside it */
+  doors: { x: MODULE, y: 886, w: 357.63, h: 66, gap: 12 },
   text: { x: 836.36, y: 336, w: 654.54 },
   glance: { x: 1527.27, y: 336, w: STAGE.w - MODULE - 1527.27 },
   glanceRowsY: 380,

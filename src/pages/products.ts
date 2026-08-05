@@ -14,7 +14,7 @@
  * to pointer, so nothing here hand-rolls a hover state.
  *
  * Seven of the eleven rows are anchors to a deployed demo. The other four are
- * not: chellbook, mfny, chipotle and df2tm each carry `href: null` and a
+ * not: chellbook, lee, mfny, chipotle and df2tm each carry `href: null` and a
  * `subpage`, because there is no deployed app to point at. Chellbook, for
  * instance, is concept-stage: 30 designed screens and two prototypes,
  * so it renders as a real `<button>` that opens a case study inside the stage,
@@ -36,6 +36,7 @@ import * as chellbookPage from './chellbook.ts';
 import * as df2tmPage from './df2tm.ts';
 import * as mfnyPage from './mfny.ts';
 import * as chipotlePage from './chipotle.ts';
+import * as leePage from './lee.ts';
 import {
   CASES,
   CASES_THESIS,
@@ -951,5 +952,6 @@ export function build(): HTMLElement {
     df2tmPage.build(),
     mfnyPage.build(),
     chipotlePage.build(),
+    leePage.build(),
   );
 }

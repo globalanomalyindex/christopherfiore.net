@@ -2,7 +2,7 @@
  * The image viewer, shared by every subpage that carries a plate.
  *
  * Four screens show photographs inside a 727 × 436 plate: the Kona N evidence
- * viewer, chellbook's boards, and the mfny and chipotle before/after plates.
+ * viewer, chellbook's boards, and the mfny, chipotle and lee plates.
  * At that size a 1600 × 3338 flow board is unreadable. Clicking the plate opens
  * the image here instead, as large as the stage allows and never past its own
  * natural size, with a subdued ground you click to get out.
@@ -305,7 +305,7 @@ export function openLightbox(stage: HTMLElement, trigger: HTMLElement): void {
 
   // the screen underneath stops being reachable while this is up
   const screen = trigger.closest<HTMLElement>(
-    '[data-evidence],[data-chellbook],[data-mfny],[data-chipotle]',
+    '[data-evidence],[data-chellbook],[data-mfny],[data-chipotle],[data-lee]',
   );
   if (screen) screen.setAttribute('inert', '');
 
@@ -352,7 +352,7 @@ export function closeLightbox(stage: HTMLElement): void {
       img.removeAttribute('src');
     }
     // uninert BEFORE returning focus, or the trigger is not focusable yet
-    for (const sc of qq(stage, '[data-evidence],[data-chellbook],[data-mfny],[data-chipotle]')) {
+    for (const sc of qq(stage, '[data-evidence],[data-chellbook],[data-mfny],[data-chipotle],[data-lee]')) {
       sc.removeAttribute('inert');
     }
     focusInto(trigger);

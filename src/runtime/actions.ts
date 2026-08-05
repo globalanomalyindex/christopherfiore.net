@@ -32,7 +32,9 @@ import { aboutOpen, closeAbout, goAbout, openAbout } from './about';
 import { closeDf2tm, df2tmOpen, goDf2tm, openDf2tm } from './df2tm';
 import { closeMfny, mfnyOpen, openMfny, setMfnyView } from './mfny';
 import { chipotleOpen, closeChipotle, openChipotle, setChipotleView } from './chipotle';
+import { closeLee, leeOpen, openLee, setLeeView } from './lee';
 import { CHIPOTLE_VIEWS } from '../pages/chipotle.ts';
+import { LEE_VIEWS } from '../pages/lee.ts';
 import { closeLightbox, lightboxOpen, openLightbox } from './lightbox';
 import { closePage, nextPage, openPage, runIntro } from './transitions';
 import { locked, state } from './state';
@@ -196,6 +198,7 @@ export function bindActions(stage: HTMLElement): void {
         else if (df2tmOpen(stage)) closeDf2tm(stage);
         else if (mfnyOpen(stage)) closeMfny(stage);
         else if (chipotleOpen(stage)) closeChipotle(stage);
+        else if (leeOpen(stage)) closeLee(stage);
         else closePage(stage);
         break;
       case 'evidence':
@@ -243,6 +246,16 @@ export function bindActions(stage: HTMLElement): void {
         break;
       case 'chipotle-view':
         setChipotleView(stage, num(t, 'data-view'));
+        break;
+      case 'lee':
+        // the lee row — the screen grows out of the row that opened it
+        openLee(stage, t);
+        break;
+      case 'lee-close':
+        closeLee(stage);
+        break;
+      case 'lee-view':
+        setLeeView(stage, num(t, 'data-view'));
         break;
       case 'zoom':
         // every plate on the site; the viewer reads whichever slot is showing
@@ -404,6 +417,11 @@ export function bindActions(stage: HTMLElement): void {
         closeChipotle(stage);
         return;
       }
+      if (leeOpen(stage)) {
+        e.preventDefault();
+        closeLee(stage);
+        return;
+      }
       if (s.open === null) return;
       e.preventDefault();
       closePage(stage);
@@ -447,7 +465,7 @@ export function bindActions(stage: HTMLElement): void {
         target?.focus();
         return;
       }
-      /* Same contract on the chipotle screen, but its plate carries four views
+      /* Same contract on the chipotle screen, but its plate carries five views
          rather than two, so the wrap is taken from the list's own length
          instead of a literal. */
       if (chipotleOpen(stage)) {
@@ -460,6 +478,22 @@ export function bindActions(stage: HTMLElement): void {
         const next = (num(radio, 'data-view') + (step > 0 ? 1 : -1) + n) % n;
         setChipotleView(stage, next);
         const target = q(stage, `[data-act="chipotle-view"][data-view="${next}"]`);
+        target?.focus();
+        return;
+      }
+      /* And again on lee, whose plate carries six. Same shape, same reason:
+         the wrap comes from `LEE_VIEWS.length`, so adding a view to that list
+         is the only edit a new view needs. */
+      if (leeOpen(stage)) {
+        const on = document.activeElement;
+        const radio =
+          on instanceof HTMLElement ? on.closest<HTMLElement>('[data-act="lee-view"]') : null;
+        if (!radio) return;
+        e.preventDefault();
+        const n = LEE_VIEWS.length;
+        const next = (num(radio, 'data-view') + (step > 0 ? 1 : -1) + n) % n;
+        setLeeView(stage, next);
+        const target = q(stage, `[data-act="lee-view"][data-view="${next}"]`);
         target?.focus();
         return;
       }
