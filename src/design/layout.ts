@@ -372,17 +372,23 @@ export const LEE_PAGE = {
  * characters against chipotle's 23. Karrik at 152px measures about 59px a
  * character at this tracking, so 33 characters would draw ~1957px against the
  * 1774.5 available between the module margins, and the title would run off the
- * right edge. At 136 it measures 1591.3 and ends at x 1664, which leaves 183px
- * clear of the 1847.3 right margin. Measured in the browser rather than
- * estimated, and asserted on every verification run.
+ * right edge. 132 measures 1744 in Karrik and ends at x 1817, which is 30px
+ * clear of the 1847.3 right margin.
+ *
+ * MEASURE BOTH FACES, and take the wider. The title takes the Dessign Maison
+ * alternate at TITLE_ALT, and that face is much narrower here: 1501 against
+ * Karrik's 1744 at the same size. A check that samples the title more than
+ * about 1.4s after the screen opens reads only the narrow state. The first
+ * pass at this number did exactly that, called 136 clear by 183px, and shipped
+ * a title overflowing its margin by 23px in the state it actually rests in.
  *
  * Five views, so the toggle row is shorter than lee's six and there is room.
  */
 export const GUESTPASS_PAGE = {
   headerH: 62,
   footerH: 88,
-  /** 136, not the family's 152: a 33 character title does not fit at 152. */
-  title: { x: MODULE, y: 88, size: 136, lh: 131, track: '-.05em' },
+  /** 132, not the family's 152: a 33 character title does not fit at 152. */
+  title: { x: MODULE, y: 88, size: 132, lh: 127, track: '-.05em' },
   descriptorY: 246,
   metaY: 286,
   ruleY: 318,

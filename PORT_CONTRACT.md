@@ -420,9 +420,16 @@ and `le` are their own: every subpage is inside page 01 at once.
 "apple wallet card sharing concept" at the author's request. That is 33
 characters, and Karrik at the family's 152px draws about 59px a character at
 this tracking, so it would run to ~1957px against the 1774.5 available between
-the module margins. `GUESTPASS_PAGE.title.size` is therefore 136, at which it
-measures 1591.3 and ends at x 1664, leaving 183px of clearance. That number is
-asserted on every verification run rather than trusted.
+the module margins. `GUESTPASS_PAGE.title.size` is therefore **132**, at which
+it measures 1744 in Karrik and ends at x 1817, 30px clear of the 1847.3 right
+margin.
+
+**Measure both faces and take the wider one.** The title swaps to the Dessign
+Maison alternate at `TITLE_ALT`, and that face is far narrower here: 1501
+against Karrik's 1744 at the same size. Any check that samples the title more
+than ~1.4s after the screen opens sees only the narrow state. The first pass at
+this number did that, declared 136 clear by 183px, and shipped a title
+overflowing its margin by 23px in the state the screen actually rests in.
 
 **THE BOUNDARY ON THIS SCREEN IS UNUSUAL AND MUST NOT BE WEAKENED.** The source
 package names Apple Wallet, Apple Pay, Apple Cash, Apple Card, Face ID, CarKey
