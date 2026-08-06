@@ -40,12 +40,19 @@
  *      sit under "what success looks like" for a product that does not exist.
  *      `guessing` below keeps them in the conditional.
  *
- * 5. THE PACKAGE HAS TWO AUTHORS AND SAYS SO. Chris is the concept owner and
- *    made every design decision in it. A research and synthesis pass produced
- *    the options and the citations, and the decision log records both the
- *    places he took its recommendation and the place it recorded its own
- *    error against itself. The `open` section states this plainly. Do not
- *    quietly reassign the research to him.
+ * 5. THE PACKAGE HAS TWO AUTHORS, AND THE CASE TEXT DELIBERATELY DOES NOT
+ *    MENTION IT. Chris is the concept owner and made every design decision in
+ *    it; a research and synthesis pass produced the options and the citations.
+ *    The case used to close on a paragraph saying so, and he cut it. That was
+ *    his call about his own portfolio and it makes nothing here untrue, so
+ *    leave it cut.
+ *
+ *    What the cut does NOT license: writing a sentence that claims he
+ *    personally ran the research. Nothing above does. The one first person
+ *    "i had to check" in `positioning` is lifted from his own design
+ *    rationale, so it is his claim rather than one made on his behalf, and
+ *    `role` says "research direction" rather than "research" for the same
+ *    reason. Silence is fine. Attribution to the wrong person is not.
  */
 
 export interface GuestpassSection {
@@ -312,10 +319,6 @@ export const GUESTPASS_SECTIONS: GuestpassSection[] = [
         'every name, store and dollar figure on the screens is invented. the whole thing also ' +
         'depends on card issuers agreeing to something they do not do today, which is the first ' +
         'thing that would have to be true.',
-      'one more, on who did what. i own the concept and every decision in it. a research and ' +
-        'synthesis pass produced the options and the sourcing, and the decision log keeps both ' +
-        'the places i took its recommendation and the place it wrote down its own error after i ' +
-        'overruled it. i would rather show that than pretend the reasoning arrived fully formed.',
     ],
   },
 ];
