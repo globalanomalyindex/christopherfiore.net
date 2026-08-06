@@ -400,6 +400,58 @@ Two other repairs, both recorded because they look like bugs otherwise:
 The author's own copy is otherwise untouched, and neither page contains a dash
 in anything a visitor reads.
 
+### `src/pages/guestpass.ts` + `src/runtime/guestpass.ts`
+Channel 01's sixth in-stage screen, opened from the guestpass row
+(`data-act="guestpass"`). A structural clone of the lee pair.
+
+```ts
+export function openGuestpass(stage: HTMLElement, trigger: HTMLElement): void;
+export function closeGuestpass(stage: HTMLElement): void;
+export function setGuestpassView(stage: HTMLElement, n: number): void;
+export function guestpassOpen(stage: HTMLElement): boolean;
+```
+
+Data attributes are `gp`-prefixed (`data-gpplate`, `data-gpchrome`,
+`data-gpscroll`, `data-gpthumb`, `data-gpsec`, `data-gpsec-name`,
+`data-gpsecat`, `data-gpcap`, `data-gpslot`), for the same reason `mf`, `cp`
+and `le` are their own: every subpage is inside page 01 at once.
+
+**The one geometry that had to move is the title size.** The case is called
+"apple wallet card sharing concept" at the author's request. That is 33
+characters, and Karrik at the family's 152px draws about 59px a character at
+this tracking, so it would run to ~1957px against the 1774.5 available between
+the module margins. `GUESTPASS_PAGE.title.size` is therefore 136, at which it
+measures 1591.3 and ends at x 1664, leaving 183px of clearance. That number is
+asserted on every verification run rather than trusted.
+
+**THE BOUNDARY ON THIS SCREEN IS UNUSUAL AND MUST NOT BE WEAKENED.** The source
+package names Apple Wallet, Apple Pay, Apple Cash, Apple Card, Face ID, CarKey
+and iMessage on nearly every render, and it contains **no non-affiliation
+statement of any kind** — all twenty six of its files were searched for "not
+affiliated", "unaffiliated", "endorse", "trademark" and "unofficial", with zero
+matches. `GUESTPASS.state` was therefore written here rather than transcribed,
+and it rides in the header, the footer and the screen's own `aria-label`.
+Nothing on this screen may imply Apple asked for, saw, or approved any of it.
+
+Two more that `src/data/guestpass.ts` records in full: every name, store and
+dollar figure in the renders is invented, and the numbers in the source split
+into cited findings, uncited assumptions, and targets that were never measured.
+The case text uses the cited ones, uses one assumption only as an assumption,
+and does not use the rest.
+
+### `public/guestpass/case.html`
+The full case, served at `/guestpass/case.html`. A bundler export like the
+chipotle prototype, and self-contained the same way: zero external requests,
+with its fonts and React inlined in the manifest rather than fetched. The
+additions on top of the author's export are a `<title>`, a meta description,
+and the same title-pinning script the chipotle file carries, because the
+bundler's runtime adopts an inner document whose head has no title.
+
+Its visible copy contains **no dashes at all**. The 17 in the file are every one
+inside the bundler runtime's own JS comments and one `console.error`, none of
+which render. Verified by decoding the `__bundler/template` JSON and searching
+the decoded document, which is the only text a visitor sees.
+
 ### `src/pages/about.ts` + `src/runtime/about.ts`
 Channel 04's in-stage background, opened from the page-04 control
 (`data-act="about"`). Same shape and choreography as the chellbook screen with
@@ -507,14 +559,14 @@ Four things it has to keep doing:
 
 ### The plate follows the reading position
 
-Four subpages carry both a scrolling text column and a set of screenshots:
-chellbook (nine boards), mfny (two plate views), chipotle (five) and lee (six).
-On all four the plate tracks what is being read.
+Five subpages carry both a scrolling text column and a set of screenshots:
+chellbook (nine boards), mfny (two plate views), chipotle (five), lee (six) and
+guestpass (five). On all five the plate tracks what is being read.
 
 **The binding is one way, and that is the whole design.** Scrolling the column
 moves the plate. Touching the plate never moves the column: the setters
-(`goChellbook`, `setMfnyView`, `setChipotleView`, `setLeeView`) do not write
-`scrollTop`, and must not start.
+(`goChellbook`, `setMfnyView`, `setChipotleView`, `setLeeView`,
+`setGuestpassView`) do not write `scrollTop`, and must not start.
 
 The target lives on the section element, so the runtime never has to import
 content: `data-cbsec-board`, `data-mfsec-view`, `data-cpsec-view`. A section
@@ -561,15 +613,23 @@ silently if missed:
 A sixth thing is not automatic either: `PAGE1.rowH` and `PAGE1.nameSize` are
 divided from the fixed band between `rowsY` (640.79) and the motion band
 (931.7). Adding a case row means re-dividing both — the rows must still land
-exactly on 931.7, and the name has to shrink with them. At twelve rows that is
-`290.91 / 12 = 24.2425` with the name at 21.
+exactly on 931.7, and the name has to shrink with them. At thirteen rows that
+is `290.91 / 13 = 22.3777` with the name at 19.
 
 The binding dimension is not the name, which has spare track to give at every
 size it has taken. It is `CaseRecord.line`, and it does NOT shrink with the
 rows: `cellLine` is a flat 14px in a column of 581.818 less 40 of padding, so
 the ceiling is the same at every row count. A `line` past roughly **82
-characters** wraps to two lines and overflows a 24.2px cell into the rows above
+characters** wraps to two lines and overflows a 22.4px cell into the rows above
 and below. Keep every `line` inside that.
+
+The NAME column has a second ceiling, added when a case arrived called "apple
+wallet card sharing concept". `cellName` is `white-space: nowrap` in a 363.636
+track, so a name too long for it spills sideways rather than wrapping. Measured
+at 1920, 33 characters in Karrik 19px draw 263px, leaving room for about 45.
+Measure the TEXT and not the span: the span is the grid cell and always reports
+the full track, and `scrollWidth` clamps to it too. A `Range` over the text node
+is the only reading that means anything.
 
 A new screen also needs its own data-attribute prefix. Every subpage lives
 inside its host page simultaneously, so two screens sharing `data-*` names

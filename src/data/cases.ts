@@ -1,8 +1,8 @@
 /**
  * Channel 01 · Product designs.
  *
- * Eight cases transcribed from devkit `data/projects.json`, plus df2tm, lee and
- * chipotle, which postdate the devkit. The devkit's branchial lateral spine record
+ * Eight cases transcribed from devkit `data/projects.json`, plus df2tm, lee,
+ * guestpass and chipotle, which postdate the devkit. The devkit's branchial lateral spine record
  * lives on channel 03 (Competizione) instead, because it is automotive work.
  *
  * `evidence` carries the devkit's `evidenceStatus` verbatim. "simulated" and
@@ -28,8 +28,33 @@ export const CASES: CaseRecord[] = [
     source: 'https://github.com/globalanomalyindex/after-tokens',
   },
   {
-    id: 'chellbook',
+    id: 'guestpass',
     idx: '02',
+    name: 'apple wallet card sharing concept',
+    // 75 characters. PAGE1's line column takes about 82 before it wraps and
+    // overflows the row; see the note on PAGE1 in `src/design/layout.ts`.
+    line: 'a temporary single use version of your card, handed to someone over imessage',
+    year: '2026',
+    discipline: 'product design, iOS, research direction',
+    // A hosted case page with two working prototypes exists here, but nothing
+    // was built: no feature, no code, no user testing. It also has no
+    // relationship to Apple, which the source package never states and
+    // `src/data/guestpass.ts` therefore has to. That boundary is carried five
+    // times over.
+    evidence: 'concept',
+    image: 'projects/live/guestpass.webp',
+    imageAlt:
+      'A design render of the borrowed card: a card with a dashed edge reading "Alex\'s Apple Card" and "Expires 9:41 PM", shown beside a phone where the same card sits at the bottom of a Wallet stack under two solid-edged cards',
+    caption: 'apple wallet card sharing concept · design renders · 2026',
+    // The case is hosted in this site's own public/ directory, as chellbook's,
+    // lee's, mfny's and chipotle's are. The row opens the case study.
+    href: null,
+    source: null,
+    subpage: 'guestpass',
+  },
+  {
+    id: 'chellbook',
+    idx: '03',
     name: 'chellbook',
     line: 'AI-based iOS app concept for celiac food safety',
     year: '2026',
@@ -49,7 +74,7 @@ export const CASES: CaseRecord[] = [
   },
   {
     id: 'lee',
-    idx: '03',
+    idx: '04',
     name: 'lee',
     // 76 characters. PAGE1's line column takes about 82 before it wraps and
     // overflows the row; see the note on PAGE1 in `src/design/layout.ts`.
@@ -73,7 +98,7 @@ export const CASES: CaseRecord[] = [
   },
   {
     id: 'mfny-concentrates',
-    idx: '04',
+    idx: '05',
     name: 'mfny concentrates',
     line: 'product page redesign: one card per SKU becomes one card per strain',
     year: '2026',
@@ -94,7 +119,7 @@ export const CASES: CaseRecord[] = [
   },
   {
     id: 'chipotle',
-    idx: '05',
+    idx: '06',
     name: 'chipotle app ui cleanup',
     // 78 characters. PAGE1's line column takes about 82 before it wraps and
     // overflows the row; see the note on PAGE1 in `src/design/layout.ts`.
@@ -119,7 +144,7 @@ export const CASES: CaseRecord[] = [
   },
   {
     id: 'one-master-affordance',
-    idx: '06',
+    idx: '07',
     name: 'one master affordance',
     line: 'one persistent control does activation, targeting and a safe abort',
     year: '2026',
@@ -134,7 +159,7 @@ export const CASES: CaseRecord[] = [
   },
   {
     id: 'adhd-mode',
-    idx: '07',
+    idx: '08',
     name: 'adhd mode',
     line: 'a feed becomes a bounded session with a visible end and a return queue',
     year: '2026',
@@ -149,7 +174,7 @@ export const CASES: CaseRecord[] = [
   },
   {
     id: 'df2tm',
-    idx: '08',
+    idx: '09',
     name: 'df2tm',
     line: 'a learning layer for claude code that teaches the concept behind the work',
     year: '2026',
@@ -167,7 +192,7 @@ export const CASES: CaseRecord[] = [
   },
   {
     id: 'campeon',
-    idx: '09',
+    idx: '10',
     name: 'campeón',
     line: 'four aim drills converge on one range without hiding disagreement',
     year: '2026',
@@ -182,7 +207,7 @@ export const CASES: CaseRecord[] = [
   },
   {
     id: 'chickpea',
-    idx: '10',
+    idx: '11',
     name: 'chickpea',
     line: 'a seeded studio that exposes the grid, palette and math behind output',
     year: '2026',
@@ -204,7 +229,7 @@ export const CASES: CaseRecord[] = [
   },
   {
     id: 'wildcard',
-    idx: '11',
+    idx: '12',
     name: 'wildcard',
     line: 'freeze the problem, draw from outside, keep only what survives',
     year: '2026',
@@ -220,7 +245,7 @@ export const CASES: CaseRecord[] = [
   },
   {
     id: 'dither',
-    idx: '12',
+    idx: '13',
     name: 'dither',
     line: 'a dependency-free studio for dithering, grain, palette and paint',
     year: '2026',

@@ -41,21 +41,28 @@ export const MENU = {
  *   tableHeaderY  608.97                  clears the fig caption
  *   tableHeaderH   31.818   =  7/16       the column labels are one 11.5px line
  *   rowsY         640.79    = 608.97 + 31.818
- *   rowH          24.2425   = 290.91 / 12 cases, ending at 931.70
+ *   rowH          22.3777   = 290.91 / 13 cases, ending at 931.70
  *   motion.y      931.70
  *   motion.h       90.9     = 20/16       ≈ 3.4 case rows, landing on 1022.6
  *
  * `rowH` is the only one of these that moves. The band from `rowsY` to the
  * motion band is fixed at 290.91, so every case added redivides it: 36.364 at
- * eight, 32.323 at nine, 29.091 at ten, 26.4464 at eleven, 24.2425 at twelve.
- * The case name goes down with it, 34 to 28 to 25 to 23 to 21.
+ * eight, 32.323 at nine, 29.091 at ten, 26.4464 at eleven, 24.2425 at twelve,
+ * 22.3777 at thirteen. The case name goes down with it, 34 to 28 to 25 to 23
+ * to 21 to 19.
  *
  * The tight dimension is not the name, which has spare track to give at every
  * size it has taken. It is the `line` column, and it does not shrink with the
  * rows: `cellLine` is a flat 14px in 581.818 less 40 of padding, so 541.8 is
  * usable at every row count, and a `line` past roughly 82 characters wraps to
- * two lines and overflows a 24.2px cell into the rows above and below it. Keep
+ * two lines and overflows a 22.4px cell into the rows above and below it. Keep
  * every `CaseRecord.line` inside that.
+ *
+ * The NAME column has its own ceiling now that a case is called "apple wallet
+ * card sharing concept". Measured at 1920: 33 characters in Karrik 19px draw
+ * 263 of the 363.636px track, so there is room for roughly 45. `cellName` is
+ * `white-space: nowrap`, so a name past that spills into the line column
+ * rather than wrapping.
  *
  * `rowSplit` is what lets the case rows be links. Each row is now an anchor to
  * its live demo, and the hover band stack fills whatever box the anchor owns,
@@ -71,7 +78,7 @@ export const MENU = {
  * the footer's.
  *
  * The key-frame panel, title, thesis, header and footer keep their handoff
- * geometry. Case names drop from 34px to 21px to sit in the shorter row.
+ * geometry. Case names drop from 34px to 19px to sit in the shorter row.
  */
 export const PAGE1 = {
   headerH: 77.18, // handoff
@@ -81,24 +88,24 @@ export const PAGE1 = {
   panel: { x: 1090.9, y: 122, w: 727.27, h: 436.36 }, // adapted y (was 149.9)
   figCaption: { x: 1090.9, y: 572, w: 727.27 },
   /*
-    Twelve cases now. The band between `rowsY` and the motion band is fixed at
-    931.7 - 640.79 = 290.91, so the row height is that divided by the case
+    Thirteen cases now. The band between `rowsY` and the motion band is fixed
+    at 931.7 - 640.79 = 290.91, so the row height is that divided by the case
     count, and the name size follows it down: 36.364/34, then 32.323/28, then
-    29.091/25, then 26.4464/23, now 290.91/12 = 24.2425 with the name at 21.
-    12 × 24.2425 = 290.91, which puts the last rule on 931.70, still the
-    motion band.
+    29.091/25, then 26.4464/23, then 24.2425/21, now 290.91/13 = 22.3777 with
+    the name at 19. 13 × 22.3777 = 290.91, which puts the last rule on 931.70,
+    still the motion band.
 
     The `line` column does NOT follow: `cellLine` is a flat 14px in a fixed
     581.818px column, so its ~82 character ceiling is the same at every row
     count. Only the name shrinks.
   */
-  rowH: 24.2425,
+  rowH: 22.3777,
   tableHeaderY: 608.97, // adapted
   tableHeaderH: 31.818, // adapted, 7/16 module (was one full row)
   rowsY: 640.79, // adapted — the rows fill exactly to the motion band at 931.7
   rowCols: '145.455px 363.636px 581.818px 145.455px 1fr', // handoff, inside the row anchor
   rowSplit: '1fr 218.181px', // adapted — row anchor, then the source column (3 modules)
-  nameSize: 21,
+  nameSize: 19,
   /** The motion archive band: full bleed, 20/16 module, sitting on the footer. */
   motion: { y: 931.7, h: 90.9, cols: '472.727px 1fr 327.272px', still: 68 },
   footer: { y: 1022.6, h: 57.4 }, // handoff
@@ -345,6 +352,48 @@ export const LEE_PAGE = {
   toggleY: 828,
   /** two doors: the prototype and the wireframe exploration beside it */
   doors: { x: MODULE, y: 886, w: 357.63, h: 66, gap: 12 },
+  text: { x: 836.36, y: 336, w: 654.54 },
+  glance: { x: 1527.27, y: 336, w: STAGE.w - MODULE - 1527.27 },
+  glanceRowsY: 380,
+  secBarH: 34,
+  secBarGap: 12,
+  railW: 6,
+} as const;
+
+/**
+ * The guestpass subpage.
+ *
+ * LEE_PAGE's numbers, which are CHIPOTLE_PAGE's, which are MFNY_PAGE's: four
+ * screens, one shape, kept legible as a family. Written out rather than
+ * aliased so any one of them can diverge without dragging the others.
+ *
+ * The one number that had to move is the title size. This case is called
+ * "apple wallet card sharing concept" at the author's request, which is 33
+ * characters against chipotle's 23. Karrik at 152px measures about 59px a
+ * character at this tracking, so 33 characters would draw ~1957px against the
+ * 1774.5 available between the module margins, and the title would run off the
+ * right edge. At 136 it measures 1591.3 and ends at x 1664, which leaves 183px
+ * clear of the 1847.3 right margin. Measured in the browser rather than
+ * estimated, and asserted on every verification run.
+ *
+ * Five views, so the toggle row is shorter than lee's six and there is room.
+ */
+export const GUESTPASS_PAGE = {
+  headerH: 62,
+  footerH: 88,
+  /** 136, not the family's 152: a 33 character title does not fit at 152. */
+  title: { x: MODULE, y: 88, size: 136, lh: 131, track: '-.05em' },
+  descriptorY: 246,
+  metaY: 286,
+  ruleY: 318,
+  bandY: 336,
+  bandEnd: 976,
+  plate: { x: MODULE, y: 336, w: 727.27, h: 436.36 },
+  plateCaptionY: 788,
+  /** the five-way view walk, directly under the caption it changes */
+  toggleY: 828,
+  /** the one door: the full case, hosted here with both prototypes in it */
+  doors: { x: MODULE, y: 886, w: 727.27, h: 66, gap: 12 },
   text: { x: 836.36, y: 336, w: 654.54 },
   glance: { x: 1527.27, y: 336, w: STAGE.w - MODULE - 1527.27 },
   glanceRowsY: 380,

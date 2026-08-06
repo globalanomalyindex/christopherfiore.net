@@ -67,6 +67,7 @@ import { DF2TM, DF2TM_GLANCE, DF2TM_SECTIONS } from './data/df2tm.ts';
 import { MFNY, MFNY_GLANCE, MFNY_SECTIONS } from './data/mfny.ts';
 import { CHIPOTLE, CHIPOTLE_GLANCE, CHIPOTLE_SECTIONS } from './data/chipotle.ts';
 import { LEE, LEE_GLANCE, LEE_SECTIONS } from './data/lee.ts';
+import { GUESTPASS, GUESTPASS_GLANCE, GUESTPASS_SECTIONS } from './data/guestpass.ts';
 import type { TableRow } from './data/types.ts';
 
 /** Viewport width below which the fixed stage stops being legible. */
@@ -616,14 +617,67 @@ function leeStudy(): (Node | null)[] {
   ];
 }
 
+/**
+ * guestpass, inlined like the other five subpage rows.
+ *
+ * The stage walks five plate views; a phone cannot, so all five print in order
+ * with their captions. Two boundaries ride with the entry rather than waiting
+ * for the sections, because on a phone a reader can land on any one of these
+ * pictures of Apple's products without the surrounding argument: nothing was
+ * built, and Apple has no relationship to it.
+ */
+function guestpassStudy(): (Node | null)[] {
+  const rec = CASES.find((c) => c.id === 'guestpass');
+  const shots: [string, string, string][] = [
+    ['projects/guestpass-object.webp',
+     'Two design renders: a card with a dashed edge reading "Alex\'s Apple Card" and "Expires 9:41 PM" tucked under two solid-edged cards, and a phone showing the same card at the bottom of a Wallet stack',
+     'the borrowed card, as design renders · the dashed edge only reads as temporary next to solid ones, so it is never shown alone'],
+    ['projects/guestpass-send.webp',
+     'Three design renders of sending: a sheet asking who it is for, a review screen with one sentence and a collapsed options row, and the Face ID confirmation',
+     'sending, as design renders · a card, a person, and Face ID, with every option collapsed behind one row'],
+    ['projects/guestpass-spend.webp',
+     'Four design renders: the sheet where the recipient reads what the owner will see, the payment sheet, the approved checkmark, and the owner\'s notification naming the store, the amount, the time and a map',
+     'accepting, paying, and the receipt · design renders, and every store and figure in them is invented'],
+    ['projects/guestpass-escalation.webp',
+     'Four design renders of the path when a purchase goes over a limit: the reason without the amounts in large type, a finished state, the owner\'s request sheet, and the approved retry',
+     'when a purchase does not fit, as design renders · the amounts sit in small text, because a stranger can read a headline'],
+    ['projects/guestpass-positioning.webp',
+     'Two diagrams: a quadrant of money sharing products plotted by who ends up owning the money and whether it happens once or keeps going, and a swimlane of the whole flow',
+     'the argument · three of the four corners already ship, and this is the empty one'],
+  ];
+  return [
+    el(
+      'article',
+      { class: 'm-case m-entry' },
+      el('div', { class: 'm-caseidx' }, rec ? rec.idx : '', el('span', {}, 'concept')),
+      el('h3', { class: 'm-casename' }, GUESTPASS.title),
+      el('p', { class: 'm-caseline' }, rec ? rec.line : GUESTPASS.descriptor),
+      el('span', { class: 'm-meta' }, `${GUESTPASS.role} · ${GUESTPASS.surface}`),
+      el(
+        'p',
+        { class: 'm-boundary' },
+        `${GUESTPASS.state}. every name, store and dollar figure in the renders is invented, and the card faces are stand ins rather than anybody's real artwork.`,
+      ),
+      el('div', { class: 'm-caselinks' }, link(asset(GUESTPASS.demoHref), GUESTPASS.demoLabel)),
+    ),
+    ...shots.map(([src, alt, cap]) => figure(src, alt, cap, 1456, 874)),
+    block('guestpass-short', 'the short version', null, el('p', { class: 'm-stand' }, GUESTPASS.standfirst)),
+    ...GUESTPASS_SECTIONS.map((sec) =>
+      block(`guestpass-${sec.id}`, sec.name, null, ...sec.paras.map((t) => body(t))),
+    ),
+    block('guestpass-glance', 'at a glance', null, table(GUESTPASS_GLANCE)),
+  ];
+}
+
 /* ------------------------------------------------------------------ 01 */
 
 function productsSection(): HTMLElement {
   /*
-    Seven rows, not twelve. Five records carry `subpage` instead of `href`:
-    chellbook, lee, mfny, chipotle and df2tm. On the stage each opens a screen
-    of its own; there are no subpages here, so all five are printed in full
-    below instead of appearing as rows with nothing to link to.
+    Seven rows, not thirteen. Six records carry `subpage` instead of `href`:
+    chellbook, guestpass, lee, mfny, chipotle and df2tm. On the stage each
+    opens a screen of its own; there are no subpages here, so all six are
+    printed in full below instead of appearing as rows with nothing to link
+    to.
   */
   const rows = CASES.filter((c) => !c.subpage).map((c) =>
     el(
@@ -655,6 +709,7 @@ function productsSection(): HTMLElement {
     el('p', { class: 'm-thesis' }, CASES_THESIS),
     ...rows,
     ...chellbookStudy(),
+    ...guestpassStudy(),
     ...leeStudy(),
     ...mfnyStudy(),
     ...chipotleStudy(),

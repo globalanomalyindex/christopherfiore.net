@@ -33,8 +33,10 @@ import { closeDf2tm, df2tmOpen, goDf2tm, openDf2tm } from './df2tm';
 import { closeMfny, mfnyOpen, openMfny, setMfnyView } from './mfny';
 import { chipotleOpen, closeChipotle, openChipotle, setChipotleView } from './chipotle';
 import { closeLee, leeOpen, openLee, setLeeView } from './lee';
+import { closeGuestpass, guestpassOpen, openGuestpass, setGuestpassView } from './guestpass';
 import { CHIPOTLE_VIEWS } from '../pages/chipotle.ts';
 import { LEE_VIEWS } from '../pages/lee.ts';
+import { GUESTPASS_VIEWS } from '../pages/guestpass.ts';
 import { closeLightbox, lightboxOpen, openLightbox } from './lightbox';
 import { closePage, nextPage, openPage, runIntro } from './transitions';
 import { locked, state } from './state';
@@ -199,6 +201,7 @@ export function bindActions(stage: HTMLElement): void {
         else if (mfnyOpen(stage)) closeMfny(stage);
         else if (chipotleOpen(stage)) closeChipotle(stage);
         else if (leeOpen(stage)) closeLee(stage);
+        else if (guestpassOpen(stage)) closeGuestpass(stage);
         else closePage(stage);
         break;
       case 'evidence':
@@ -256,6 +259,16 @@ export function bindActions(stage: HTMLElement): void {
         break;
       case 'lee-view':
         setLeeView(stage, num(t, 'data-view'));
+        break;
+      case 'guestpass':
+        // the guestpass row — the screen grows out of the row that opened it
+        openGuestpass(stage, t);
+        break;
+      case 'guestpass-close':
+        closeGuestpass(stage);
+        break;
+      case 'guestpass-view':
+        setGuestpassView(stage, num(t, 'data-view'));
         break;
       case 'zoom':
         // every plate on the site; the viewer reads whichever slot is showing
@@ -422,6 +435,11 @@ export function bindActions(stage: HTMLElement): void {
         closeLee(stage);
         return;
       }
+      if (guestpassOpen(stage)) {
+        e.preventDefault();
+        closeGuestpass(stage);
+        return;
+      }
       if (s.open === null) return;
       e.preventDefault();
       closePage(stage);
@@ -494,6 +512,21 @@ export function bindActions(stage: HTMLElement): void {
         const next = (num(radio, 'data-view') + (step > 0 ? 1 : -1) + n) % n;
         setLeeView(stage, next);
         const target = q(stage, `[data-act="lee-view"][data-view="${next}"]`);
+        target?.focus();
+        return;
+      }
+      /* And again on guestpass, whose plate carries five. Same shape, same
+         reason: the wrap comes from the list's own length. */
+      if (guestpassOpen(stage)) {
+        const on = document.activeElement;
+        const radio =
+          on instanceof HTMLElement ? on.closest<HTMLElement>('[data-act="guestpass-view"]') : null;
+        if (!radio) return;
+        e.preventDefault();
+        const n = GUESTPASS_VIEWS.length;
+        const next = (num(radio, 'data-view') + (step > 0 ? 1 : -1) + n) % n;
+        setGuestpassView(stage, next);
+        const target = q(stage, `[data-act="guestpass-view"][data-view="${next}"]`);
         target?.focus();
         return;
       }
