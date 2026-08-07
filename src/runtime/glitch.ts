@@ -1,7 +1,7 @@
 /**
  * Per-letter font glitch engine.
  *
- * The resting face is Karrik. The alternate is Dessign Maison, which only ever
+ * The resting face is Monaco. The alternate is Dessign Maison, which only ever
  * reads correctly with `font-feature-settings: 'salt' 1, 'ss01' 1` — every
  * swap to the alternate sets both together (FONT.alt / FONT.altFeatures).
  *
@@ -11,12 +11,12 @@
  *   · titles and buttons — `glitchFont` / `resetTitleFont`, driven by
  *                          transitions.ts and hover.ts
  *
- * A swapped letter sits on a color band (`hlOn`) drawn from LIGHTS with
+ * A swapped letter sits on a color band (`hlOn`) drawn from SPARK_LIGHTS with
  * near-black ink, which is the legibility contract from the handoff.
  */
 
 import { el, qq } from '../dom.ts';
-import { COLOR, FLASH, FONT, LIGHTS, MARA } from '../design/tokens.ts';
+import { COLOR, FLASH, FONT, SPARK, SPARK_LIGHTS } from '../design/tokens.ts';
 import { dfxRelease, dfxSeq } from './dither.ts';
 import { state } from './state.ts';
 
@@ -127,20 +127,27 @@ function tickMarks(sz: number): HTMLElement[] {
 /* -------------------------------------------------------------- highlights */
 
 /**
- * A band color. 34% a flat LIGHTS color, otherwise a hard two- or three-stop
- * gradient whose *middle* is always the light one — type on a band is always
- * near-black on a LIGHTS color, MARA is edge accent only.
+ * A band color. 34% a flat SPARK_LIGHTS color, otherwise a hard two- or
+ * three-stop gradient whose *middle* is always the light one — type on a band
+ * is always near-black on a SPARK_LIGHTS color, and the rest of SPARK is edge
+ * accent only.
+ *
+ * The two-stop form is the one that has to be watched. Its light stop runs from
+ * the top down to `a`, and a letter's ink covers the whole band, so `a` has to
+ * stay high enough that the x-height never reaches the dark stop. 64–86% does
+ * that: the band is placed at 7% down the letter box and is 78% of its height,
+ * so the ink occupies roughly the top three quarters of the band.
  */
 function hlPaint(): string {
-  const L = rnd(LIGHTS);
+  const L = rnd(SPARK_LIGHTS);
   if (Math.random() < 0.34) return L;
   if (Math.random() < 0.55) {
     const a = (64 + Math.random() * 22) | 0;
-    return `linear-gradient(to bottom,${L} 0 ${a}%,${rnd(MARA)} ${a}% 100%)`;
+    return `linear-gradient(to bottom,${L} 0 ${a}%,${rnd(SPARK)} ${a}% 100%)`;
   }
   const t = (7 + Math.random() * 12) | 0;
   const b = 100 - ((5 + Math.random() * 12) | 0);
-  return `linear-gradient(to bottom,${rnd(MARA)} 0 ${t}%,${L} ${t}% ${b}%,${rnd(MARA)} ${b}% 100%)`;
+  return `linear-gradient(to bottom,${rnd(SPARK)} 0 ${t}%,${L} ${t}% ${b}%,${rnd(SPARK)} ${b}% 100%)`;
 }
 
 /** The per-line layer the bands live in, pinned behind the text (`z-index:-1`). */

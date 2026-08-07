@@ -36,6 +36,27 @@ export const MENU = {
 } as const;
 
 /**
+ * The pixel grid for channel 02's paint simulation.
+ *
+ * The two canvases are inset 15px inside a 480 × 289 cell, so their box is
+ * 450 × 259 design px. At one rendered pixel per 5 of those the backing store
+ * is 90 × 52, which the browser scales back up nearest-neighbour. 90 divides
+ * 450 exactly; 52 lands 259 on 4.98px rows, which is under a tenth of a pixel
+ * off square and invisible.
+ *
+ * Lives here rather than in `runtime/channels.ts` because the builder sizes
+ * the canvas and the runtime draws into it, and the two have to agree. The
+ * menu's hover colours drifted for exactly this reason when they were declared
+ * in two places.
+ */
+export const PAINT_PIX = {
+  /** design px per rendered pixel */
+  px: 5,
+  w: 90,
+  h: 52,
+} as const;
+
+/**
  * Page 01 · Product designs.
  *
  * ADAPTED. The design carries four 72.727px case rows between y 731.7 and the

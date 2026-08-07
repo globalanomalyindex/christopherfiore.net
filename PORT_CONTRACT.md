@@ -559,6 +559,64 @@ export function df2tmOpen(stage: HTMLElement): boolean;
 The same standfirst-offset rule applies as on the about screen: index row `n`
 is scroll section `n + 1`, and the readout does not number the standfirst.
 
+### The two accent pools, and why there are two
+
+`LIGHTS` / `MARA` are the **page chrome**: the section bands on the subpages,
+the mobile CTA plate, anything that sits still on a screen and is read. Warm
+neutrals only. Do not put a hue in here.
+
+`SPARK` / `SPARK_LIGHTS` are the **glitch**: `hover.ts`'s band stack,
+`glitch.ts`'s `hlPaint`, the paint simulation's beads. Neutrals plus the seven
+vivid hues. This is the line that keeps the editorial screens editorial while
+the things that move are loud.
+
+Every hue appears at two lightnesses, for two jobs: full strength as a *band*
+under near-black ink, darkened as *type* on paper. Neither set is hand-picked.
+`SPARK_LIGHTS` filters `SPARK` on measured contrast against `COLOR.nearBlack`;
+`FLASH` bisects each hue toward black until it clears 4.5:1 on `COLOR.paper`
+and stops. **A color that cannot carry a role cannot reach that role**, so
+adding a hue to `HUES` is safe by construction and needs no hand check.
+
+`relLuminance` is the real WCAG formula, channels linearized. It previously
+averaged the gamma-encoded bytes, which is not luminance: it happened to order
+a single-hue ramp correctly and got multi-hue sets wrong, rejecting `#FF2D87`
+at a scored 0.377 when it measures 5.4:1.
+
+### Display independence
+
+Nothing may advance by frame count. Three loops carry this:
+
+- `frost.ts` `tick` advances `f.last` by **whole intervals**, never to `now`.
+  Snapping to `now` quantizes to the display's frame boundary and made the
+  field run 15fps at 60Hz and 18.5fps at 240Hz, a 23% speed difference.
+- `channels.ts`'s water loop steps a fixed 60Hz accumulator and **renders only
+  when a step ran**. Rendering per animation frame redrew identical pixels
+  twice on ProMotion and four times at 240Hz.
+- `dither.ts` `BUDGET` is a **ceiling, not a setting**. It was measured on one
+  machine at one resolution. `pace()` finds the live number by comparing each
+  frame against the fastest interval this display has recently demonstrated,
+  so the threshold is never a fixed millisecond count.
+
+### `PAINT_PIX` — channel 02's pixel grid
+
+The two canvases are inset 15px in a 480 × 289 cell, so their box is 450 × 259
+design px; at one rendered pixel per 5 the backing store is 90 × 52, upscaled
+nearest-neighbour by `image-rendering: pixelated`. The constant lives in
+`layout.ts` because the builder sizes the canvas and the runtime draws into it
+and the two must agree.
+
+**The pigment canvas may never be dithered in place.** It accumulates washes at
+0.12–0.2 alpha and the picture is what a hundred of those sum to; quantizing
+alpha every frame rounds each wash back to nothing, so the layers never sum and
+the field becomes isolated pixels flickering to full strength. Pigment
+accumulates smooth on an offscreen buffer and is dithered as a copy on the way
+to the screen. The beads canvas holds no history and is dithered where it
+stands.
+
+Colour quantizes to 6 levels, alpha to 5. The blocks come from the grid, so
+colour does not need to be brutal and must not be: 4 levels sends a warm beige
+to olive and turns the whole field neon.
+
 ### Subpage titles
 `glitch.ts` exports `subtitleIn` / `subtitleOut` / `subtitleReset`, which run
 the page titles' Dessign Maison swap on a subpage title. They find it by

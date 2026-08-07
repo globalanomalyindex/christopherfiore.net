@@ -79,8 +79,72 @@ let filterSeq = 0;
  * is pixel-for-pixel what it always was. Only a cursor thrown across several
  * buttons at once gets there, and what it loses is the speckle on individual
  * letters at a moment when a dozen of them are speckling.
+ *
+ * But that table was measured on ONE machine, at ONE resolution, on ONE
+ * display. 48 is therefore a CEILING, not a setting: the real budget is found
+ * at runtime by `pace` below, which watches the frame clock and takes it down
+ * when this machine cannot hold its own cadence.
  */
 const BUDGET = 48;
+
+/* --------------------------------------------------------------- pacing */
+
+/**
+ * The live budget, and the controller that sets it.
+ *
+ * A display's cadence is whatever its own fastest frames are — 16.7ms on a
+ * 60Hz panel, 8.3 on ProMotion, 4.2 on a 240Hz one — so "we are dropping
+ * frames" cannot be a fixed millisecond number. It is running long against
+ * the cadence THIS machine has just demonstrated it can hit.
+ *
+ * So the cadence is measured as the fastest interval in a rolling window, and
+ * ten consecutive frames at more than 1.7× that takes the budget down by 30%.
+ * Three hundred clean frames give 4 of it back. A fast machine sits at 48 and
+ * never notices; a 4K panel on integrated graphics finds its own number
+ * within a second or two of the first heavy hover, without anybody having to
+ * measure that machine.
+ */
+let liveBudget = BUDGET;
+/** Fastest frame interval in the current window: this display's real cadence. */
+let cadence = 0;
+let winMin = Infinity;
+let winN = 0;
+let slowRun = 0;
+let fastRun = 0;
+let prevFrame = 0;
+/** Timestamp already paced — several runs share one frame and must count once. */
+let pacedAt = -1;
+
+function pace(now: number): void {
+  if (now === pacedAt) return;
+  pacedAt = now;
+  const dt = now - prevFrame;
+  prevFrame = now;
+  // First frame, a resumed tab, or a hidden one carries no information.
+  if (dt <= 0 || dt > 500) return;
+
+  winMin = Math.min(winMin, dt);
+  if (++winN >= 240) {
+    cadence = winMin;
+    winMin = Infinity;
+    winN = 0;
+  }
+  if (!cadence) cadence = dt;
+
+  if (dt > cadence * 1.7) {
+    fastRun = 0;
+    if (++slowRun >= 10) {
+      liveBudget = Math.max(8, Math.round(liveBudget * 0.7));
+      slowRun = 0;
+    }
+    return;
+  }
+  slowRun = 0;
+  if (++fastRun >= 300 && liveBudget < BUDGET) {
+    liveBudget = Math.min(BUDGET, liveBudget + 4);
+    fastRun = 0;
+  }
+}
 
 interface Run {
   /** the pending frame */
@@ -357,13 +421,16 @@ export function dfxSeq(
   // element still ends up exactly where the sequence would have put it, so a
   // skipped letter is a letter that did not speckle, never a letter stuck in
   // noise.
-  if (optional && RUNS.size >= BUDGET && !evict()) {
+  if (optional && RUNS.size >= liveBudget && !evict()) {
     settle();
     return;
   }
 
   const t0 = performance.now();
   const step = (now: number) => {
+    // The frame clock is only worth watching while there is work on it, which
+    // is exactly here. Several runs share a frame; `pace` counts it once.
+    pace(now);
     const t = now - t0;
     let u = stops[0][1];
     for (let i = 1; i < stops.length; i++) {

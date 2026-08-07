@@ -12,8 +12,8 @@
  */
 
 import { asset, css, el, letters, svg } from '../dom.ts';
-import { COLOR, RULE } from '../design/tokens.ts';
-import { MENU, MODULE } from '../design/layout.ts';
+import { COLOR, RULE, rgba } from '../design/tokens.ts';
+import { MENU, MODULE, PAINT_PIX } from '../design/layout.ts';
 import { CASES } from '../data/cases.ts';
 import { CZ_META } from '../data/competizione.ts';
 import { PAINTINGS_COUNT_LABEL, PAINTINGS_META } from '../data/paintings.ts';
@@ -320,8 +320,8 @@ function scaffolding(): SVGElement {
 }
 
 function channel1(): HTMLElement {
-  const gridH = `repeating-linear-gradient(90deg,${RULE.gridLine} 0 2px,rgba(255,255,255,0) 2px ${MODULE}px)`;
-  const gridV = `repeating-linear-gradient(0deg,${RULE.gridLine} 0 2px,rgba(255,255,255,0) 2px ${MODULE}px)`;
+  const gridH = `repeating-linear-gradient(90deg,${RULE.gridLine} 0 2px,${rgba(COLOR.paper, 0)} 2px ${MODULE}px)`;
+  const gridV = `repeating-linear-gradient(0deg,${RULE.gridLine} 0 2px,${rgba(COLOR.paper, 0)} 2px ${MODULE}px)`;
   // The fill grows from the hovered module: --r is the radius, --p the wipe.
   const pos =
     'calc(var(--gx,363.6px) - var(--r)) calc(var(--gy,145.4px) - var(--r)),calc(var(--gx,363.6px) - var(--r)) calc(var(--gy,145.4px) - var(--r)),left top';
@@ -424,8 +424,8 @@ function channel2(): HTMLElement {
     },
     el('canvas', {
       'data-paint': true,
-      width: 630,
-      height: 363,
+      width: PAINT_PIX.w,
+      height: PAINT_PIX.h,
       'aria-hidden': 'true',
       style: css({
         display: 'block',
@@ -433,14 +433,19 @@ function channel2(): HTMLElement {
         height: '100%',
         opacity: '0',
         transition: 'opacity 300ms linear',
-        filter: 'url(#ps-liquid-i) blur(7px) saturate(1.35)',
-        'will-change': 'filter',
+        // The blur that used to be here is gone. Both canvases now carry a
+        // one-pixel-per-5px backing store that channels.ts ordered-dithers, and
+        // a 7px blur over a 5px block is the one thing that erases it. The
+        // turbulence stays: displacing whole blocks reads as wet pigment
+        // dragging the pixels around, which a blur was only ever approximating.
+        filter: 'url(#ps-liquid-i) saturate(1.05)',
+        'image-rendering': 'pixelated',
       }),
     }),
     el('canvas', {
       'data-beads': true,
-      width: 900,
-      height: 518,
+      width: PAINT_PIX.w,
+      height: PAINT_PIX.h,
       'aria-hidden': 'true',
       style: css({
         position: 'absolute',
@@ -450,7 +455,10 @@ function channel2(): HTMLElement {
         height: '100%',
         opacity: '0',
         transition: 'opacity 220ms linear',
-        filter: 'blur(2px) saturate(1.12)',
+        // No displacement on the beads: they are the crisp foreground, and the
+        // two layers reading differently is what gives the field depth.
+        filter: 'saturate(1.12)',
+        'image-rendering': 'pixelated',
       }),
     }),
   );
@@ -474,7 +482,11 @@ function channel2(): HTMLElement {
         'background-repeat': 'no-repeat',
         'background-position': 'left top',
         'background-size': 'var(--p) 100%',
-        'box-shadow': `inset 0 0 0 0 ${COLOR.wood},inset 0 0 0 0 rgba(223,203,250,0)`,
+        // The hover grows this to a 14px ink frame with a 1px paper hairline;
+        // resting is the same two colors at zero width, so the frame grows in
+        // rather than crossing hues on the way. The hairline used to rest on
+        // the old lavender at zero alpha.
+        'box-shadow': `inset 0 0 0 0 ${rgba(COLOR.ink, 0)},inset 0 0 0 0 ${rgba(COLOR.paper, 0)}`,
         transition:
           '--p 300ms cubic-bezier(.3,0,0,1) 40ms,box-shadow 200ms cubic-bezier(.2,0,0,1),color 0ms linear 150ms',
       }),
@@ -530,8 +542,8 @@ function channel3(): HTMLElement {
         opacity: '0',
         transition: 'opacity 300ms linear',
         'background-image': invert
-          ? `repeating-linear-gradient(90deg,rgba(74,19,5,0) 0 48px,${COLOR.woodDeep} 48px 96px)`
-          : `repeating-linear-gradient(90deg,${COLOR.woodDeep} 0 48px,rgba(74,19,5,0) 48px 96px)`,
+          ? `repeating-linear-gradient(90deg,${rgba(COLOR.woodDeep, 0)} 0 48px,${COLOR.woodDeep} 48px 96px)`
+          : `repeating-linear-gradient(90deg,${COLOR.woodDeep} 0 48px,${rgba(COLOR.woodDeep, 0)} 48px 96px)`,
         'background-repeat': 'repeat',
         'will-change': 'transform,opacity',
         'backface-visibility': 'hidden',
@@ -559,7 +571,7 @@ function channel3(): HTMLElement {
   );
 
   /** The 79.5–80.5px pin marks that top and tail the checkered band. */
-  const pins = `repeating-linear-gradient(90deg,rgba(74,19,5,0) 0 79.5px,${COLOR.woodDeep} 79.5px 80.5px,rgba(74,19,5,0) 80.5px 160px)`;
+  const pins = `repeating-linear-gradient(90deg,${rgba(COLOR.woodDeep, 0)} 0 79.5px,${COLOR.woodDeep} 79.5px 80.5px,${rgba(COLOR.woodDeep, 0)} 80.5px 160px)`;
 
   const frame = (extra: Record<string, string | number>) =>
     el('span', {
@@ -591,7 +603,7 @@ function channel3(): HTMLElement {
         ...CELL_BASE,
         padding: '28px 56px 30px 28px',
         'justify-content': 'space-between',
-        'background-image': `repeating-linear-gradient(115deg,${COLOR.paper} 0 13px,rgba(223,203,250,0) 13px 27px)`,
+        'background-image': `repeating-linear-gradient(115deg,${COLOR.paper} 0 13px,${rgba(COLOR.paper, 0)} 13px 27px)`,
         'background-repeat': 'no-repeat',
         'background-position': 'left center',
         'background-size': '0% 100%',

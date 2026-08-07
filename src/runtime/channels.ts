@@ -13,21 +13,31 @@
  * cross-fade per channel.
  */
 
-import { COLOR, VIVID, rgba } from '../design/tokens';
-import { MODULE } from '../design/layout';
+import { COLOR, FONT, SPARK, rgba } from '../design/tokens';
+import { MODULE, PAINT_PIX } from '../design/layout';
 import { css, el, q, qq, svg } from '../dom';
 import { state } from './state';
 
 /* ------------------------------------------------------------------ shared */
 
-/** Hover-state values lifted from the prototype's `style-hover` declarations. */
+/**
+ * Hover-state values lifted from the prototype's `style-hover` declarations.
+ *
+ * These are also written as classes in `styles/menu.css`, and only ONE of the
+ * two runs: `actions.ts` dispatches on `data-hov` and calls the functions
+ * below, so the classes are documentation and the constants here are the site.
+ * They had drifted — ch2 still framed the cell in the old rust at 14px and ch3
+ * still wiped the old lavender across it, both of them the last two visible
+ * pieces of the pre-editorial palette. Kept in step with the classes by hand;
+ * if one moves, move the other.
+ */
 const HOVER = {
   ch1: { r: '800px', p: '820px' },
   ch2: {
     p: '500px',
-    shadow: 'inset 0 0 0 14px #C62C05,inset 0 0 0 15px rgba(223,203,250,.55)',
+    shadow: `inset 0 0 0 14px ${COLOR.ink},inset 0 0 0 15px ${rgba(COLOR.paper, 0.55)}`,
   },
-  ch3: { size: '100% 100%', shadow: 'inset 760px 0 0 0 #DFCBFA' },
+  ch3: { size: '100% 100%', shadow: `inset 760px 0 0 0 ${COLOR.paper}` },
 } as const;
 
 /**
@@ -232,12 +242,16 @@ export function prodOn(cell: HTMLElement): void {
   if (ptrSeen) scafPlace(cell, ptrX, ptrY);
 
   qq(cell, '[data-l]').forEach((s, i) => {
-    s.style.setProperty('-webkit-text-stroke', '1.6px rgba(255,255,255,.62)');
+    // The stroke is the SAME ink the solid letters take, not a lighter tint of
+    // it. The lattice this hover grows is paper, and the stroke used to be
+    // white at .62 — 1.1:1 against the ground it lands on, so the four knocked
+    // out letters simply vanished and "Product designs" read with holes in it.
+    s.style.setProperty('-webkit-text-stroke', `1.6px ${COLOR.ink}`);
     // four letters knock out to outline only, three swap to the alternate face
     s.style.color = i === 2 || i === 5 || i === 9 || i === 12 ? 'transparent' : COLOR.ink;
     if (i === 1 || i === 7 || i === 11) {
-      s.style.fontFamily = "'Dessign Maison',Helvetica,sans-serif";
-      s.style.fontFeatureSettings = "'salt' 1,'ss01' 1";
+      s.style.fontFamily = FONT.alt;
+      s.style.fontFeatureSettings = FONT.altFeatures;
     }
   });
 }
@@ -251,8 +265,9 @@ export function prodOff(cell: HTMLElement): void {
   restoreStyle(cell, 'color');
   scafOff(cell);
   qq(cell, '[data-l]').forEach((s) => {
-    // fade the stroke out over the letters' own 200ms color transition
-    s.style.setProperty('-webkit-text-stroke-color', 'rgba(255,255,255,0)');
+    // fade the stroke out over the letters' own 200ms color transition — the
+    // same ink at zero alpha, so it fades rather than crossing to another hue
+    s.style.setProperty('-webkit-text-stroke-color', rgba(COLOR.ink, 0));
     s.style.color = '';
     s.style.fontFamily = '';
     s.style.fontFeatureSettings = '';
@@ -275,6 +290,102 @@ export function scafMove(cell: HTMLElement, ev: PointerEvent): void {
 /* ----------------------------------------------- 02 · Paintings — the beads */
 
 const LIQUID_ID = 'ps-liquid-i';
+
+/**
+ * The pixel dither.
+ *
+ * Two things together make the effect, and neither alone is enough. The
+ * canvases carry a backing store of one pixel per `PIX` design px and the
+ * browser scales that up with `image-rendering: pixelated`, which is what
+ * makes the blocks. Then every frame the buffer is re-quantised to a few
+ * levels per channel through a 4×4 Bayer threshold matrix, which is what lets
+ * a gradient still read as a gradient once there are only four values left to
+ * say it in. Blocks without the dither is a mosaic; the dither without the
+ * blocks is invisible noise.
+ *
+ * The ALPHA channel is dithered along with the colour, and that is the part
+ * that carries the look: the soft radial falloff around a bead becomes a
+ * stipple instead of a fade, which is the actual signature of a dithered
+ * image rather than a downscaled one.
+ *
+ * Both canvases use the same grid so their blocks line up. They did not
+ * before — the paint canvas oversampled 1.4× and the beads 2×, against a box
+ * that is 450 × 259, so neither landed on whole pixels and the two disagreed.
+ */
+
+/** 4×4 Bayer threshold matrix, in the usual recursive order. */
+const BAYER4 = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+
+/** Design px per rendered pixel. The 450 × 259 canvas box becomes 90 × 52. */
+const PIX = PAINT_PIX.px;
+
+/**
+ * Quantisation levels: colour channels, then alpha.
+ *
+ * The blocks come from the grid, not from these, so the colour quantisation
+ * does not have to be brutal to read as pixels — and it must not be. Four
+ * levels puts every channel on {0, 85, 170, 255}, which sends a warm beige
+ * (192,164,126) to (170,170,85) and turns the whole field neon. Six keeps the
+ * hue and still bands visibly.
+ *
+ * Alpha stays coarse: the stipple at the edge of a wash is the thing that
+ * says "dithered" rather than "downscaled", and it wants few levels.
+ */
+const LEV = 6;
+const ALEV = 5;
+
+/** Below this the un-premultiply is noise, so the pixel is cleared instead. */
+const AFLOOR = 10;
+
+const clamp255 = (v: number): number => (v < 0 ? 0 : v > 255 ? 255 : v);
+
+/**
+ * Ordered-dither a canvas in place.
+ *
+ * `getImageData` / `putImageData` both ignore the current transform and work
+ * in device pixels, so the drawing transform set by `prep` is left alone.
+ */
+function pixelate(c: CanvasRenderingContext2D | null, cv: HTMLCanvasElement | null): void {
+  if (!c || !cv || !cv.width || !cv.height) return;
+  const img = c.getImageData(0, 0, cv.width, cv.height);
+  const d = img.data;
+  const cs = 255 / (LEV - 1);
+  const as = 255 / (ALEV - 1);
+  for (let y = 0, i = 0; y < cv.height; y++) {
+    for (let x = 0; x < cv.width; x++, i += 4) {
+      // -0.469 … +0.469: the fraction of one quantisation step to bias by.
+      // Never a full ±0.5, so a value already sitting on the grid stays there
+      // and re-dithering an already-dithered buffer is a no-op.
+      const t = BAYER4[((y & 3) << 2) | (x & 3)] / 16 - 0.46875;
+      if (d[i + 3] < AFLOOR) {
+        d[i + 3] = 0;
+        continue;
+      }
+      d[i + 3] = clamp255(Math.round((d[i + 3] + t * as) / as) * as);
+      if (!d[i + 3]) continue;
+      const b = t * cs;
+      d[i] = clamp255(Math.round((d[i] + b) / cs) * cs);
+      d[i + 1] = clamp255(Math.round((d[i + 1] + b) / cs) * cs);
+      d[i + 2] = clamp255(Math.round((d[i + 2] + b) / cs) * cs);
+    }
+  }
+  c.putImageData(img, 0, 0);
+}
+
+/**
+ * Bead and palette-dab colours: two neutrals to every vivid.
+ *
+ * SPARK is the seven neutrals followed by the seven vivid hues. Drawing evenly
+ * across it gives a field that is half saturated hue, and once that is
+ * quantised it stops reading as paint on paper and starts reading as neon. So
+ * every third bead is hot and the rest are ground.
+ */
+const NEUTRAL_BEADS = SPARK.slice(0, 7);
+const HOT_BEADS = SPARK.slice(7);
+const beadCol = (i: number): string =>
+  i % 3 === 2
+    ? HOT_BEADS[((i / 3) | 0) % HOT_BEADS.length]
+    : NEUTRAL_BEADS[(i * 3) % NEUTRAL_BEADS.length];
 
 /** bead diameter, cell-local px */
 const D = 46;
@@ -465,13 +576,36 @@ export function waterOn(cell: HTMLElement): void {
   const CW = cell.offsetWidth;
   const cvP = q<HTMLCanvasElement>(cell, '[data-paint]');
   const cvB = q<HTMLCanvasElement>(cell, '[data-beads]');
-  const g = cvP ? cvP.getContext('2d') : null;
-  const gb = cvB ? cvB.getContext('2d') : null;
+
+  /*
+    The pigment canvas ACCUMULATES — every stroke lays down a wash at
+    0.12–0.2 alpha and the picture is what a hundred of those add up to. So it
+    cannot be dithered in place: quantising alpha every frame rounds each of
+    those washes back to nothing, the layers never sum, and instead of paint
+    you get isolated pixels flickering to full strength wherever the threshold
+    happened to be crossed. It looked like confetti, which is exactly what it
+    was.
+
+    So pigment accumulates smooth, on an offscreen buffer at the same grid,
+    and is dithered only on the way to the screen. The beads canvas is a
+    different thing — it is cleared and fully redrawn every frame, holds no
+    history, and can be dithered in place.
+  */
+  const off = document.createElement('canvas');
+  off.width = cvP ? cvP.width : PAINT_PIX.w;
+  off.height = cvP ? cvP.height : PAINT_PIX.h;
+  const g = off.getContext('2d');
+  // willReadFrequently keeps these on the CPU, which is what makes the
+  // per-frame getImageData in `pixelate` a memcpy instead of a GPU readback.
+  // At 90 × 52 the software rasteriser is not the bottleneck either.
+  const gp = cvP ? cvP.getContext('2d', { willReadFrequently: true }) : null;
+  const gb = cvB ? cvB.getContext('2d', { willReadFrequently: true }) : null;
 
   /**
-   * Both canvases are inset 15px inside the cell and oversampled (1.4× paint,
-   * 2× beads). Working in cell-local coordinates means bead positions and
-   * letter boxes share one space.
+   * Both canvases are inset 15px inside the cell and UNDERsampled, one pixel
+   * per PIX design px, which is what the dither quantises. Working in
+   * cell-local coordinates means bead positions and letter boxes share one
+   * space regardless of what the backing store is.
    */
   const prep = (c: CanvasRenderingContext2D | null, cv: HTMLCanvasElement | null, k: number): void => {
     if (!c || !cv) return;
@@ -482,8 +616,8 @@ export function waterOn(cell: HTMLElement): void {
     c.lineCap = 'round';
     c.lineJoin = 'round';
   };
-  prep(g, cvP, 1.4);
-  prep(gb, cvB, 2);
+  prep(g, off, 1 / PIX);
+  prep(gb, cvB, 1 / PIX);
 
   const beads: Bead[] = spans.map((sp, i) => {
     const r = sp.getBoundingClientRect();
@@ -493,8 +627,8 @@ export function waterOn(cell: HTMLElement): void {
     const lh = r.height / sc;
     sp.style.transition =
       `color 280ms linear ${i * 34}ms,-webkit-text-stroke-color 280ms linear ${i * 34}ms`;
-    sp.style.setProperty('-webkit-text-stroke', '2px rgba(28,14,40,0)');
-    const col = VIVID[i % VIVID.length];
+    sp.style.setProperty('-webkit-text-stroke', `2px ${rgba(COLOR.ink, 0)}`);
+    const col = beadCol(i);
     return {
       sp,
       col,
@@ -559,7 +693,7 @@ export function waterOn(cell: HTMLElement): void {
       [bx0 + bw * 0.5, by0 + bh],
       [bx0, by0 + bh],
     ] as [number, number][]
-  ).map((d, i) => ({ x: d[0], y: d[1], col: VIVID[i % VIVID.length] }));
+  ).map((d, i) => ({ x: d[0], y: d[1], col: beadCol(i * 2 + 1) }));
 
   const sim: WaterSim = {
     items: beads,
@@ -582,12 +716,12 @@ export function waterOn(cell: HTMLElement): void {
     hollow: () =>
       spans.forEach((sp) => {
         sp.style.color = 'transparent';
-        sp.style.setProperty('-webkit-text-stroke', '2px #1C0E28');
+        sp.style.setProperty('-webkit-text-stroke', `2px ${COLOR.ink}`);
       }),
     fill: () =>
       spans.forEach((sp) => {
         sp.style.color = '';
-        sp.style.setProperty('-webkit-text-stroke', '2px rgba(28,14,40,0)');
+        sp.style.setProperty('-webkit-text-stroke', `2px ${rgba(COLOR.ink, 0)}`);
       }),
   };
   WATER.set(cell, sim);
@@ -724,9 +858,9 @@ export function waterOn(cell: HTMLElement): void {
           sp.style.color = '';
           sp.style.removeProperty('-webkit-text-stroke');
         });
-        if (g && cvP) {
+        if (g) {
           g.setTransform(1, 0, 0, 1, 0, 0);
-          g.clearRect(0, 0, cvP.width, cvP.height);
+          g.clearRect(0, 0, off.width, off.height);
         }
         sim.dead = true;
       }
@@ -953,6 +1087,25 @@ export function waterOn(cell: HTMLElement): void {
   const render = (): void => {
     const its = sim.items;
     if (g) {
+      /*
+        Pigment fades a shade every frame, so the field settles at a density
+        instead of climbing to a solid slab.
+
+        Strokes are aimed at the least-painted cell of a 6 × 4 coverage grid,
+        which means the canvas is deliberately being filled — and nothing ever
+        took anything off it. Eight seconds of hovering used to leave the whole
+        band opaque. That was survivable while the pigment was a soft wash and
+        is not now: quantised, a saturated field is a wall of colour with no
+        picture left in it. At 0.005 a stroke has a half-life of about two
+        seconds, which is four or five strokes' worth of history on the canvas
+        at any moment.
+      */
+      g.globalCompositeOperation = 'destination-out';
+      g.globalAlpha = 0.005;
+      g.fillStyle = '#000';
+      g.fillRect(15, 15, 450, 259);
+      g.globalAlpha = 1;
+
       // keep the pigment inside the band — hard cut top and bottom, soft ramp in
       if (!sim.mask) {
         const mt = g.createLinearGradient(0, 50, 0, 76);
@@ -975,7 +1128,7 @@ export function waterOn(cell: HTMLElement): void {
       g.globalCompositeOperation = 'source-over';
     }
     if (gb) {
-      prep(gb, cvB, 2);
+      prep(gb, cvB, 1 / PIX);
       gb.globalAlpha = 1;
       for (const b of its) {
         const sp2 = b.spd || 0;
@@ -998,9 +1151,31 @@ export function waterOn(cell: HTMLElement): void {
         gb.fill();
       }
     }
+    // Last, so the dither is the final state of what reaches the screen and
+    // nothing draws a smooth edge over it. The pigment is copied off its
+    // accumulation buffer here and dithered as a copy; the beads canvas holds
+    // no history and is dithered where it stands.
+    if (gp && cvP) {
+      gp.clearRect(0, 0, cvP.width, cvP.height);
+      gp.drawImage(off, 0, 0);
+      pixelate(gp, cvP);
+    }
+    pixelate(gb, cvB);
   };
 
-  // fixed 60Hz step, at most 3 catch-up steps per frame
+  /*
+    Fixed 60Hz step, at most 3 catch-up steps per frame. The simulation was
+    already display-independent; the RENDER was not. It ran once per animation
+    frame, so a 120Hz display redrew both canvases twice per simulation step
+    and a 240Hz display four times, for pixel-identical output every time.
+
+    Rendering only when a step actually advanced pins the draw rate to the
+    simulation's own 60Hz on every display. On this machine that is unchanged;
+    on a ProMotion panel it halves the work; on a 240Hz panel it quarters it.
+    It matters more now than it used to, because each render also runs two
+    ordered-dither passes.
+  */
+  const STEP = 1000 / 60;
   let acc = 0;
   let prev = 0;
   const loop = (now: number): void => {
@@ -1008,9 +1183,9 @@ export function waterOn(cell: HTMLElement): void {
     acc += Math.min(64, now - prev);
     prev = now;
     let n = 0;
-    while (acc >= 16.667 && n < 3) {
+    while (acc >= STEP && n < 3) {
       step();
-      acc -= 16.667;
+      acc -= STEP;
       n++;
       if (sim.dead) break;
     }
@@ -1018,7 +1193,7 @@ export function waterOn(cell: HTMLElement): void {
       if (WATER.get(cell) === sim) WATER.delete(cell);
       return;
     }
-    render();
+    if (n) render();
     sim.raf = requestAnimationFrame(loop);
   };
   sim.raf = requestAnimationFrame(loop);

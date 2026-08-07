@@ -48,12 +48,14 @@ export const COLOR = {
 } as const;
 
 /**
- * Accent ramp — hover bands, dither flashes, channel dots.
+ * Accent ramp — the page chrome's bands and rules.
  *
  * Deliberately a single warm ramp rather than a set of hues. `LIGHTS` takes
  * the top of it and those carry type; the darker end are edge accents that
- * never do. The handoff's version was seven unrelated vivid colors, which is
- * the one thing about it that could not survive the word "editorial".
+ * never do. This is the *editorial* set: the section bands on the subpages,
+ * the mobile CTA plate, anything that sits still on a page and is read.
+ *
+ * The vivid colors live in `SPARK` below and are for the glitch, which moves.
  */
 export const MARA = [
   '#E7E0D2',
@@ -77,21 +79,137 @@ export const VIVID = [
   '#3E3A33',
 ] as const;
 
-/** Colors used by the per-letter intro flash. */
-export const FLASH = ['#8A7049', '#C0A47E', '#3E3A33', '#D3C3A6', '#5C564B', '#A79B88'] as const;
-
-export const relLuminance = (hex: string): number => {
-  const n = parseInt(hex.slice(1), 16);
-  return (0.2126 * ((n >> 16) & 255) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255)) / 255;
-};
+/* ------------------------------------------------------------- contrast */
 
 /**
- * The legibility contract: type only ever sits on a band drawn from LIGHTS,
- * and the ink on such a band is always near-black. Darker MARA accents are
- * edge accents only. #121110 on the darkest LIGHTS member (#C0A47E) measures
- * 7.9:1, so every band in the set clears 4.5:1 with room.
+ * WCAG relative luminance.
+ *
+ * The channels have to be LINEARIZED first. This used to average the
+ * gamma-encoded bytes straight, which is not luminance and is not what the
+ * 4.5:1 threshold is defined against. It agreed with the real formula on the
+ * neutral ramp by luck, because a ramp of one hue orders the same either way;
+ * it does not agree once there is more than one hue in the set. Under the old
+ * arithmetic #FF2D87 scores 0.377 and is rejected as too dark to carry ink,
+ * when it actually measures 5.4:1 against near-black and carries it fine.
  */
-export const LIGHTS: readonly string[] = MARA.filter((c) => relLuminance(c) >= 0.5);
+export const relLuminance = (hex: string): number => {
+  const n = parseInt(hex.slice(1), 16);
+  const lin = (b: number): number => {
+    const s = b / 255;
+    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+  };
+  return 0.2126 * lin((n >> 16) & 255) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255);
+};
+
+/** WCAG contrast ratio between two opaque hex colors. 1 = identical, 21 = max. */
+export const contrast = (a: string, b: string): number => {
+  const la = relLuminance(a);
+  const lb = relLuminance(b);
+  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+};
+
+/** The threshold everything on this site is held to. */
+export const AA = 4.5;
+
+/**
+ * Scale a color toward black until it clears `ratio` against `ground`.
+ *
+ * Returns it unchanged when it already clears. Used to build the flash set:
+ * the vivid hues are far too light to be *type* on paper, and the fix is to
+ * take the hue down rather than to drop the hue.
+ */
+const darkenTo = (hex: string, ground: string, ratio: number): string => {
+  if (contrast(hex, ground) >= ratio) return hex;
+  const n = parseInt(hex.slice(1), 16);
+  const r = (n >> 16) & 255;
+  const g = (n >> 8) & 255;
+  const b = n & 255;
+  const at = (f: number): string =>
+    `#${[r, g, b].map((c) => Math.round(c * f).toString(16).padStart(2, '0')).join('')}`;
+  // Contrast against a light ground is monotone in the scale factor, so bisect.
+  let lo = 0;
+  let hi = 1;
+  for (let i = 0; i < 24; i++) {
+    const mid = (lo + hi) / 2;
+    if (contrast(at(mid), ground) >= ratio) lo = mid;
+    else hi = mid;
+  }
+  return at(lo);
+};
+
+/* --------------------------------------------------------------- glitch */
+
+/**
+ * The vivid hues from the handoff. They are back, and they are back on terms:
+ * a hue appears at full strength where it is a BAND under near-black ink, and
+ * darkened where it is TYPE on paper. Same seven hues in both roles.
+ *
+ * This is the whole answer to "vivid, but always legible". Nothing here is
+ * hand-picked for contrast; both derived sets below are filtered or solved, so
+ * a hue that cannot clear 4.5:1 in a role never reaches that role.
+ */
+/*
+  Ordered warm first, and the order is load-bearing in one place: the paint
+  simulation's palette dabs take the first few, and on the handoff's original
+  order those were the cyan and the blue, which pulled the whole field cold
+  against a warm site. Everything else that reads this picks at random.
+*/
+const HUES = [
+  '#FF2D87',
+  '#F5D90A',
+  '#12D9E8',
+  '#FF6B1A',
+  '#C9F227',
+  '#2B45F5',
+  '#35E5C8',
+] as const;
+
+/**
+ * The band pool for the glitch: the warm neutrals plus the vivid hues.
+ *
+ * `hover.ts` and `glitch.ts` draw from this. The page chrome does not — the
+ * subpage section bands stay on `LIGHTS`, so the editorial screens are still
+ * editorial and only the things that move are loud.
+ */
+export const SPARK: readonly string[] = [...MARA, ...HUES];
+
+/**
+ * Bands that may carry type, derived rather than listed: everything in SPARK
+ * that clears 4.5:1 against the near-black ink. Ten of the fourteen do, four
+ * neutral and six vivid, and the four that do not (#8A7049 at 4.0, #5C564B,
+ * #3E3A33, #2B45F5 at 2.9) stay available as edge accents.
+ */
+export const SPARK_LIGHTS: readonly string[] = SPARK.filter(
+  (c) => contrast(c, COLOR.nearBlack) >= AA,
+);
+
+/**
+ * Colors for the per-letter flash.
+ *
+ * These are set as `color` on a letter sitting on the paper ground, so they
+ * are the one place a vivid hue has to be dark. Each one is taken down until
+ * it clears 4.5:1 on paper and no further, which lands them as deep jewel
+ * versions of the same hues: an olive lime, a teal cyan, a burnt orange.
+ *
+ * The set this replaced was four-sevenths illegible. #C0A47E measured 2.0:1
+ * on paper and #D3C3A6 measured 1.4, so half of every flash was invisible and
+ * the letters looked like they were dropping out rather than firing.
+ */
+export const FLASH: readonly string[] = [
+  ...HUES.map((c) => darkenTo(c, COLOR.paper, AA)),
+  '#5C564B',
+  '#3E3A33',
+];
+
+/**
+ * The legibility contract: type only ever sits on a band drawn from LIGHTS (or
+ * SPARK_LIGHTS), and the ink on such a band is always near-black. Darker MARA
+ * accents are edge accents only. #121110 on the darkest LIGHTS member
+ * (#C0A47E) measures 7.9:1, so every band in the set clears 4.5:1 with room.
+ */
+export const LIGHTS: readonly string[] = MARA.filter(
+  (c) => contrast(c, COLOR.nearBlack) >= AA,
+);
 
 export const rgba = (hex: string, a: number): string => {
   const n = parseInt(hex.slice(1), 16);

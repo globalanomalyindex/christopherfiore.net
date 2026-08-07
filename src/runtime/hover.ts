@@ -2,26 +2,34 @@
  * The in-page button hover treatment.
  *
  * A band stack fills the *whole* button, not just the text: one main light
- * band drawn from LIGHTS (56–80% of the height, at a random vertical offset),
- * one or two darker MARA accents above/below it, a 1.5px inset outline and
- * 13px corner tick marks. Every layer wipes in from its own random direction
- * with a ±7.5px jitter and its own stagger, so the stack assembles glitchily
- * and never reads as a left-to-right sweep.
+ * band drawn from SPARK_LIGHTS (56–80% of the height, at a random vertical
+ * offset), one or two darker SPARK accents above/below it, a 1.5px inset
+ * outline and 13px corner tick marks. Every layer wipes in from its own random
+ * direction with a ±7.5px jitter and its own stagger, so the stack assembles
+ * glitchily and never reads as a left-to-right sweep.
  *
- * LEGIBILITY CONTRACT: the band the type sits on is always from LIGHTS, the
- * ink on it is always #0B0B0C, and the darker MARA rows are edge accents that
- * never carry type.
+ * LEGIBILITY CONTRACT: the band the type sits on is always from SPARK_LIGHTS,
+ * the ink on it is always COLOR.nearBlack, and the darker SPARK rows are edge
+ * accents that never carry type. SPARK_LIGHTS is *derived* by filtering on
+ * measured contrast, so a band that could not carry the ink cannot reach here.
  */
 
 import { css, qq } from '../dom.ts';
-import { COLOR, LIGHTS, MARA } from '../design/tokens.ts';
+import { COLOR, SPARK, SPARK_LIGHTS } from '../design/tokens.ts';
 import { glitchFont, wrapWord } from './glitch.ts';
 import { state } from './state.ts';
 
 /** The only ink allowed on a band. */
 const INK = COLOR.nearBlack;
-/** `style.color` serialises to this once INK is set — lets the pin skip redundant writes. */
-const INK_RGB = 'rgb(11, 11, 12)';
+/**
+ * What `style.color` serialises to once INK is set, so the per-frame pin can
+ * skip the write when nothing has changed. Derived from INK rather than typed
+ * out: it was a stale literal from the old palette, so the comparison never
+ * matched and the pin wrote to every hovered element on every frame.
+ */
+const INK_RGB = ((n) => `rgb(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255})`)(
+  parseInt(INK.slice(1), 16),
+);
 
 /** Corner tick size for a button-sized band. */
 const TICK = 13;
@@ -137,11 +145,11 @@ export function hlBox(el: HTMLElement): void {
   // the leftover room. Reduced motion collapses this to one full-height band.
   const mainH = flat ? 100 : 56 + Math.random() * 24;
   const top = flat ? 0 : (100 - mainH) * (0.2 + Math.random() * 0.6);
-  const rows: [number, number, string][] = [[top, mainH, rnd(LIGHTS)]];
+  const rows: [number, number, string][] = [[top, mainH, rnd(SPARK_LIGHTS)]];
   if (!flat) {
     // Darker accents only where there is more than 3% of height to fill.
-    if (top > 3) rows.unshift([0, top, rnd(MARA)]);
-    if (100 - top - mainH > 3) rows.push([top + mainH, 100 - top - mainH, rnd(MARA)]);
+    if (top > 3) rows.unshift([0, top, rnd(SPARK)]);
+    if (100 - top - mainH > 3) rows.push([top + mainH, 100 - top - mainH, rnd(SPARK)]);
   }
 
   const parts: HTMLElement[] = [];
@@ -193,8 +201,8 @@ export function hlBox(el: HTMLElement): void {
 }
 
 /**
- * Pin the ink to #0B0B0C while the cursor is inside. Re-asserted every frame
- * so a re-render of the button cannot revert it mid-hover.
+ * Pin the ink to COLOR.nearBlack while the cursor is inside. Re-asserted every
+ * frame so a re-render of the button cannot revert it mid-hover.
  */
 export function hlInk(el: HTMLElement, on: boolean): void {
   const r = rec(el);

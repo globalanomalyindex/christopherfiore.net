@@ -320,12 +320,30 @@ function tick(f: Frost, now: number): void {
     if (!f.off) f.off = covered(f, r);
   }
   if (f.off) return;
-  // ~11fps quiet, ~19fps otherwise — the low frame rate is part of the look.
-  if (now - f.last > (f.quiet ? 90 : 52)) {
-    f.last = now;
-    f.t += f.quiet ? 0.45 : 1;
-    render(f);
-  }
+  /*
+    ~11fps quiet, ~19fps otherwise — the low frame rate is part of the look,
+    and it has to be the SAME low frame rate on every display.
+
+    This used to compare `now - f.last` against the interval and then set
+    `f.last = now`, which quantises the real interval up to the next display
+    frame and makes the field's speed a function of the refresh rate. At 52ms
+    a 60Hz display first clears the threshold at 66.7ms and runs the field at
+    15fps; a 120Hz display clears it at 58.3 and runs at 17; a 240Hz display
+    clears it at 54.2 and runs at 18.5. The same canvas moved 23% faster on a
+    faster monitor.
+
+    Advancing `f.last` by whole intervals instead of snapping it to `now`
+    removes the quantisation: the field renders on the same clock everywhere.
+    `n` is capped so a tab that was hidden for a minute resumes rather than
+    trying to catch up through a thousand intervals.
+  */
+  const iv = f.quiet ? 90 : 52;
+  const behind = now - f.last;
+  if (behind < iv) return;
+  const n = Math.min(3, Math.floor(behind / iv));
+  f.last = behind > iv * 12 ? now : f.last + n * iv;
+  f.t += (f.quiet ? 0.45 : 1) * n;
+  render(f);
 }
 
 /* ------------------------------------------------------------------ renderer */
