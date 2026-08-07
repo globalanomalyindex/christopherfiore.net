@@ -254,7 +254,7 @@ function showSheet(P: Parts, n: number, animate: boolean): void {
   for (const row of qq(viewer, '[data-evrow]')) {
     const on = Number(row.getAttribute('data-evrow')) === n;
     row.setAttribute('aria-current', on ? 'true' : 'false');
-    row.style.borderLeftColor = on ? COLOR.lavender : 'transparent';
+    row.style.borderLeftColor = on ? COLOR.paper : 'transparent';
     row.style.opacity = on ? '1' : '.62';
   }
 

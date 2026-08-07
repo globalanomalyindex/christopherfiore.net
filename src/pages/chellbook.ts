@@ -75,10 +75,10 @@ import {
 import type { TableRow } from '../data/types.ts';
 
 /** Lavender hairlines: the dark-ground pair, as on the page-03 case study. */
-const MAJOR = RULE.onRustMajor;
-const MINOR = RULE.onRustMinor;
+const MAJOR = RULE.onInkMajor;
+const MINOR = RULE.onInkMinor;
 
-const KARRIK = "'Karrik',sans-serif";
+const MONO = "Monaco,'SFMono-Regular',Menlo,ui-monospace,monospace";
 
 /**
  * A band color, always from LIGHTS, always carrying `#0B0B0C` ink. Indexed
@@ -210,7 +210,7 @@ function protoCard(p: (typeof CHELL_PROTOTYPES)[number], i: number): HTMLElement
         style: css({
           display: 'block',
           margin: '12px 0 10px',
-          'font-family': KARRIK,
+          'font-family': MONO,
           'font-size': 30,
           'line-height': '1.05',
           'letter-spacing': '-.02em',
@@ -489,7 +489,7 @@ function titleBlock(): HTMLElement[] {
         left: CB.title.x,
         top: CB.title.y,
         margin: '0',
-        'font-family': KARRIK,
+        'font-family': MONO,
         'font-weight': '400',
         'font-size': CB.title.size,
         'line-height': `${CB.title.lh}px`,
@@ -516,7 +516,7 @@ function titleBlock(): HTMLElement[] {
         top: CB.descriptorY,
         width: 760,
         margin: '0',
-        'font-family': KARRIK,
+        'font-family': MONO,
         'font-size': 20,
         'line-height': '1.4',
         'letter-spacing': '.005em',
@@ -688,7 +688,7 @@ function indexRow(b: (typeof CHELL_BOARDS)[number], n: number): HTMLElement {
         gap: 5,
         // the current-board marker; a border, not a box-shadow, so it cannot
         // collide with the focus ring band base.css paints with box-shadow
-        'border-left': `3px solid ${n === 0 ? COLOR.lavender : 'transparent'}`,
+        'border-left': `3px solid ${n === 0 ? COLOR.paper : 'transparent'}`,
         'border-bottom': `1px solid ${MINOR}`,
         padding: '0 10px',
         opacity: n === 0 ? '1' : '.62',
@@ -699,7 +699,7 @@ function indexRow(b: (typeof CHELL_BOARDS)[number], n: number): HTMLElement {
       'span',
       {
         style: css({
-          'font-family': KARRIK,
+          'font-family': MONO,
           'font-size': 15,
           'letter-spacing': '-.01em',
           overflow: 'hidden',
@@ -785,7 +785,7 @@ function index(): HTMLElement[] {
       {
         style: css({
           display: 'block',
-          'font-family': KARRIK,
+          'font-family': MONO,
           'font-size': 15,
           'line-height': '1.35',
           'text-wrap': 'pretty',
@@ -864,7 +864,7 @@ function stateCard(s: (typeof CHELL_STATES)[number], n: number): HTMLElement {
         'span',
         {
           style: css({
-            'font-family': KARRIK,
+            'font-family': MONO,
             'font-size': 20,
             'letter-spacing': '-.015em',
           }),
@@ -979,7 +979,7 @@ const prose = (text: string, size: number, opacity?: string) =>
     {
       style: css({
         margin: '0 0 13px',
-        'font-family': KARRIK,
+        'font-family': MONO,
         'font-size': size,
         'line-height': '1.62',
         'letter-spacing': '.005em',
@@ -1091,7 +1091,7 @@ const fieldRows = (rows: TableRow[], valueSize: number) =>
           {
             style: css({
               margin: '6px 0 0',
-              'font-family': KARRIK,
+              'font-family': MONO,
               'font-size': valueSize,
               'line-height': '1.45',
               'text-wrap': 'pretty',
@@ -1133,7 +1133,7 @@ const numbered = (n: string, name: string, aside: string | null, body: string) =
         'span',
         {
           style: css({
-            'font-family': KARRIK,
+            'font-family': MONO,
             'font-size': 18,
             'line-height': '1.2',
             'letter-spacing': '-.015em',
@@ -1164,7 +1164,7 @@ function textSections(): HTMLElement[] {
       {
         style: css({
           margin: '0 0 14px',
-          'font-family': KARRIK,
+          'font-family': MONO,
           'font-size': 20,
           'line-height': '1.35',
           'letter-spacing': '-.01em',
@@ -1190,7 +1190,7 @@ function textSections(): HTMLElement[] {
             {
               style: css({
                 margin: '7px 0 0',
-                'font-family': KARRIK,
+                'font-family': MONO,
                 'font-size': 16,
                 'line-height': '1.45',
                 'text-wrap': 'pretty',
@@ -1255,7 +1255,7 @@ function textSections(): HTMLElement[] {
             {
               style: css({
                 margin: '7px 0 0',
-                'font-family': KARRIK,
+                'font-family': MONO,
                 'font-size': 17,
                 'line-height': '1.45',
                 'text-wrap': 'pretty',
@@ -1286,7 +1286,7 @@ function textSections(): HTMLElement[] {
             {
               style: css({
                 margin: '0',
-                'font-family': KARRIK,
+                'font-family': MONO,
                 'font-size': 16,
                 'line-height': '1.5',
                 'letter-spacing': '-.005em',
@@ -1383,7 +1383,7 @@ function textColumn(): HTMLElement {
         top: 0,
         width: '100%',
         height: 0,
-        background: COLOR.rust,
+        background: COLOR.wood,
         display: 'none',
       }),
     }),
@@ -1484,7 +1484,7 @@ export function build(): HTMLElement {
         // the opaque plaque ground: type has to stay legible over a screen full
         // of imagery, and the state specimen needs a neutral dark surround
         background: COLOR.plaque,
-        color: COLOR.lavender,
+        color: COLOR.paper,
         overflow: 'hidden',
       }),
     },

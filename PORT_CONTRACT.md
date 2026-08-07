@@ -20,6 +20,46 @@ survive verbatim is **geometry, exact values, and timing**. Rewrite the
 plumbing (the `x-dc` custom element, `style-hover="…"`, `onClick="{{ fn }}"`)
 into the idioms below.
 
+## The editorial palette and Monaco
+
+The handoff's rust (#C62C05) and lavender (#DFCBFA) with seven vivid accents
+were replaced by warm neutrals, one light unpainted-wood tone, and Monaco in
+place of Karrik. Every structural decision the handoff made survives: the
+inversion on hover, the light-band-with-near-black-ink contract, the timings,
+the dither. Only the hues and the face moved.
+
+**`rust` was doing two jobs and had to be split.** It was the ink on light
+grounds AND the accent on marks, rails, frames and borders. Those pull apart in
+an editorial scheme, so the tokens are now `ink` and `wood` and every call site
+had to say which it meant. `wood` is deliberately 3.0:1 on paper and fails as a
+reading color on purpose, so nothing important can drift into it.
+
+**Monaco is MONOSPACE, and that changes how display sizes are set.** One advance
+is 0.6em, verified in the browser at 100px with no tracking: ten characters draw
+600.1px. A title's width is therefore `chars × size × (0.6 + trackEm)`, and
+`monoWidth` / `monoFit` in `src/design/tokens.ts` are the whole story. Sizes are
+SOLVED now rather than measured and tuned. Anything that changes a display
+string should re-solve, not re-eyeball.
+
+Monaco is 1.16× to 1.45× wider than Karrik for the same string, depending on how
+many narrow letters it has, so several things had to come down or move:
+
+| What | Was | Now | Why |
+|---|---|---|---|
+| `PAGE1.nameSize` | 19 | 17 | 33 characters drew 357 of a 363.636 track |
+| menu channel 03 | 88 | 82 | "Competizione" wrapped one letter onto line two |
+| menu contact strip | 62 | 48 | "Contact + About me" ran under the email |
+| `MENU.crest.left` | 1259 | 1440 | "synthétique" grew 166px into the bird |
+| subpage descriptor | 900 wide | 1300 | wrapped into the meta line under it |
+| subpage header state | 4 cols @13px | 5 cols @11.5px | clipped mid-word on every subpage |
+
+**Monaco is Apple's font and is bundled here as a webfont** at
+`public/fonts/Monaco.ttf`, 534KB. That is a licensing question for the site's
+owner, not a technical one: Apple's system fonts are licensed for use on Apple
+platforms, not for redistribution. The stack falls back to SFMono, Menlo and
+`ui-monospace`, so dropping the `@font-face` would still resolve to the real
+Monaco on macOS and to a monospace elsewhere.
+
 ## Stack
 
 Vite + TypeScript, no framework, no runtime dependencies. ES modules, strict

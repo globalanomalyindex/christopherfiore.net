@@ -24,9 +24,9 @@ import { READER_PAGE as AP } from '../design/layout.ts';
 import { ABOUT, ABOUT_SECTIONS, AT_A_GLANCE } from '../data/about.ts';
 import { PROFILE_LINKS, STUDIO } from '../data/studio.ts';
 
-const KARRIK = "'Karrik',sans-serif";
-const MAJOR = rgba(COLOR.lavender, 0.28);
-const MINOR = rgba(COLOR.lavender, 0.2);
+const MONO = "Monaco,'SFMono-Regular',Menlo,ui-monospace,monospace";
+const MAJOR = rgba(COLOR.paper, 0.28);
+const MINOR = rgba(COLOR.paper, 0.2);
 
 const TEXT_H = AP.bandEnd - AP.text.y;
 const SCROLL_TOP = AP.secBarH + AP.secBarGap;
@@ -224,7 +224,7 @@ function titleBlock(): HTMLElement[] {
         left: AP.title.x,
         top: AP.title.y,
         'transform-origin': '0 0',
-        'font-family': KARRIK,
+        'font-family': MONO,
         'font-size': AP.title.size,
         'line-height': `${AP.title.lh}px`,
         'letter-spacing': AP.title.track,
@@ -312,7 +312,7 @@ function indexRow(sec: (typeof ABOUT_SECTIONS)[number], n: number): HTMLElement 
     ),
     el(
       'span',
-      { style: css({ 'font-family': KARRIK, 'font-size': 17, 'letter-spacing': '-.01em' }) },
+      { style: css({ 'font-family': MONO, 'font-size': 17, 'letter-spacing': '-.01em' }) },
       sec.name,
     ),
   );
@@ -415,7 +415,7 @@ function glanceColumn(): HTMLElement {
             {
               style: css({
                 margin: '5px 0 0',
-                'font-family': KARRIK,
+                'font-family': MONO,
                 'font-size': 15,
                 'line-height': '1.4',
                 'text-wrap': 'pretty',
@@ -445,7 +445,7 @@ function textSections(): HTMLElement[] {
       {
         style: css({
           margin: '12px 0 0',
-          'font-family': KARRIK,
+          'font-family': MONO,
           'font-size': 21,
           'line-height': '1.4',
           'letter-spacing': '-.01em',
@@ -472,7 +472,7 @@ function textSections(): HTMLElement[] {
           {
             style: css({
               margin: '12px 0 0',
-              'font-family': KARRIK,
+              'font-family': MONO,
               'font-size': 17,
               'line-height': '1.55',
               'text-wrap': 'pretty',
@@ -554,7 +554,7 @@ function textColumn(): HTMLElement {
         top: 0,
         width: '100%',
         height: 0,
-        background: COLOR.rust,
+        background: COLOR.wood,
         display: 'none',
       }),
     }),
@@ -640,7 +640,7 @@ export function build(): HTMLElement {
         display: 'none',
         // the plaque ground every reading subpage in this design uses
         background: COLOR.plaque,
-        color: COLOR.lavender,
+        color: COLOR.paper,
         overflow: 'hidden',
       }),
     },

@@ -85,13 +85,13 @@ function staticOn(cell: HTMLElement): void {
     style: css({
       position: 'absolute',
       inset: '0',
-      background: COLOR.lavender,
+      background: COLOR.paper,
       'pointer-events': 'none',
       'z-index': '0',
     }),
   });
   cell.insertBefore(plate, cell.firstChild);
-  setStyle(cell, 'color', COLOR.rust);
+  setStyle(cell, 'color', COLOR.ink);
 }
 
 function staticOff(cell: HTMLElement): void {
@@ -226,7 +226,7 @@ export function prodOn(cell: HTMLElement): void {
   // cubic-bezier(.3,0,0,1) delayed 70ms — both transitions live on the cell.
   setStyle(cell, '--r', HOVER.ch1.r);
   setStyle(cell, '--p', HOVER.ch1.p);
-  setStyle(cell, 'color', COLOR.rust);
+  setStyle(cell, 'color', COLOR.ink);
   if (ptrSeen) gridEnter(cell, ptrX, ptrY);
   scafOn(cell);
   if (ptrSeen) scafPlace(cell, ptrX, ptrY);
@@ -234,7 +234,7 @@ export function prodOn(cell: HTMLElement): void {
   qq(cell, '[data-l]').forEach((s, i) => {
     s.style.setProperty('-webkit-text-stroke', '1.6px rgba(255,255,255,.62)');
     // four letters knock out to outline only, three swap to the alternate face
-    s.style.color = i === 2 || i === 5 || i === 9 || i === 12 ? 'transparent' : COLOR.rust;
+    s.style.color = i === 2 || i === 5 || i === 9 || i === 12 ? 'transparent' : COLOR.ink;
     if (i === 1 || i === 7 || i === 11) {
       s.style.fontFamily = "'Dessign Maison',Helvetica,sans-serif";
       s.style.fontFeatureSettings = "'salt' 1,'ss01' 1";
@@ -444,7 +444,7 @@ export function waterOn(cell: HTMLElement): void {
   }
   setStyle(cell, '--p', HOVER.ch2.p);
   setStyle(cell, 'box-shadow', HOVER.ch2.shadow);
-  setStyle(cell, 'color', COLOR.rust);
+  setStyle(cell, 'color', COLOR.ink);
 
   const running = WATER.get(cell);
   if (running) {
@@ -1050,7 +1050,7 @@ export function sweepOn(cell: HTMLElement): void {
   }
   setStyle(cell, 'background-size', HOVER.ch3.size);
   setStyle(cell, 'box-shadow', HOVER.ch3.shadow);
-  setStyle(cell, 'color', COLOR.rust);
+  setStyle(cell, 'color', COLOR.ink);
 
   // every letter runs the same 3.4s lap, 22ms apart — hard linear skew and
   // trailing light, so the flash reads as one object passing the whole word

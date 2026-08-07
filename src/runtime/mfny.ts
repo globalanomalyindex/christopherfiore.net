@@ -263,7 +263,7 @@ function applyView(P: Parts, n: number, animate: boolean): void {
   for (const b of qq(screen, '[data-act="mfny-view"]')) {
     const on = Number(b.getAttribute('data-view')) === n;
     b.setAttribute('aria-checked', on ? 'true' : 'false');
-    b.style.borderColor = on ? COLOR.lavender : rgba(COLOR.lavender, 0.28);
+    b.style.borderColor = on ? COLOR.paper : rgba(COLOR.paper, 0.28);
     b.style.opacity = on ? '1' : '.62';
   }
 

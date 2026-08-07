@@ -275,7 +275,7 @@ function applyView(P: Parts, n: number, animate: boolean): void {
     // the roving tab stop follows the selection, so Tab always lands on the
     // view that is actually showing
     b.setAttribute('tabindex', on ? '0' : '-1');
-    b.style.borderColor = on ? COLOR.lavender : rgba(COLOR.lavender, 0.28);
+    b.style.borderColor = on ? COLOR.paper : rgba(COLOR.paper, 0.28);
     b.style.opacity = on ? '1' : '.62';
   }
 

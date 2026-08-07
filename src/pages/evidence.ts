@@ -63,10 +63,10 @@ import {
 import type { EvidenceSheet, TableRow } from '../data/types.ts';
 
 /** Lavender hairlines: the dark-ground pair, same alphas as the rust ground. */
-const MAJOR = RULE.onRustMajor;
-const MINOR = RULE.onRustMinor;
+const MAJOR = RULE.onInkMajor;
+const MINOR = RULE.onInkMinor;
 
-const KARRIK = "'Karrik',sans-serif";
+const MONO = "Monaco,'SFMono-Regular',Menlo,ui-monospace,monospace";
 
 /**
  * A band color, always from LIGHTS, always carrying `#0B0B0C` ink. Indexed
@@ -344,7 +344,7 @@ function titleBlock(): HTMLElement[] {
         left: EV.title.x,
         top: EV.title.y,
         margin: '0',
-        'font-family': KARRIK,
+        'font-family': MONO,
         'font-weight': '400',
         'font-size': EV.title.size,
         'line-height': `${EV.title.lh}px`,
@@ -371,7 +371,7 @@ function titleBlock(): HTMLElement[] {
         top: EV.descriptorY,
         width: 1200,
         margin: '0',
-        'font-family': KARRIK,
+        'font-family': MONO,
         'font-size': 20,
         'line-height': '1.4',
         'letter-spacing': '.005em',
@@ -542,7 +542,7 @@ function indexRow(s: EvidenceSheet, n: number): HTMLElement {
         gap: 5,
         // the current-sheet marker; a border, not a box-shadow, so it cannot
         // collide with the focus ring band base.css paints with box-shadow
-        'border-left': `3px solid ${n === 0 ? COLOR.lavender : 'transparent'}`,
+        'border-left': `3px solid ${n === 0 ? COLOR.paper : 'transparent'}`,
         'border-bottom': `1px solid ${MINOR}`,
         padding: '0 10px',
         opacity: n === 0 ? '1' : '.62',
@@ -551,7 +551,7 @@ function indexRow(s: EvidenceSheet, n: number): HTMLElement {
     },
     el(
       'span',
-      { style: css({ 'font-family': KARRIK, 'font-size': 15, 'letter-spacing': '-.01em' }) },
+      { style: css({ 'font-family': MONO, 'font-size': 15, 'letter-spacing': '-.01em' }) },
       s.label,
     ),
     el(
@@ -620,7 +620,7 @@ const prose = (text: string, size: number, opacity?: string) =>
     {
       style: css({
         margin: '0 0 13px',
-        'font-family': KARRIK,
+        'font-family': MONO,
         'font-size': size,
         'line-height': '1.62',
         'letter-spacing': '.005em',
@@ -725,7 +725,7 @@ const fieldRows = (rows: TableRow[], valueSize: number) =>
           {
             style: css({
               margin: '6px 0 0',
-              'font-family': KARRIK,
+              'font-family': MONO,
               'font-size': valueSize,
               'line-height': '1.45',
               'text-wrap': 'pretty',
@@ -750,7 +750,7 @@ const countRows = (rows: TableRow[]) =>
             'span',
             {
               style: css({
-                'font-family': KARRIK,
+                'font-family': MONO,
                 'font-size': 26,
                 'letter-spacing': '-.02em',
                 'flex-shrink': '0',
@@ -814,7 +814,7 @@ function textSections(): HTMLElement[] {
       {
         style: css({
           margin: '0 0 16px',
-          'font-family': KARRIK,
+          'font-family': MONO,
           'font-size': 26,
           'line-height': '1.2',
           'letter-spacing': '-.02em',
@@ -865,7 +865,7 @@ function textSections(): HTMLElement[] {
             ),
             el(
               'span',
-              { style: css({ 'font-family': KARRIK, 'font-size': 20, 'letter-spacing': '-.015em' }) },
+              { style: css({ 'font-family': MONO, 'font-size': 20, 'letter-spacing': '-.015em' }) },
               a.name,
             ),
           ),
@@ -900,7 +900,7 @@ function textSections(): HTMLElement[] {
             {
               style: css({
                 margin: '7px 0 0',
-                'font-family': KARRIK,
+                'font-family': MONO,
                 'font-size': 17,
                 'line-height': '1.45',
                 'text-wrap': 'pretty',
@@ -931,7 +931,7 @@ function textSections(): HTMLElement[] {
             {
               style: css({
                 margin: '0',
-                'font-family': KARRIK,
+                'font-family': MONO,
                 'font-size': 18,
                 'line-height': '1.5',
                 'letter-spacing': '-.005em',
@@ -964,7 +964,7 @@ function textSections(): HTMLElement[] {
             },
             el(
               'span',
-              { style: css({ 'font-family': KARRIK, 'font-size': 21, 'letter-spacing': '-.02em' }) },
+              { style: css({ 'font-family': MONO, 'font-size': 21, 'letter-spacing': '-.02em' }) },
               g.gate,
             ),
             statusChip(g.status),
@@ -1018,7 +1018,7 @@ function textSections(): HTMLElement[] {
             color: 'inherit',
             'text-decoration': 'none',
             cursor: 'pointer',
-            'font-family': KARRIK,
+            'font-family': MONO,
             'font-size': 17,
             'line-height': '1.35',
             'text-wrap': 'pretty',
@@ -1127,7 +1127,7 @@ function textColumn(): HTMLElement {
         top: 0,
         width: '100%',
         height: 0,
-        background: COLOR.rust,
+        background: COLOR.wood,
         display: 'none',
       }),
     }),
@@ -1226,7 +1226,7 @@ export function build(): HTMLElement {
         // the opaque plaque ground, for the same reason the painting captions
         // use it: type has to stay legible over a screen full of imagery
         background: COLOR.plaque,
-        color: COLOR.lavender,
+        color: COLOR.paper,
         overflow: 'hidden',
       }),
     },

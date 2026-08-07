@@ -25,8 +25,8 @@ import { ABOUT } from '../data/about.ts';
 import * as aboutPage from './about.ts';
 
 /** Rules on the near-black ground. */
-const RULE_MAJOR = rgba(COLOR.lavender, 0.28);
-const RULE_MINOR = rgba(COLOR.lavender, 0.2);
+const RULE_MAJOR = rgba(COLOR.paper, 0.28);
+const RULE_MINOR = rgba(COLOR.paper, 0.2);
 
 const BTN: Record<string, string> = {
   appearance: 'none',
@@ -308,7 +308,7 @@ export function build(): HTMLElement {
         left: PAGE4.title.x,
         top: PAGE4.title.y,
         'transform-origin': '0 0',
-        'font-family': "'Karrik',sans-serif",
+        'font-family': "Monaco,'SFMono-Regular',Menlo,ui-monospace,monospace",
         'font-size': PAGE4.title.size,
         'line-height': `${PAGE4.title.lh}px`,
         // handoff tracking for the 172px title
@@ -349,7 +349,7 @@ export function build(): HTMLElement {
         left: PAGE4.lede.x,
         top: PAGE4.lede.y,
         width: PAGE4.lede.w,
-        'font-family': "'Karrik',sans-serif",
+        'font-family': "Monaco,'SFMono-Regular',Menlo,ui-monospace,monospace",
         'font-size': PAGE4.lede.size,
         'line-height': String(PAGE4.lede.lh),
         'letter-spacing': PAGE4.lede.track,
@@ -411,7 +411,7 @@ export function build(): HTMLElement {
         position: 'absolute',
         left: PAGE4.email.x,
         top: PAGE4.email.y,
-        'font-family': "'Karrik',sans-serif",
+        'font-family': "Monaco,'SFMono-Regular',Menlo,ui-monospace,monospace",
         'font-size': PAGE4.email.size,
         'letter-spacing': PAGE4.email.track,
         transition: 'color 160ms linear',
@@ -488,7 +488,7 @@ export function build(): HTMLElement {
         'z-index': '6',
         display: 'none',
         background: COLOR.nearBlack,
-        color: COLOR.lavender,
+        color: COLOR.paper,
         overflow: 'hidden',
       }),
     },

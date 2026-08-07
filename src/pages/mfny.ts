@@ -29,9 +29,9 @@ import { MFNY_PAGE as MP } from '../design/layout.ts';
 import { MFNY, MFNY_GLANCE, MFNY_LEAD_VIEW, MFNY_SECTIONS } from '../data/mfny.ts';
 import { STUDIO } from '../data/studio.ts';
 
-const KARRIK = "'Karrik',sans-serif";
-const MAJOR = rgba(COLOR.lavender, 0.28);
-const MINOR = rgba(COLOR.lavender, 0.2);
+const MONO = "Monaco,'SFMono-Regular',Menlo,ui-monospace,monospace";
+const MAJOR = rgba(COLOR.paper, 0.28);
+const MINOR = rgba(COLOR.paper, 0.2);
 
 const TEXT_H = MP.bandEnd - MP.text.y;
 const SCROLL_TOP = MP.secBarH + MP.secBarGap;
@@ -112,7 +112,7 @@ function header(): HTMLElement {
     'close',
   );
 
-  const cell = (text: string, span: number, padding: string, rule: boolean) =>
+  const cell = (text: string, span: number, padding: string, rule: boolean, size?: number) =>
     el(
       'span',
       {
@@ -122,6 +122,7 @@ function header(): HTMLElement {
           'align-items': 'center',
           padding,
           'border-right': rule ? `1px solid ${MINOR}` : null,
+          'font-size': size ?? null,
           overflow: 'hidden',
           'white-space': 'nowrap',
         }),
@@ -152,7 +153,7 @@ function header(): HTMLElement {
     close,
     cell('01 · mfny concentrates', 3, '0 20px', true),
     cell(MFNY.state, 4, '0 20px', true),
-    cell(STUDIO.rev, 3, '0 56px 0 20px', false),
+    cell(STUDIO.rev, 2, '0 56px 0 20px', false),
   );
 }
 
@@ -259,7 +260,7 @@ function titleBlock(): HTMLElement[] {
         left: MP.title.x,
         top: MP.title.y,
         'transform-origin': '0 0',
-        'font-family': KARRIK,
+        'font-family': MONO,
         'font-size': MP.title.size,
         'line-height': `${MP.title.lh}px`,
         'letter-spacing': MP.title.track,
@@ -283,9 +284,9 @@ function titleBlock(): HTMLElement[] {
         position: 'absolute',
         left: MP.title.x,
         top: MP.descriptorY,
-        width: 900,
+        width: 1300,
         margin: '0',
-        'font-family': KARRIK,
+        'font-family': MONO,
         'font-size': 20,
         'line-height': '1.4',
         'letter-spacing': '.005em',
@@ -351,7 +352,7 @@ function plate(): HTMLElement {
         top: MP.plate.y,
         width: MP.plate.w,
         height: MP.plate.h,
-        background: rgba(COLOR.lavender, 0.06),
+        background: rgba(COLOR.paper, 0.06),
         border: `1px solid ${MINOR}`,
         overflow: 'hidden',
       }),
@@ -451,7 +452,7 @@ function toggle(): HTMLElement {
             padding: '0 18px',
             display: 'flex',
             'align-items': 'center',
-            border: `1px solid ${i === 0 ? COLOR.lavender : MAJOR}`,
+            border: `1px solid ${i === 0 ? COLOR.paper : MAJOR}`,
             'font-size': 13,
             'letter-spacing': '.16em',
             opacity: i === 0 ? '1' : '.62',
@@ -499,7 +500,7 @@ function doors(): HTMLElement[] {
           'align-items': 'center',
           'justify-content': 'space-between',
           padding: '0 20px',
-          border: `1px solid ${COLOR.lavender}`,
+          border: `1px solid ${COLOR.paper}`,
           transition: 'background 150ms linear,color 150ms linear',
         }),
       },
@@ -560,7 +561,7 @@ function glanceColumn(): HTMLElement {
             {
               style: css({
                 margin: '4px 0 0',
-                'font-family': KARRIK,
+                'font-family': MONO,
                 'font-size': 13.5,
                 'line-height': '1.38',
                 'text-wrap': 'pretty',
@@ -591,7 +592,7 @@ function textSections(): HTMLElement[] {
       {
         style: css({
           margin: '12px 0 0',
-          'font-family': KARRIK,
+          'font-family': MONO,
           'font-size': 20,
           'line-height': '1.4',
           'letter-spacing': '-.01em',
@@ -620,7 +621,7 @@ function textSections(): HTMLElement[] {
           {
             style: css({
               margin: '12px 0 0',
-              'font-family': KARRIK,
+              'font-family': MONO,
               'font-size': 16.5,
               'line-height': '1.55',
               'text-wrap': 'pretty',
@@ -701,7 +702,7 @@ function textColumn(): HTMLElement {
         top: 0,
         width: '100%',
         height: 0,
-        background: COLOR.rust,
+        background: COLOR.wood,
         display: 'none',
       }),
     }),
@@ -786,7 +787,7 @@ export function build(): HTMLElement {
         'z-index': '8',
         display: 'none',
         background: COLOR.plaque,
-        color: COLOR.lavender,
+        color: COLOR.paper,
         overflow: 'hidden',
       }),
     },

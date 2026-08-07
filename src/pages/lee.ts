@@ -43,9 +43,9 @@ import {
 } from '../data/lee.ts';
 import { STUDIO } from '../data/studio.ts';
 
-const KARRIK = "'Karrik',sans-serif";
-const MAJOR = rgba(COLOR.lavender, 0.28);
-const MINOR = rgba(COLOR.lavender, 0.2);
+const MONO = "Monaco,'SFMono-Regular',Menlo,ui-monospace,monospace";
+const MAJOR = rgba(COLOR.paper, 0.28);
+const MINOR = rgba(COLOR.paper, 0.2);
 
 const TEXT_H = LP.bandEnd - LP.text.y;
 const SCROLL_TOP = LP.secBarH + LP.secBarGap;
@@ -189,7 +189,7 @@ function header(): HTMLElement {
     'close',
   );
 
-  const cell = (text: string, span: number, padding: string, rule: boolean) =>
+  const cell = (text: string, span: number, padding: string, rule: boolean, size?: number) =>
     el(
       'span',
       {
@@ -199,6 +199,7 @@ function header(): HTMLElement {
           'align-items': 'center',
           padding,
           'border-right': rule ? `1px solid ${MINOR}` : null,
+          'font-size': size ?? null,
           overflow: 'hidden',
           'white-space': 'nowrap',
         }),
@@ -228,8 +229,8 @@ function header(): HTMLElement {
     },
     close,
     cell(`01 · ${LEE.name}`, 3, '0 20px', true),
-    cell(LEE.state, 4, '0 20px', true),
-    cell(STUDIO.rev, 3, '0 56px 0 20px', false),
+    cell(LEE.state, 5, '0 20px', true, 11.5),
+    cell(STUDIO.rev, 2, '0 56px 0 20px', false),
   );
 }
 
@@ -342,7 +343,7 @@ function titleBlock(): HTMLElement[] {
         left: LP.title.x,
         top: LP.title.y,
         'transform-origin': '0 0',
-        'font-family': KARRIK,
+        'font-family': MONO,
         'font-size': LP.title.size,
         'line-height': `${LP.title.lh}px`,
         'letter-spacing': LP.title.track,
@@ -366,9 +367,9 @@ function titleBlock(): HTMLElement[] {
         position: 'absolute',
         left: LP.title.x,
         top: LP.descriptorY,
-        width: 900,
+        width: 1300,
         margin: '0',
-        'font-family': KARRIK,
+        'font-family': MONO,
         'font-size': 20,
         'line-height': '1.4',
         'letter-spacing': '.005em',
@@ -434,7 +435,7 @@ function plate(): HTMLElement {
         top: LP.plate.y,
         width: LP.plate.w,
         height: LP.plate.h,
-        background: rgba(COLOR.lavender, 0.06),
+        background: rgba(COLOR.paper, 0.06),
         border: `1px solid ${MINOR}`,
         overflow: 'hidden',
       }),
@@ -546,7 +547,7 @@ function toggle(): HTMLElement {
             padding: '0 18px',
             display: 'flex',
             'align-items': 'center',
-            border: `1px solid ${i === 0 ? COLOR.lavender : MAJOR}`,
+            border: `1px solid ${i === 0 ? COLOR.paper : MAJOR}`,
             'font-size': 13,
             'letter-spacing': '.16em',
             opacity: i === 0 ? '1' : '.62',
@@ -606,7 +607,7 @@ function doors(): HTMLElement[] {
           'align-items': 'center',
           'justify-content': 'space-between',
           padding: '0 20px',
-          border: `1px solid ${COLOR.lavender}`,
+          border: `1px solid ${COLOR.paper}`,
           transition: 'background 150ms linear,color 150ms linear',
         }),
       },
@@ -685,7 +686,7 @@ function glanceColumn(): HTMLElement {
             {
               style: css({
                 margin: '4px 0 0',
-                'font-family': KARRIK,
+                'font-family': MONO,
                 'font-size': 13.5,
                 'line-height': '1.38',
                 'text-wrap': 'pretty',
@@ -716,7 +717,7 @@ function textSections(): HTMLElement[] {
       {
         style: css({
           margin: '12px 0 0',
-          'font-family': KARRIK,
+          'font-family': MONO,
           'font-size': 20,
           'line-height': '1.4',
           'letter-spacing': '-.01em',
@@ -746,7 +747,7 @@ function textSections(): HTMLElement[] {
           {
             style: css({
               margin: '12px 0 0',
-              'font-family': KARRIK,
+              'font-family': MONO,
               'font-size': 16.5,
               'line-height': '1.55',
               'text-wrap': 'pretty',
@@ -827,7 +828,7 @@ function textColumn(): HTMLElement {
         top: 0,
         width: '100%',
         height: 0,
-        background: COLOR.rust,
+        background: COLOR.wood,
         display: 'none',
       }),
     }),
@@ -912,7 +913,7 @@ export function build(): HTMLElement {
         'z-index': '8',
         display: 'none',
         background: COLOR.plaque,
-        color: COLOR.lavender,
+        color: COLOR.paper,
         overflow: 'hidden',
       }),
     },

@@ -82,17 +82,17 @@ export const isMobile = (): boolean =>
  * value by construction and cannot drift into a hardcoded near-miss.
  */
 const ROOT_VARS = css({
-  '--rust': COLOR.rust,
-  '--lavender': COLOR.lavender,
+  '--rust': COLOR.ink,
+  '--lavender': COLOR.paper,
   '--near-black': COLOR.nearBlack,
   '--plaque': COLOR.plaque,
-  '--hair': RULE.onRustMajor,
-  '--hair-min': RULE.onRustMinor,
+  '--hair': RULE.onInkMajor,
+  '--hair-min': RULE.onInkMinor,
   /* the one band color this view uses; ink on it is always --near-black */
   '--band': LIGHTS[0],
   '--email-hover': MARA[2],
   /* what an image box shows before its bytes arrive */
-  '--imgbg': rgba(COLOR.shadowRust, 0.25),
+  '--imgbg': rgba(COLOR.shadow, 0.25),
 });
 
 /**
@@ -1008,7 +1008,7 @@ export function buildMobile(): HTMLElement {
       el('p', { class: 'm-tagline' }, STUDIO.tagline),
       el('img', {
         class: 'm-crest',
-        src: asset('brand/crestdown-lavender.png'),
+        src: asset('brand/crestdown-paper.png'),
         alt: '',
         'aria-hidden': 'true',
         loading: 'lazy',

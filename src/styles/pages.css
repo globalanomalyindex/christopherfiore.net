@@ -4,18 +4,18 @@
 
   HOVER / FOCUS CLASSES DEFINED HERE (also listed in HOVER_CLASSES.md):
 
-    .ps-hov-invert       background:#C62C05; color:#DFCBFA   — rust fill,
+    .ps-hov-invert       background:#1B1A17; color:#EFEBE3   — rust fill,
                          lavender ink. 24 uses in the prototype: page 01
                          header close / four case rows / footer close / footer
                          next; page 02 wall list (11 rows); page 03 header
                          close / three concept rows / footer close / footer
                          next.
-    .ps-hov-invert-dark  background:#DFCBFA; color:#0B0B0C   — lavender fill,
+    .ps-hov-invert-dark  background:#EFEBE3; color:#121110   — lavender fill,
                          near-black ink. 3 uses, all page 04: header close,
                          footer close, footer next.
     .ps-hov-dim          opacity:.6    — page 02 footer close and footer next.
     .ps-hov-dim-55       opacity:.55   — page 02 header close.
-    .ps-hov-email        color:#FF2D87 — page 04 email.
+    .ps-hov-email        color:#8A7049 — page 04 email.
     .ps-hov-evidence     the page-03 hero as the evidence viewer's door. NEW —
                          no prototype equivalent. Inverts the .ps-ev-chip tab
                          to an acid band with near-black ink and takes the 1px
@@ -40,14 +40,14 @@
 
 .ps-hov-invert:hover,
 .ps-hov-invert:focus-visible {
-  background: #c62c05;
-  color: #dfcbfa;
+  background: #1b1a17;
+  color: #efebe3;
 }
 
 .ps-hov-invert-dark:hover,
 .ps-hov-invert-dark:focus-visible {
-  background: #dfcbfa;
-  color: #0b0b0c;
+  background: #efebe3;
+  color: #121110;
 }
 
 .ps-hov-dim:hover,
@@ -67,7 +67,7 @@
 
 /*
   Page 03 hero → evidence viewer. The acid band is from LIGHTS and the ink on
-  it is #0B0B0C, so the tab keeps the legibility contract while inverted.
+  it is #121110, so the tab keeps the legibility contract while inverted.
 
   This carries its own resting frame rather than composing with .ps-frame:
   both would be `.class:focus-visible`, i.e. the same specificity, so which one
@@ -76,21 +76,21 @@
   base.css paints the ring with box-shadow, so a bare ring drops the frame.
 */
 .ps-hov-evidence {
-  box-shadow: 0 0 0 1px rgba(198, 44, 5, 0.42);
+  box-shadow: 0 0 0 1px rgba(27, 26, 23, 0.42);
 }
 
 .ps-hov-evidence:hover {
-  box-shadow: 0 0 0 1px #c62c05;
+  box-shadow: 0 0 0 1px #1b1a17;
 }
 
 .ps-hov-evidence:focus-visible {
-  box-shadow: var(--ps-focus-band), 0 0 0 1px #c62c05;
+  box-shadow: var(--ps-focus-band), 0 0 0 1px #1b1a17;
 }
 
 .ps-hov-evidence:hover .ps-ev-chip,
 .ps-hov-evidence:focus-visible .ps-ev-chip {
   background: #c9f227;
-  color: #0b0b0c;
+  color: #121110;
 }
 
 /* ---------- structure ---------- */
@@ -125,14 +125,14 @@
   shadow — the only kind of shadow the design allows.
 */
 .ps-frame {
-  box-shadow: 0 0 0 1px rgba(198, 44, 5, 0.42);
+  box-shadow: 0 0 0 1px rgba(27, 26, 23, 0.42);
 }
 
 /* If a frame is also a control (a paintings lightbox trigger, say), keep the
    frame and add the ring band — the plain ring rule in base.css would
    otherwise replace the box-shadow outright. */
 .ps-frame:focus-visible {
-  box-shadow: var(--ps-focus-band), 0 0 0 1px rgba(198, 44, 5, 0.42);
+  box-shadow: var(--ps-focus-band), 0 0 0 1px rgba(27, 26, 23, 0.42);
 }
 
 /*
@@ -145,8 +145,8 @@
   height: 15px;
   pointer-events: none;
   background-image:
-    linear-gradient(var(--ps-cross, #c62c05), var(--ps-cross, #c62c05)),
-    linear-gradient(var(--ps-cross, #c62c05), var(--ps-cross, #c62c05));
+    linear-gradient(var(--ps-cross, #1b1a17), var(--ps-cross, #1b1a17)),
+    linear-gradient(var(--ps-cross, #1b1a17), var(--ps-cross, #1b1a17));
   background-size: 1px 15px, 15px 1px;
   background-position: center center, center center;
   background-repeat: no-repeat;
@@ -183,8 +183,8 @@
   right: 0;
   bottom: 0;
   height: 38px;
-  background: #150b20;
-  color: #dfcbfa;
+  background: #1b1a17;
+  color: #efebe3;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -226,8 +226,8 @@
   display: flex;
   align-items: center;
   padding: 0 13px;
-  background: #150b20;
-  color: #dfcbfa;
+  background: #1b1a17;
+  color: #efebe3;
   font-size: 12px;
   letter-spacing: 0.16em;
   z-index: 2;

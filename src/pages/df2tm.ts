@@ -24,9 +24,9 @@ import { READER_PAGE as RP } from '../design/layout.ts';
 import { DF2TM, DF2TM_GLANCE, DF2TM_SECTIONS } from '../data/df2tm.ts';
 import { STUDIO } from '../data/studio.ts';
 
-const KARRIK = "'Karrik',sans-serif";
-const MAJOR = rgba(COLOR.lavender, 0.28);
-const MINOR = rgba(COLOR.lavender, 0.2);
+const MONO = "Monaco,'SFMono-Regular',Menlo,ui-monospace,monospace";
+const MAJOR = rgba(COLOR.paper, 0.28);
+const MINOR = rgba(COLOR.paper, 0.2);
 
 const TEXT_H = RP.bandEnd - RP.text.y;
 const SCROLL_TOP = RP.secBarH + RP.secBarGap;
@@ -221,7 +221,7 @@ function titleBlock(): HTMLElement[] {
         left: RP.title.x,
         top: RP.title.y,
         'transform-origin': '0 0',
-        'font-family': KARRIK,
+        'font-family': MONO,
         'font-size': RP.title.size,
         'line-height': `${RP.title.lh}px`,
         'letter-spacing': RP.title.track,
@@ -310,7 +310,7 @@ function indexRow(sec: (typeof DF2TM_SECTIONS)[number], n: number): HTMLElement 
     ),
     el(
       'span',
-      { style: css({ 'font-family': KARRIK, 'font-size': 17, 'letter-spacing': '-.01em' }) },
+      { style: css({ 'font-family': MONO, 'font-size': 17, 'letter-spacing': '-.01em' }) },
       sec.name,
     ),
   );
@@ -421,7 +421,7 @@ function glanceColumn(): HTMLElement {
               style: css({
                 margin: '5px 0 0',
                 // the install lines are literal commands — set them as such
-                'font-family': r.value.startsWith('/') ? 'ui-monospace,monospace' : KARRIK,
+                'font-family': r.value.startsWith('/') ? 'ui-monospace,monospace' : MONO,
                 'font-size': r.value.startsWith('/') ? 13 : 15,
                 'line-height': '1.4',
                 'text-wrap': 'pretty',
@@ -452,7 +452,7 @@ function textSections(): HTMLElement[] {
       {
         style: css({
           margin: '12px 0 0',
-          'font-family': KARRIK,
+          'font-family': MONO,
           'font-size': 21,
           'line-height': '1.4',
           'letter-spacing': '-.01em',
@@ -466,7 +466,7 @@ function textSections(): HTMLElement[] {
       {
         style: css({
           margin: '16px 0 0',
-          'font-family': KARRIK,
+          'font-family': MONO,
           'font-size': 17,
           'line-height': '1.55',
           opacity: '.88',
@@ -493,7 +493,7 @@ function textSections(): HTMLElement[] {
           {
             style: css({
               margin: '12px 0 0',
-              'font-family': KARRIK,
+              'font-family': MONO,
               'font-size': 17,
               'line-height': '1.55',
               'text-wrap': 'pretty',
@@ -574,7 +574,7 @@ function textColumn(): HTMLElement {
         top: 0,
         width: '100%',
         height: 0,
-        background: COLOR.rust,
+        background: COLOR.wood,
         display: 'none',
       }),
     }),
@@ -658,7 +658,7 @@ export function build(): HTMLElement {
         display: 'none',
         // the plaque ground every reading subpage in this design uses
         background: COLOR.plaque,
-        color: COLOR.lavender,
+        color: COLOR.paper,
         overflow: 'hidden',
       }),
     },

@@ -34,12 +34,12 @@ body {
   before the first paint.
 */
 html {
-  background: var(--ps-backdrop, #c62c05);
+  background: var(--ps-backdrop, #1b1a17);
 }
 
 body {
   background: transparent;
-  color: #dfcbfa;
+  color: #efebe3;
   /* The prototype's document font. All micro / metadata type in the design
      inherits it; only elements that name Karrik get Karrik. */
   font-family: 'Dessign Maison', Helvetica, Arial, sans-serif;
@@ -73,14 +73,14 @@ body {
   /*
     Focus ring. Two tone on purpose: a 2px light band at the very edge plus a
     2px near-black outline immediately inside it, so at least one of the two
-    clears 3:1 whichever ground it lands on — rust #C62C05, lavender #DFCBFA
-    or near-black #0B0B0C. The ring is a shape that was not there before, so
+    clears 3:1 whichever ground it lands on — rust #1B1A17, lavender #EFEBE3
+    or near-black #121110. The ring is a shape that was not there before, so
     the state never depends on color perception alone.
     Offsets are negative because stage boxes clip (overflow: hidden), so an
     outward ring would be cut off.
   */
   --ps-focus-band: inset 0 0 0 2px #f5d90a;
-  --ps-focus-line: 2px solid #0b0b0c;
+  --ps-focus-line: 2px solid #121110;
   --ps-focus-offset: -2px;
 }
 
@@ -96,8 +96,8 @@ body {
      so the translate is a plain letterbox offset in viewport px. */
   transform-origin: 0 0;
   overflow: hidden;
-  background: #c62c05;
-  color: #dfcbfa;
+  background: #1b1a17;
+  color: #efebe3;
   font-family: 'Dessign Maison', Helvetica, Arial, sans-serif;
 }
 

@@ -26,7 +26,13 @@ export const MENU = {
   wordmarkSize: 240,
   wordmarkLh: 0.9,
   wordmarkTrack: '-.08em',
-  crest: { w: 393, left: 1259, top: 22 },
+  /*
+    Moved right from the handoff's 1259. Monaco is wider than Karrik, so
+    "synthétique" at 240px and -.08em now draws 11 × 240 × 0.52 = 1373 from
+    x 52 and ends at 1425, which ran 166px into the crest. At 1440 the crest
+    ends at 1833, still inside the 1920 stage.
+  */
+  crest: { w: 393, left: 1440, top: 22 },
 } as const;
 
 /**
@@ -49,7 +55,7 @@ export const MENU = {
  * motion band is fixed at 290.91, so every case added redivides it: 36.364 at
  * eight, 32.323 at nine, 29.091 at ten, 26.4464 at eleven, 24.2425 at twelve,
  * 22.3777 at thirteen. The case name goes down with it, 34 to 28 to 25 to 23
- * to 21 to 19.
+ * to 21 to 19, and to 17 when the face became Monaco.
  *
  * The tight dimension is not the name, which has spare track to give at every
  * size it has taken. It is the `line` column, and it does not shrink with the
@@ -59,10 +65,12 @@ export const MENU = {
  * every `CaseRecord.line` inside that.
  *
  * The NAME column has its own ceiling now that a case is called "apple wallet
- * card sharing concept". Measured at 1920: 33 characters in Karrik 19px draw
- * 263 of the 363.636px track, so there is room for roughly 45. `cellName` is
- * `white-space: nowrap`, so a name past that spills into the line column
- * rather than wrapping.
+ * card sharing concept". Monaco is monospace, so this is arithmetic rather
+ * than measurement: at -.03em tracking one advance is 0.57em, so 33 characters
+ * at 17px draw 320 of the 363.636px track and leave 43 before the thesis
+ * column. `cellName` is `white-space: nowrap`, so a name past about 37
+ * characters spills into that column rather than wrapping. At 19px, which is
+ * what Karrik carried, the same name drew 357 and touched it.
  *
  * `rowSplit` is what lets the case rows be links. Each row is now an anchor to
  * its live demo, and the hover band stack fills whatever box the anchor owns,
@@ -105,7 +113,7 @@ export const PAGE1 = {
   rowsY: 640.79, // adapted — the rows fill exactly to the motion band at 931.7
   rowCols: '145.455px 363.636px 581.818px 145.455px 1fr', // handoff, inside the row anchor
   rowSplit: '1fr 218.181px', // adapted — row anchor, then the source column (3 modules)
-  nameSize: 19,
+  nameSize: 17,
   /** The motion archive band: full bleed, 20/16 module, sitting on the footer. */
   motion: { y: 931.7, h: 90.9, cols: '472.727px 1fr 327.272px', still: 68 },
   footer: { y: 1022.6, h: 57.4 }, // handoff

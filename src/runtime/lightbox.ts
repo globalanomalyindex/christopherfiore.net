@@ -27,7 +27,7 @@ import { dIn, killAnim } from './dither.ts';
 import { state } from './state.ts';
 import { REDUCED_FADE } from './transitions.ts';
 
-const MAJOR = rgba(COLOR.lavender, 0.28);
+const MAJOR = rgba(COLOR.paper, 0.28);
 
 /** The inset the ground occupies around the image, in stage px. */
 const PAD_X = 64;
@@ -162,7 +162,7 @@ export function installLightbox(stage: HTMLElement): void {
       display: 'block',
       height: 'auto',
       border: `1px solid ${MAJOR}`,
-      background: rgba(COLOR.lavender, 0.06),
+      background: rgba(COLOR.paper, 0.06),
       cursor: 'default',
     }),
   });
@@ -202,7 +202,7 @@ export function installLightbox(stage: HTMLElement): void {
         display: 'flex',
         'align-items': 'center',
         gap: 12,
-        border: `1px solid ${COLOR.lavender}`,
+        border: `1px solid ${COLOR.paper}`,
         'font-size': 13,
         'letter-spacing': '.16em',
         'z-index': '3',
@@ -226,7 +226,7 @@ export function installLightbox(stage: HTMLElement): void {
         inset: '0',
         'z-index': '12',
         display: 'none',
-        color: COLOR.lavender,
+        color: COLOR.paper,
       }),
     },
     ground,

@@ -36,14 +36,23 @@ const BAYER = [
   7, 39, 13, 45, 5, 37, 63, 31, 55, 23, 61, 29, 53, 21,
 ];
 
-/** lavender · pink · cyan · acid · bright rust · blue. Indexed by hue. */
+/**
+ * The dither field's six colors, indexed by hue.
+ *
+ * A single warm ramp rather than six hues: paper, pale wood, wood, taupe, deep
+ * wood, warm gray. The handoff's set was lavender / pink / cyan / acid / rust /
+ * blue, and at the sizes this field is drawn that read as confetti behind
+ * everything. A ramp still dithers — the whole effect is quantisation to six
+ * entries, and six values of one hue quantise exactly as visibly as six hues —
+ * but it reads as texture rather than as color.
+ */
 const PAL: number[][] = [
-  [223, 203, 250],
-  [255, 45, 135],
-  [18, 217, 232],
-  [201, 242, 39],
-  [227, 58, 8],
-  [43, 69, 245],
+  [239, 235, 227],
+  [222, 207, 182],
+  [192, 164, 126],
+  [167, 155, 136],
+  [138, 112, 73],
+  [92, 86, 75],
 ];
 
 /** Mode 4's six metaballs: drift amplitudes, speeds, phases, radius, color. */

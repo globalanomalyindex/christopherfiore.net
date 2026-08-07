@@ -310,7 +310,7 @@ function showBoard(P: Parts, n: number, animate: boolean): void {
   for (const row of qq(screen, '[data-cbrow]')) {
     const on = Number(row.getAttribute('data-cbrow')) === n;
     row.setAttribute('aria-current', on ? 'true' : 'false');
-    row.style.borderLeftColor = on ? COLOR.lavender : 'transparent';
+    row.style.borderLeftColor = on ? COLOR.paper : 'transparent';
     row.style.opacity = on ? '1' : '.62';
   }
 

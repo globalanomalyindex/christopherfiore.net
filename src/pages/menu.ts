@@ -116,7 +116,7 @@ const CELL_BASE: Record<string, string | number> = {
   position: 'relative',
   height: MENU.channelRowH,
   'box-sizing': 'border-box',
-  'border-bottom': `1px solid ${RULE.onRustMajor}`,
+  'border-bottom': `1px solid ${RULE.onInkMajor}`,
   display: 'flex',
   'flex-direction': 'column',
   width: '100%',
@@ -145,7 +145,7 @@ function header(): HTMLElement {
           'align-items': 'center',
           'justify-content': last ? 'space-between' : null,
           padding,
-          'border-right': last ? null : `1px solid ${RULE.onRustMinor}`,
+          'border-right': last ? null : `1px solid ${RULE.onInkMinor}`,
         }),
       },
       ...content,
@@ -160,7 +160,7 @@ function header(): HTMLElement {
         display: 'grid',
         'grid-template-columns': 'repeat(12,1fr)',
         height: MENU.headerH,
-        'border-bottom': `1px solid ${RULE.onRustMajor}`,
+        'border-bottom': `1px solid ${RULE.onInkMajor}`,
         'font-size': 13,
         'letter-spacing': '.18em',
       }),
@@ -195,7 +195,7 @@ function hero(): HTMLElement {
   // Drawn at 393px wide; the intro dithers it in from opacity 0.
   const crest = el('img', {
     'data-logo': true,
-    src: asset('brand/crestdown-lavender.png'),
+    src: asset('brand/crestdown-paper.png'),
     alt: '',
     'aria-hidden': 'true',
     decoding: 'async',
@@ -218,7 +218,7 @@ function hero(): HTMLElement {
         'data-in-delay': delay,
         'data-in-step': 30,
         style: css({
-          'font-family': "'Karrik',sans-serif",
+          'font-family': "Monaco,'SFMono-Regular',Menlo,ui-monospace,monospace",
           'font-size': MENU.wordmarkSize,
           'line-height': String(MENU.wordmarkLh),
           'letter-spacing': MENU.wordmarkTrack,
@@ -253,7 +253,7 @@ function hero(): HTMLElement {
         position: 'relative',
         'z-index': '1',
         opacity: '0',
-        'font-family': "'Karrik',sans-serif",
+        'font-family': "Monaco,'SFMono-Regular',Menlo,ui-monospace,monospace",
         'font-size': 30,
         'letter-spacing': '-.02em',
         'margin-top': 28,
@@ -275,7 +275,7 @@ function hero(): HTMLElement {
         'flex-direction': 'column',
         'justify-content': 'center',
         padding: '0 56px',
-        'border-bottom': `1px solid ${RULE.onRustMajor}`,
+        'border-bottom': `1px solid ${RULE.onInkMajor}`,
       }),
     },
     frost,
@@ -302,7 +302,7 @@ function scaffolding(): SVGElement {
     focusable: 'false',
     style: 'position:absolute;inset:0;pointer-events:none;overflow:visible',
   });
-  const S = COLOR.shadowRust;
+  const S = COLOR.shadow;
   const F = 'Dessign Maison, Helvetica, sans-serif';
   const fade = 'opacity:0;transition:opacity 180ms linear';
   root.innerHTML = `
@@ -340,7 +340,7 @@ function channel1(): HTMLElement {
         ...CELL_BASE,
         '--r': '0px',
         '--p': '0px',
-        'background-image': `${gridH},${gridV},linear-gradient(${COLOR.lavender},${COLOR.lavender})`,
+        'background-image': `${gridH},${gridV},linear-gradient(${COLOR.paper},${COLOR.paper})`,
         'background-repeat': 'no-repeat',
         'background-position': pos,
         'background-size':
@@ -360,7 +360,7 @@ function channel1(): HTMLElement {
           display: 'block',
           height: 145.454,
           padding: `0 ${MODULE}px`,
-          'font-family': "'Karrik',sans-serif",
+          'font-family': "Monaco,'SFMono-Regular',Menlo,ui-monospace,monospace",
           'font-size': 92,
           'line-height': `${MODULE}px`,
           'letter-spacing': '-.06em',
@@ -470,11 +470,11 @@ function channel2(): HTMLElement {
         padding: 28,
         'justify-content': 'space-between',
         '--p': '0px',
-        'background-image': `linear-gradient(${COLOR.lavender},${COLOR.lavender})`,
+        'background-image': `linear-gradient(${COLOR.paper},${COLOR.paper})`,
         'background-repeat': 'no-repeat',
         'background-position': 'left top',
         'background-size': 'var(--p) 100%',
-        'box-shadow': `inset 0 0 0 0 ${COLOR.rust},inset 0 0 0 0 rgba(223,203,250,0)`,
+        'box-shadow': `inset 0 0 0 0 ${COLOR.wood},inset 0 0 0 0 rgba(223,203,250,0)`,
         transition:
           '--p 300ms cubic-bezier(.3,0,0,1) 40ms,box-shadow 200ms cubic-bezier(.2,0,0,1),color 0ms linear 150ms',
       }),
@@ -489,7 +489,7 @@ function channel2(): HTMLElement {
           position: 'relative',
           'z-index': '1',
           display: 'block',
-          'font-family': "'Karrik',sans-serif",
+          'font-family': "Monaco,'SFMono-Regular',Menlo,ui-monospace,monospace",
           'font-size': 76,
           'line-height': '.96',
           'letter-spacing': '-.05em',
@@ -530,8 +530,8 @@ function channel3(): HTMLElement {
         opacity: '0',
         transition: 'opacity 300ms linear',
         'background-image': invert
-          ? `repeating-linear-gradient(90deg,rgba(74,19,5,0) 0 48px,${COLOR.deepRust} 48px 96px)`
-          : `repeating-linear-gradient(90deg,${COLOR.deepRust} 0 48px,rgba(74,19,5,0) 48px 96px)`,
+          ? `repeating-linear-gradient(90deg,rgba(74,19,5,0) 0 48px,${COLOR.woodDeep} 48px 96px)`
+          : `repeating-linear-gradient(90deg,${COLOR.woodDeep} 0 48px,rgba(74,19,5,0) 48px 96px)`,
         'background-repeat': 'repeat',
         'will-change': 'transform,opacity',
         'backface-visibility': 'hidden',
@@ -559,7 +559,7 @@ function channel3(): HTMLElement {
   );
 
   /** The 79.5–80.5px pin marks that top and tail the checkered band. */
-  const pins = `repeating-linear-gradient(90deg,rgba(74,19,5,0) 0 79.5px,${COLOR.deepRust} 79.5px 80.5px,rgba(74,19,5,0) 80.5px 160px)`;
+  const pins = `repeating-linear-gradient(90deg,rgba(74,19,5,0) 0 79.5px,${COLOR.woodDeep} 79.5px 80.5px,rgba(74,19,5,0) 80.5px 160px)`;
 
   const frame = (extra: Record<string, string | number>) =>
     el('span', {
@@ -591,11 +591,11 @@ function channel3(): HTMLElement {
         ...CELL_BASE,
         padding: '28px 56px 30px 28px',
         'justify-content': 'space-between',
-        'background-image': `repeating-linear-gradient(115deg,${COLOR.lavender} 0 13px,rgba(223,203,250,0) 13px 27px)`,
+        'background-image': `repeating-linear-gradient(115deg,${COLOR.paper} 0 13px,rgba(223,203,250,0) 13px 27px)`,
         'background-repeat': 'no-repeat',
         'background-position': 'left center',
         'background-size': '0% 100%',
-        'box-shadow': `inset 0 0 0 0 ${COLOR.lavender}`,
+        'box-shadow': `inset 0 0 0 0 ${COLOR.paper}`,
         transition:
           'background-size 120ms linear,box-shadow 260ms cubic-bezier(.3,0,0,1) 70ms,color 0ms linear 110ms',
       }),
@@ -604,8 +604,8 @@ function channel3(): HTMLElement {
     frame({
       top: 96,
       height: 96,
-      'border-top': `1px solid ${COLOR.deepRust}`,
-      'border-bottom': `1px solid ${COLOR.deepRust}`,
+      'border-top': `1px solid ${COLOR.woodDeep}`,
+      'border-bottom': `1px solid ${COLOR.woodDeep}`,
     }),
     frame({ top: 91, height: 11, 'background-image': pins }),
     frame({ top: 186, height: 11, 'background-image': pins }),
@@ -619,8 +619,15 @@ function channel3(): HTMLElement {
           'z-index': '1',
           display: 'block',
           transform: 'translateY(19.1px)',
-          'font-family': "'Karrik',sans-serif",
-          'font-size': 88,
+          'font-family': "Monaco,'SFMono-Regular',Menlo,ui-monospace,monospace",
+          /*
+            82, not the handoff's 88. Monaco is monospace, so this is solved
+            rather than tuned: 12 characters at -.06em draw
+            12 × 82 × 0.54 = 531 against the 556 this cell leaves after its
+            56/28 padding. At 88 it drew 570 and wrapped "Competizione" onto a
+            second line with one letter on it.
+          */
+          'font-size': 82,
           'line-height': '.94',
           'letter-spacing': '-.06em',
         }),
@@ -657,7 +664,7 @@ function contactStrip(): HTMLElement {
         display: 'flex',
         'align-items': 'baseline',
         gap: 20,
-        'border-right': `1px solid ${RULE.onRustMinor}`,
+        'border-right': `1px solid ${RULE.onInkMinor}`,
       }),
     },
     el('span', { style: css({ 'font-size': 13, 'letter-spacing': '.16em' }) }, '04'),
@@ -665,11 +672,16 @@ function contactStrip(): HTMLElement {
       'span',
       {
         style: css({
-          'font-family': "'Karrik',sans-serif",
-          // 62 rather than the handoff's 86: the strip now names both things it
-          // opens, and "Contact + About me" is 18 characters where "Contact"
-          // was 7. Measured to fit the cell with room at either end.
-          'font-size': 62,
+          'font-family': "Monaco,'SFMono-Regular',Menlo,ui-monospace,monospace",
+          /*
+            48, down from 62 when the face was Karrik and 86 in the handoff.
+            The strip names both things it opens, so it is 18 characters where
+            "Contact" was 7, and Monaco is wider than Karrik. Solved: 18 × 48 ×
+            0.56 = 484 against the ~516 left in this cell once the "04" label
+            and its 20px gap are taken out. At 62 it drew 625 and ran under the
+            email beside it.
+          */
+          'font-size': 48,
           'letter-spacing': '-.04em',
           'line-height': '1',
           'white-space': 'nowrap',
@@ -689,7 +701,7 @@ function contactStrip(): HTMLElement {
         padding: '0 28px',
         display: 'flex',
         'align-items': 'center',
-        'border-right': `1px solid ${RULE.onRustMinor}`,
+        'border-right': `1px solid ${RULE.onInkMinor}`,
       }),
     },
     el(

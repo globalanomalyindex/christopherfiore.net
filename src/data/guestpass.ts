@@ -73,7 +73,13 @@ export const GUESTPASS = {
   /** What the screen calls itself to assistive tech and on a phone. */
   title: 'a temporary single use card you hand to someone',
   descriptor: 'lend the card without lending the money, and take it back the moment it is used',
-  state: 'self-directed concept · not affiliated with apple · nothing was built and nobody commissioned it',
+  /*
+    68 characters, down from 96. Monaco at 11.5px draws 0.76em an advance with
+    this tracking, so 68 draws 594 against the 760 the header cell has, and 96
+    drew 839 and clipped mid-word. Nothing weakened: "self-directed" already
+    says nobody commissioned it, and the footer carries the same string.
+  */
+  state: 'self-directed concept · not affiliated with apple · nothing was built',
   role: 'product design: research direction, structure, interaction, visual, engineering handoff',
   surface: 'a concept feature for apple wallet on iOS',
   /** The full case, hosted alongside this site. */
