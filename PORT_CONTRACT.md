@@ -52,6 +52,20 @@ many narrow letters it has, so several things had to come down or move:
 | `MENU.crest.left` | 1259 | 1440 | "synthétique" grew 166px into the bird |
 | subpage descriptor | 900 wide | 1300 | wrapped into the meta line under it |
 | subpage header state | 4 cols @13px | 5 cols @11.5px | clipped mid-word on every subpage |
+| subpage titles | fixed 152 / 132 | solved per name | 3 of 7 ran off the right margin |
+
+**Subpage titles solve their own size.** `subpageTitle(chars, cfg)` in
+`src/design/tokens.ts` returns the family's size unless the name is too long
+for the band, and the largest whole pixel that fits when it is. At Monaco the
+23-character and 33-character names came out at 138 and 96 against a family
+size of 152. A new case with a long name re-solves itself; nothing here needs
+tuning by hand again.
+
+**Measure the RESTING face, not the alternate.** Every display title swaps to
+Dessign Maison about 1.4s after its screen opens, and that face is far narrower.
+A screenshot taken after the swap shows all of these fitting even when they do
+not. The three overflows above were invisible in screenshots and were caught by
+asserting the predicted Monaco width instead.
 
 **Monaco is Apple's font and is bundled here as a webfont** at
 `public/fonts/Monaco.ttf`, 534KB. That is a licensing question for the site's

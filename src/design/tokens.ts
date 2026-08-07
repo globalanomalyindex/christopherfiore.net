@@ -167,3 +167,27 @@ export const monoWidth = (chars: number, size: number, trackEm: number): number 
  */
 export const monoFit = (chars: number, avail: number, trackEm: number, max: number): number =>
   Math.min(max, Math.floor(avail / (chars * (MONO_ADVANCE + trackEm))));
+
+/**
+ * A subpage title's size and line-height.
+ *
+ * Every subpage in the family is drawn at the same display size, and that
+ * worked while the face was proportional and the longest name was 23
+ * characters. Monaco is monospace and one of the names is 33, so three of them
+ * ran off the right margin at the family size.
+ *
+ * So the size is solved rather than set: the family's own size unless the name
+ * is too long for the band, and the largest whole pixel that fits when it is.
+ * A new case with a long name re-solves itself and never needs a number tuned
+ * by hand. `avail` is the 1920 stage less a module either side, less 24 of
+ * clearance so a title never touches its margin.
+ */
+export const subpageTitle = (
+  chars: number,
+  cfg: { size: number; lh: number; track: string },
+): { size: number; lh: number } => {
+  const track = parseFloat(cfg.track);
+  const avail = 1920 - 72.727 * 2 - 24;
+  const size = monoFit(chars, avail, track, cfg.size);
+  return { size, lh: Math.round(cfg.lh * (size / cfg.size)) };
+};

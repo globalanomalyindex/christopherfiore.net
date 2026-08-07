@@ -24,11 +24,12 @@
 
 import { asset, css, el, letters } from '../dom.ts';
 import { zoomTrigger } from '../runtime/lightbox.ts';
-import { COLOR, rgba } from '../design/tokens.ts';
+import { COLOR, rgba, subpageTitle } from '../design/tokens.ts';
 import { MFNY_PAGE as MP } from '../design/layout.ts';
 import { MFNY, MFNY_GLANCE, MFNY_LEAD_VIEW, MFNY_SECTIONS } from '../data/mfny.ts';
 import { STUDIO } from '../data/studio.ts';
 
+const TITLE = subpageTitle(MFNY.name.length, MP.title);
 const MONO = "Monaco,'SFMono-Regular',Menlo,ui-monospace,monospace";
 const MAJOR = rgba(COLOR.paper, 0.28);
 const MINOR = rgba(COLOR.paper, 0.2);
@@ -261,8 +262,8 @@ function titleBlock(): HTMLElement[] {
         top: MP.title.y,
         'transform-origin': '0 0',
         'font-family': MONO,
-        'font-size': MP.title.size,
-        'line-height': `${MP.title.lh}px`,
+        'font-size': TITLE.size,
+        'line-height': `${TITLE.lh}px`,
         'letter-spacing': MP.title.track,
         'white-space': 'nowrap',
       }),

@@ -57,7 +57,7 @@
 
 import { asset, css, el, letters } from '../dom.ts';
 import { zoomTrigger } from '../runtime/lightbox.ts';
-import { COLOR, LIGHTS, RULE } from '../design/tokens.ts';
+import { COLOR, LIGHTS, RULE, subpageTitle } from '../design/tokens.ts';
 import { MODULE, PAGE3, STAGE } from '../design/layout.ts';
 import {
   CHELL,
@@ -140,6 +140,8 @@ const CB = {
   secBarGap: 12,
   railW: 6,
 } as const;
+
+const TITLE = subpageTitle(CHELL.name.length, CB.title);
 
 const TEXT_H = CB.bandEnd - CB.text.y;
 const SCROLL_TOP = CB.secBarH + CB.secBarGap;
@@ -491,8 +493,8 @@ function titleBlock(): HTMLElement[] {
         margin: '0',
         'font-family': MONO,
         'font-weight': '400',
-        'font-size': CB.title.size,
-        'line-height': `${CB.title.lh}px`,
+        'font-size': TITLE.size,
+        'line-height': `${TITLE.lh}px`,
         'letter-spacing': CB.title.track,
         'white-space': 'nowrap',
       }),

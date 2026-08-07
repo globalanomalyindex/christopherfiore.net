@@ -41,7 +41,7 @@
 
 import { asset, css, el, letters } from '../dom.ts';
 import { zoomTrigger } from '../runtime/lightbox.ts';
-import { COLOR, rgba } from '../design/tokens.ts';
+import { COLOR, rgba, subpageTitle } from '../design/tokens.ts';
 import { GUESTPASS_PAGE as GP } from '../design/layout.ts';
 import {
   GUESTPASS,
@@ -51,6 +51,7 @@ import {
 } from '../data/guestpass.ts';
 import { STUDIO } from '../data/studio.ts';
 
+const TITLE = subpageTitle(GUESTPASS.name.length, GP.title);
 const MONO = "Monaco,'SFMono-Regular',Menlo,ui-monospace,monospace";
 const MAJOR = rgba(COLOR.paper, 0.28);
 const MINOR = rgba(COLOR.paper, 0.2);
@@ -339,8 +340,8 @@ function titleBlock(): HTMLElement[] {
         top: GP.title.y,
         'transform-origin': '0 0',
         'font-family': MONO,
-        'font-size': GP.title.size,
-        'line-height': `${GP.title.lh}px`,
+        'font-size': TITLE.size,
+        'line-height': `${TITLE.lh}px`,
         'letter-spacing': GP.title.track,
         'white-space': 'nowrap',
       }),

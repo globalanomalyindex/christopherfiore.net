@@ -45,7 +45,7 @@
 
 import { asset, css, el, letters } from '../dom.ts';
 import { zoomTrigger } from '../runtime/lightbox.ts';
-import { COLOR, LIGHTS, RULE } from '../design/tokens.ts';
+import { COLOR, LIGHTS, RULE, subpageTitle } from '../design/tokens.ts';
 import { EVIDENCE, MODULE, STAGE } from '../design/layout.ts';
 import { EV_META, EV_SHEETS } from '../data/competizione.ts';
 import {
@@ -118,6 +118,8 @@ const EV = {
   secBarGap: 12,
   railW: 6,
 } as const;
+
+const TITLE = subpageTitle(BLSP.name.length, EV.title);
 
 const TEXT_H = EV.bandEnd - EV.text.y;
 const SCROLL_TOP = EV.secBarH + EV.secBarGap;
@@ -346,8 +348,8 @@ function titleBlock(): HTMLElement[] {
         margin: '0',
         'font-family': MONO,
         'font-weight': '400',
-        'font-size': EV.title.size,
-        'line-height': `${EV.title.lh}px`,
+        'font-size': TITLE.size,
+        'line-height': `${TITLE.lh}px`,
         'letter-spacing': EV.title.track,
         'white-space': 'nowrap',
       }),

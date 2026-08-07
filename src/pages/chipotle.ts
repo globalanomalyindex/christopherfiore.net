@@ -36,7 +36,7 @@
 
 import { asset, css, el, letters } from '../dom.ts';
 import { zoomTrigger } from '../runtime/lightbox.ts';
-import { COLOR, rgba } from '../design/tokens.ts';
+import { COLOR, rgba, subpageTitle } from '../design/tokens.ts';
 import { CHIPOTLE_PAGE as CP } from '../design/layout.ts';
 import {
   CHIPOTLE,
@@ -46,6 +46,7 @@ import {
 } from '../data/chipotle.ts';
 import { STUDIO } from '../data/studio.ts';
 
+const TITLE = subpageTitle(CHIPOTLE.name.length, CP.title);
 const MONO = "Monaco,'SFMono-Regular',Menlo,ui-monospace,monospace";
 const MAJOR = rgba(COLOR.paper, 0.28);
 const MINOR = rgba(COLOR.paper, 0.2);
@@ -331,8 +332,8 @@ function titleBlock(): HTMLElement[] {
         top: CP.title.y,
         'transform-origin': '0 0',
         'font-family': MONO,
-        'font-size': CP.title.size,
-        'line-height': `${CP.title.lh}px`,
+        'font-size': TITLE.size,
+        'line-height': `${TITLE.lh}px`,
         'letter-spacing': CP.title.track,
         'white-space': 'nowrap',
       }),
