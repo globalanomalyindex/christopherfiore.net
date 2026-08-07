@@ -113,7 +113,34 @@ export const PAGE1 = {
   gridPitch: MODULE,
 } as const;
 
-/** Page 02 · Paintings. All handoff except the wall list row height. */
+/**
+ * Page 02 · Paintings.
+ *
+ * ADAPTED, and more than any other page. The design hangs four works in fixed
+ * frames with a wall list of names beside them. The real inventory is twenty
+ * paintings, and showing four of them is a hang, not a portfolio, so the frames
+ * and the list are both gone and the whole band is one scrolling gallery.
+ *
+ * The band runs the full content width, x 112 to 1808, which is where the wall
+ * list used to end. Vertically 360 to 910: the title block ends at 333 and the
+ * footer's rule is at 932.
+ *
+ *   colW  536.67  = (1696 - 22 rail - 2 × 32 gap) / 3
+ *
+ * Three columns rather than four, because a work is never cropped here: at four
+ * columns a 2:1 painting draws 200px tall and reads as a thumbnail. And rather
+ * than two, because at 821px wide the three portrait works draw over 1500px
+ * tall, which is nearly three windows for one painting.
+ *
+ * Measured with the real inventory: 2895px of scroll in a 550px window, columns
+ * balanced within 165px, five works starting in view. Those five are the only
+ * ones that get the dither reveal, which keeps the opening well under the 48
+ * filter budget in `runtime/dither.ts`.
+ *
+ * `captionH` is unchanged and the plaque still sits INSIDE the work at its
+ * bottom edge, overlapping it, exactly as the four frames did. That overlap is
+ * the page's look and is why the gallery reads as the same page.
+ */
 export const PAGE2 = {
   frameInset: 40,
   frameWidth: 14,
@@ -121,11 +148,19 @@ export const PAGE2 = {
   header: { x: 78, y: 78, h: 58, gap: 44 },
   meta: { x: 112, y: 322 },
   captionH: 38,
-  wall: { x: 1372, y: 360, w: 436 },
-  /** ADAPTED: 20 real works instead of 11, so rows shrink 40 → 26px. */
-  wallHeaderH: 34,
-  wallRowH: 26,
-  wallChip: 12, // adapted with the row (was 14)
+  /** the scrolling gallery band, full content width */
+  gallery: { x: 112, y: 360, w: 1696, h: 550 },
+  galleryCols: 3,
+  galleryGap: 32,
+  /** the rust scroll rail, same idea as the subpages' prose columns */
+  railW: 6,
+  /**
+   * A work this wide or wider spans two columns. At 3.19 and 2.65 the two that
+   * qualify would otherwise draw 168px and 202px tall against a 38px plaque.
+   * Everything else on this inventory sits at 2.44 or below and reads fine in
+   * one column.
+   */
+  gallerySpanAspect: 2.6,
   footer: { x: 78, bottom: 78, h: 70 },
 } as const;
 

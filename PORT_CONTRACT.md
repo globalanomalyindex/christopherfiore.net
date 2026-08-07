@@ -654,6 +654,47 @@ so the page's own veil canvas has to stay earlier in the tree than the
 viewer's. It belongs to the section, not to the stage, so the page's own
 open/close clip carries it and it cannot outlive its channel.
 
+### `src/pages/paintings.ts` — the gallery
+
+Page 02 no longer hangs four works in fixed frames beside a wall list of names.
+It is one scrolling gallery of the whole inventory, and three things went with
+that change:
+
+- **The rotation is gone.** Each frame used to swap to another work on its own
+  offset so twenty could be seen four at a time. Nothing is hidden now, so it
+  has no job. `src/runtime/rotate.ts` still exists and **has no callers** — the
+  bundler drops it, but it is dead source until somebody decides otherwise.
+- **The wall list is gone.** Its `on view` column had no meaning once
+  everything was on view, and its names duplicated the plaques underneath them.
+  `PaintingRecord.state` and `.chip` are still in the data and render nowhere.
+- **Nothing is cropped.** Every work draws at its true aspect ratio, so the
+  1904 × 597 painting is a wide strip rather than a tall painting with its ends
+  cut off. That is the whole reason it is a masonry and not a grid.
+
+**The layout is computed, not measured.** `layOut` reads `width`/`height` off
+the data and places every work shortest-column-first, so all three column
+heights are known before an image loads. No reflow, no runtime layout read, and
+adding a painting re-solves it. Keep those two fields as the ORIGINAL
+dimensions: they are layout input, not metadata.
+
+Measured with the real twenty: 2895px of sheet in a 550px window, columns
+balanced within 165px, five works starting in view. Only those five carry
+`data-dfx`, so the opening spends five live filters against the 48 budget in
+`runtime/dither.ts` rather than twenty.
+
+**The scroll reset is hooked to the hidden-to-shown EDGE**, not to hiding.
+`transitions.ts` writes `display: none` at the end of the close animation, so
+closing and re-opening inside that window never hides the page and the old
+scroll position survives. And it has to be an edge rather than every style
+write, because `transitions.ts` also writes `clip-path` to the same element
+while the page is up, and resetting on those would yank the gallery out from
+under whoever is reading it.
+
+Assets are **webp at 1200px on the long edge**, not the devkit JPEGs: twenty
+works on one screen was 12MB, and is 4.8MB. Originals are byte-identical in
+`_source/christopher-fiore-portfolio-devkit-v31/assets/artstation/`, which is
+gitignored, exactly as the BLSP sheets are.
+
 ### `src/styles/`
 `base.css`, `fonts.css`, `menu.css`, `pages.css`, `motion.css`. Ported from the
 prototype `<style>` block plus one class per `style-hover` declaration.

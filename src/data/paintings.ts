@@ -2,16 +2,27 @@
  * Channel 02 · Paintings.
  *
  * Twenty works transcribed from devkit `data/artwork.json` and
- * `SITE_LINKS.md`. Images are the locally bundled site assets; `href` points
- * at the ArtStation record, which is a reference — no ArtStation content is
- * bundled here.
+ * `SITE_LINKS.md`. `href` points at the ArtStation record, which is a
+ * reference — no ArtStation content is bundled here.
  *
- * `state` maps to the devkit's own sets: the four works hung in frames on
- * this page are `hung`, the rest of the `selected` set is `selected`, and the
- * `archive` set is `archive`.
+ * IMAGES ARE WEBP AT 1200px ON THE LONG EDGE, not the devkit's JPEGs. The
+ * gallery shows all twenty at once now, and 12MB of JPEG for one screen is not
+ * a gallery, it is a download. The originals are byte-identical in
+ * `_source/christopher-fiore-portfolio-devkit-v31/assets/artstation/`, which is
+ * gitignored, exactly as the BLSP sheets are. 1200 covers a 536.7px column at
+ * 2x on a 1920 stage; a larger display upscales by about 1.2, which on a
+ * painting is invisible.
+ *
+ * `width` and `height` are the ORIGINAL dimensions and must stay that way. The
+ * gallery computes every column height from them before a single image loads,
+ * so they are layout input, not metadata.
+ *
+ * `state` maps to the devkit's own sets: `hung`, `selected`, `archive`. It is
+ * kept because it is a fact about the collection, but nothing renders it now
+ * that the wall list is gone and every work is on the wall.
  */
 
-import type { HungFrame, PaintingRecord } from './types.ts';
+import type { PaintingRecord } from './types.ts';
 
 /** Vivid palette from the design tokens, cycled across the wall list. */
 const CHIPS = [
@@ -34,7 +45,7 @@ export const PAINTINGS: PaintingRecord[] = [
     wall: 'the steppe',
     year: '2025',
     note: 'silhouette and distance',
-    image: 'artstation/the-steppe.jpg',
+    image: 'artstation/the-steppe.webp',
     alt: 'A helicopter lifts two figures above an isolated stone peak rising from an amber plain',
     href: 'https://www.artstation.com/artwork/JrneqD',
     width: 1090,
@@ -48,7 +59,7 @@ export const PAINTINGS: PaintingRecord[] = [
     wall: 'shepherd',
     year: '2025',
     note: 'scale and atmosphere',
-    image: 'artstation/shepherd.jpg',
+    image: 'artstation/shepherd.webp',
     alt: 'A shepherd guides a flock along the crest of a vivid green hillside beneath broad clouds',
     href: 'https://www.artstation.com/artwork/L4laW5',
     width: 1600,
@@ -62,7 +73,7 @@ export const PAINTINGS: PaintingRecord[] = [
     wall: 'balance',
     year: '2024',
     note: 'structure, moss, and one orange signal',
-    image: 'artstation/balance.jpg',
+    image: 'artstation/balance.webp',
     alt: 'A small orange-robed figure threads through pale, moss-covered stone ruins',
     href: 'https://www.artstation.com/artwork/04Kvy4',
     width: 1500,
@@ -76,7 +87,7 @@ export const PAINTINGS: PaintingRecord[] = [
     wall: 'verticality',
     year: '2024',
     note: 'negative space and focus',
-    image: 'artstation/verticality.jpg',
+    image: 'artstation/verticality.webp',
     alt: 'Two sword fighters cross blades on a flowered slope below a monumental rock face',
     href: 'https://www.artstation.com/artwork/vbDE4O',
     width: 954,
@@ -90,7 +101,7 @@ export const PAINTINGS: PaintingRecord[] = [
     wall: "one day, i'll make it to the top",
     year: '2025',
     note: 'recent painting',
-    image: 'artstation/one-day.jpg',
+    image: 'artstation/one-day.webp',
     alt: 'Crowds gather at the foot of a bright, densely stacked white megastructure',
     href: 'https://www.artstation.com/artwork/oJ6AZk',
     width: 800,
@@ -104,7 +115,7 @@ export const PAINTINGS: PaintingRecord[] = [
     wall: 'four year painting progress',
     year: '2024',
     note: 'practice made visible',
-    image: 'artstation/four-year-progress.jpg',
+    image: 'artstation/four-year-progress.webp',
     alt: 'A lone figure watches a dragon circle between a distant castle and a luminous moon',
     href: 'https://www.artstation.com/artwork/XJ1AbR',
     width: 1500,
@@ -118,7 +129,7 @@ export const PAINTINGS: PaintingRecord[] = [
     wall: 'nix',
     year: '2024',
     note: 'quiet scale under a storm field',
-    image: 'artstation/nix.jpg',
+    image: 'artstation/nix.webp',
     alt: 'Two mounted riders pause in a snow-covered plain beneath a dark advancing storm',
     href: 'https://www.artstation.com/artwork/Bk3EyA',
     width: 1235,
@@ -132,7 +143,7 @@ export const PAINTINGS: PaintingRecord[] = [
     wall: "i've never seen you before",
     year: '2024',
     note: 'narrative distributed across one horizon',
-    image: 'artstation/never-seen.jpg',
+    image: 'artstation/never-seen.webp',
     alt: 'Three horses and a humanoid figure stand in a forest clearing beneath a hovering craft',
     href: 'https://www.artstation.com/artwork/AZQ1Ko',
     width: 1648,
@@ -146,7 +157,7 @@ export const PAINTINGS: PaintingRecord[] = [
     wall: "we aren't strong enough yet",
     year: '2024',
     note: 'recent painting',
-    image: 'artstation/not-strong-enough.jpg',
+    image: 'artstation/not-strong-enough.webp',
     alt: 'Cloaked travelers approach a colossal grounded vessel through a misty field',
     href: 'https://www.artstation.com/artwork/DLNQXG',
     width: 1600,
@@ -160,7 +171,7 @@ export const PAINTINGS: PaintingRecord[] = [
     wall: 'waiting',
     year: '2024',
     note: 'selected painting',
-    image: 'artstation/waiting.jpg',
+    image: 'artstation/waiting.webp',
     alt: 'A lone figure stands beside a smoking wreck in a flat marsh under heavy clouds',
     href: 'https://www.artstation.com/artwork/04PaRK',
     width: 1500,
@@ -174,7 +185,7 @@ export const PAINTINGS: PaintingRecord[] = [
     wall: 'the keeper',
     year: '2024',
     note: 'selected painting',
-    image: 'artstation/the-keeper.jpg',
+    image: 'artstation/the-keeper.webp',
     alt: 'A red-robed keeper stands between immense white columns at the edge of darkness',
     href: 'https://www.artstation.com/artwork/kQkQgz',
     width: 1500,
@@ -188,7 +199,7 @@ export const PAINTINGS: PaintingRecord[] = [
     wall: 'the sky was on fire',
     year: '2023',
     note: 'signal and intentional focus',
-    image: 'artstation/the-sky-was-on-fire.jpg',
+    image: 'artstation/the-sky-was-on-fire.webp',
     alt: 'A solitary figure stands on a jagged mound before hazy ruins under a coral-lit sky',
     href: 'https://www.artstation.com/artwork/qeEBoN',
     width: 1515,
@@ -202,7 +213,7 @@ export const PAINTINGS: PaintingRecord[] = [
     wall: "let's take a walk",
     year: null,
     note: null,
-    image: 'artstation/lets-take-a-walk.jpg',
+    image: 'artstation/lets-take-a-walk.webp',
     alt: 'Two tiny red figures walk across a green field beneath a vast wall of sunlit clouds',
     href: 'https://chrisfiore.artstation.com/projects/YB9wvb',
     width: 1904,
@@ -216,7 +227,7 @@ export const PAINTINGS: PaintingRecord[] = [
     wall: 'es ist so kalt',
     year: null,
     note: null,
-    image: 'artstation/es-ist-so-kalt.jpg',
+    image: 'artstation/es-ist-so-kalt.webp',
     alt: 'White-clad figures carrying rifles move through an icy valley edged with golden grass',
     href: 'https://chrisfiore.artstation.com/projects/elbqLY',
     width: 1727,
@@ -230,7 +241,7 @@ export const PAINTINGS: PaintingRecord[] = [
     wall: 'icbm',
     year: null,
     note: null,
-    image: 'artstation/icbm.jpg',
+    image: 'artstation/icbm.webp',
     alt: 'Distant launch towers punctuate a green valley beneath towering silver clouds',
     href: 'https://chrisfiore.artstation.com/projects/LRY8zl',
     width: 1453,
@@ -244,7 +255,7 @@ export const PAINTINGS: PaintingRecord[] = [
     wall: 'piazza',
     year: null,
     note: null,
-    image: 'artstation/piazza.jpg',
+    image: 'artstation/piazza.webp',
     alt: 'Black-cloaked figures cross a smoky piazza beneath a domed tower and storm clouds',
     href: 'https://chrisfiore.artstation.com/projects/9EDkJy',
     width: 1500,
@@ -258,7 +269,7 @@ export const PAINTINGS: PaintingRecord[] = [
     wall: 'turtle',
     year: null,
     note: null,
-    image: 'artstation/turtle.jpg',
+    image: 'artstation/turtle.webp',
     alt: 'A giant turtle-like creature rises from a violet jungle while a small figure watches',
     href: 'https://chrisfiore.artstation.com/projects/040vy5',
     width: 1500,
@@ -272,7 +283,7 @@ export const PAINTINGS: PaintingRecord[] = [
     wall: 'fields',
     year: null,
     note: null,
-    image: 'artstation/fields.jpg',
+    image: 'artstation/fields.webp',
     alt: 'A rider crosses a wide field opposite a weathered castle beneath a gray sky',
     href: 'https://chrisfiore.artstation.com/projects/obD1QJ',
     width: 1500,
@@ -286,7 +297,7 @@ export const PAINTINGS: PaintingRecord[] = [
     wall: 'cowboy sketch',
     year: null,
     note: null,
-    image: 'artstation/cowboy-sketch.jpg',
+    image: 'artstation/cowboy-sketch.webp',
     alt: 'A cowboy rides a leaping horse across a pale blue and orange painted field',
     href: 'https://chrisfiore.artstation.com/projects/98NAla',
     width: 1500,
@@ -300,7 +311,7 @@ export const PAINTINGS: PaintingRecord[] = [
     wall: 'argue',
     year: null,
     note: null,
-    image: 'artstation/argue.jpg',
+    image: 'artstation/argue.webp',
     alt: 'Two pale-robed figures face each other atop a bright cliff under a dark sky',
     href: 'https://chrisfiore.artstation.com/projects/PX9yJ1',
     width: 1319,
@@ -310,21 +321,13 @@ export const PAINTINGS: PaintingRecord[] = [
   },
 ];
 
-/** The four works hung in frames, and the frame geometry from the design. */
-export const HUNG: HungFrame[] = [
-  { slot: 'ps-pt-1', slug: 'the-steppe', x: 112, y: 360, w: 400, h: 500 },
-  { slot: 'ps-pt-2', slug: 'shepherd', x: 542, y: 360, w: 360, h: 240 },
-  { slot: 'ps-pt-3', slug: 'balance', x: 542, y: 630, w: 360, h: 230 },
-  { slot: 'ps-pt-4', slug: 'verticality', x: 932, y: 360, w: 400, h: 500 },
-];
-
 export const byslug = (slug: string): PaintingRecord => {
   const found = PAINTINGS.find((p) => p.slug === slug);
   if (!found) throw new Error(`unknown painting: ${slug}`);
   return found;
 };
 
-export const PAINTINGS_COUNT_LABEL = `${PAINTINGS.length} works, ${HUNG.length} hung`;
+export const PAINTINGS_COUNT_LABEL = `${PAINTINGS.length} works`;
 export const PAINTINGS_META =
   '2023 to 2025 · concept art and illustration · photobash, blender, substance';
 export const ARTSTATION_HREF = 'https://www.artstation.com/chrisfiore';

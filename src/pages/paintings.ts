@@ -1,40 +1,45 @@
 /**
  * Screen 3 · Page 02 — Paintings.
  *
- * Four hung frames at their handoff geometry (HUNG in `src/data/paintings.ts`)
- * over a continuously drifting organic dither field. The opaque #150B20
- * caption plaque exists so titles stay legible over that moving field — it is
- * not decoration.
+ * A scrolling gallery of the whole inventory over the continuously drifting
+ * organic dither field. The opaque #150B20 caption plaque exists so titles stay
+ * legible over that moving field — it is not decoration.
  *
- * The wall list carries the whole inventory (20 works, not the design's 11),
- * so its rows are 26px instead of 40px — the one adaptation on this page.
- * Every frame and every wall row is a real link to the ArtStation record.
+ * WHAT THIS REPLACED, AND WHY. The design hangs four works in fixed frames with
+ * a wall list of names beside them, and this page ran that way with a rotation:
+ * each frame swapped to another work on its own offset so the twenty could be
+ * seen four at a time. That was the right answer to "four frames, twenty
+ * works". It is the wrong answer to "show the paintings", because a visitor saw
+ * four and had to wait, on the page's schedule, to see the rest.
  *
- * The four frames rotate. HUNG is the *starting* hang, not the inventory: each
- * frame swaps to another work on its own offset so no two ever change together,
- * dissolving through the site's own dither rather than a plain opacity fade.
- * See `src/runtime/rotate.ts`; the aspect pools and the atomic commit are below.
+ * So the frames, the rotation and the wall list are all gone. Everything is on
+ * the wall at once and you scroll. Three consequences worth knowing:
  *
- * The two wide frames turn every 7s and the two tall ones every 30s. That is
- * not a taste decision: the tall pair draws on three portrait-format paintings
- * and the wide pair on seventeen, so a shared tempo would bring a work back to
- * the tall frames every 10.5s. Each pool's period is derived from MIN_REPEAT
- * instead — see `periodFor` below.
+ * 1. The rotation machinery went with it — the aspect pools, the per-pool
+ *    period derived from MIN_REPEAT, the pause-while-reading holds. None of it
+ *    has a job when nothing is hidden. `runtime/rotate.ts` has no callers now.
+ * 2. The wall list's `on view` column had no meaning left, since everything is
+ *    on view, and its names duplicated the plaques underneath them.
+ * 3. `PaintingRecord.state` (hung / selected / archive) is still in the data
+ *    because it is a fact about the collection, but nothing renders it.
+ *
+ * NOTHING IS CROPPED. Every work is drawn at its true aspect ratio, computed
+ * from the `width`/`height` in the data, so a 1904 × 597 painting is a wide
+ * strip rather than a tall painting with its ends cut off. That is the whole
+ * reason the layout is a masonry rather than a grid.
+ *
+ * THE LAYOUT IS COMPUTED, NOT MEASURED. Every column height is known from the
+ * data before a single image loads, so there is no reflow when they do and no
+ * layout read at runtime. See `layOut` below and the numbers in `PAGE2`.
+ *
+ * Every work is a real link to its ArtStation record.
  */
 
 import { asset, css, el, letters } from '../dom.ts';
 import { COLOR, RULE } from '../design/tokens.ts';
 import { PAGE2 } from '../design/layout.ts';
-import {
-  HUNG,
-  PAINTINGS,
-  PAINTINGS_COUNT_LABEL,
-  PAINTINGS_META,
-  byslug,
-} from '../data/paintings.ts';
+import { PAINTINGS, PAINTINGS_COUNT_LABEL, PAINTINGS_META } from '../data/paintings.ts';
 import type { PaintingRecord } from '../data/types.ts';
-import { createRotor } from '../runtime/rotate.ts';
-import { state } from '../runtime/state.ts';
 
 const BTN: Record<string, string> = {
   appearance: 'none',
@@ -82,89 +87,78 @@ const corners = () => [
   cross({ right: -7.5, bottom: -7.5 }),
 ];
 
-/* ----------------------------------------------------------- aspect pools */
+/* ---------------------------------------------------------------- the hang */
 
-/**
- * Which works may hang in which frames.
- *
- * The four frames are 400×500, 360×240, 360×230 and 400×500 — two portrait
- * (0.80) and two landscape (1.50 / 1.565). The images are `object-fit: cover`,
- * so a work dropped into the wrong orientation is not scaled, it is *cropped*:
- * `let's take a walk` is 1904×597, and a 400×500 frame would show 19% of its
- * width. That is not a smaller version of the painting, it is a different one.
- *
- * So the inventory is partitioned by orientation and a work only ever rotates
- * into a frame it suits. Splitting at 1.0 and picking the nearest frame
- * aspect in log space (crossover √(0.80 × 1.50) = 1.095) give the same
- * partition on this inventory — nothing sits between 0.852 and 1.727 — so the
- * plain, readable test is the one used.
- */
-type Orient = 'portrait' | 'landscape';
+/** The gap between the scroll region's content and the rail beside it. */
+const RAIL_PAD = PAGE2.railW + 16;
+/** Usable width inside the scroll region, once the rail has its lane. */
+const INNER_W = PAGE2.gallery.w - RAIL_PAD;
+const COL_W =
+  (INNER_W - PAGE2.galleryGap * (PAGE2.galleryCols - 1)) / PAGE2.galleryCols;
 
-const orientOf = (w: number, h: number): Orient => (w < h ? 'portrait' : 'landscape');
-
-const workOrient = (p: PaintingRecord): Orient => orientOf(p.width, p.height);
-
-/** One orientation's inventory plus where in it the next turn is served from. */
-interface Pool {
-  /** which orientation this pool serves — also its key when counting frames */
-  kind: Orient;
-  works: PaintingRecord[];
-  /** index of the work handed out most recently */
-  at: number;
-  /** slugs from this pool currently on the wall — never served twice at once */
-  shown: Set<string>;
-}
-
-function makePool(kind: Orient): Pool {
-  return { kind, works: PAINTINGS.filter((p) => workOrient(p) === kind), at: -1, shown: new Set() };
+interface Placed {
+  work: PaintingRecord;
+  left: number;
+  top: number;
+  w: number;
+  h: number;
+  /** how many columns it takes: 1, or 2 for the widest works */
+  span: number;
 }
 
 /**
- * The next work this pool will serve: the inventory in order, skipping
- * anything already hanging. Returns null when the pool is no deeper than the
- * frames drawing on it, which would mean there is nothing new to show.
+ * Place every work, shortest column first.
+ *
+ * Two rules and nothing else. A work wider than `gallerySpanAspect` takes two
+ * columns, because at one column the widest painting in the inventory draws
+ * 168px tall against a 38px plaque and stops being a painting. And every work
+ * lands wherever the shortest run of adjacent columns currently is, which is
+ * what keeps the three columns within about 165px of each other over twenty
+ * works without anybody ordering them by hand.
+ *
+ * Pure: same data in, same layout out, no DOM and no measurement.
  */
-function nextWork(pool: Pool): PaintingRecord | null {
-  for (let i = 0; i < pool.works.length; i++) {
-    pool.at = (pool.at + 1) % pool.works.length;
-    const w = pool.works[pool.at];
-    if (!pool.shown.has(w.slug)) {
-      // Reserved the moment it is chosen, not when it lands: two frames drawing
-      // on the same pool can be preparing at once, and the portrait pool is
-      // only one work deeper than the frames it feeds.
-      pool.shown.add(w.slug);
-      return w;
+function layOut(works: readonly PaintingRecord[]): { items: Placed[]; height: number } {
+  const tops = new Array<number>(PAGE2.galleryCols).fill(0);
+  const items: Placed[] = [];
+
+  for (const work of works) {
+    const span = work.width / work.height >= PAGE2.gallerySpanAspect ? 2 : 1;
+    const w = COL_W * span + PAGE2.galleryGap * (span - 1);
+    const h = Math.round((w * work.height) / work.width);
+
+    // the leftmost run of `span` columns whose deepest point is highest up
+    let col = 0;
+    let top = Infinity;
+    for (let c = 0; c + span <= PAGE2.galleryCols; c++) {
+      const t = Math.max(...tops.slice(c, c + span));
+      if (t < top - 0.01) {
+        top = t;
+        col = c;
+      }
     }
+
+    items.push({ work, span, w, h, top, left: col * (COL_W + PAGE2.galleryGap) });
+    for (let c = col; c < col + span; c++) tops[c] = top + h + PAGE2.galleryGap;
   }
-  return null;
+
+  // the trailing gap is not part of the content
+  return { items, height: Math.max(...tops) - PAGE2.galleryGap };
 }
 
-/* ------------------------------------------------------------- hung frames */
-
-/** A built frame plus the handles its rotation writes through. */
-interface Frame {
-  node: HTMLAnchorElement;
-  img: HTMLImageElement;
-  name: HTMLElement;
-  year: HTMLElement;
-  pool: Pool;
-  /** the work currently hanging in it */
-  slug: string;
-}
-
-const frameLabel = (p: PaintingRecord): string =>
+const workLabel = (p: PaintingRecord): string =>
   `${p.title}${p.year ? `, ${p.year}` : ''}, view on ArtStation, opens in a new tab`;
 
-function frame(index: number, pools: Record<Orient, Pool>): Frame {
-  const g = HUNG[index];
-  const p = byslug(g.slug);
-
-  // The lowercased name, matching the wall list and the studio's voice —
-  // the prototype's plaque read "crestdown", not "Crestdown".
-  const name = el('span', {}, p.wall);
-  const year = el('span', { style: css({ opacity: '.62' }) }, p.year ?? '');
-
+/**
+ * One work. The plaque sits inside it at the bottom edge, overlapping the
+ * painting, exactly as the four frames did — that overlap is the page's look.
+ *
+ * `reveal` is passed only to the works that start in view. The dither is the
+ * site's arrival move and it costs a live SVG filter each, so the fifteen below
+ * the fold are simply there when you scroll to them rather than each spending a
+ * filter on an entrance nobody is present for.
+ */
+function workNode(p: Placed, reveal: number | null): HTMLAnchorElement {
   const plaque = el(
     'div',
     {
@@ -184,17 +178,21 @@ function frame(index: number, pools: Record<Orient, Pool>): Frame {
         'letter-spacing': '.16em',
       }),
     },
-    name,
-    year,
+    // lowercased, matching the studio's voice — the prototype's plaque read
+    // "crestdown", not "Crestdown"
+    el('span', {}, p.work.wall),
+    el('span', { style: css({ opacity: '.62' }) }, p.work.year ?? ''),
   );
 
   const img = el('img', {
-    src: asset(p.image),
-    alt: p.alt,
+    src: asset(p.work.image),
+    alt: p.work.alt,
     loading: 'lazy',
     decoding: 'async',
-    width: g.w,
-    height: g.h,
+    // the box is cut to the work's own ratio, so `cover` never actually crops;
+    // it is here so a rounding error takes a pixel rather than letterboxing
+    width: Math.round(p.w),
+    height: p.h,
     style: css({
       position: 'absolute',
       inset: '0',
@@ -205,29 +203,27 @@ function frame(index: number, pools: Record<Orient, Pool>): Frame {
     }),
   });
 
-  const node = el(
+  return el(
     'a',
     {
-      href: p.href,
+      href: p.work.href,
       target: '_blank',
       rel: 'noopener noreferrer',
-      // The band hover would cover the painting; the plaque carries the state.
+      // the band hover would cover the painting; the plaque carries the state
       'data-nohl': true,
-      // The rotation's pause target: pointer over any frame, or focus in one.
-      'data-rotslot': index,
-      'aria-label': frameLabel(p),
-      'data-dfx': 10,
-      'data-in-dur': 380,
-      'data-in-delay': 140 + index * 70,
+      'aria-label': workLabel(p.work),
+      ...(reveal === null
+        ? {}
+        : { 'data-dfx': 10, 'data-in-dur': 380, 'data-in-delay': reveal }),
       style: css({
         ...LINK,
-        opacity: '0',
+        ...(reveal === null ? {} : { opacity: '0' }),
         position: 'absolute',
         display: 'block',
-        left: g.x,
-        top: g.y,
-        width: g.w,
-        height: g.h,
+        left: p.left,
+        top: p.top,
+        width: p.w,
+        height: p.h,
         'box-shadow': `0 0 0 1px ${RULE.onLavenderMajor}`,
       }),
     },
@@ -235,174 +231,159 @@ function frame(index: number, pools: Record<Orient, Pool>): Frame {
     plaque,
     ...corners(),
   );
-
-  const pool = pools[orientOf(g.w, g.h)];
-  pool.shown.add(p.slug);
-  // Serve the rotation from just past the works already hanging, so the first
-  // swap continues the inventory instead of repeating the opening hang.
-  pool.at = Math.max(
-    pool.at,
-    pool.works.findIndex((w) => w.slug === p.slug),
-  );
-
-  return { node, img, name, year, pool, slug: p.slug };
 }
 
-/* ----------------------------------------------------------------- the wall */
-
-/**
- * Column widths for the two right-hand cells. `on view` at 11.5px/.22em and
- * `selected` at 13px/.13em are the widest strings each has to hold.
- */
-const MARK_W = 62;
-const STATE_W = 66;
-
-/** The whole inventory, plus the handle that marks what is hanging right now. */
-interface Wall {
+interface Gallery {
   node: HTMLElement;
-  /** Mark or unmark one row. Only the two rows a swap touched are written. */
-  mark(slug: string, on: boolean): void;
+  region: HTMLElement;
+  thumb: HTMLElement;
 }
 
-const rowLabel = (p: PaintingRecord, onWall: boolean): string =>
-  `${p.title}${onWall ? ', on the wall now' : ''}, view on ArtStation, opens in a new tab`;
+function gallery(): Gallery {
+  const { items, height } = layOut(PAINTINGS);
 
-function wall(hung: ReadonlySet<string>): Wall {
-  const header = el(
+  const sheet = el(
     'div',
     {
-      style: css({
-        display: 'flex',
-        'align-items': 'center',
-        gap: 16,
-        height: PAGE2.wallHeaderH,
-        'border-bottom': `1px solid ${RULE.onLavenderMajor}`,
-        'font-size': 11.5,
-        'letter-spacing': '.22em',
-        opacity: '.72',
-        // matches the rows, so the two right-hand columns line up with them
-        'padding-right': 12,
-      }),
+      style: css({ position: 'relative', width: INNER_W, height }),
     },
-    el('span', { style: css({ flex: '1' }) }, 'the wall'),
-    el('span', { style: css({ width: MARK_W, flex: 'none' }) }, 'on view'),
-    el('span', { style: css({ width: STATE_W, flex: 'none' }) }, 'state'),
+    ...items.map((p, i) =>
+      // only what starts in view gets the arrival dither, staggered the way the
+      // four frames were
+      workNode(p, p.top < PAGE2.gallery.h ? 140 + i * 70 : null),
+    ),
   );
 
-  const squares = new Map<string, HTMLElement>();
-  const links = new Map<string, HTMLElement>();
-
-  const rows = PAINTINGS.map((p) => {
-    const onWall = hung.has(p.slug);
-
-    /*
-      `state` stays the devkit's set — hung / selected / archive — because that
-      is a fact about the collection, not about this minute. Which four are
-      actually up changes every few seconds, so it gets a column of its own:
-      a square in currentColor, so it inverts with the row on hover instead of
-      vanishing into the rust band.
-    */
-    const square = el('span', {
+  const region = el(
+    'div',
+    {
+      'data-pgscroll': true,
+      tabindex: 0,
+      role: 'region',
+      'aria-label': `The paintings, ${PAINTINGS.length} works, scrollable`,
       style: css({
-        width: 8,
-        height: 8,
-        display: 'block',
-        background: 'currentColor',
-        visibility: onWall ? 'visible' : 'hidden',
+        position: 'absolute',
+        inset: '0',
+        'overflow-y': 'auto',
+        'overflow-x': 'hidden',
+        'padding-right': RAIL_PAD,
+        'scrollbar-width': 'none',
+        'overscroll-behavior': 'contain',
       }),
-    });
+    },
+    sheet,
+  );
 
-    const row = el(
-      'a',
-      {
-        href: p.href,
-        target: '_blank',
-        rel: 'noopener noreferrer',
-        'aria-label': rowLabel(p, onWall),
-        class: 'ps-hov-invert',
-        style: css({
-          ...LINK,
-          display: 'flex',
-          'align-items': 'center',
-          gap: 16,
-          height: PAGE2.wallRowH,
-          'border-bottom': `1px solid ${RULE.onLavenderMinor}`,
-          'font-size': 13,
-          'letter-spacing': '.13em',
-          transition: 'background 150ms linear,color 150ms linear',
-          'padding-right': 12,
-        }),
-      },
-      el('span', {
-        'aria-hidden': 'true',
-        style: css({
-          width: PAGE2.wallChip,
-          height: PAGE2.wallChip,
-          flex: 'none',
-          background: p.chip,
-        }),
-      }),
-      el(
-        'span',
-        { style: css({ flex: '1', overflow: 'hidden', 'white-space': 'nowrap' }) },
-        p.wall,
-      ),
-      el(
-        'span',
-        {
-          'aria-hidden': 'true',
-          style: css({ width: MARK_W, flex: 'none', display: 'flex', 'align-items': 'center' }),
-        },
-        square,
-      ),
-      el('span', { style: css({ width: STATE_W, flex: 'none', opacity: '.66' }) }, p.state),
-    );
-
-    squares.set(p.slug, square);
-    links.set(p.slug, row);
-    return row;
+  const thumb = el('span', {
+    'data-pgthumb': true,
+    style: css({
+      position: 'absolute',
+      left: 0,
+      top: 0,
+      width: '100%',
+      height: 0,
+      background: COLOR.rust,
+      display: 'none',
+    }),
   });
+
+  const rail = el(
+    'div',
+    {
+      'aria-hidden': 'true',
+      style: css({
+        position: 'absolute',
+        right: 0,
+        top: 0,
+        bottom: 0,
+        width: PAGE2.railW,
+        background: RULE.onLavenderMinor,
+        'pointer-events': 'none',
+      }),
+    },
+    thumb,
+  );
 
   const node = el(
     'div',
     {
       'data-intro': 'fade',
-      'data-in-delay': 300,
+      'data-in-delay': 120,
       'data-in-dur': 380,
       style: css({
         opacity: '0',
         position: 'absolute',
-        left: PAGE2.wall.x,
-        top: PAGE2.wall.y,
-        width: PAGE2.wall.w,
-        /*
-          The design floats the wall list straight on the drifting field. That
-          worked for eleven rows, which sat in a calm band; twenty rows reach
-          into the busy part and 13px names stop being readable over it. This
-          is the page's own answer to its own problem — the caption plaques
-          exist for exactly this reason — applied as a peer of the work frames:
-          the page's own lavender, and the same 1px rust hairline they carry.
-          No radius, no blur, no new color.
-        */
-        background: COLOR.lavender,
-        'box-shadow': `0 0 0 1px ${RULE.onLavenderMajor}`,
-        padding: '0 12px 10px',
+        left: PAGE2.gallery.x,
+        top: PAGE2.gallery.y,
+        width: PAGE2.gallery.w,
+        height: PAGE2.gallery.h,
       }),
     },
-    header,
-    ...rows,
+    region,
+    rail,
   );
 
-  return {
-    node,
-    mark(slug, on) {
-      const square = squares.get(slug);
-      if (square) square.style.visibility = on ? 'visible' : 'hidden';
-      const row = links.get(slug);
-      const p = PAINTINGS.find((w) => w.slug === slug);
-      if (row && p) row.setAttribute('aria-label', rowLabel(p, on));
-    },
+  return { node, region, thumb };
+}
+
+/**
+ * Paint the rail thumb. Cheap enough to run straight off the scroll event: a
+ * couple of style writes and no layout read beyond the region's own metrics.
+ */
+function wireRail(g: Gallery): void {
+  const paint = (): void => {
+    const view = g.region.clientHeight;
+    const total = g.region.scrollHeight;
+    const over = total - view;
+    // a hidden page measures zero, and the scroll event queued on close lands
+    // after display:none
+    if (!view) return;
+    if (over <= 1) {
+      g.thumb.style.display = 'none';
+      return;
+    }
+    const h = Math.max(28, Math.round((view / total) * view));
+    const u = Math.min(1, Math.max(0, g.region.scrollTop / over));
+    g.thumb.style.display = 'block';
+    g.thumb.style.height = `${h}px`;
+    g.thumb.style.transform = `translateY(${Math.round(u * (view - h))}px)`;
   };
+  g.region.addEventListener('scroll', paint, { passive: true });
+
+  /*
+    `wireRail` runs during `build()`, before the root is in the document, so the
+    region measures zero and the first paint is a no-op. The thumb therefore has
+    to be painted when the page is actually shown, and the page's visibility is
+    an inline style write by `transitions.ts` and nothing else — the same signal
+    `main.ts`'s a11y mirror relies on.
+
+    Opening sends the gallery back to the top, so a visit starts at the first
+    work rather than wherever the last one stopped reading. It is hooked to the
+    hidden-to-shown EDGE and not to hiding: `display: none` is written at the
+    end of the close animation, so closing and re-opening inside that window
+    never hid the page at all and the old scroll position survived. And it is
+    an edge rather than every write because `transitions.ts` also writes
+    `clip-path` to this same element while the page is up, and resetting on
+    those would yank the gallery out from under anyone reading it.
+  */
+  const root = (): HTMLElement | null => g.node.closest('[data-page]');
+  const shown = (): boolean => {
+    const r = root();
+    return !!r && r.style.display !== 'none';
+  };
+  let was = false;
+  const life = (): void => {
+    const now = shown();
+    if (now && !was) g.region.scrollTop = 0;
+    if (now) paint();
+    was = now;
+  };
+  queueMicrotask(() => {
+    const r = root();
+    if (!r) return;
+    new MutationObserver(life).observe(r, { attributes: true, attributeFilter: ['style'] });
+    life();
+  });
 }
 
 /* ------------------------------------------------------------------- chrome */
@@ -529,203 +510,6 @@ function footerBar(): HTMLElement {
   );
 }
 
-/* ---------------------------------------------------------------- rotation */
-
-/**
- * One frame's turn: ~7s, and the four offsets a quarter of that apart, so no
- * two frames ever change together.
- */
-const PERIOD = 7000;
-
-/**
- * No work may come back to the wall inside this window.
- *
- * The pools are very different depths — 17 landscape works against 3 portrait
- * ones — and they feed two frames each. A pool of W works feeding S frames that
- * each turn every P ms serves a turn every P/S ms, so a given work returns
- * every `W × P / S` ms. At a flat 7s that is 59.5s for the landscape frames and
- * **10.5s** for the tall pair, which is short enough to read as a loop rather
- * than as a wall.
- *
- * So the period is derived per pool instead of shared: each pool turns slowly
- * enough that nothing returns inside MIN_REPEAT, and never faster than PERIOD.
- * The tall frames end up markedly slower than the wide ones, which is the
- * honest consequence of the inventory — three portrait paintings cannot fill
- * two tall frames at speed without repeating. Add portrait-format works and
- * this speeds itself back up with no code change.
- */
-const MIN_REPEAT = 45000;
-
-/** ms between one frame's swaps, for a pool of `works` feeding `slots` frames. */
-const periodFor = (works: number, slots: number): number =>
-  works <= 0 ? PERIOD : Math.max(PERIOD, Math.round((MIN_REPEAT * slots) / works));
-
-/**
- * The blur radius the frames' own opening reveal uses (`data-dfx="10"`). A
- * swap that dissolved harder than the arrival would read as a different move.
- */
-const FRAME_MB = 10;
-
-/**
- * Pick the next work for `f`, decode it, and return the commit that installs
- * it. The commit is deliberately one indivisible block: picture, plaque name,
- * plaque year, href and accessible name all move together, because a plaque
- * reading `shepherd` over a picture of `nix` — or a link sending someone to
- * the wrong ArtStation record — is worse than no rotation at all.
- */
-async function prepareSwap(f: Frame, list: Wall): Promise<(() => void) | null> {
-  const next = nextWork(f.pool);
-  if (!next || next.slug === f.slug) return null;
-
-  const src = asset(next.image);
-  const pre = new Image();
-  pre.src = src;
-  try {
-    // Decode before anything dissolves, so the frame never resolves out of the
-    // noise onto a half-painted image.
-    await pre.decode();
-  } catch {
-    /* decode is a courtesy — a failed one still swaps, the <img> retries */
-  }
-
-  const gone = f.slug;
-  return () => {
-    f.pool.shown.delete(gone);
-    f.slug = next.slug;
-
-    f.img.src = src;
-    f.img.alt = next.alt;
-    f.name.textContent = next.wall;
-    f.year.textContent = next.year ?? '';
-    f.node.href = next.href;
-    f.node.setAttribute('aria-label', frameLabel(next));
-
-    list.mark(gone, false);
-    list.mark(next.slug, true);
-  };
-}
-
-/**
- * Start the rotation when the page is up, stop it when it is not, and hold it
- * while anyone is reading — pointer over any frame, or keyboard focus in one.
- *
- * prefers-reduced-motion gets no rotation at all: the opening four stay put.
- * Not a slower cycle, none.
- */
-function wireRotation(
-  root: HTMLElement,
-  frames: Frame[],
-  pools: Record<Orient, Pool>,
-  list: Wall,
-): void {
-  // How many frames draw on each pool — the divisor in the repeat interval.
-  const slotsOn = frames.reduce<Record<string, number>>((n, f) => {
-    n[f.pool.kind] = (n[f.pool.kind] ?? 0) + 1;
-    return n;
-  }, {});
-
-  const rotor = createRotor({
-    period: PERIOD,
-    slots: frames.map((f, i) => ({
-      el: f.node,
-      // Offsets stay on the base period so the four frames keep their even
-      // stagger even where their own periods differ.
-      offset: Math.round((PERIOD / frames.length) * i),
-      period: periodFor(f.pool.works.length, slotsOn[f.pool.kind] ?? 1),
-      mb: FRAME_MB,
-      prepare: () => prepareSwap(f, list),
-    })),
-  });
-
-  /* ---- hold while a caption is being read ---- */
-
-  const pointer = new Set<Element>();
-  const focused = new Set<Element>();
-
-  const hold = (): void => {
-    if (pointer.size) rotor.pause('pointer');
-    else rotor.resume('pointer');
-    if (focused.size) rotor.pause('focus');
-    else rotor.resume('focus');
-  };
-
-  /** The frame an event landed in, or null. Moves inside one frame are ignored. */
-  const slotOf = (target: EventTarget | null, rel: EventTarget | null): Element | null => {
-    const slot = target instanceof Element ? target.closest('[data-rotslot]') : null;
-    if (!slot) return null;
-    return rel instanceof Node && slot.contains(rel) ? null : slot;
-  };
-
-  // pointerover/pointerout bubble where pointerenter/leave do not, and the
-  // relatedTarget check above turns them back into exact enter/leave.
-  root.addEventListener(
-    'pointerover',
-    (e) => {
-      const slot = slotOf(e.target, e.relatedTarget);
-      if (!slot) return;
-      pointer.add(slot);
-      hold();
-    },
-    { passive: true },
-  );
-  root.addEventListener(
-    'pointerout',
-    (e) => {
-      const slot = slotOf(e.target, e.relatedTarget);
-      if (!slot) return;
-      pointer.delete(slot);
-      hold();
-    },
-    { passive: true },
-  );
-  root.addEventListener('focusin', (e) => {
-    const slot = slotOf(e.target, e.relatedTarget);
-    if (!slot) return;
-    focused.add(slot);
-    hold();
-  });
-  root.addEventListener('focusout', (e) => {
-    const slot = slotOf(e.target, e.relatedTarget);
-    if (!slot) return;
-    focused.delete(slot);
-    hold();
-  });
-
-  /* ---- run only while the page is up ---- */
-
-  const reduced = (): boolean => {
-    const stage = root.closest<HTMLElement>('[data-stage]');
-    return stage ? state(stage).reduced : false;
-  };
-
-  const life = (): void => {
-    if (root.style.display !== 'none' && !reduced()) {
-      rotor.start();
-      return;
-    }
-    // Closing: drop the read-holds and re-seat every pool on what is actually
-    // hanging, so a work reserved by a swap that never landed is not lost.
-    pointer.clear();
-    focused.clear();
-    rotor.stop();
-    for (const pool of Object.values(pools)) pool.shown.clear();
-    for (const f of frames) f.pool.shown.add(f.slug);
-  };
-
-  // transitions.ts drives the page's visibility with an inline style write and
-  // nothing else, exactly as main.ts's a11y mirror relies on.
-  new MutationObserver(life).observe(root, { attributes: true, attributeFilter: ['style'] });
-
-  // A reduced-motion change mid-session has to take effect on the open page,
-  // not just the next one. Deferred a tick because state.ts listens to the
-  // same media query and the two listeners have no guaranteed order.
-  if (typeof matchMedia === 'function') {
-    matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', () => {
-      window.setTimeout(life, 0);
-    });
-  }
-}
-
 /* -------------------------------------------------------------------- build */
 
 export function build(): HTMLElement {
@@ -807,18 +591,7 @@ export function build(): HTMLElement {
     PAINTINGS_META,
   );
 
-  /*
-    HUNG is the opening hang, not the inventory. Each frame keeps a pool of the
-    works whose orientation it suits and cycles through it; `wall()` is handed
-    the four that start up so its `on view` column is right from the first
-    frame, before any timer has run.
-  */
-  const pools: Record<Orient, Pool> = {
-    portrait: makePool('portrait'),
-    landscape: makePool('landscape'),
-  };
-  const frames = HUNG.map((_g, i) => frame(i, pools));
-  const list = wall(new Set(frames.map((f) => f.slug)));
+  const g = gallery();
 
   const body = el(
     'div',
@@ -828,8 +601,7 @@ export function build(): HTMLElement {
     },
     headerBar(),
     meta,
-    ...frames.map((f) => f.node),
-    list.node,
+    g.node,
     footerBar(),
   );
 
@@ -858,7 +630,7 @@ export function build(): HTMLElement {
     body,
   );
 
-  wireRotation(root, frames, pools, list);
+  wireRail(g);
 
   return root;
 }

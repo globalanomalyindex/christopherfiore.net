@@ -62,19 +62,14 @@ export interface PaintingRecord {
   href: string;
   width: number;
   height: number;
-  /** hung = in a frame on this page; selected / archive = wall list only */
+  /**
+   * The devkit's own sets. Nothing renders this now that page 02 shows every
+   * work at once, but it is a fact about the collection rather than about the
+   * page, so it stays.
+   */
   state: 'hung' | 'selected' | 'archive';
-  /** wall-list color chip, drawn from the vivid palette */
+  /** vivid-palette chip, from when the wall list carried one per row */
   chip: string;
-}
-
-export interface HungFrame {
-  slot: string;
-  slug: string;
-  x: number;
-  y: number;
-  w: number;
-  h: number;
 }
 
 export interface SystemRecord {
