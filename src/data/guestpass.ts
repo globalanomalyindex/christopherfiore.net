@@ -37,8 +37,8 @@
  *      "roughly half of US contacts". This file uses the first ONLY as the
  *      assumption the design rests on, and does not use the other two at all.
  *    - Targets, not results: time to send, approval rate, return rate. They
- *      sit under "what success looks like" for a product that does not exist.
- *      `guessing` below keeps them in the conditional.
+ *      sit under "what success looks like" for a product that does not exist,
+ *      so this file does not repeat any of them.
  *
  * 5. THE PACKAGE HAS TWO AUTHORS, AND THE CASE TEXT DELIBERATELY DOES NOT
  *    MENTION IT. Chris is the concept owner and made every design decision in
@@ -145,19 +145,18 @@ export const GUESTPASS_SECTIONS: GuestpassSection[] = [
   {
     id: 'send',
     view: 1,
-    name: 'three taps and no decisions',
+    name: 'four taps and no decisions',
     paras: [
-      'sending is a card, a person, and face id. every option lives behind one collapsed row and ' +
-        'every one of them already has a sensible answer filled in.',
+      'sending is a card, a person, continue, and face id. every option lives behind one ' +
+        'collapsed row, and every one of them already has a sensible answer filled in.',
       'there is no verification screen, and there should not be one. i flagged early that we ' +
         'would need a way to prove the sender owns the card. the instinct was right and the ' +
         'conclusion was wrong. a card cannot get into wallet without the bank checking who you ' +
         'are first, so holding a card and passing face id is the proof. the research deleted a ' +
         'screen instead of adding one.',
-      'the send flow used to have a send button with double click to confirm under it. i took ' +
-        'both out and made it behave like buying something. face id comes up on its own and then ' +
-        'you get the same checkmark you get after a purchase. that moment carries the ownership ' +
-        'proof and costs nothing to learn, because people already do it several times a week.',
+      'continue leads into face id, and then you get the same checkmark you get after a ' +
+        'purchase. that moment carries the ownership proof and costs nothing to learn, because ' +
+        'people already do it several times a week.',
     ],
   },
   {

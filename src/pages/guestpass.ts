@@ -118,10 +118,10 @@ const VIEWS = [
     src: 'projects/guestpass-send.webp',
     alt:
       'Three design renders of the sending flow: a sheet asking who it is for with contact ' +
-      'circles, a review screen with one sentence and a collapsed options row, and the Face ID ' +
-      'confirmation that comes up on its own',
+      'circles, a review screen with one sentence, a collapsed options row and a Continue ' +
+      'button, and the Face ID confirmation that follows it',
     caption:
-      'sending, as design renders · a card, a person, and Face ID, with every option collapsed behind one row',
+      'sending, as design renders · a card, a person, continue, and Face ID, with every option collapsed behind one row',
   },
   {
     id: 'spend',
