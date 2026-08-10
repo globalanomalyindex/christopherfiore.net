@@ -171,7 +171,8 @@ interface Scroller {
   band: ScrollBand;
   cfg: LatticeCfg;
   region: HTMLElement;
-  thumb: HTMLElement | null;
+  /** lattice indices of the live scroll caret, empty at rest */
+  caret: number[];
   blocks: Geom[];
   /** the lattice's flat, row-major cell list */
   cells: HTMLCollection | null;
@@ -301,17 +302,52 @@ function paint(S: Scroller, corners: boolean): void {
   S.owned = next;
 }
 
-function updateThumb(S: Scroller): void {
-  if (!S.thumb) return;
-  const over = S.trackH - S.band.h;
-  if (over <= 0) {
-    S.thumb.style.display = 'none';
-    return;
+/**
+ * The scroll position, spoken in the field's own language.
+ *
+ * There is no scrollbar and no thumb. While a gesture is live, a short run of
+ * ink pegs in the lattice's outermost column tracks the position, so the
+ * scroll is read OFF THE CROSSHAIRS rather than off a widget floating above
+ * them. Painted per scroll event — the gesture holds the field busy, so no
+ * resolve can wipe it mid-travel — and dropped at settle, so at rest the
+ * column returns to ambient and nothing is left fighting the resolve.
+ *
+ * The caret never lands on an occluded point, same as every painter here.
+ */
+const CARET_LEN = 3;
+
+function paintCaret(S: Scroller): void {
+  for (const i of S.caret) {
+    const c = cellAt(S, i);
+    if (c) restorePeg(c);
   }
-  const h = Math.max(24, S.band.h * (S.band.h / S.trackH));
-  S.thumb.style.display = 'block';
-  S.thumb.style.height = `${h}px`;
-  S.thumb.style.transform = `translateY(${(clamp01(S.region.scrollTop / over) * (S.band.h - h)).toFixed(1)}px)`;
+  S.caret.length = 0;
+
+  const over = S.trackH - S.band.h;
+  if (over <= 0) return;
+  const cfg = S.cfg;
+  const col = cfg.cols - 1;
+  const rowAt = (y: number): number => Math.round(y / cfg.step) - 1;
+  const r0 = rowAt(S.band.y);
+  const r1 = rowAt(S.band.y + S.band.h);
+  const span = r1 - r0 - (CARET_LEN - 1);
+  const top = r0 + Math.round(clamp01(S.region.scrollTop / over) * span);
+  for (let k = 0; k < CARET_LEN; k++) {
+    const i = (top + k) * cfg.cols + col;
+    const c = cellAt(S, i);
+    if (!c || c.dataset.base === 'transparent') continue;
+    c.style.color = PEG_CORNER;
+    c.style.fontSize = `${cfg.majorSize + 2}px`;
+    S.caret.push(i);
+  }
+}
+
+function dropCaret(S: Scroller): void {
+  for (const i of S.caret) {
+    const c = cellAt(S, i);
+    if (c) restorePeg(c);
+  }
+  S.caret.length = 0;
 }
 
 /** Blocks that are settled and wholly inside the band get their frame back. */
@@ -347,7 +383,7 @@ function onScroll(S: Scroller): void {
   }
 
   paint(S, true);
-  updateThumb(S);
+  paintCaret(S);
 
   window.clearTimeout(S.settleT);
   S.settleT = window.setTimeout(() => settle(S), SETTLE_MS);
@@ -378,12 +414,12 @@ function settle(S: Scroller): void {
     released: restore the frames, drop this module's claim on the field, run
     the resolve for real, and only then let the travelling pegs go.
   */
+  dropCaret(S);
   restoreFrames(S);
   setLatticeBusy(S.screen, false);
   solveLattice(S.screen);
   releaseAll(S);
   paint(S, false);
-  updateThumb(S);
 }
 
 /* ------------------------------------------------------- show / hide edge */
@@ -402,7 +438,6 @@ function show(S: Scroller): void {
   setLatticeBusy(S.screen, false);
   paint(S, false);
   restoreFrames(S);
-  updateThumb(S);
   solveLattice(S.screen);
   startDrift(S.screen);
   // Block labels are `[data-fit]`, and a hidden element measures zero, so the
@@ -458,7 +493,6 @@ function assertCorners(S: Scroller): void {
  * Markup contract, all of it built by `pages/products.ts`:
  *   [data-ixscroll]  the native scroll container, sized to the band
  *   [data-ixblock]   one per mosaic block, carrying its geometry in data-b*
- *   [data-ixthumb]   optional scroll thumb
  */
 export function installLatticeScroll(
   screen: HTMLElement,
@@ -504,7 +538,7 @@ export function installLatticeScroll(
     band,
     cfg: mounted,
     region,
-    thumb: q(screen, '[data-ixthumb]'),
+    caret: [],
     blocks,
     cells: q(screen, '[data-lattice]')?.children ?? null,
     snaps,

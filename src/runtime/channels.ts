@@ -15,8 +15,10 @@
  *      a one-cell-thick ink ring just inside the block, with the interior
  *      dithering in the fill hue and breathing under a held flicker.
  *   03 competizione    — sweepOn / sweepOff
- *      whole modules of ink crosshairs alternating like a checkerboard,
- *      marching one square right per 320ms beat.
+ *      a lap: an ink circuit of crosshairs one cell inside the block, and one
+ *      crosshair driving around it like a car, trailing the fill hue. It steps
+ *      peg to peg every 110ms, about 2.4s a lap, and passes BEHIND the label
+ *      because occluded points are skipped without skipping the position.
  *   04 contact         — invertOn / invertOff
  *      inversion: a near-black band, paper type and paper crosshairs, and the
  *      frame corners flipped to paper so they survive the band.
@@ -41,11 +43,11 @@
  * · The legibility contract. The band under a label is always from
  *   `SPARK_LIGHTS` and the ink on it is always `COLOR.nearBlack`; the darker
  *   `SPARK` accents are capped at 8% of the height so no accent row can slide
- *   under a line of type. 03's dark checker squares are the same kind of edge
- *   accent, which is why they are masked away from the label.
+ *   under a line of type. 03's ink circuit is the same kind of edge accent,
+ *   which is why the car never paints an occluded point.
  */
 
-import { COLOR, LIGHTS, SPARK, SPARK_LIGHTS, rgba } from '../design/tokens';
+import { COLOR, FONT, LIGHTS, SPARK, SPARK_LIGHTS, rgba } from '../design/tokens';
 import { MENU_FRAMES } from '../design/layout';
 import { css, el, q, qq } from '../dom';
 import {
@@ -103,9 +105,6 @@ function apart(pool: readonly string[], ...not: string[]): string {
  * reaches this fill for free, and a hand-picked list would not.
  */
 const FILL_HUES: readonly string[] = SPARK_LIGHTS.filter((c) => !LIGHTS.includes(c));
-
-/** 03's beat. One square of the checker per tick. */
-const BEAT = 320;
 
 /**
  * How long `fillFor`'s reveal ramp keeps writing.
@@ -799,6 +798,28 @@ function prodPaint(cell: HTMLElement): void {
   }, REVEAL);
 }
 
+/**
+ * The label treatment the old channel had: a few letters take the alternates
+ * for as long as the cursor is in.
+ *
+ * The indices are FIXED rather than random, and that is the difference between
+ * typography and a malfunction: "product designs" always breaks at the same
+ * four letters, so the hover reads as this button's voice. 48px is display
+ * size, well above the 20px floor the generic glitch runs under, so the swash
+ * forms read as forms.
+ */
+const PROD_ALT = [1, 6, 9, 12];
+
+function prodLetters(cell: HTMLElement, on: boolean): void {
+  const ls = qq<HTMLElement>(cell, '[data-chlabel] [data-l]');
+  for (const i of PROD_ALT) {
+    const sp = ls[i];
+    if (!sp) continue;
+    sp.style.fontFamily = on ? FONT.alt : '';
+    sp.style.fontFeatureSettings = on ? FONT.altFeatures : '';
+  }
+}
+
 export function prodOn(cell: HTMLElement): void {
   const ctx = begin(cell, 1, false);
   if (!ctx) return;
@@ -809,9 +830,13 @@ export function prodOn(cell: HTMLElement): void {
   ctx.rec.py = y;
   ctx.rec.repaint = () => prodPaint(cell);
   prodPaint(cell);
+  // The alternates are narrower, so the centered label tightens a little as
+  // they land — the same movement every glitched line on the site makes.
+  if (!ctx.rec.flat) prodLetters(cell, true);
 }
 
 export function prodOff(cell: HTMLElement): void {
+  prodLetters(cell, false);
   end(cell, 1);
 }
 
@@ -913,70 +938,116 @@ export function waterOff(cell: HTMLElement): void {
   end(cell, 2);
 }
 
-/* ------------------------------------------- 03 · Competizione — the checker */
+/* ------------------------------------------- 03 · Competizione — the lap */
 
-/** On-squares are drawn one step heavier than a major, as the design asks. */
-const CHECK_BUMP = 3;
+/** The car, drawn well past a major so it reads as the moving thing. */
+const CAR_BUMP = 6;
+/** The trail behind it, just proud of the track. */
+const TRAIL_BUMP = 2;
+/**
+ * One car step. The ring around a 360 × 240 block is 22 points, so this is a
+ * lap of about 2.4 seconds — brisk enough to read as a car, slow enough that
+ * the eye can follow one crosshair rather than perceive a shimmer.
+ */
+const LAP_MS = 110;
 
 /**
- * One beat of the racing board.
+ * The track: the ring of points one cell inside the block, ordered CLOCKWISE
+ * from the top-left corner. The order is the racing line — `lapStep` drives a
+ * car around it by advancing an index, so the array being in travel order is
+ * the whole mechanism.
  *
- * `on = ((floor(dCol/mk) + floor(dRow/mk) + phase) & 1) === 0`, where `mk` is
- * the major stride, so a square is a whole module and adding one to the phase
- * marches the pattern one square right.
- *
- * The dark squares are edge accents and must never carry type. They cannot:
- * every point under a run of type is resolved to `transparent`, and this pass
- * skips those. That is the same mask `.ps-flagmask` used to do in CSS, done
- * once by the field instead of once per channel.
+ * One cell inset for the same reason as channel 02's ring: a two-module block
+ * has no room for a module of inset, and the frame's own corners stay outside
+ * the track holding their marks.
  */
-function sweepBeat(cell: HTMLElement): void {
+function lapTrack(cell: HTMLElement): number[] {
   const screen = screenOf(cell);
   const rect = rectOf(cell);
   const cfg = screen ? cfgOf(screen) : null;
-  if (!screen || !rect || !cfg) return;
-  const rec = chanOf(cell);
-
-  const c0 = Math.ceil((rect.x - cfg.step) / cfg.step);
-  const r0 = Math.ceil((rect.y - cfg.step) / cfg.step);
-  const mk = cfg.major;
-
-  eachPeg(screen, rect, (peg, col, row) => {
-    if (peg.dataset.corner) return;
-    if (peg.dataset.base === 'transparent') return;
-    const on =
-      ((Math.floor((col - c0) / mk) + Math.floor((row - r0) / mk) + rec.phase) & 1) === 0;
-    if (on) paintPeg(peg, COLOR.ink, cfg.majorSize + CHECK_BUMP);
-    else restorePeg(peg);
-  });
+  if (!screen || !rect || !cfg) return [];
+  const st = cfg.step;
+  const colAt = (x: number): number => Math.round(x / st) - 1;
+  const rowAt = (y: number): number => Math.round(y / st) - 1;
+  const c0 = colAt(rect.x + st);
+  const c1 = colAt(rect.x + rect.w - st);
+  const r0 = rowAt(rect.y + st);
+  const r1 = rowAt(rect.y + rect.h - st);
+  const ring: number[] = [];
+  for (let c = c0; c <= c1; c++) ring.push(r0 * cfg.cols + c);
+  for (let r = r0 + 1; r <= r1; r++) ring.push(r * cfg.cols + c1);
+  for (let c = c1 - 1; c >= c0; c--) ring.push(r1 * cfg.cols + c);
+  for (let r = r1 - 1; r > r0; r--) ring.push(r * cfg.cols + c0);
+  return ring;
 }
 
-function sweepPaint(cell: HTMLElement): void {
+/**
+ * Draw the car at `rec.phase` and its two-peg trail, and put the track back
+ * behind it.
+ *
+ * A peg whose resolved state is `transparent` sits under the label, and the
+ * car SKIPS PAINTING it without skipping the position: for that step the car
+ * is simply behind the type, which is what a car passing behind a sign does.
+ * Lighting it would print a crosshair through "competizione".
+ */
+function lapStep(cell: HTMLElement, ring: number[]): void {
+  const screen = screenOf(cell);
+  const cfg = screen ? cfgOf(screen) : null;
+  const L = screen ? latticeOf(screen) : null;
+  if (!screen || !cfg || !L || !ring.length) return;
+  const rec = chanOf(cell);
+  const n = ring.length;
+  const at = (k: number): HTMLElement | null => L.cells[ring[((k % n) + n) % n]] ?? null;
+
+  const wake = at(rec.phase - 3);
+  if (wake && wake.dataset.base !== 'transparent') paintPeg(wake, COLOR.ink, cfg.majorSize);
+  for (const back of [2, 1]) {
+    const t = at(rec.phase - back);
+    if (t && t.dataset.base !== 'transparent')
+      paintPeg(t, rec.hue, cfg.majorSize + TRAIL_BUMP);
+  }
+  const car = at(rec.phase);
+  if (car && car.dataset.base !== 'transparent')
+    paintPeg(car, COLOR.ink, cfg.majorSize + CAR_BUMP);
+}
+
+/** The whole plate: the dithered fill, the ink track, and the car on it. */
+function lapPaint(cell: HTMLElement): void {
   const screen = screenOf(cell);
   const rect = rectOf(cell);
-  if (!screen || !rect) return;
+  const cfg = screen ? cfgOf(screen) : null;
+  const L = screen ? latticeOf(screen) : null;
+  if (!screen || !rect || !cfg || !L) return;
   const rec = chanOf(cell);
 
   fillFor(screen, rect, { hue: rec.hue, accent: rec.accent, skip: cornerSet(screen, rect) });
-  sweepBeat(cell);
 
+  const ring = lapTrack(cell);
   const gen = rec.gen;
+  // The track over the fill, once the reveal ramp has finished writing —
+  // painting it now would have the ramp's tail re-color the circuit.
   window.clearTimeout(rec.settle);
   rec.settle = window.setTimeout(() => {
-    if (chanOf(cell).gen === gen) sweepBeat(cell);
+    if (chanOf(cell).gen !== gen) return;
+    for (const i of ring) {
+      const peg = L.cells[i];
+      if (peg && peg.dataset.base !== 'transparent') paintPeg(peg, COLOR.ink, cfg.majorSize);
+    }
+    lapStep(cell, ring);
   }, REVEAL);
 }
 
 export function sweepOn(cell: HTMLElement): void {
   const ctx = begin(cell, 3, false);
   if (!ctx) return;
-  ctx.rec.repaint = () => sweepPaint(cell);
-  sweepPaint(cell);
-  if (reducedFor(cell)) return; // the board stands still, it does not march
+  ctx.rec.repaint = () => lapPaint(cell);
+  lapPaint(cell);
+  if (reducedFor(cell)) return; // the circuit stands, the car does not run
+  const ring = lapTrack(cell);
   ctx.rec.beat = window.setInterval(() => {
     ctx.rec.phase += 1;
-    sweepBeat(cell);
-  }, BEAT);
+    lapStep(cell, ring);
+  }, LAP_MS);
 }
 
 export function sweepOff(cell: HTMLElement): void {

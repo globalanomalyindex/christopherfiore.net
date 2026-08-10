@@ -23,7 +23,7 @@
  */
 
 import { el, qq } from '../dom.ts';
-import { AA, COLOR, FLASH, FONT, SPARK, SPARK_LIGHTS, contrast } from '../design/tokens.ts';
+import { AA, COLOR, FLASH, FONT, LIGHTS, SPARK, SPARK_LIGHTS, contrast } from '../design/tokens.ts';
 import { dfxRelease, dfxSeq } from './dither.ts';
 import { fitScreen } from './fit.ts';
 import { state } from './state.ts';
@@ -156,8 +156,20 @@ function tickMarks(sz: number): HTMLElement[] {
  * that: the band is placed at 7% down the letter box and is 78% of its height,
  * so the ink occupies roughly the top three quarters of the band.
  */
+/**
+ * The type-carrying stop always comes from the VIVID half of the pool.
+ *
+ * `SPARK_LIGHTS` is five neutrals and six hues, so drawing from all of it made
+ * nearly half the glitch bands a gray on the gray paper — mechanically a band,
+ * visually nothing. A highlight that reads as a highlight is a hue. The
+ * neutrals still appear as gradient EDGES via `rnd(SPARK)` below, where they do
+ * texture rather than carry the color. Derived, not listed, so a hue added to
+ * the palette reaches here through the same contrast filter as everything else.
+ */
+const HL_VIVID: readonly string[] = SPARK_LIGHTS.filter((c) => !LIGHTS.includes(c));
+
 function hlPaint(): string {
-  const L = rnd(SPARK_LIGHTS);
+  const L = rnd(HL_VIVID);
   if (Math.random() < 0.34) return L;
   if (Math.random() < 0.55) {
     const a = (64 + Math.random() * 22) | 0;

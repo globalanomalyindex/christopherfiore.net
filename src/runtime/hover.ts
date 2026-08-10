@@ -477,6 +477,11 @@ function pickWord(el: HTMLElement): HTMLElement | null {
 const MIN_GLITCH_PX = 20;
 
 function enter(el: HTMLElement): void {
+  // Same gate the channel personalities get in actions.ts: nothing raises a
+  // band while a transition owns the stage. The rails and the email link paint
+  // into the same screen-level host the choreography is about to sweep.
+  const st = el.closest<HTMLElement>('[data-stage],[data-frame-root]');
+  if (st && state(st).nav) return;
   hlBox(el);
   const w = pickWord(el);
   if (!w) return;

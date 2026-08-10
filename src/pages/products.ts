@@ -46,7 +46,7 @@
  */
 
 import { asset, css, el, letters } from '../dom.ts';
-import { COLOR, FONT, RULE } from '../design/tokens.ts';
+import { COLOR, FONT } from '../design/tokens.ts';
 import { BLOCK_PAD, INDEX_BLOCKS, INDEX_TRACK, blockTakesCover } from '../design/layout.ts';
 import { LAT_INDEX } from '../design/lattice.ts';
 import { installLatticeScroll } from '../runtime/latticescroll.ts';
@@ -585,38 +585,14 @@ function trackRegion(): HTMLElement {
     track,
   );
 
-  const thumb = el('span', {
-    'data-ixthumb': true,
-    style: css({
-      position: 'absolute',
-      left: 0,
-      top: 0,
-      width: '100%',
-      height: 0,
-      background: COLOR.drape,
-      display: 'none',
-    }),
-  });
-
-  const rail = el(
-    'div',
-    {
-      'aria-hidden': 'true',
-      style: css({
-        position: 'absolute',
-        // 1884…1890 — inside the 60px margin the mosaic leaves at the right,
-        // ending on the field's last column of points.
-        right: 30,
-        top: 0,
-        bottom: 0,
-        width: 6,
-        background: RULE.gridLine,
-        'pointer-events': 'none',
-      }),
-    },
-    thumb,
-  );
-
+  /*
+    No thumb and no rail. The scroll indicator is the LATTICE's own outermost
+    column of points: while a gesture is live, `latticescroll.ts` lights a
+    short run of ink pegs there that tracks the position, and drops them at
+    settle. A widget floating above the field would say the scroll is a
+    different thing from the crosshairs, and the whole direction here is that
+    it is not.
+  */
   return el(
     'div',
     {
@@ -631,7 +607,6 @@ function trackRegion(): HTMLElement {
       }),
     },
     region,
-    rail,
   );
 }
 

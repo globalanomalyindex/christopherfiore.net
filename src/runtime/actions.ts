@@ -131,6 +131,18 @@ function refreshHov(el: HTMLElement, kind: HovKind): void {
   const f = flagsOf(el);
   const want = f.pointer || f.focus;
   if (want === f.on) return;
+  /*
+    No hover may RAISE while a transition owns the stage. The choreography
+    stands the pressed channel down at t0 and then paints the field for 3.3
+    seconds; a cursor drifting across the other cells in that window was
+    summoning their fills and bands into the middle of it. Standing DOWN stays
+    allowed — a teardown mid-transition is exactly what the synthetic
+    pointerout is for.
+  */
+  if (want) {
+    const stage = el.closest<HTMLElement>('[data-stage]');
+    if (stage && state(stage).nav) return;
+  }
   f.on = want;
   const fn = want ? HOV_ON[kind] : HOV_OFF[kind];
   fn?.(el);
