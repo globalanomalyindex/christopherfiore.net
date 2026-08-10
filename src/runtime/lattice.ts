@@ -428,7 +428,26 @@ export function watchLattice(screen: HTMLElement): () => void {
     for (const r of records) {
       const t = r.target;
       const el = t.nodeType === Node.ELEMENT_NODE ? (t as Element) : t.parentElement;
-      if (el && el.closest('[data-lattice]')) continue;
+      if (!el) continue;
+      if (el.closest('[data-lattice]')) continue;
+      /*
+        The glitch's own letter writes are ignored, and this is what makes the
+        field STABLE rather than merely correct.
+
+        The ambient glitch swaps a letter to the alternates every few seconds.
+        Each swap is a style write on a `[data-l]` span, and letting those
+        re-resolve made the occlusion flicker between two answers: the check
+        passed or failed depending on whether a letter happened to be swapped
+        when it looked.
+
+        Ignoring them is SAFE rather than a shortcut, and only because the
+        alternates are always narrower than the defaults (0.845x to 0.99x) and
+        the lines are centered. A swapped line is therefore a strict subset of
+        the resting line's box, so occlusion solved against the resting face
+        already covers every state the glitch can reach. If the alternate ever
+        became the wider face, this would have to go.
+      */
+      if (r.type === 'attributes' && el.closest('[data-l]')) continue;
       scheduleResolve(screen);
       return;
     }

@@ -156,6 +156,68 @@ say(rec, '[4] double click still recovers to the menu');
 // [DO-NOT-BREAK 2] focus parity: a channel reached by keyboard must raise the
 // same state a pointer does. Tested with a real Tab rather than by relying on
 // focus restoration after a close, which is a separate contract.
+/* ---------------------------------------------------------- screen 2b ---
+   The mosaic has to satisfy the same invariants at EVERY rest position, not
+   just at scroll 0. A block is only shown when it is entirely inside the band,
+   so a row that half-fills it would put two of that block's corners off the
+   lattice, which is the one thing the whole system rests on.
+*/
+console.log('\n--- index (2b) ---');
+await pg.evaluate(() => document.querySelector('[data-act="open"][data-open="1"]')?.click());
+await pg.waitForTimeout(4200);
+const snaps = await pg.evaluate(() => {
+  const r = document.querySelector('[data-ixscroll]');
+  return r ? { max: r.scrollHeight - r.clientHeight, h: r.clientHeight } : null;
+});
+if (!snaps) { say(false, '[2b] no [data-ixscroll] region'); }
+else {
+  console.log(`  (band ${snaps.h}px, scroll range ${snaps.max}px)`);
+  for (const pos of [0, 240, 480, snaps.max]) {
+    await pg.evaluate((y) => { const r = document.querySelector('[data-ixscroll]'); if (r) r.scrollTop = y; }, pos);
+    await pg.waitForTimeout(1500);
+    const g = (await geom()).find(x => /product designs/i.test(x.screen));
+    if (!g) { say(false, `[2b] scroll ${pos}: screen not found`); continue; }
+    say(g.offLattice.length === 0, `[1] scroll ${pos}: ${g.offLattice.length} off-lattice corners of ${g.frames} frames ${g.offLattice.slice(0,2).join(' | ')}`);
+    say(g.overlaps === 0, `[2] scroll ${pos}: ${g.overlaps} peg/type overlaps`);
+    const part = await pg.evaluate(() => {
+      const band = document.querySelector('[data-ixscroll]').getBoundingClientRect();
+      let cut = 0;
+      for (const b of document.querySelectorAll('[data-ixblock]')) {
+        if (getComputedStyle(b).visibility === 'hidden') continue;
+        const q = b.getBoundingClientRect();
+        if (q.top < band.top - 1 || q.bottom > band.bottom + 1) cut++;
+      }
+      return cut;
+    });
+    say(part === 0, `[2b] scroll ${pos}: ${part} visible blocks cut by the band edge`);
+  }
+  // no nested links, and every href matches the data
+  const links = await pg.evaluate(() => {
+    const a = [...document.querySelectorAll('[data-ixblock] a')];
+    return { nested: a.filter(x => x.parentElement.closest('a')).length, total: a.length,
+             hrefs: a.map(x => x.getAttribute('href')).filter(Boolean).length };
+  });
+  say(links.nested === 0, `[2b] ${links.nested} nested links (${links.total} links, ${links.hrefs} with href)`);
+  /* Hidden blocks must be out of the tab order, and that has to be asserted by
+     TABBING rather than by reading tabIndex. `visibility: hidden` genuinely
+     removes descendants from the sequence, but the tabIndex PROPERTY is
+     unaffected by it, so a check that reads the property reports every control
+     in every scrolled-out block and is simply measuring the wrong thing. */
+  await pg.evaluate(() => { const r = document.querySelector('[data-ixscroll]'); if (r) r.scrollTop = 0; });
+  await pg.waitForTimeout(1200);
+  let intoHidden = 0;
+  for (let i = 0; i < 40; i++) {
+    await pg.keyboard.press('Tab');
+    intoHidden += await pg.evaluate(() => {
+      const a = document.activeElement;
+      const b = a && a.closest ? a.closest('[data-ixblock]') : null;
+      return b && getComputedStyle(b).visibility === 'hidden' ? 1 : 0;
+    });
+  }
+  say(intoHidden === 0, `[2b] Tab landed inside a hidden block ${intoHidden} times in 40 presses`);
+}
+await pg.keyboard.press('Escape'); await pg.waitForTimeout(2000);
+
 console.log('\n--- focus parity ---');
 await pg.mouse.move(1910, 1075); await pg.waitForTimeout(300);
 for (let i = 0; i < 24; i++) {

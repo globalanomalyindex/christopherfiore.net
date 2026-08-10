@@ -75,23 +75,25 @@ export const MENU_CHANNEL_UNION = { x: 240, y: 600, w: 1440, h: 240 } as const;
  * it, outside the band, and the scroll brings it up.
  *
  * ROWS, NOT PIXELS. The scroll snaps to whole mosaic rows rather than to the
- * 60px module, and the row heights are chosen so that every reachable rest
- * position fills the 660px band EXACTLY:
+ * 60px module, and the row heights REPEAT 240, 240, 180 so that every window
+ * of three consecutive rows sums to the 660px band exactly:
  *
  *   240 + 240 + 180 = 660   (scroll   0: rows 1–3)
  *   240 + 180 + 240 = 660   (scroll 240: rows 2–4)
  *   180 + 240 + 240 = 660   (scroll 480: rows 3–5)
+ *   240 + 240 + 180 = 660   (scroll 660: rows 4–6)
+ *
+ * The repeat is the point, and it is why the pattern survived the motion band
+ * being promoted to a full row. Any three consecutive members of a repeating
+ * 240/240/180 sequence sum to 660 whichever one you start on, so adding rows
+ * never has to re-tune the ones already there.
  *
  * That is not tidiness. A block is only ever shown when it is ENTIRELY inside
  * the band, because a block cut off by the band's edge would have two of its
  * four corners outside the lattice and the whole system rests on all four
- * landing on a point. Snapping to the 60px module instead would leave three
- * intermediate rest positions where a 240px row is 60px past the edge — gone,
- * with a hole where it was. Snapping to the row means there is never a hole.
- *
- * The last row is 240 rather than the 180 its content would want for the same
- * reason: at 180 the track ends at 1380, the last rest position is 420, and
- * the band opens a 60px gap at its top that no row can fill.
+ * landing on a point. Snapping to the 60px module instead would leave rest
+ * positions where a 240px row is 60px past the edge — gone, with a hole where
+ * it was. Snapping to the row means there is never a hole.
  */
 export const INDEX_BLOCKS = [
   { id: 'rail', x: 60, y: 60, w: 1800, h: 60, size: 13, track: false },
@@ -115,13 +117,25 @@ export const INDEX_BLOCKS = [
   { id: 'chellbook', x: 780, y: 300, w: 360, h: 240, size: 26, track: true },
   { id: 'guestpass', x: 1140, y: 300, w: 720, h: 240, size: 36, track: true },
 
-  { id: 'lee', x: 60, y: 540, w: 360, h: 240, size: 36, track: true },
-  { id: 'motion', x: 420, y: 540, w: 1080, h: 240, size: 36, track: true },
-  { id: 'mfny', x: 1500, y: 540, w: 360, h: 240, size: 26, track: true },
+  /*
+    The motion archive is a FULL-WIDTH BAND and takes a row to itself.
 
-  { id: 'chipotle', x: 60, y: 780, w: 600, h: 180, size: 26, track: true },
-  { id: 'one-master', x: 660, y: 780, w: 600, h: 180, size: 26, track: true },
-  { id: 'df2tm', x: 1260, y: 780, w: 600, h: 180, size: 26, track: true },
+    `DO-NOT-BREAK.md` §1 names that non-negotiable while the kit's own 2b table
+    gives it 1080 × 240 in the middle of row 2, which is exactly a mosaic cell.
+    The kit contradicts itself; the band wins, confirmed. It is not a case, it
+    is the door to 58 studies, and sitting it between two cases said otherwise.
+
+    Everything below moved to make room, and the row heights were re-solved
+    rather than nudged — see the note on the pattern above `INDEX_TRACK`.
+  */
+  { id: 'motion', x: 60, y: 540, w: 1800, h: 240, size: 36, track: true },
+
+  { id: 'lee', x: 60, y: 780, w: 600, h: 180, size: 26, track: true },
+  { id: 'mfny', x: 660, y: 780, w: 600, h: 180, size: 26, track: true },
+  { id: 'chipotle', x: 1260, y: 780, w: 600, h: 180, size: 26, track: true },
+
+  { id: 'one-master', x: 60, y: 960, w: 900, h: 240, size: 36, track: true },
+  { id: 'df2tm', x: 960, y: 960, w: 900, h: 240, size: 36, track: true },
 
   /*
     The five cases the kit's own table has no room for. `ANALYSIS.md` names
@@ -129,12 +143,12 @@ export const INDEX_BLOCKS = [
     "13 cases" over a mosaic that holds eight. They are two more rows on the
     same module, reached by scrolling, rather than a second screen.
   */
-  { id: 'adhd-mode', x: 60, y: 960, w: 720, h: 240, size: 36, track: true },
-  { id: 'campeon', x: 780, y: 960, w: 540, h: 240, size: 26, track: true },
-  { id: 'chickpea', x: 1320, y: 960, w: 540, h: 240, size: 26, track: true },
+  { id: 'adhd-mode', x: 60, y: 1200, w: 720, h: 240, size: 36, track: true },
+  { id: 'campeon', x: 780, y: 1200, w: 540, h: 240, size: 26, track: true },
+  { id: 'chickpea', x: 1320, y: 1200, w: 540, h: 240, size: 26, track: true },
 
-  { id: 'wildcard', x: 60, y: 1200, w: 900, h: 240, size: 36, track: true },
-  { id: 'dither', x: 960, y: 1200, w: 900, h: 240, size: 36, track: true },
+  { id: 'wildcard', x: 60, y: 1440, w: 900, h: 180, size: 36, track: true },
+  { id: 'dither', x: 960, y: 1440, w: 900, h: 180, size: 36, track: true },
 ] as const;
 
 /**
@@ -152,7 +166,7 @@ export const INDEX_BLOCKS = [
  * Any smaller and the dissolve would finish in the first fraction of a 240px
  * gesture and the rest of the travel would be an empty band sliding.
  */
-export const INDEX_TRACK = { y: 300, h: 660, end: 1440, fade: 180 } as const;
+export const INDEX_TRACK = { y: 300, h: 660, end: 1620, fade: 180 } as const;
 
 /** Every block is padded the same, and the label sits at the bottom. */
 export const BLOCK_PAD = { x: 26, y: 22 } as const;
@@ -164,8 +178,13 @@ export const BLOCK_PAD = { x: 26, y: 22 } as const;
  * them the 720-wide ones on the first row. Expressed as a rule rather than a
  * list so a block that changes size takes its plate with it, and so the rows
  * added below the fold do not have to be remembered separately. The motion
- * archive is 1080 wide and qualifies on size, but it is the mosaic's one
- * layout exception and carries a filmstrip of its own instead.
+ * archive is the full 1800 wide and qualifies on size, but it is not a case at
+ * all and never goes through the block builder: it carries a filmstrip of its
+ * own instead.
+ *
+ * Five blocks satisfy it now rather than the kit's two, because the rule is a
+ * rule. The kit's imagery is explicitly not final (README, Fidelity), so the
+ * placeholders were showing where a plate CAN go, not licensing only two.
  */
 export const blockTakesCover = (w: number, h: number): boolean => w >= 720 && h >= 240;
 
