@@ -47,12 +47,12 @@ const BAYER = [
  * but it reads as texture rather than as color.
  */
 const PAL: number[][] = [
-  [239, 235, 227],
-  [222, 207, 182],
-  [192, 164, 126],
-  [167, 155, 136],
-  [138, 112, 73],
-  [92, 86, 75],
+  [233, 237, 238],
+  [203, 210, 213],
+  [174, 182, 186],
+  [154, 161, 165],
+  [124, 133, 138],
+  [86, 83, 94],
 ];
 
 /** Mode 4's six metaballs: drift amplitudes, speeds, phases, radius, color. */

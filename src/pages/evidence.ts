@@ -45,7 +45,7 @@
 
 import { asset, css, el, letters } from '../dom.ts';
 import { zoomTrigger } from '../runtime/lightbox.ts';
-import { COLOR, LIGHTS, RULE, subpageTitle } from '../design/tokens.ts';
+import { COLOR, FONT, LIGHTS, RULE, subpageTitle } from '../design/tokens.ts';
 import { EVIDENCE, MODULE, STAGE } from '../design/layout.ts';
 import { EV_META, EV_SHEETS } from '../data/competizione.ts';
 import {
@@ -66,7 +66,7 @@ import type { EvidenceSheet, TableRow } from '../data/types.ts';
 const MAJOR = RULE.onInkMajor;
 const MINOR = RULE.onInkMinor;
 
-const MONO = "Monaco,'SFMono-Regular',Menlo,ui-monospace,monospace";
+const MONO = FONT.display;
 
 /**
  * A band color, always from LIGHTS, always carrying `#0B0B0C` ink. Indexed
@@ -119,7 +119,7 @@ const EV = {
   railW: 6,
 } as const;
 
-const TITLE = subpageTitle(BLSP.name.length, EV.title);
+const TITLE = subpageTitle(EV.title);
 
 const TEXT_H = EV.bandEnd - EV.text.y;
 const SCROLL_TOP = EV.secBarH + EV.secBarGap;
@@ -1129,7 +1129,7 @@ function textColumn(): HTMLElement {
         top: 0,
         width: '100%',
         height: 0,
-        background: COLOR.wood,
+        background: COLOR.drape,
         display: 'none',
       }),
     }),

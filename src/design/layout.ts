@@ -24,7 +24,7 @@ export const MENU = {
   ],
   contactRect: [948, 0, 0, 0],
   wordmarkSize: 240,
-  wordmarkLh: 0.9,
+  wordmarkLh: 1.02,
   wordmarkTrack: '-.08em',
   /*
     Moved right from the handoff's 1259. Monaco is wider than Karrik, so
@@ -451,8 +451,14 @@ export const LEE_PAGE = {
 export const GUESTPASS_PAGE = {
   headerH: 62,
   footerH: 88,
-  /** 132, not the family's 152: a 33 character title does not fit at 152. */
-  title: { x: MODULE, y: 88, size: 132, lh: 127, track: '-.05em' },
+  /**
+   * The family's size, like every other subpage. This used to be hand-dropped
+   * to 132 because a 33 character title did not fit at 152 in Monaco; the face
+   * is proportional now, so `runtime/fit.ts` measures it on open and solves it
+   * to 137 against the band. The number that fits is no longer something a
+   * person has to know.
+   */
+  title: { x: MODULE, y: 88, size: 152, lh: 146, track: '-.05em' },
   descriptorY: 246,
   metaY: 286,
   ruleY: 318,

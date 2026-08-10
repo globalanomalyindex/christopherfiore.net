@@ -19,12 +19,12 @@
  */
 
 import { css, el, letters } from '../dom.ts';
-import { COLOR, rgba } from '../design/tokens.ts';
+import { COLOR, FONT, rgba } from '../design/tokens.ts';
 import { READER_PAGE as AP } from '../design/layout.ts';
 import { ABOUT, ABOUT_SECTIONS, AT_A_GLANCE } from '../data/about.ts';
 import { PROFILE_LINKS, STUDIO } from '../data/studio.ts';
 
-const MONO = "Monaco,'SFMono-Regular',Menlo,ui-monospace,monospace";
+const MONO = FONT.display;
 const MAJOR = rgba(COLOR.paper, 0.28);
 const MINOR = rgba(COLOR.paper, 0.2);
 
@@ -554,7 +554,7 @@ function textColumn(): HTMLElement {
         top: 0,
         width: '100%',
         height: 0,
-        background: COLOR.wood,
+        background: COLOR.drape,
         display: 'none',
       }),
     }),

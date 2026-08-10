@@ -12,7 +12,7 @@
  */
 
 import { asset, css, el, letters, svg } from '../dom.ts';
-import { COLOR, RULE, rgba } from '../design/tokens.ts';
+import { COLOR, FONT, rgba, RULE } from '../design/tokens.ts';
 import { MENU, MODULE, PAINT_PIX } from '../design/layout.ts';
 import { CASES } from '../data/cases.ts';
 import { CZ_META } from '../data/competizione.ts';
@@ -218,7 +218,7 @@ function hero(): HTMLElement {
         'data-in-delay': delay,
         'data-in-step': 30,
         style: css({
-          'font-family': "Monaco,'SFMono-Regular',Menlo,ui-monospace,monospace",
+          'font-family': FONT.display,
           'font-size': MENU.wordmarkSize,
           'line-height': String(MENU.wordmarkLh),
           'letter-spacing': MENU.wordmarkTrack,
@@ -253,7 +253,7 @@ function hero(): HTMLElement {
         position: 'relative',
         'z-index': '1',
         opacity: '0',
-        'font-family': "Monaco,'SFMono-Regular',Menlo,ui-monospace,monospace",
+        'font-family': FONT.display,
         'font-size': 30,
         'letter-spacing': '-.02em',
         'margin-top': 28,
@@ -360,7 +360,7 @@ function channel1(): HTMLElement {
           display: 'block',
           height: 145.454,
           padding: `0 ${MODULE}px`,
-          'font-family': "Monaco,'SFMono-Regular',Menlo,ui-monospace,monospace",
+          'font-family': FONT.display,
           'font-size': 92,
           'line-height': `${MODULE}px`,
           'letter-spacing': '-.06em',
@@ -501,7 +501,7 @@ function channel2(): HTMLElement {
           position: 'relative',
           'z-index': '1',
           display: 'block',
-          'font-family': "Monaco,'SFMono-Regular',Menlo,ui-monospace,monospace",
+          'font-family': FONT.display,
           'font-size': 76,
           'line-height': '.96',
           'letter-spacing': '-.05em',
@@ -542,8 +542,8 @@ function channel3(): HTMLElement {
         opacity: '0',
         transition: 'opacity 300ms linear',
         'background-image': invert
-          ? `repeating-linear-gradient(90deg,${rgba(COLOR.woodDeep, 0)} 0 48px,${COLOR.woodDeep} 48px 96px)`
-          : `repeating-linear-gradient(90deg,${COLOR.woodDeep} 0 48px,${rgba(COLOR.woodDeep, 0)} 48px 96px)`,
+          ? `repeating-linear-gradient(90deg,${rgba(COLOR.drapeDeep, 0)} 0 48px,${COLOR.drapeDeep} 48px 96px)`
+          : `repeating-linear-gradient(90deg,${COLOR.drapeDeep} 0 48px,${rgba(COLOR.drapeDeep, 0)} 48px 96px)`,
         'background-repeat': 'repeat',
         'will-change': 'transform,opacity',
         'backface-visibility': 'hidden',
@@ -571,7 +571,7 @@ function channel3(): HTMLElement {
   );
 
   /** The 79.5–80.5px pin marks that top and tail the checkered band. */
-  const pins = `repeating-linear-gradient(90deg,${rgba(COLOR.woodDeep, 0)} 0 79.5px,${COLOR.woodDeep} 79.5px 80.5px,${rgba(COLOR.woodDeep, 0)} 80.5px 160px)`;
+  const pins = `repeating-linear-gradient(90deg,${rgba(COLOR.drapeDeep, 0)} 0 79.5px,${COLOR.drapeDeep} 79.5px 80.5px,${rgba(COLOR.drapeDeep, 0)} 80.5px 160px)`;
 
   const frame = (extra: Record<string, string | number>) =>
     el('span', {
@@ -616,8 +616,8 @@ function channel3(): HTMLElement {
     frame({
       top: 96,
       height: 96,
-      'border-top': `1px solid ${COLOR.woodDeep}`,
-      'border-bottom': `1px solid ${COLOR.woodDeep}`,
+      'border-top': `1px solid ${COLOR.drapeDeep}`,
+      'border-bottom': `1px solid ${COLOR.drapeDeep}`,
     }),
     frame({ top: 91, height: 11, 'background-image': pins }),
     frame({ top: 186, height: 11, 'background-image': pins }),
@@ -631,7 +631,7 @@ function channel3(): HTMLElement {
           'z-index': '1',
           display: 'block',
           transform: 'translateY(19.1px)',
-          'font-family': "Monaco,'SFMono-Regular',Menlo,ui-monospace,monospace",
+          'font-family': FONT.display,
           /*
             82, not the handoff's 88. Monaco is monospace, so this is solved
             rather than tuned: 12 characters at -.06em draw
@@ -684,7 +684,7 @@ function contactStrip(): HTMLElement {
       'span',
       {
         style: css({
-          'font-family': "Monaco,'SFMono-Regular',Menlo,ui-monospace,monospace",
+          'font-family': FONT.display,
           /*
             48, down from 62 when the face was Karrik and 86 in the handoff.
             The strip names both things it opens, so it is 18 characters where

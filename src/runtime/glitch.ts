@@ -1,9 +1,16 @@
 /**
  * Per-letter font glitch engine.
  *
- * The resting face is Monaco. The alternate is Dessign Maison, which only ever
- * reads correctly with `font-feature-settings: 'salt' 1, 'ss01' 1` — every
- * swap to the alternate sets both together (FONT.alt / FONT.altFeatures).
+ * There is ONE typeface now, and the swap is between its default glyphs and
+ * its alternates. Resting is Dessign Maison as drawn; the alternate is the
+ * same family under `font-feature-settings: 'salt' 1, 'ss01' 1`, which turns a
+ * geometric grotesque into a high-contrast swash italic. Every swap sets the
+ * family and the features together (FONT.alt / FONT.altFeatures) even though
+ * the family no longer changes, so that clearing them both returns a letter to
+ * the document default rather than to a half state.
+ *
+ * The alternates measure 0.845× to 0.99× the width of the defaults, always
+ * narrower, so a line that fits at rest cannot overflow when it glitches.
  *
  * Three users:
  *   · the intro          — `introLetters`, per-letter color flash on load
@@ -18,6 +25,7 @@
 import { el, qq } from '../dom.ts';
 import { COLOR, FLASH, FONT, SPARK, SPARK_LIGHTS } from '../design/tokens.ts';
 import { dfxRelease, dfxSeq } from './dither.ts';
+import { fitScreen } from './fit.ts';
 import { state } from './state.ts';
 
 /* ------------------------------------------------------------------ state */
@@ -749,6 +757,10 @@ export function subtitleIn(screen: HTMLElement, delay: number): void {
   const m = meta(t);
   window.clearTimeout(m.spT);
   resetTitleFont(t);
+  // Solve the size here, on the resting face, before anything swaps. This is
+  // the only moment a subpage title is both visible and unglitched; see
+  // fitScreen for why boot cannot do it.
+  fitScreen(screen);
   if (isReduced(t)) {
     glitchFont(t, true, 0, true);
     return;

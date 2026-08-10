@@ -4,7 +4,7 @@
 
   Rules that hold here as much as on the stage: corner radius 0, no drop
   shadows, depth from hairlines only, type on a color band is always
-  #121110 — and the band itself is `--band`, which src/mobile.ts sets from
+  #1A1820 — and the band itself is `--band`, which src/mobile.ts sets from
   LIGHTS. No color is written literally in this file; every one arrives as a
   custom property off `.m-root`'s inline style, so the palette cannot drift
   away from src/design/tokens.ts.
@@ -19,7 +19,7 @@
 
   background: var(--rust);
   color: var(--lavender);
-  font-family: Monaco, 'SFMono-Regular', Menlo, ui-monospace, monospace;
+  font-family: 'Dessign Maison', Helvetica, Arial, sans-serif;
   min-height: 100%;
   padding: 0 0 4rem;
   overflow-x: hidden;

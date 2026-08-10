@@ -36,7 +36,7 @@
  */
 
 import { asset, css, el, letters } from '../dom.ts';
-import { COLOR, RULE } from '../design/tokens.ts';
+import { COLOR, FONT, RULE } from '../design/tokens.ts';
 import { PAGE2 } from '../design/layout.ts';
 import { PAINTINGS, PAINTINGS_COUNT_LABEL, PAINTINGS_META } from '../data/paintings.ts';
 import type { PaintingRecord } from '../data/types.ts';
@@ -72,7 +72,7 @@ const cross = (pos: Record<string, string | number>) =>
       width: 15,
       height: 15,
       'pointer-events': 'none',
-      'background-image': `linear-gradient(${COLOR.wood},${COLOR.wood}),linear-gradient(${COLOR.wood},${COLOR.wood})`,
+      'background-image': `linear-gradient(${COLOR.drape},${COLOR.drape}),linear-gradient(${COLOR.drape},${COLOR.drape})`,
       'background-size': '1px 15px,15px 1px',
       'background-position': 'center center,center center',
       'background-repeat': 'no-repeat',
@@ -282,7 +282,7 @@ function gallery(): Gallery {
       top: 0,
       width: '100%',
       height: 0,
-      background: COLOR.wood,
+      background: COLOR.drape,
       display: 'none',
     }),
   });
@@ -543,7 +543,7 @@ export function build(): HTMLElement {
       right: PAGE2.frameInset,
       bottom: PAGE2.frameInset,
       left: PAGE2.frameInset,
-      border: `${PAGE2.frameWidth}px solid ${COLOR.wood}`,
+      border: `${PAGE2.frameWidth}px solid ${COLOR.drape}`,
       'pointer-events': 'none',
       'z-index': '4',
     }),
@@ -559,7 +559,7 @@ export function build(): HTMLElement {
         left: PAGE2.title.x,
         top: PAGE2.title.y,
         'transform-origin': '0 0',
-        'font-family': "Monaco,'SFMono-Regular',Menlo,ui-monospace,monospace",
+        'font-family': FONT.display,
         'font-size': PAGE2.title.size,
         'line-height': `${PAGE2.title.lh}px`,
         'letter-spacing': PAGE2.title.track,

@@ -1,42 +1,43 @@
 /*
-  perfection synthétique — the two faces.
+  perfection synthétique — ONE typeface, two faces of it.
 
-  Monaco carries all display type at rest (wordmark, page titles, channel
-  titles, list names). Dessign Maison does double duty: it is the micro /
-  metadata face — every 11.5–15px label in the design inherits it from the
-  stage — and it is the glitch alternate that Monaco swaps into.
+  SLTF Dessign Maison sets everything: the wordmark, page titles, channel
+  titles, list names, and every 11.5–15px label, which inherits it from the
+  stage. There is no second family any more. Karrik was replaced by Monaco;
+  Monaco is now gone too.
 
-  MONACO REPLACED KARRIK, and it is a monospace where Karrik was a display
-  sans. Two consequences worth knowing before touching any display size:
+  The two faces are the same font's DEFAULT glyphs and its ALTERNATES. Default
+  is a geometric grotesque. Under 'salt' 1 and 'ss01' 1 the same string becomes
+  a high-contrast swash italic, which is a far larger change than swapping two
+  unrelated families ever was — the glitch got louder by losing a font.
 
-  1. Every width is exact arithmetic now. One advance is 0.6em, so a title is
-     `chars × size × (0.6 + trackEm)` wide. `monoWidth` and `monoFit` in
-     src/design/tokens.ts are the whole story, and the display sizes in
-     src/design/layout.ts are solved from them rather than measured.
-  2. Monaco is wider than Karrik for the same string, by 1.16× to 1.45×
-     depending on how many narrow letters the string has. Several titles had
-     to come down in size to keep their margins.
+  Three consequences worth knowing before touching any display size:
 
-  As an alternate Dessign Maison must ALWAYS be set with font-feature-settings:
-  'salt' 1, 'ss01' 1. The alternates are what makes the swap read as a glitch
-  rather than as a font change. Use .ps-alt, or FONT.alt / FONT.altFeatures
-  from src/design/tokens.ts.
+  1. The face is PROPORTIONAL, so widths cannot be computed. Monaco's 0.6em
+     advance let a title's size be solved from a character count with no
+     browser involved; monoWidth / monoFit did that and are gone. Sizes are now
+     measured at runtime by src/runtime/fit.ts, which reads the rendered ink
+     after document.fonts.ready and moves the size only if it misses its band.
+  2. Dessign Maison is NARROWER than Monaco for the same string, 0.645× to
+     0.851× depending on the letters, a 32% spread. Anything still carrying a
+     size solved for Monaco under-fills its line by about a third.
+  3. The alternates are always narrower than the defaults, 0.845× to 0.99×. So
+     a line that fits at rest cannot overflow when it glitches. Fit the resting
+     state and both states are safe.
 
-  font-display: block on all three, deliberately. There must be no flash of
-  fallback: the dither-in covers the load, and a swap would drop a fallback
-  into the middle of the intro for a frame.
+  Any element that names the display face must ALSO set font-feature-settings
+  explicitly. Feature settings inherit, so a display line nested inside
+  anything that turned the alternates on would come up already swapped. Use
+  .ps-display / .ps-alt, or FONT.display + FONT.displayFeatures / FONT.alt +
+  FONT.altFeatures from src/design/tokens.ts.
+
+  font-display: block, deliberately. There must be no flash of fallback: the
+  dither-in covers the load, a swap would drop a fallback into the middle of
+  the intro for a frame, and the fit pass measures the real face or nothing.
 
   url() is root-absolute so Vite rebases it against BASE_URL at build time;
   the files are served from public/fonts/.
 */
-
-@font-face {
-  font-family: 'Monaco';
-  src: url('/fonts/Monaco.ttf') format('truetype');
-  font-weight: 400;
-  font-style: normal;
-  font-display: block;
-}
 
 @font-face {
   font-family: 'Dessign Maison';
@@ -46,13 +47,14 @@
   font-display: block;
 }
 
-/* Display face at rest. */
+/* Display face at rest — the defaults, and saying so. */
 .ps-display {
-  font-family: Monaco, 'SFMono-Regular', Menlo, ui-monospace, monospace;
+  font-family: 'Dessign Maison', Helvetica, Arial, sans-serif;
+  font-feature-settings: normal;
 }
 
-/* Glitch alternate. Never set Dessign Maison as an alternate without these. */
+/* Glitch alternate. Never set the alternate without these. */
 .ps-alt {
-  font-family: 'Dessign Maison', Monaco, ui-monospace, monospace;
+  font-family: 'Dessign Maison', Helvetica, Arial, sans-serif;
   font-feature-settings: 'salt' 1, 'ss01' 1;
 }

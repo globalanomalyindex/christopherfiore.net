@@ -4,14 +4,14 @@
 
   HOVER / FOCUS CLASSES DEFINED HERE (also listed in HOVER_CLASSES.md):
 
-    .ps-hov-replay          color:#EFEBE3
+    .ps-hov-replay          color:#E9EDEE
                             header cell 4 · "replay intro"
-    .ps-hov-channel-prod    --r:800px; --p:820px; color:#1B1A17
+    .ps-hov-channel-prod    --r:800px; --p:820px; color:#28262E
                             channel 01 · Product designs
-    .ps-hov-channel-paint   --p:500px; inset rust frame; color:#1B1A17
+    .ps-hov-channel-paint   --p:500px; inset rust frame; color:#28262E
                             channel 02 · Paintings
     .ps-hov-channel-comp    background-size:100% 100%; inset lavender wipe;
-                            color:#1B1A17 — channel 03 · Competizione
+                            color:#28262E — channel 03 · Competizione
 
   Every one has a matching :focus-visible so a keyboard user gets the same
   state, on top of the two-tone ring from base.css.
@@ -29,7 +29,7 @@
 
 .ps-hov-replay:hover,
 .ps-hov-replay:focus-visible {
-  color: #efebe3;
+  color: #e9edee;
 }
 
 /*
@@ -41,7 +41,7 @@
 .ps-hov-channel-prod:focus-visible {
   --r: 800px;
   --p: 820px;
-  color: #1b1a17;
+  color: #28262e;
 }
 
 /*
@@ -51,9 +51,9 @@
 .ps-hov-channel-paint:hover {
   --p: 500px;
   box-shadow:
-    inset 0 0 0 14px #1b1a17,
-    inset 0 0 0 15px rgba(239, 235, 227, 0.55);
-  color: #1b1a17;
+    inset 0 0 0 14px #28262e,
+    inset 0 0 0 15px rgba(233,237,238, 0.55);
+  color: #28262e;
 }
 
 /* Focus keeps the frame and re-adds the ring band, which the box-shadow above
@@ -62,9 +62,9 @@
   --p: 500px;
   box-shadow:
     var(--ps-focus-band),
-    inset 0 0 0 14px #1b1a17,
-    inset 0 0 0 15px rgba(239, 235, 227, 0.55);
-  color: #1b1a17;
+    inset 0 0 0 14px #28262e,
+    inset 0 0 0 15px rgba(233,237,238, 0.55);
+  color: #28262e;
 }
 
 /*
@@ -73,14 +73,14 @@
 */
 .ps-hov-channel-comp:hover {
   background-size: 100% 100%;
-  box-shadow: inset 760px 0 0 0 #efebe3;
-  color: #1b1a17;
+  box-shadow: inset 760px 0 0 0 #e9edee;
+  color: #28262e;
 }
 
 .ps-hov-channel-comp:focus-visible {
   background-size: 100% 100%;
-  box-shadow: var(--ps-focus-band), inset 760px 0 0 0 #efebe3;
-  color: #1b1a17;
+  box-shadow: var(--ps-focus-band), inset 760px 0 0 0 #e9edee;
+  color: #28262e;
 }
 
 /* ---------- structure ---------- */
@@ -148,12 +148,12 @@
 /* Offset by one cell against each other so the two rows read as a flag. */
 .ps-flag-a {
   top: 96px;
-  background-image: repeating-linear-gradient(90deg, #8a7049 0 48px, rgba(138, 112, 73, 0) 48px 96px);
+  background-image: repeating-linear-gradient(90deg, #7c858a 0 48px, rgba(124,133,138, 0) 48px 96px);
 }
 
 .ps-flag-b {
   top: 144px;
-  background-image: repeating-linear-gradient(90deg, rgba(138, 112, 73, 0) 0 48px, #8a7049 48px 96px);
+  background-image: repeating-linear-gradient(90deg, rgba(124,133,138, 0) 0 48px, #7c858a 48px 96px);
 }
 
 /* Background canvases are decorative and marked aria-hidden by the builder. */
@@ -185,14 +185,14 @@
   borrowing it would win or lose on source order alone.
 */
 [data-stage] button.ps-contact-strip {
-  background: #121110;
-  color: #efebe3;
+  background: #1A1820;
+  color: #e9edee;
 }
 
 [data-stage] button.ps-contact-strip:hover,
 [data-stage] button.ps-contact-strip:focus-visible {
-  background: #efebe3;
-  color: #121110;
+  background: #e9edee;
+  color: #1A1820;
 }
 
 .ps-contact-strip canvas {

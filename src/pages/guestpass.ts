@@ -41,7 +41,7 @@
 
 import { asset, css, el, letters } from '../dom.ts';
 import { zoomTrigger } from '../runtime/lightbox.ts';
-import { COLOR, rgba, subpageTitle } from '../design/tokens.ts';
+import { COLOR, FONT, rgba, subpageTitle } from '../design/tokens.ts';
 import { GUESTPASS_PAGE as GP } from '../design/layout.ts';
 import {
   GUESTPASS,
@@ -51,8 +51,8 @@ import {
 } from '../data/guestpass.ts';
 import { STUDIO } from '../data/studio.ts';
 
-const TITLE = subpageTitle(GUESTPASS.name.length, GP.title);
-const MONO = "Monaco,'SFMono-Regular',Menlo,ui-monospace,monospace";
+const TITLE = subpageTitle(GP.title);
+const MONO = FONT.display;
 const MAJOR = rgba(COLOR.paper, 0.28);
 const MINOR = rgba(COLOR.paper, 0.2);
 
@@ -798,7 +798,7 @@ function textColumn(): HTMLElement {
         top: 0,
         width: '100%',
         height: 0,
-        background: COLOR.wood,
+        background: COLOR.drape,
         display: 'none',
       }),
     }),

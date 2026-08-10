@@ -27,7 +27,7 @@
  */
 
 import { asset, css, el, letters } from '../dom.ts';
-import { COLOR, RULE } from '../design/tokens.ts';
+import { COLOR, FONT, RULE } from '../design/tokens.ts';
 import { PAGE3 } from '../design/layout.ts';
 import { CZ_GATES, CZ_META, EV_SHEETS, HERO, sheetForImage } from '../data/competizione.ts';
 import { BLSP, BLSP_ASSEMBLIES } from '../data/blsp-case.ts';
@@ -69,7 +69,7 @@ const cross = (pos: Record<string, string | number>) =>
       height: 15,
       'z-index': '3',
       'pointer-events': 'none',
-      'background-image': `linear-gradient(${COLOR.wood},${COLOR.wood}),linear-gradient(${COLOR.wood},${COLOR.wood})`,
+      'background-image': `linear-gradient(${COLOR.drape},${COLOR.drape}),linear-gradient(${COLOR.drape},${COLOR.drape})`,
       'background-size': '1px 15px,15px 1px',
       'background-position': 'center center,center center',
       'background-repeat': 'no-repeat',
@@ -194,7 +194,7 @@ function entry(): HTMLElement {
       style: css({
         display: 'block',
         'margin-top': 18,
-        'font-family': "Monaco,'SFMono-Regular',Menlo,ui-monospace,monospace",
+        'font-family': FONT.display,
         'font-size': PAGE3.nameSize,
         'line-height': '.96',
         'letter-spacing': '-.03em',
@@ -383,7 +383,7 @@ function assemblies(): HTMLElement[] {
           'span',
           {
             style: css({
-              'font-family': "Monaco,'SFMono-Regular',Menlo,ui-monospace,monospace",
+              'font-family': FONT.display,
               'font-size': 15,
               'letter-spacing': '-.02em',
             }),
@@ -649,7 +649,7 @@ export function build(): HTMLElement {
         right: -96,
         top: 0,
         bottom: 0,
-        'background-image': `repeating-conic-gradient(${COLOR.woodDeep} 0% 25%,rgba(0,0,0,0) 0% 50%)`,
+        'background-image': `repeating-conic-gradient(${COLOR.drapeDeep} 0% 25%,rgba(0,0,0,0) 0% 50%)`,
         'background-size': `${PAGE3.checker.cell * 2}px ${PAGE3.checker.cell * 2}px`,
         animation: 'ps-checkdrift 2.6s linear infinite',
       }),
@@ -666,7 +666,7 @@ export function build(): HTMLElement {
         left: PAGE3.title.x,
         top: PAGE3.title.y,
         'transform-origin': '0 0',
-        'font-family': "Monaco,'SFMono-Regular',Menlo,ui-monospace,monospace",
+        'font-family': FONT.display,
         'font-size': PAGE3.title.size,
         'line-height': `${PAGE3.title.lh}px`,
         'letter-spacing': PAGE3.title.track,

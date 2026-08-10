@@ -33,7 +33,7 @@
 
 import { asset, css, el, letters } from '../dom.ts';
 import { zoomTrigger } from '../runtime/lightbox.ts';
-import { COLOR, rgba, subpageTitle } from '../design/tokens.ts';
+import { COLOR, FONT, rgba, subpageTitle } from '../design/tokens.ts';
 import { LEE_PAGE as LP } from '../design/layout.ts';
 import {
   LEE,
@@ -43,8 +43,8 @@ import {
 } from '../data/lee.ts';
 import { STUDIO } from '../data/studio.ts';
 
-const TITLE = subpageTitle(LEE.name.length, LP.title);
-const MONO = "Monaco,'SFMono-Regular',Menlo,ui-monospace,monospace";
+const TITLE = subpageTitle(LP.title);
+const MONO = FONT.display;
 const MAJOR = rgba(COLOR.paper, 0.28);
 const MINOR = rgba(COLOR.paper, 0.2);
 
@@ -829,7 +829,7 @@ function textColumn(): HTMLElement {
         top: 0,
         width: '100%',
         height: 0,
-        background: COLOR.wood,
+        background: COLOR.drape,
         display: 'none',
       }),
     }),

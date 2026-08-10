@@ -559,6 +559,48 @@ export function df2tmOpen(stage: HTMLElement): boolean;
 The same standfirst-offset rule applies as on the about screen: index row `n`
 is scroll section `n + 1`, and the readout does not number the standfirst.
 
+### The face: one typeface, two faces of it
+
+SLTF Dessign Maison sets **everything** — display, micro, prose. Monaco is gone,
+as Karrik was before it. The glitch swaps the same family's DEFAULT glyphs for
+its ALTERNATES under `'salt' 1, 'ss01' 1`: a geometric grotesque becomes a
+high-contrast swash italic, which is a larger change than swapping two families
+was.
+
+Three measured facts that constrain everything:
+
+1. **Proportional, so widths cannot be computed.** Monaco's 0.6em advance let a
+   size be solved from a character count; `monoWidth` / `monoFit` did that and
+   are deleted. Sizes are measured by `runtime/fit.ts`.
+2. **Narrower than Monaco**, 0.645× to 0.851× by string, a 32% spread. Anything
+   still carrying a Monaco-solved size under-fills by about a third.
+3. **The alternates are always narrower than the defaults**, 0.845× to 0.99×.
+   So a line that fits at rest cannot overflow when it glitches. **Fit the
+   resting face and both states are safe** — and never measure a title that has
+   already swapped, or you solve against the smaller of the two.
+
+The em box is **1.20em** (ascent .95, descent .25) against real ink of 1.00em.
+A line-height under 1.00 therefore collides ink; the wordmark's 0.9, tuned for
+Monaco, became 1.02.
+
+### `runtime/fit.ts`
+
+`fitWhenReady(stage)` at boot, behind `document.fonts.ready` (measuring the
+fallback measures the wrong face; `font-display: block` means nothing is
+painted before it lands, so it cannot flash).
+
+**Subpages cannot be fitted at boot.** They are all built up front and left
+`display:none`, and a hidden element measures zero, so the boot pass skips
+every one of them silently. `fitScreen(screen)` runs again from `subtitleIn`,
+while the title is visible and still resting. That gap was not theoretical:
+without it a 33-character title carries whatever size was authored, and no
+screenshot shows the problem because the title swaps to the narrower alternate
+about 1.4s after the screen opens.
+
+The authored size and line-height ratio are captured in a WeakMap on first fit
+and never re-read. Taking the cap from the live computed size would ratchet: a
+title fitted down once could never grow back.
+
 ### The two accent pools, and why there are two
 
 `LIGHTS` / `MARA` are the **page chrome**: the section bands on the subpages,

@@ -18,7 +18,7 @@
  */
 
 import { css, el, letters } from '../dom.ts';
-import { COLOR, rgba } from '../design/tokens.ts';
+import { COLOR, FONT, rgba } from '../design/tokens.ts';
 import { PAGE4 } from '../design/layout.ts';
 import { CONTACT_TABLE, PROFILE_LINKS, STUDIO } from '../data/studio.ts';
 import { ABOUT } from '../data/about.ts';
@@ -308,7 +308,7 @@ export function build(): HTMLElement {
         left: PAGE4.title.x,
         top: PAGE4.title.y,
         'transform-origin': '0 0',
-        'font-family': "Monaco,'SFMono-Regular',Menlo,ui-monospace,monospace",
+        'font-family': FONT.display,
         'font-size': PAGE4.title.size,
         'line-height': `${PAGE4.title.lh}px`,
         // handoff tracking for the 172px title
@@ -349,7 +349,7 @@ export function build(): HTMLElement {
         left: PAGE4.lede.x,
         top: PAGE4.lede.y,
         width: PAGE4.lede.w,
-        'font-family': "Monaco,'SFMono-Regular',Menlo,ui-monospace,monospace",
+        'font-family': FONT.display,
         'font-size': PAGE4.lede.size,
         'line-height': String(PAGE4.lede.lh),
         'letter-spacing': PAGE4.lede.track,
@@ -411,7 +411,7 @@ export function build(): HTMLElement {
         position: 'absolute',
         left: PAGE4.email.x,
         top: PAGE4.email.y,
-        'font-family': "Monaco,'SFMono-Regular',Menlo,ui-monospace,monospace",
+        'font-family': FONT.display,
         'font-size': PAGE4.email.size,
         'letter-spacing': PAGE4.email.track,
         transition: 'color 160ms linear',

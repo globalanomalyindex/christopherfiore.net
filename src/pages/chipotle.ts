@@ -36,7 +36,7 @@
 
 import { asset, css, el, letters } from '../dom.ts';
 import { zoomTrigger } from '../runtime/lightbox.ts';
-import { COLOR, rgba, subpageTitle } from '../design/tokens.ts';
+import { COLOR, FONT, rgba, subpageTitle } from '../design/tokens.ts';
 import { CHIPOTLE_PAGE as CP } from '../design/layout.ts';
 import {
   CHIPOTLE,
@@ -46,8 +46,8 @@ import {
 } from '../data/chipotle.ts';
 import { STUDIO } from '../data/studio.ts';
 
-const TITLE = subpageTitle(CHIPOTLE.name.length, CP.title);
-const MONO = "Monaco,'SFMono-Regular',Menlo,ui-monospace,monospace";
+const TITLE = subpageTitle(CP.title);
+const MONO = FONT.display;
 const MAJOR = rgba(COLOR.paper, 0.28);
 const MINOR = rgba(COLOR.paper, 0.2);
 
@@ -794,7 +794,7 @@ function textColumn(): HTMLElement {
         top: 0,
         width: '100%',
         height: 0,
-        background: COLOR.wood,
+        background: COLOR.drape,
         display: 'none',
       }),
     }),

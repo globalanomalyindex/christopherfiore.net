@@ -24,13 +24,13 @@
 
 import { asset, css, el, letters } from '../dom.ts';
 import { zoomTrigger } from '../runtime/lightbox.ts';
-import { COLOR, rgba, subpageTitle } from '../design/tokens.ts';
+import { COLOR, FONT, rgba, subpageTitle } from '../design/tokens.ts';
 import { MFNY_PAGE as MP } from '../design/layout.ts';
 import { MFNY, MFNY_GLANCE, MFNY_LEAD_VIEW, MFNY_SECTIONS } from '../data/mfny.ts';
 import { STUDIO } from '../data/studio.ts';
 
-const TITLE = subpageTitle(MFNY.name.length, MP.title);
-const MONO = "Monaco,'SFMono-Regular',Menlo,ui-monospace,monospace";
+const TITLE = subpageTitle(MP.title);
+const MONO = FONT.display;
 const MAJOR = rgba(COLOR.paper, 0.28);
 const MINOR = rgba(COLOR.paper, 0.2);
 
@@ -703,7 +703,7 @@ function textColumn(): HTMLElement {
         top: 0,
         width: '100%',
         height: 0,
-        background: COLOR.wood,
+        background: COLOR.drape,
         display: 'none',
       }),
     }),

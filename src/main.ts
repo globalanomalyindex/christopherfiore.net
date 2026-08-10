@@ -13,6 +13,7 @@ import './styles/mobile.css';
 import { qq } from './dom.ts';
 import { buildMobile, isMobile } from './mobile.ts';
 import { fitStage, mountStage } from './runtime/stage.ts';
+import { fitWhenReady } from './runtime/fit.ts';
 import { runIntro } from './runtime/transitions.ts';
 
 const OPAQUE = (c: string): boolean => !!c && c !== 'rgba(0, 0, 0, 0)' && c !== 'transparent';
@@ -133,6 +134,10 @@ function boot(): void {
 
   const stage = mountStage(app);
   fitStage(stage);
+  // Display sizes are measured, not computed — the face is proportional now.
+  // Runs behind document.fonts.ready, which lands before anything is painted
+  // because every face is font-display: block.
+  fitWhenReady(stage);
   syncPageA11y(stage);
 
   /*

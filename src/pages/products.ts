@@ -30,7 +30,7 @@
  */
 
 import { asset, css, el, letters } from '../dom.ts';
-import { COLOR, RULE, rgba } from '../design/tokens.ts';
+import { COLOR, FONT, rgba, RULE } from '../design/tokens.ts';
 import { MODULE, MOTION_SHEET, PAGE1 } from '../design/layout.ts';
 import * as chellbookPage from './chellbook.ts';
 import * as df2tmPage from './df2tm.ts';
@@ -95,7 +95,7 @@ const cross = (pos: Record<string, string | number>) =>
       width: 15,
       height: 15,
       'pointer-events': 'none',
-      'background-image': `linear-gradient(${COLOR.wood},${COLOR.wood}),linear-gradient(${COLOR.wood},${COLOR.wood})`,
+      'background-image': `linear-gradient(${COLOR.drape},${COLOR.drape}),linear-gradient(${COLOR.drape},${COLOR.drape})`,
       'background-size': '1px 15px,15px 1px',
       'background-position': 'center center,center center',
       'background-repeat': 'no-repeat',
@@ -224,7 +224,7 @@ const cellName = (text: string) =>
     'span',
     {
       style: css({
-        'font-family': "Monaco,'SFMono-Regular',Menlo,ui-monospace,monospace",
+        'font-family': FONT.display,
         'font-size': PAGE1.nameSize,
         'letter-spacing': '-.03em',
         'white-space': 'nowrap',
@@ -503,7 +503,7 @@ function motionBand(n: number): HTMLElement {
       'span',
       {
         style: css({
-          'font-family': "Monaco,'SFMono-Regular',Menlo,ui-monospace,monospace",
+          'font-family': FONT.display,
           'font-size': 40,
           'line-height': '1',
           'letter-spacing': '-.03em',
@@ -560,7 +560,7 @@ function motionBand(n: number): HTMLElement {
         display: 'grid',
         'grid-template-columns': PAGE1.motion.cols,
         'align-items': 'center',
-        'border-top': `2px solid ${COLOR.wood}`,
+        'border-top': `2px solid ${COLOR.drape}`,
         background: rgba(COLOR.shadow, 0.07),
       }),
     },
@@ -840,7 +840,7 @@ export function build(): HTMLElement {
         left: PAGE1.title.x,
         top: PAGE1.title.y,
         'transform-origin': '0 0',
-        'font-family': "Monaco,'SFMono-Regular',Menlo,ui-monospace,monospace",
+        'font-family': FONT.display,
         'font-size': PAGE1.title.size,
         'line-height': `${PAGE1.title.lh}px`,
         'letter-spacing': PAGE1.title.track,
@@ -871,7 +871,7 @@ export function build(): HTMLElement {
         left: PAGE1.thesis.x,
         top: PAGE1.thesis.y,
         width: PAGE1.thesis.w,
-        'font-family': "Monaco,'SFMono-Regular',Menlo,ui-monospace,monospace",
+        'font-family': FONT.display,
         'font-size': PAGE1.thesis.size,
         'line-height': String(PAGE1.thesis.lh),
         'letter-spacing': PAGE1.thesis.track,

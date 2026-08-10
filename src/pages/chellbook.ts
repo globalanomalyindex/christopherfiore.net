@@ -57,7 +57,7 @@
 
 import { asset, css, el, letters } from '../dom.ts';
 import { zoomTrigger } from '../runtime/lightbox.ts';
-import { COLOR, LIGHTS, RULE, subpageTitle } from '../design/tokens.ts';
+import { COLOR, FONT, LIGHTS, RULE, subpageTitle } from '../design/tokens.ts';
 import { MODULE, PAGE3, STAGE } from '../design/layout.ts';
 import {
   CHELL,
@@ -78,7 +78,7 @@ import type { TableRow } from '../data/types.ts';
 const MAJOR = RULE.onInkMajor;
 const MINOR = RULE.onInkMinor;
 
-const MONO = "Monaco,'SFMono-Regular',Menlo,ui-monospace,monospace";
+const MONO = FONT.display;
 
 /**
  * A band color, always from LIGHTS, always carrying `#0B0B0C` ink. Indexed
@@ -141,7 +141,7 @@ const CB = {
   railW: 6,
 } as const;
 
-const TITLE = subpageTitle(CHELL.name.length, CB.title);
+const TITLE = subpageTitle(CB.title);
 
 const TEXT_H = CB.bandEnd - CB.text.y;
 const SCROLL_TOP = CB.secBarH + CB.secBarGap;
@@ -1385,7 +1385,7 @@ function textColumn(): HTMLElement {
         top: 0,
         width: '100%',
         height: 0,
-        background: COLOR.wood,
+        background: COLOR.drape,
         display: 'none',
       }),
     }),
