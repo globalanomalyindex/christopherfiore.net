@@ -21,6 +21,8 @@ import { installDitherDefs } from './dither';
 import { installLightbox } from './lightbox';
 import { startFrost, trackFrost } from './frost';
 import { wireHovers } from './hover';
+import { LAT_MENU } from '../design/lattice';
+import { mountLattice, solveLattice, startDrift, watchLattice } from './lattice';
 
 /**
  * Build the stage and wire every runtime that needs a live DOM.
@@ -59,6 +61,24 @@ export function mountStage(root: HTMLElement): HTMLElement {
   for (const page of qq(stage, '[data-page]')) wireHovers(page);
 
   bindActions(stage);
+
+  /*
+    The lattice, last, because `solveLattice` reads every frame's rendered
+    corners and every text run's rects out of the live DOM. Mounting it before
+    the screens exist would resolve an empty field.
+
+    `watchLattice` re-resolves on fonts, resize, visibility and mutation.
+    document.fonts.ready is the one that matters most: solving against the
+    fallback measures a face whose metrics have nothing to do with this one, and
+    the result does not look broken, it looks like a few stray crosshairs.
+  */
+  const menu = stage.querySelector<HTMLElement>('[data-menu]');
+  if (menu) {
+    mountLattice(menu, LAT_MENU);
+    watchLattice(menu);
+    solveLattice(menu);
+    startDrift(menu);
+  }
 
   return stage;
 }
