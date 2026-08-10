@@ -1,71 +1,130 @@
 /**
- * The three per-channel menu hover personalities.
+ * The four per-channel menu hover personalities, expressed in the lattice.
  *
  * Each channel behaves in character; a generic hover on any of them reads as
- * unfinished. Ported from the prototype's `renderVals()`:
- *   01 Product designs — prodOn / prodOff / scafMove (gridEnter + scafOn + scafMove)
- *   02 Paintings       — waterOn / waterOff          (the bead/paint canvas sim)
- *   03 Competizione    — sweepOn / sweepOff          (prototype sweep2On)
+ * unfinished. What changed with the redesign is the medium, not the character:
+ * the personalities used to be CSS custom properties driving background
+ * gradients on the cell, and they are now crosshairs switched on and off in the
+ * screen's lattice.
  *
- * Every geometry number, easing and duration below is read out of
- * `_source/prototype/prototype.markup.html` and `prototype.script.js` and is
- * final. `state(stage).hovered` is updated here so the background field can
- * cross-fade per channel.
+ *   01 product designs — prodOn / prodOff / scafMove
+ *      a radial flood out of the module the cursor entered, a fully lit ink row
+ *      and column through the cursor's cell, and the `col NN · row NN` callout.
+ *      All of it moves on `pointermove` and on nothing else.
+ *   02 paintings       — waterOn / waterOff
+ *      a one-cell-thick ink ring just inside the block, with the interior
+ *      dithering in the fill hue and breathing under a held flicker.
+ *   03 competizione    — sweepOn / sweepOff
+ *      whole modules of ink crosshairs alternating like a checkerboard,
+ *      marching one square right per 320ms beat.
+ *   04 contact         — invertOn / invertOff
+ *      inversion: a near-black band, paper type and paper crosshairs, and the
+ *      frame corners flipped to paper so they survive the band.
+ *
+ * FOUR THINGS HERE ARE LOAD-BEARING AND EASY TO UNDO BY ACCIDENT.
+ *
+ * · A peg is only ever painted after `fillFor` has CLAIMED it. Claimed points
+ *   are the ones the drift skips and the ones `releaseFor` puts back, so a peg
+ *   coloured outside that set is wiped by the next drift tick and never
+ *   restored. Every channel therefore claims the points it means to drive
+ *   before it drives them. The frame corners are the one exception: they are
+ *   kept out of every claim so they simply hold, and 04 puts them back by hand.
+ * · A peg is never restored by clearing its inline colour. `restorePeg` writes
+ *   the value the resolve pass left on the element; `style.color = ''` inherits
+ *   near-black and scars the field permanently.
+ * · The lattice is held BUSY for the length of a hover. `watchLattice` re-solves
+ *   on any node or text change inside the screen, and this file adds nodes (the
+ *   band, the callout) — without the hold, a resolve would land mid-hover and
+ *   repaint every point from its resting state, taking the fill with it. The
+ *   hold is refcounted because pointer and keyboard focus can hold two cells at
+ *   once, and the resolve is re-scheduled on the last release.
+ * · The legibility contract. The band under a label is always from
+ *   `SPARK_LIGHTS` and the ink on it is always `COLOR.nearBlack`; the darker
+ *   `SPARK` accents are capped at 8% of the height so no accent row can slide
+ *   under a line of type. 03's dark checker squares are the same kind of edge
+ *   accent, which is why they are masked away from the label.
  */
 
-import { COLOR, FONT, SPARK, rgba } from '../design/tokens';
-import { MODULE, PAINT_PIX } from '../design/layout';
-import { css, el, q, qq, svg } from '../dom';
+import { COLOR, LIGHTS, SPARK, SPARK_LIGHTS, rgba } from '../design/tokens';
+import { MENU_FRAMES } from '../design/layout';
+import { css, el, q, qq } from '../dom';
+import {
+  type Rect,
+  cellsInRect,
+  cfgOf,
+  crossAt,
+  fillFor,
+  latticeOf,
+  nearestIndex,
+  releaseFor,
+  restorePeg,
+  scheduleResolve,
+  setLatticeBusy,
+} from './lattice';
 import { state } from './state';
 
 /* ------------------------------------------------------------------ shared */
 
+/** The ordered-dither matrix the rest of the site already uses. */
+const BAYER4 = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+
+/** Normalized Bayer threshold for a point, 0…1. */
+const bayer = (col: number, row: number): number =>
+  (BAYER4[(row % 4) * 4 + (col % 4)] + 0.5) / 16;
+
+const rnd = <T>(a: readonly T[]): T => a[(Math.random() * a.length) | 0];
+
 /**
- * Hover-state values lifted from the prototype's `style-hover` declarations.
+ * A colour from `pool` that is not one of `not`.
  *
- * These are also written as classes in `styles/menu.css`, and only ONE of the
- * two runs: `actions.ts` dispatches on `data-hov` and calls the functions
- * below, so the classes are documentation and the constants here are the site.
- * They had drifted — ch2 still framed the cell in the old rust at 14px and ch3
- * still wiped the old lavender across it, both of them the last two visible
- * pieces of the pre-editorial palette. Kept in step with the classes by hand;
- * if one moves, move the other.
+ * The crosshair fill and the band it lands on are chosen independently, and
+ * independently means they can collide: a yellow fill on a yellow band is a
+ * fill nobody can see, and the block reads as though the lattice did nothing.
+ * Eight tries is plenty against pools of eleven and fourteen, and falling
+ * through to a random member is the right failure — a repeat looks like a plain
+ * band, not like a fault.
  */
-const HOVER = {
-  ch1: { r: '800px', p: '820px' },
-  ch2: {
-    p: '500px',
-    shadow: `inset 0 0 0 14px ${COLOR.ink},inset 0 0 0 15px ${rgba(COLOR.paper, 0.55)}`,
-  },
-  ch3: { size: '100% 100%', shadow: `inset 760px 0 0 0 ${COLOR.paper}` },
-} as const;
+function apart(pool: readonly string[], ...not: string[]): string {
+  for (let i = 0; i < 8; i++) {
+    const c = rnd(pool);
+    if (!not.includes(c)) return c;
+  }
+  return rnd(pool);
+}
 
 /**
- * Inline properties we overwrite on hover, remembered once so leaving restores
- * the page builder's resting declaration instead of deleting it (a deleted
- * `box-shadow` has no interpolation target and would snap instead of easing).
+ * The vivid half of the band pool, derived rather than listed.
+ *
+ * The design asks the lattice fill for "one hue from HUES", and `HUES` is not
+ * exported — but `SPARK_LIGHTS` is every band that may carry type and `LIGHTS`
+ * is the neutral half of it, so the difference is exactly the vivid hues that
+ * clear the contrast filter. Deriving it means a hue added to the palette
+ * reaches this fill for free, and a hand-picked list would not.
  */
-const SAVED = new WeakMap<HTMLElement, Map<string, string>>();
+const FILL_HUES: readonly string[] = SPARK_LIGHTS.filter((c) => !LIGHTS.includes(c));
 
-function setStyle(cell: HTMLElement, prop: string, value: string): void {
-  let m = SAVED.get(cell);
-  if (!m) {
-    m = new Map();
-    SAVED.set(cell, m);
-  }
-  if (!m.has(prop)) m.set(prop, cell.style.getPropertyValue(prop));
-  cell.style.setProperty(prop, value);
-}
+/** 03's beat. One square of the checker per tick. */
+const BEAT = 320;
 
-function restoreStyle(cell: HTMLElement, prop: string): void {
-  const prev = SAVED.get(cell)?.get(prop);
-  if (prev === undefined) return;
-  if (prev) cell.style.setProperty(prop, prev);
-  else cell.style.removeProperty(prop);
-}
+/**
+ * How long `fillFor`'s reveal ramp keeps writing.
+ *
+ * The ramp climbs 0.17 every 40ms against a threshold that tops out just under
+ * 0.95, so it is done inside six steps. 01 and 03 re-assert their pattern once
+ * afterwards, because a cursor that enters and then holds perfectly still would
+ * otherwise be left looking at the flat reveal rather than the personality.
+ */
+const REVEAL = 280;
 
-function stageOf(cell: HTMLElement): HTMLElement | null {
-  return cell.closest<HTMLElement>('[data-stage]');
+const screenOf = (cell: HTMLElement): HTMLElement | null =>
+  cell.closest<HTMLElement>('[data-menu]');
+
+const stageOf = (cell: HTMLElement): HTMLElement | null =>
+  cell.closest<HTMLElement>('[data-stage]');
+
+function reducedFor(cell: HTMLElement): boolean {
+  const stage = stageOf(cell);
+  return stage ? state(stage).reduced : false;
 }
 
 function setHovered(cell: HTMLElement, n: number | null, channel: number): void {
@@ -77,60 +136,460 @@ function setHovered(cell: HTMLElement, n: number | null, channel: number): void 
   s.hovered = n;
 }
 
-function reducedFor(cell: HTMLElement): boolean {
-  const stage = stageOf(cell);
-  return stage ? state(stage).reduced : false;
+/**
+ * The cell's frame, in design px, read from the table rather than measured.
+ *
+ * `cellsInRect` bounds with `ceil`/`floor`, so a rect that arrives a
+ * hundredth of a pixel large from `getBoundingClientRect()` through the stage's
+ * fractional scale drops a whole column of points. The authored numbers land on
+ * the module exactly, which is the whole reason they are authored.
+ */
+function rectOf(cell: HTMLElement): Rect | null {
+  const id = cell.getAttribute('data-frame');
+  const f = MENU_FRAMES.find((m) => m.id === id);
+  return f ? { x: f.x, y: f.y, w: f.w, h: f.h } : null;
+}
+
+/* --------------------------------------------------------------- the hold */
+
+/**
+ * Refcounted busy flag. Two cells can be held at once — the pointer on one and
+ * keyboard focus on another — and the second to leave is the one that owns the
+ * re-solve.
+ */
+const HOLDS = new WeakMap<HTMLElement, number>();
+
+function hold(screen: HTMLElement, delta: number): number {
+  const n = Math.max(0, (HOLDS.get(screen) ?? 0) + delta);
+  HOLDS.set(screen, n);
+  setLatticeBusy(screen, n > 0);
+  return n;
+}
+
+/* -------------------------------------------------------------- the pegs */
+
+/**
+ * Walk every point in a rect.
+ *
+ * `latticeOf` is the only way to reach a point's element, and a point's element
+ * is what `restorePeg` takes. Nothing else in the lattice's internals is read
+ * here, and nothing is written to them.
+ */
+function eachPeg(
+  screen: HTMLElement,
+  r: Rect,
+  fn: (peg: HTMLElement, col: number, row: number, idx: number) => void,
+): void {
+  const cfg = cfgOf(screen);
+  const L = latticeOf(screen);
+  if (!cfg || !L) return;
+  for (const i of cellsInRect(screen, r)) {
+    const peg = L.cells[i];
+    if (peg) fn(peg, i % cfg.cols, (i / cfg.cols) | 0, i);
+  }
+}
+
+/** Light one claimed point. */
+function paintPeg(peg: HTMLElement, color: string, size: number): void {
+  peg.style.color = color;
+  peg.style.fontSize = `${size}px`;
 }
 
 /**
- * prefers-reduced-motion collapse: a flat lavender plate behind the type and
- * rust ink. No canvas, no rAF, no per-letter work. The plate is injected as the
- * first child so it sits under the cell's own `z-index:1` rows.
+ * The frame corners inside a rect, as a `skip` set for `fillFor`.
+ *
+ * A corner is drawn at major + 6 and in ink, and a fill would take it down to
+ * the fill size and the fill's hue — dropping the one mark the entire system
+ * rests on for as long as the cursor is inside. Keeping corners out of every
+ * claim means they simply hold their resolved state through a hover, and it is
+ * also why the drift cannot disturb them: the drift only touches points whose
+ * resolved value is the ambient one.
  */
-function staticOn(cell: HTMLElement): void {
-  if (q(cell, '[data-ps-static]')) return;
-  const plate = el('i', {
-    'data-ps-static': '',
+function cornerSet(screen: HTMLElement, r: Rect): Set<number> {
+  const out = new Set<number>();
+  eachPeg(screen, r, (peg, _col, _row, idx) => {
+    if (peg.dataset.corner) out.add(idx);
+  });
+  return out;
+}
+
+/**
+ * Write a block's corners directly.
+ *
+ * Only channel 04 needs this: ink on a near-black band is not a corner, it is
+ * a hole, so its four corners take paper for as long as the band is up. With
+ * no colour it puts them back, which is what the leave does — nothing else
+ * restores them, because they were never claimed.
+ */
+function holdCorners(screen: HTMLElement, r: Rect, color?: string): void {
+  eachPeg(screen, r, (peg) => {
+    if (!peg.dataset.corner) return;
+    restorePeg(peg);
+    if (color) peg.style.color = color;
+  });
+}
+
+/* -------------------------------------------------------------- the band */
+
+/** Wipe-in start clips. Two are partial (62%) so some layers only half travel. */
+const WIPE_IN = [
+  'inset(0 100% 0 0)',
+  'inset(0 0 0 100%)',
+  'inset(100% 0 0 0)',
+  'inset(0 0 100% 0)',
+  'inset(0 62% 0 0)',
+  'inset(0 0 0 62%)',
+] as const;
+
+/** Wipe-out end clips. */
+const WIPE_OUT = [
+  'inset(0 0 0 100%)',
+  'inset(0 100% 0 0)',
+  'inset(0 0 100% 0)',
+  'inset(100% 0 0 0)',
+] as const;
+
+interface BandSpec {
+  /** The band the type sits on. Always from SPARK_LIGHTS. */
+  main: string;
+  /** The edge accent. Never carries type, so it may come from all of SPARK. */
+  accent: string;
+  /** The one border every hover has now: a 1.5px inset outline. */
+  outline: string;
+  /** One full-height band, no accents and no wipe. */
+  flat: boolean;
+}
+
+/**
+ * Paint the band for a channel cell.
+ *
+ * It goes in the screen-level band host, which sits at z 0 UNDER the lattice,
+ * so the crosshairs stay visible over a vivid band. That is the whole reason
+ * the host is a screen-level element rather than a child of the button.
+ *
+ * The accent rows are capped at 8% of the height. The old 56–80% main band let
+ * an accent fall under a two-line block's meta line, where near-black ink on a
+ * near-black accent is invisible.
+ */
+function bandOn(cell: HTMLElement, screen: HTMLElement, r: Rect, spec: BandSpec): HTMLElement {
+  const host = q<HTMLElement>(screen, '[data-bandhost]') ?? screen;
+  const box = el('span', {
+    'data-chband': cell.getAttribute('data-frame'),
     'aria-hidden': 'true',
     style: css({
+      display: 'block',
       position: 'absolute',
-      inset: '0',
-      background: COLOR.paper,
-      'pointer-events': 'none',
+      left: r.x,
+      top: r.y,
+      width: r.w,
+      height: r.h,
       'z-index': '0',
+      'pointer-events': 'none',
     }),
   });
-  cell.insertBefore(plate, cell.firstChild);
-  setStyle(cell, 'color', COLOR.ink);
+
+  const rows: [number, number, string][] = [];
+  if (spec.flat) {
+    rows.push([0, 100, spec.main]);
+  } else {
+    const top = 2 + Math.random() * 6;
+    const bot = 2 + Math.random() * 6;
+    rows.push([0, top, spec.accent]);
+    rows.push([top, 100 - top - bot, spec.main]);
+    rows.push([100 - bot, bot, spec.accent]);
+  }
+
+  const parts: HTMLElement[] = [];
+  for (const [y, h, col] of rows) {
+    const d = el('span', {
+      style: css({
+        display: 'block',
+        position: 'absolute',
+        left: '0',
+        width: '100%',
+        top: `${y.toFixed(2)}%`,
+        height: `${h.toFixed(2)}%`,
+        background: col,
+      }),
+    });
+    box.appendChild(d);
+    parts.push(d);
+  }
+
+  // No corner ticks: the lattice provides the corners, and drawing them twice
+  // puts a hand-authored mark a fraction off the peg it is supposed to be.
+  const ol = el('span', {
+    style: css({
+      display: 'block',
+      position: 'absolute',
+      inset: '0',
+      'box-shadow': `inset 0 0 0 1.5px ${spec.outline}`,
+    }),
+  });
+  box.appendChild(ol);
+  parts.push(ol);
+
+  host.appendChild(box);
+
+  if (!spec.flat) {
+    for (const d of parts) {
+      const jx = Math.random() * 15 - 7.5; // ±7.5px jitter
+      d.animate(
+        [
+          { clipPath: rnd(WIPE_IN), transform: `translateX(${jx.toFixed(1)}px)`, offset: 0 },
+          {
+            clipPath: 'inset(0 0 0 0)',
+            transform: `translateX(${(jx / 2.6).toFixed(1)}px)`,
+            offset: 0.55,
+          },
+          { clipPath: 'inset(0 0 0 0)', transform: 'none', offset: 1 },
+        ],
+        {
+          duration: 150 + Math.random() * 170,
+          delay: Math.random() * 140,
+          easing: 'steps(5,end)',
+          fill: 'both',
+        },
+      );
+    }
+  }
+
+  return box;
 }
 
-function staticOff(cell: HTMLElement): void {
-  q(cell, '[data-ps-static]')?.remove();
-  restoreStyle(cell, 'color');
+/** Reverse-wipe the band out and drop it. */
+function bandOff(box: HTMLElement | null, flat: boolean): void {
+  if (!box) return;
+  if (flat) {
+    box.remove();
+    return;
+  }
+  const parts = qq<HTMLElement>(box, ':scope > span');
+  let done = 0;
+  for (const d of parts) {
+    const a = d.animate(
+      [
+        { clipPath: 'inset(0 0 0 0)', transform: 'none' },
+        {
+          clipPath: rnd(WIPE_OUT),
+          transform: `translateX(${(Math.random() * 11 - 5.5).toFixed(1)}px)`,
+        },
+      ],
+      {
+        duration: 110 + Math.random() * 130,
+        delay: Math.random() * 100,
+        easing: 'steps(4,end)',
+        fill: 'both',
+      },
+    );
+    a.onfinish = () => {
+      if (++done >= parts.length) box.remove();
+    };
+  }
+  if (!parts.length) box.remove();
 }
 
-/** Cell-local coordinates, undoing the stage's `transform: scale(k)`. */
-function localXY(cell: HTMLElement, clientX: number, clientY: number): [number, number] {
-  const r = cell.getBoundingClientRect();
-  const sc = cell.offsetWidth ? r.width / cell.offsetWidth : 1;
-  return [(clientX - r.left) / sc, (clientY - r.top) / sc];
+/* ---------------------------------------------------------------- the ink */
+
+/**
+ * Pin the label to one ink while the band is up, and put the originals back on
+ * leave.
+ *
+ * Every descendant carrying its OWN inline colour is pinned, not just the
+ * button: the 13px channel number is set to `inkSoft` inline, and an inline
+ * declaration beats the colour inherited from the button, so it would drop out
+ * over the band.
+ */
+const PINNED = new WeakMap<HTMLElement, Map<HTMLElement, string>>();
+
+function pinInk(cell: HTMLElement, color: string): void {
+  const saved = new Map<HTMLElement, string>();
+  saved.set(cell, cell.style.color);
+  cell.style.color = color;
+  for (const n of qq<HTMLElement>(cell, '*')) {
+    if (!n.style.color) continue;
+    saved.set(n, n.style.color);
+    n.style.color = color;
+  }
+  PINNED.set(cell, saved);
+}
+
+function unpinInk(cell: HTMLElement): void {
+  const saved = PINNED.get(cell);
+  if (!saved) return;
+  for (const [node, prev] of saved) {
+    if (prev) node.style.color = prev;
+    else node.style.removeProperty('color');
+  }
+  PINNED.delete(cell);
+}
+
+/* ------------------------------------------------------------ the record */
+
+interface Chan {
+  /** Bumped on every enter, so a deferred pass cannot fire into a newer hover. */
+  gen: number;
+  hue: string;
+  accent: string;
+  band: HTMLElement | null;
+  flat: boolean;
+  stopFlicker: (() => void) | null;
+  /** 03's marching beat. */
+  beat: number;
+  phase: number;
+  /** The one-shot that re-asserts a pattern once the reveal ramp is done. */
+  settle: number;
+  /** The one-shot that sweeps up after a hover cut short mid-reveal. */
+  tail: number;
+  /** 01's callout, and the last pointer position that placed it, in design px. */
+  callout: HTMLElement | null;
+  px: number;
+  py: number;
+  /**
+   * This channel's whole lattice paint, so a cell still held elsewhere can be
+   * put back after a screen-wide `releaseFor`.
+   */
+  repaint: (() => void) | null;
+}
+
+const CHANS = new WeakMap<HTMLElement, Chan>();
+
+function chanOf(cell: HTMLElement): Chan {
+  let c = CHANS.get(cell);
+  if (!c) {
+    c = {
+      gen: 0,
+      hue: SPARK_LIGHTS[0],
+      accent: SPARK[0],
+      band: null,
+      flat: false,
+      stopFlicker: null,
+      beat: 0,
+      phase: 0,
+      settle: 0,
+      tail: 0,
+      callout: null,
+      px: 0,
+      py: 0,
+      repaint: null,
+    };
+    CHANS.set(cell, c);
+  }
+  return c;
+}
+
+/** Cells currently held by a pointer or by focus, on any screen. */
+const ACTIVE = new Set<HTMLElement>();
+
+interface Ctx {
+  screen: HTMLElement;
+  rect: Rect;
+  rec: Chan;
 }
 
 /**
- * `--r` and `--p` only interpolate if they are registered as <length>; an
- * unregistered custom property is a plain token and would snap instead of
- * running the 120ms steps(11,end) growth. `motion.css` declares these with
- * `@property`; this is a belt-and-braces duplicate — re-registering the same
- * name throws and is ignored, and the descriptors match the prototype exactly.
+ * The half of a hover every channel shares: claim the field, paint the band,
+ * pin the ink.
+ *
+ * `invert` is channel 04's whole personality, so it is a parameter here rather
+ * than a fifth code path: the band becomes one near-black plate, the outline
+ * becomes paper at half alpha, and the type flips to paper.
  */
-if (typeof CSS !== 'undefined' && typeof CSS.registerProperty === 'function') {
-  for (const name of ['--r', '--p']) {
-    try {
-      CSS.registerProperty({ name, syntax: '<length>', inherits: false, initialValue: '0px' });
-    } catch {
-      /* already registered by motion.css */
-    }
+function begin(cell: HTMLElement, n: number, invert: boolean): Ctx | null {
+  setHovered(cell, n, n);
+  const screen = screenOf(cell);
+  const rect = rectOf(cell);
+  if (!screen || !rect) return null;
+
+  const rec = chanOf(cell);
+  rec.gen += 1;
+  rec.phase = 0;
+  window.clearTimeout(rec.tail);
+  rec.tail = 0;
+  ACTIVE.add(cell);
+  hold(screen, 1);
+
+  // The band first, then the crosshairs that have to be seen against it.
+  const main = invert ? COLOR.nearBlack : rnd(SPARK_LIGHTS);
+  rec.hue = invert ? COLOR.paper : apart(FILL_HUES, main);
+  rec.accent = invert ? COLOR.paper : apart(SPARK_LIGHTS, main, rec.hue);
+  rec.flat = invert || reducedFor(cell);
+
+  rec.band = bandOn(cell, screen, rect, {
+    main,
+    // The band's own edge rows may come from all of SPARK, darks included: they
+    // are 8% of the height at most and no type ever sits on them.
+    accent: invert ? COLOR.nearBlack : rnd(SPARK),
+    outline: invert ? rgba(COLOR.paper, 0.5) : COLOR.nearBlack,
+    flat: rec.flat,
+  });
+  pinInk(cell, invert ? COLOR.paper : COLOR.nearBlack);
+
+  return { screen, rect, rec };
+}
+
+/** The other half: stop everything, put every point back, let the field resolve. */
+function end(cell: HTMLElement, n: number): void {
+  setHovered(cell, null, n);
+  const rec = chanOf(cell);
+  rec.gen += 1;
+
+  window.clearInterval(rec.beat);
+  rec.beat = 0;
+  window.clearTimeout(rec.settle);
+  rec.settle = 0;
+  rec.stopFlicker?.();
+  rec.stopFlicker = null;
+  rec.callout?.remove();
+  rec.callout = null;
+  rec.repaint = null;
+
+  unpinInk(cell);
+  bandOff(rec.band, rec.flat);
+  rec.band = null;
+
+  ACTIVE.delete(cell);
+  const screen = screenOf(cell);
+  if (!screen) return;
+
+  releaseFor(screen);
+  // Corners are never claimed, so the release does not reach them. Only 04
+  // moves them, but restoring unconditionally costs four writes and means the
+  // leave path does not have to know which channel it is leaving.
+  const rect = rectOf(cell);
+  if (rect) holdCorners(screen, rect);
+  // `releaseFor` is screen-wide, so a channel still held by keyboard focus has
+  // just lost its fill along with this one. Painting it again is also what
+  // re-claims its points: a point outside the lit set is not restored by the
+  // next release and is overwritten by the next drift tick.
+  for (const other of ACTIVE) {
+    if (screenOf(other) === screen) chanOf(other).repaint?.();
   }
+  // The refcount, not this call, decides whether the field is free: while
+  // another cell is still held the resolve stays gated and would only repaint
+  // over its fill.
+  hold(screen, -1);
+  scheduleResolve(screen);
+
+  /*
+    One sweep-up pass, and it is not belt and braces.
+
+    `fillFor`'s reveal is a chain of 40ms timeouts with no cancel, so a hover
+    that ends inside the reveal leaves a chain still running: it lights points
+    AFTER the release has put them back, and those points are lit, skipped by
+    the drift and restored by nobody. Releasing once more past the longest a
+    reveal can run is what closes that window. It is skipped while any cell on
+    this screen is still held, because a release is screen-wide and would take
+    that cell's fill with it.
+  */
+  const gen = rec.gen;
+  window.clearTimeout(rec.tail);
+  rec.tail = window.setTimeout(() => {
+    if (chanOf(cell).gen !== gen) return;
+    for (const other of ACTIVE) if (screenOf(other) === screen) return;
+    releaseFor(screen);
+    scheduleResolve(screen);
+  }, REVEAL + 60);
 }
 
 /**
@@ -152,1142 +611,372 @@ if (typeof document !== 'undefined') {
   document.addEventListener('pointermove', rec, { capture: true, passive: true });
 }
 
+/** Client px → the screen's own 1920 × 1080 design space. */
+function designXY(screen: HTMLElement, clientX: number, clientY: number): [number, number] {
+  const r = screen.getBoundingClientRect();
+  const k = (r.width || 1920) / 1920;
+  return [(clientX - r.left) / k, (clientY - r.top) / k];
+}
+
 /* ------------------------------------------- 01 · Product designs — the grid */
 
-/** Enter timestamps, used to hold the module callouts still for 620ms. */
-const SCAF_T0 = new WeakMap<HTMLElement, number>();
-/** Hover generation, so a deferred cleanup cannot fire into a newer hover. */
-const GEN = new WeakMap<HTMLElement, number>();
+/** Two zero-padded digits, 1-based, as the callout has always printed them. */
+const pad2 = (n: number): string => String(n + 1).padStart(2, '0');
 
-function bumpGen(cell: HTMLElement): number {
-  const n = (GEN.get(cell) ?? 0) + 1;
-  GEN.set(cell, n);
-  return n;
-}
+/**
+ * The callout's ink box, bounded rather than measured.
+ *
+ * The string is always fifteen characters at 13px, so one constant covers every
+ * position it can take, and a constant avoids a forced layout read on every
+ * `pointermove`. It is deliberately generous — the box clears the crosshairs
+ * underneath, which is the same thing the resolve pass does for every other run
+ * of type on the screen, and clearing one column too many is invisible while
+ * clearing one too few puts a lit peg through the text.
+ */
+const CALLOUT = { dx: 10, dy: 10, w: 132, h: 18 } as const;
 
-/** The lavender lattice grows out of the module the cursor entered on. */
-function gridEnter(cell: HTMLElement, clientX: number, clientY: number): void {
-  const [x, y] = localXY(cell, clientX, clientY);
-  cell.style.setProperty('--gx', `${(Math.floor(x / MODULE) * MODULE).toFixed(2)}px`);
-  cell.style.setProperty('--gy', `${(Math.floor(y / MODULE) * MODULE).toFixed(2)}px`);
-  cell.style.setProperty('--hx', `${(Math.floor(x / MODULE) * MODULE).toFixed(2)}px`);
-  cell.style.setProperty('--hy', `${(Math.floor(y / MODULE) * MODULE).toFixed(2)}px`);
-}
+/**
+ * The band's edge accents are capped at 8% of the height, and they are the one
+ * place on this screen type may not go: they are drawn from all of SPARK,
+ * darks included, precisely because nothing reads on them. The callout sits in
+ * the first module, so without this it lands on the top accent every time.
+ */
+const ACCENT_CAP = 0.08;
 
-function scafOn(cell: HTMLElement): void {
-  SCAF_T0.set(cell, Date.now());
-  qq(cell, '[data-scaf]').forEach((s, i) => {
-    s.style.transitionDelay = `${110 + i * 55}ms`;
-    s.style.opacity = '1';
-  });
-}
+/**
+ * Repaint 01 from the current pointer position.
+ *
+ * Three things at once, and none of them on a timer:
+ *
+ *   · the radial flood, thresholded at the coefficients the design specifies —
+ *     `distance/maxDistance × 0.86 + bayer × 0.13` against a cut of 0.86, which
+ *     is the radial coefficient itself. The block fills except for a dithered
+ *     shell at the far edge, and that shell swings around the cursor as it
+ *     moves.
+ *   · the cursor scaffolding: a fully lit ink row and column through the
+ *     cursor's own cell, bounded to the block.
+ *   · the `col NN · row NN` callout, naming the module the cursor is in.
+ */
+function prodMask(cell: HTMLElement): void {
+  const screen = screenOf(cell);
+  const rect = rectOf(cell);
+  const cfg = screen ? cfgOf(screen) : null;
+  if (!screen || !rect || !cfg) return;
+  const rec = chanOf(cell);
 
-function scafOff(cell: HTMLElement): void {
-  qq(cell, '[data-scaf]').forEach((s) => {
-    s.style.transitionDelay = '0ms';
-    s.style.opacity = '0';
-  });
-}
+  const md = cfg.step * cfg.major; // the 120px module
+  const cols = Math.max(1, Math.round(rect.w / md));
+  const rows = Math.max(1, Math.round(rect.h / md));
+  const mcol = Math.max(0, Math.min(cols - 1, Math.floor((rec.px - rect.x) / md)));
+  const mrow = Math.max(0, Math.min(rows - 1, Math.floor((rec.py - rect.y) / md)));
+  const ox = rect.x + mcol * md + md / 2;
+  const oy = rect.y + mrow * md + md / 2;
 
-/** Move the dashed guides and the "col NN · row NN" module label to the cursor. */
-function scafPlace(cell: HTMLElement, clientX: number, clientY: number): void {
-  const [x, y] = localXY(cell, clientX, clientY);
-  // both axes snap on the same 72.727 module — the cell is a square lattice
-  const cx = Math.floor(x / MODULE) * MODULE;
-  const cy = Math.floor(y / MODULE) * MODULE;
-  const colNo = String(Math.floor(x / MODULE) + 1).padStart(2, '0');
-  const rowNo = String(Math.floor(y / MODULE) + 1).padStart(2, '0');
-
-  const col = q<SVGGElement>(cell, '[data-col]');
-  if (col) {
-    col.setAttribute('transform', `translate(${cx.toFixed(1)},${Math.round(y)})`);
-    const t = q<SVGTextElement>(col, 'text');
-    if (t) t.textContent = `col ${colNo} · 72.7`;
+  // Normalize against the furthest corner of the block, so the flood always
+  // reaches the far edge whichever module the cursor entered on.
+  let maxD = 1;
+  for (const [cx, cy] of [
+    [rect.x, rect.y],
+    [rect.x + rect.w, rect.y],
+    [rect.x, rect.y + rect.h],
+    [rect.x + rect.w, rect.y + rect.h],
+  ]) {
+    maxD = Math.max(maxD, Math.hypot(cx - ox, cy - oy));
   }
-  const vg = q<SVGGElement>(cell, '[data-vguide]');
-  if (vg) vg.setAttribute('transform', `translate(${cx.toFixed(1)},0)`);
-  const hg = q<SVGGElement>(cell, '[data-hguide]');
-  if (hg) hg.setAttribute('transform', `translate(0,${cy.toFixed(1)})`);
-  const mod = q<SVGGElement>(cell, '[data-mod]');
-  if (mod) {
-    mod.setAttribute('transform', `translate(${cx.toFixed(1)},${cy.toFixed(1)})`);
-    const t = q<SVGTextElement>(mod, 'text');
-    if (t) t.textContent = `col ${colNo} · row ${rowNo}`;
-  }
 
-  // the fixed dimension callouts hold their staggered reveal for 620ms, then
-  // start reacting to cursor proximity
-  if (Date.now() - (SCAF_T0.get(cell) ?? 0) < 620) return;
-  qq<SVGGElement>(cell, '[data-mx]').forEach((g) => {
-    const d = Math.hypot(x - Number(g.getAttribute('data-mx')), y - Number(g.getAttribute('data-my')));
-    g.style.transitionDelay = '0ms';
-    g.style.opacity = (0.44 + 0.56 * Math.max(0, 1 - d / 260)).toFixed(3);
-  });
-}
-
-export function prodOn(cell: HTMLElement): void {
-  setHovered(cell, 1, 1);
-  bumpGen(cell);
-  if (reducedFor(cell)) {
-    staticOn(cell);
-    return;
-  }
-  // --r 0→800px over 120ms steps(11,end); --p 0→820px over 260ms
-  // cubic-bezier(.3,0,0,1) delayed 70ms — both transitions live on the cell.
-  setStyle(cell, '--r', HOVER.ch1.r);
-  setStyle(cell, '--p', HOVER.ch1.p);
-  setStyle(cell, 'color', COLOR.ink);
-  if (ptrSeen) gridEnter(cell, ptrX, ptrY);
-  scafOn(cell);
-  if (ptrSeen) scafPlace(cell, ptrX, ptrY);
-
-  qq(cell, '[data-l]').forEach((s, i) => {
-    // The stroke is the SAME ink the solid letters take, not a lighter tint of
-    // it. The lattice this hover grows is paper, and the stroke used to be
-    // white at .62 — 1.1:1 against the ground it lands on, so the four knocked
-    // out letters simply vanished and "Product designs" read with holes in it.
-    s.style.setProperty('-webkit-text-stroke', `1.6px ${COLOR.ink}`);
-    // four letters knock out to outline only, three swap to the alternate face
-    s.style.color = i === 2 || i === 5 || i === 9 || i === 12 ? 'transparent' : COLOR.ink;
-    if (i === 1 || i === 7 || i === 11) {
-      s.style.fontFamily = FONT.alt;
-      s.style.fontFeatureSettings = FONT.altFeatures;
+  const accentBand = rect.h * 0.14;
+  eachPeg(screen, rect, (peg, col, row) => {
+    if (peg.dataset.corner) return; // the frame's own marks hold
+    if (peg.dataset.base === 'transparent') return; // type sits here
+    const x = cfg.step + cfg.step * col;
+    const y = cfg.step + cfg.step * row;
+    const d = Math.hypot(x - ox, y - oy) / maxD;
+    if (d * 0.86 + bayer(col, row) * 0.13 > 0.86) {
+      restorePeg(peg);
+      return;
     }
+    const edge = y < rect.y + accentBand || y > rect.y + rect.h - accentBand;
+    paintPeg(peg, edge ? rec.accent : rec.hue, cfg.majorSize);
   });
-}
 
-export function prodOff(cell: HTMLElement): void {
-  setHovered(cell, null, 1);
-  const gen = bumpGen(cell);
-  staticOff(cell);
-  restoreStyle(cell, '--r');
-  restoreStyle(cell, '--p');
-  restoreStyle(cell, 'color');
-  scafOff(cell);
-  qq(cell, '[data-l]').forEach((s) => {
-    // fade the stroke out over the letters' own 200ms color transition — the
-    // same ink at zero alpha, so it fades rather than crossing to another hue
-    s.style.setProperty('-webkit-text-stroke-color', rgba(COLOR.ink, 0));
-    s.style.color = '';
-    s.style.fontFamily = '';
-    s.style.fontFeatureSettings = '';
-  });
-  // once the shrink and that fade have run, drop the stroke and the lattice
-  // origin. --gx/--gy have to outlive the leave: --r eases 800→0 over 120ms and
-  // must collapse back into the module the cursor entered on, not the default.
-  setTimeout(() => {
-    if (GEN.get(cell) !== gen) return;
-    qq(cell, '[data-l]').forEach((s) => s.style.removeProperty('-webkit-text-stroke'));
-    for (const p of ['--gx', '--gy', '--hx', '--hy']) cell.style.removeProperty(p);
-  }, 400);
-}
+  const idx = nearestIndex(screen, rec.px, rec.py);
+  if (idx >= 0) crossAt(screen, idx % cfg.cols, (idx / cfg.cols) | 0, COLOR.ink, rect);
 
-export function scafMove(cell: HTMLElement, ev: PointerEvent): void {
-  if (reducedFor(cell)) return;
-  scafPlace(cell, ev.clientX, ev.clientY);
-}
-
-/* ----------------------------------------------- 02 · Paintings — the beads */
-
-const LIQUID_ID = 'ps-liquid-i';
-
-/**
- * The pixel dither.
- *
- * Two things together make the effect, and neither alone is enough. The
- * canvases carry a backing store of one pixel per `PIX` design px and the
- * browser scales that up with `image-rendering: pixelated`, which is what
- * makes the blocks. Then every frame the buffer is re-quantised to a few
- * levels per channel through a 4×4 Bayer threshold matrix, which is what lets
- * a gradient still read as a gradient once there are only four values left to
- * say it in. Blocks without the dither is a mosaic; the dither without the
- * blocks is invisible noise.
- *
- * The ALPHA channel is dithered along with the colour, and that is the part
- * that carries the look: the soft radial falloff around a bead becomes a
- * stipple instead of a fade, which is the actual signature of a dithered
- * image rather than a downscaled one.
- *
- * Both canvases use the same grid so their blocks line up. They did not
- * before — the paint canvas oversampled 1.4× and the beads 2×, against a box
- * that is 450 × 259, so neither landed on whole pixels and the two disagreed.
- */
-
-/** 4×4 Bayer threshold matrix, in the usual recursive order. */
-const BAYER4 = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
-
-/** Design px per rendered pixel. The 450 × 259 canvas box becomes 90 × 52. */
-const PIX = PAINT_PIX.px;
-
-/**
- * Quantisation levels: colour channels, then alpha.
- *
- * The blocks come from the grid, not from these, so the colour quantisation
- * does not have to be brutal to read as pixels — and it must not be. Four
- * levels puts every channel on {0, 85, 170, 255}, which sends a warm beige
- * (192,164,126) to (170,170,85) and turns the whole field neon. Six keeps the
- * hue and still bands visibly.
- *
- * Alpha stays coarse: the stipple at the edge of a wash is the thing that
- * says "dithered" rather than "downscaled", and it wants few levels.
- */
-const LEV = 6;
-const ALEV = 5;
-
-/** Below this the un-premultiply is noise, so the pixel is cleared instead. */
-const AFLOOR = 10;
-
-const clamp255 = (v: number): number => (v < 0 ? 0 : v > 255 ? 255 : v);
-
-/**
- * Ordered-dither a canvas in place.
- *
- * `getImageData` / `putImageData` both ignore the current transform and work
- * in device pixels, so the drawing transform set by `prep` is left alone.
- */
-function pixelate(c: CanvasRenderingContext2D | null, cv: HTMLCanvasElement | null): void {
-  if (!c || !cv || !cv.width || !cv.height) return;
-  const img = c.getImageData(0, 0, cv.width, cv.height);
-  const d = img.data;
-  const cs = 255 / (LEV - 1);
-  const as = 255 / (ALEV - 1);
-  for (let y = 0, i = 0; y < cv.height; y++) {
-    for (let x = 0; x < cv.width; x++, i += 4) {
-      // -0.469 … +0.469: the fraction of one quantisation step to bias by.
-      // Never a full ±0.5, so a value already sitting on the grid stays there
-      // and re-dithering an already-dithered buffer is a no-op.
-      const t = BAYER4[((y & 3) << 2) | (x & 3)] / 16 - 0.46875;
-      if (d[i + 3] < AFLOOR) {
-        d[i + 3] = 0;
-        continue;
-      }
-      d[i + 3] = clamp255(Math.round((d[i + 3] + t * as) / as) * as);
-      if (!d[i + 3]) continue;
-      const b = t * cs;
-      d[i] = clamp255(Math.round((d[i] + b) / cs) * cs);
-      d[i + 1] = clamp255(Math.round((d[i + 1] + b) / cs) * cs);
-      d[i + 2] = clamp255(Math.round((d[i + 2] + b) / cs) * cs);
-    }
+  // The callout last: it clears the pegs it covers, and the two passes above
+  // would light them again.
+  let node = rec.callout;
+  if (!node) {
+    node = el('span', {
+      'aria-hidden': 'true',
+      style: css({
+        position: 'absolute',
+        'font-size': 13,
+        'letter-spacing': '.06em',
+        'line-height': '1',
+        'white-space': 'nowrap',
+        color: COLOR.nearBlack,
+        'pointer-events': 'none',
+      }),
+    });
+    cell.appendChild(node);
+    rec.callout = node;
   }
-  c.putImageData(img, 0, 0);
-}
-
-/**
- * Bead and palette-dab colours: two neutrals to every vivid.
- *
- * SPARK is the seven neutrals followed by the seven vivid hues. Drawing evenly
- * across it gives a field that is half saturated hue, and once that is
- * quantised it stops reading as paint on paper and starts reading as neon. So
- * every third bead is hot and the rest are ground.
- */
-const NEUTRAL_BEADS = SPARK.slice(0, 7);
-const HOT_BEADS = SPARK.slice(7);
-const beadCol = (i: number): string =>
-  i % 3 === 2
-    ? HOT_BEADS[((i / 3) | 0) % HOT_BEADS.length]
-    : NEUTRAL_BEADS[(i * 3) % NEUTRAL_BEADS.length];
-
-/** bead diameter, cell-local px */
-const D = 46;
-/** the band of the cell the beads are allowed to paint in */
-const TOPY = 74;
-const BOTY = 212;
-const PAD = 26;
-/** coverage grid used to spread strokes over the canvas */
-const GX = 6;
-const GY = 4;
-
-interface HistPt {
-  x: number;
-  y: number;
-  nx: number;
-  ny: number;
-  k: number;
-}
-
-interface Bead {
-  sp: HTMLElement;
-  col: string;
-  /** resting letter box, cell-local */
-  lx: number;
-  ly: number;
-  lw: number;
-  lh: number;
-  /** home position the bead expands back into */
-  hx: number;
-  hy: number;
-  x: number;
-  y: number;
-  /** flight frame counter, -1 = idling on the canvas */
-  f: number;
-  /** brush pressure 0–1, drives the persistent paint trail */
-  press: number;
-  /** squash */
-  sq: number;
-  hist: HistPt[];
-  /** per-bead phase so blobs wobble out of sync */
-  ph: number;
-  sigDone?: boolean;
-  sigF: number;
-  vx: number;
-  vy: number;
-  spd: number;
-  /** palette dab it loads from */
-  ax: number;
-  ay: number;
-  newCol: string;
-  /** stroke target and the bowed wrist-arc control point */
-  tx: number;
-  ty: number;
-  cx: number;
-  cy: number;
-  sx: number;
-  sy: number;
-  /** idle drift anchor */
-  rx?: number;
-  ry?: number;
-  rvx: number;
-  rvy: number;
-  px0?: number;
-  py0?: number;
-  ex: number;
-  ey: number;
-  /** render state */
-  r?: number;
-  ang?: number;
-  angT?: number;
-  st?: number;
-}
-
-interface WaterSim {
-  items: Bead[];
-  back: boolean;
-  undo: boolean;
-  undoAt: number;
-  t: number;
-  sig: number;
-  qi: number;
-  next: number;
-  dir: number;
-  di: number;
-  raf: number;
-  dead: boolean;
-  mask: [CanvasGradient, CanvasGradient] | null;
-  show(o: number): void;
-  hollow(): void;
-  fill(): void;
-}
-
-const WATER = new WeakMap<HTMLElement, WaterSim>();
-
-/**
- * The paint canvas is filtered through a turbulence displacement so the trails
- * read as wet pigment. Injected once per document; if the page builder already
- * emitted the filter this is a no-op.
- */
-function ensureLiquidFilter(cell: HTMLElement): void {
-  if (document.getElementById(LIQUID_ID)) return;
-  cell.appendChild(
-    svg(
-      'svg',
-      { width: 0, height: 0, 'aria-hidden': 'true', style: 'position:absolute;pointer-events:none' },
-      svg(
-        'filter',
-        {
-          id: LIQUID_ID,
-          x: '-12%',
-          y: '-12%',
-          width: '124%',
-          height: '124%',
-          'color-interpolation-filters': 'sRGB',
-        },
-        svg('feTurbulence', {
-          type: 'fractalNoise',
-          baseFrequency: '0.013',
-          numOctaves: 2,
-          seed: 7,
-          result: 'n',
-        }),
-        svg('feDisplacementMap', {
-          in: 'SourceGraphic',
-          in2: 'n',
-          scale: 20,
-          xChannelSelector: 'R',
-          yChannelSelector: 'G',
-        }),
-      ),
-    ),
+  const text = `col ${pad2(mcol)} · row ${pad2(mrow)}`;
+  if (node.textContent !== text) node.textContent = text;
+  // Held inside the block. On the last module the callout would otherwise run
+  // past the cell and clear points nothing has claimed — points no release puts
+  // back, which reads as a hole punched in the neighbour's field.
+  const lx = Math.min(mcol * md + CALLOUT.dx, rect.w - CALLOUT.w - CALLOUT.dx);
+  const ly = Math.min(
+    Math.max(mrow * md + CALLOUT.dy, rect.h * ACCENT_CAP + CALLOUT.dy),
+    rect.h - CALLOUT.h - CALLOUT.dy,
+  );
+  node.style.left = `${lx}px`;
+  node.style.top = `${ly}px`;
+  eachPeg(
+    screen,
+    { x: rect.x + lx, y: rect.y + ly, w: CALLOUT.w, h: CALLOUT.h },
+    (peg) => {
+      if (peg.dataset.corner) return;
+      peg.style.color = 'transparent';
+    },
   );
 }
 
-function clearCanvas(cv: HTMLCanvasElement | null): void {
-  if (!cv) return;
-  const c = cv.getContext('2d');
-  if (!c) return;
-  c.setTransform(1, 0, 0, 1, 0, 0);
-  c.clearRect(0, 0, cv.width, cv.height);
-  cv.style.opacity = '0';
+/** Claim the block, then let the mask drive it. */
+function prodPaint(cell: HTMLElement): void {
+  const screen = screenOf(cell);
+  const rect = rectOf(cell);
+  if (!screen || !rect) return;
+  const rec = chanOf(cell);
+
+  // Claiming the whole block, corners excepted, is what makes the mask legal:
+  // every point the mask touches afterwards is in the lit set, so the drift
+  // leaves it alone and the release puts it back.
+  fillFor(screen, rect, { hue: rec.hue, accent: rec.accent, skip: cornerSet(screen, rect) });
+  prodMask(cell);
+
+  // The reveal ramp keeps writing for a few frames after this and would fill in
+  // the hole the mask just opened. One deferred pass, generation-guarded, so a
+  // cursor that never moves still ends up looking at the flood rather than at a
+  // flat plate.
+  const gen = rec.gen;
+  window.clearTimeout(rec.settle);
+  rec.settle = window.setTimeout(() => {
+    if (chanOf(cell).gen === gen) prodMask(cell);
+  }, REVEAL);
 }
 
-/** Hard stop — cancels the loop, clears both canvases and un-hollows the type. */
-function waterTeardown(cell: HTMLElement): void {
-  const sim = WATER.get(cell);
-  if (sim) {
-    cancelAnimationFrame(sim.raf);
-    WATER.delete(cell);
-  }
-  qq(cell, '[data-l]').forEach((s) => {
-    s.style.transition = '';
-    s.style.color = '';
-    s.style.removeProperty('-webkit-text-stroke');
+export function prodOn(cell: HTMLElement): void {
+  const ctx = begin(cell, 1, false);
+  if (!ctx) return;
+  const [x, y] = ptrSeen
+    ? designXY(ctx.screen, ptrX, ptrY)
+    : [ctx.rect.x + ctx.rect.w / 2, ctx.rect.y + ctx.rect.h / 2];
+  ctx.rec.px = x;
+  ctx.rec.py = y;
+  ctx.rec.repaint = () => prodPaint(cell);
+  prodPaint(cell);
+}
+
+export function prodOff(cell: HTMLElement): void {
+  end(cell, 1);
+}
+
+/**
+ * The one thing on this screen that moves without the pointer moving is the
+ * ambient drift. 01's flood, its scaffolding and its callout all resolve here
+ * and nowhere else.
+ */
+export function scafMove(cell: HTMLElement, ev: PointerEvent): void {
+  const screen = screenOf(cell);
+  if (!screen || !ACTIVE.has(cell)) return;
+  const rec = chanOf(cell);
+  const [x, y] = designXY(screen, ev.clientX, ev.clientY);
+  rec.px = x;
+  rec.py = y;
+  prodMask(cell);
+}
+
+/* ------------------------------------------- 02 · Paintings — the inset ring */
+
+/**
+ * A one-cell-thick ink ring just inside the block's edge, with the interior
+ * dithering in the fill hue.
+ *
+ * Inset by ONE CELL, not one module. A two-module-tall block has no room for a
+ * module of inset, and the single row a module would land on is the label's.
+ */
+function waterPaint(cell: HTMLElement): number[] {
+  const screen = screenOf(cell);
+  const rect = rectOf(cell);
+  const cfg = screen ? cfgOf(screen) : null;
+  if (!screen || !rect || !cfg) return [];
+  const rec = chanOf(cell);
+  const st = cfg.step;
+
+  const ring: Rect = { x: rect.x + st, y: rect.y + st, w: rect.w - st * 2, h: rect.h - st * 2 };
+  const inner: Rect = { x: ring.x + st, y: ring.y + st, w: ring.w - st * 2, h: ring.h - st * 2 };
+  const innerIdx = cellsInRect(screen, inner);
+
+  // The ring is the inset rect minus its own interior — one cell thick by
+  // construction, so it stays one cell thick if the block ever changes size.
+  fillFor(screen, ring, {
+    hue: COLOR.ink,
+    size: cfg.majorSize,
+    from: 'top',
+    skip: new Set(innerIdx),
   });
-  clearCanvas(q<HTMLCanvasElement>(cell, '[data-paint]'));
-  clearCanvas(q<HTMLCanvasElement>(cell, '[data-beads]'));
+
+  // Half the interior, chosen by the same ordered dither the field itself uses,
+  // so it reads as a dither rather than as a plate with a hole in it.
+  const skip = new Set<number>();
+  for (const i of innerIdx) {
+    if (bayer(i % cfg.cols, (i / cfg.cols) | 0) > 0.5) skip.add(i);
+  }
+  fillFor(screen, inner, { hue: rec.hue, accent: rec.accent, skip });
+
+  // The block's own corners sit outside the ring's rect and are never touched,
+  // which is the point of insetting: the frame keeps its marks.
+  return innerIdx.filter((i) => !skip.has(i));
+}
+
+/**
+ * The held flicker, restricted to the interior.
+ *
+ * `holdFlicker` in the lattice picks from every lit point on the screen and
+ * only spares the frame corners, so on this channel it re-dithers the ink ring
+ * as well and the ring dissolves into the hue within a second or two — which is
+ * the whole personality, gone. The design's own rule is "never a cell whose
+ * target is ink", and the interior is exactly the set whose target is not.
+ * Same five points, same 140ms.
+ */
+function waterFlicker(cell: HTMLElement, pool: number[]): () => void {
+  const screen = screenOf(cell);
+  if (!screen || !pool.length || reducedFor(cell)) return () => {};
+  const rec = chanOf(cell);
+  const L = latticeOf(screen);
+  if (!L) return () => {};
+  const t = window.setInterval(() => {
+    for (let n = 0; n < 5; n++) {
+      const peg = L.cells[pool[(Math.random() * pool.length) | 0]];
+      if (!peg || peg.dataset.base === 'transparent') continue;
+      peg.style.color = Math.random() < 0.5 ? rec.accent : rec.hue;
+    }
+  }, 140);
+  return () => window.clearInterval(t);
 }
 
 export function waterOn(cell: HTMLElement): void {
-  setHovered(cell, 2, 2);
-  if (reducedFor(cell)) {
-    // covers the case where the media query flipped while a sim was mid-flight
-    waterTeardown(cell);
-    staticOn(cell);
-    return;
-  }
-  setStyle(cell, '--p', HOVER.ch2.p);
-  setStyle(cell, 'box-shadow', HOVER.ch2.shadow);
-  setStyle(cell, 'color', COLOR.ink);
-
-  const running = WATER.get(cell);
-  if (running) {
-    // re-entering mid-retraction: hollow the type again and resume forward
-    running.back = false;
-    running.undo = false;
-    running.hollow();
-    running.show(1);
-    return;
-  }
-
-  const spans = qq(cell, '[data-l]');
-  if (!spans.length) return;
-  ensureLiquidFilter(cell);
-
-  const cr = cell.getBoundingClientRect();
-  const sc = cell.offsetWidth ? cr.width / cell.offsetWidth : 1;
-  const CW = cell.offsetWidth;
-  const cvP = q<HTMLCanvasElement>(cell, '[data-paint]');
-  const cvB = q<HTMLCanvasElement>(cell, '[data-beads]');
-
-  /*
-    The pigment canvas ACCUMULATES — every stroke lays down a wash at
-    0.12–0.2 alpha and the picture is what a hundred of those add up to. So it
-    cannot be dithered in place: quantising alpha every frame rounds each of
-    those washes back to nothing, the layers never sum, and instead of paint
-    you get isolated pixels flickering to full strength wherever the threshold
-    happened to be crossed. It looked like confetti, which is exactly what it
-    was.
-
-    So pigment accumulates smooth, on an offscreen buffer at the same grid,
-    and is dithered only on the way to the screen. The beads canvas is a
-    different thing — it is cleared and fully redrawn every frame, holds no
-    history, and can be dithered in place.
-  */
-  const off = document.createElement('canvas');
-  off.width = cvP ? cvP.width : PAINT_PIX.w;
-  off.height = cvP ? cvP.height : PAINT_PIX.h;
-  const g = off.getContext('2d');
-  // willReadFrequently keeps these on the CPU, which is what makes the
-  // per-frame getImageData in `pixelate` a memcpy instead of a GPU readback.
-  // At 90 × 52 the software rasteriser is not the bottleneck either.
-  const gp = cvP ? cvP.getContext('2d', { willReadFrequently: true }) : null;
-  const gb = cvB ? cvB.getContext('2d', { willReadFrequently: true }) : null;
-
-  /**
-   * Both canvases are inset 15px inside the cell and UNDERsampled, one pixel
-   * per PIX design px, which is what the dither quantises. Working in
-   * cell-local coordinates means bead positions and letter boxes share one
-   * space regardless of what the backing store is.
-   */
-  const prep = (c: CanvasRenderingContext2D | null, cv: HTMLCanvasElement | null, k: number): void => {
-    if (!c || !cv) return;
-    c.setTransform(1, 0, 0, 1, 0, 0);
-    c.clearRect(0, 0, cv.width, cv.height);
-    c.scale(k, k);
-    c.translate(-15, -15);
-    c.lineCap = 'round';
-    c.lineJoin = 'round';
+  const ctx = begin(cell, 2, false);
+  if (!ctx) return;
+  ctx.rec.repaint = () => {
+    ctx.rec.stopFlicker?.();
+    ctx.rec.stopFlicker = waterFlicker(cell, waterPaint(cell));
   };
-  prep(g, off, 1 / PIX);
-  prep(gb, cvB, 1 / PIX);
-
-  const beads: Bead[] = spans.map((sp, i) => {
-    const r = sp.getBoundingClientRect();
-    const lx = (r.left - cr.left) / sc;
-    const ly = (r.top - cr.top) / sc;
-    const lw = r.width / sc;
-    const lh = r.height / sc;
-    sp.style.transition =
-      `color 280ms linear ${i * 34}ms,-webkit-text-stroke-color 280ms linear ${i * 34}ms`;
-    sp.style.setProperty('-webkit-text-stroke', `2px ${rgba(COLOR.ink, 0)}`);
-    const col = beadCol(i);
-    return {
-      sp,
-      col,
-      lx,
-      ly,
-      lw,
-      lh,
-      hx: lx + lw / 2,
-      hy: ly + lh * 0.55,
-      x: lx + lw / 2,
-      y: ly + lh * 0.55,
-      f: -1,
-      press: 0,
-      sq: 1,
-      hist: [],
-      ph: i * 1.9,
-      sigDone: undefined,
-      sigF: 0,
-      vx: 0,
-      vy: 0,
-      spd: 0,
-      ax: 0,
-      ay: 0,
-      newCol: col,
-      tx: 0,
-      ty: 0,
-      cx: 0,
-      cy: 0,
-      sx: 0,
-      sy: 0,
-      rx: undefined,
-      ry: undefined,
-      rvx: 0,
-      rvy: 0,
-      px0: undefined,
-      py0: undefined,
-      ex: 0,
-      ey: 0,
-      r: undefined,
-      ang: undefined,
-      angT: undefined,
-      st: undefined,
-    };
-  });
-
-  const cov = new Array<number>(GX * GY).fill(0);
-  const covCell = (x: number, y: number): number =>
-    Math.min(GY - 1, Math.max(0, Math.floor((y - TOPY) / ((BOTY - TOPY) / GY)))) * GX +
-    Math.min(GX - 1, Math.max(0, Math.floor((x - PAD) / ((CW - PAD * 2) / GX))));
-
-  // six palette dabs pinned to the frame edge — beads go and load from these
-  const bx0 = PAD + 14;
-  const bw = CW - PAD * 2 - 28;
-  const by0 = TOPY + 6;
-  const bh = BOTY - TOPY - 12;
-  const dabs = (
-    [
-      [bx0, by0],
-      [bx0 + bw * 0.5, by0],
-      [bx0 + bw, by0],
-      [bx0 + bw, by0 + bh],
-      [bx0 + bw * 0.5, by0 + bh],
-      [bx0, by0 + bh],
-    ] as [number, number][]
-  ).map((d, i) => ({ x: d[0], y: d[1], col: beadCol(i * 2 + 1) }));
-
-  const sim: WaterSim = {
-    items: beads,
-    back: false,
-    undo: false,
-    undoAt: 0,
-    t: 0,
-    sig: 0,
-    qi: 0,
-    next: 46,
-    dir: 1,
-    di: 0,
-    raf: 0,
-    dead: false,
-    mask: null,
-    show: (o: number) => {
-      if (cvP) cvP.style.opacity = String(o);
-      if (cvB) cvB.style.opacity = String(o);
-    },
-    hollow: () =>
-      spans.forEach((sp) => {
-        sp.style.color = 'transparent';
-        sp.style.setProperty('-webkit-text-stroke', `2px ${COLOR.ink}`);
-      }),
-    fill: () =>
-      spans.forEach((sp) => {
-        sp.style.color = '';
-        sp.style.setProperty('-webkit-text-stroke', `2px ${rgba(COLOR.ink, 0)}`);
-      }),
-  };
-  WATER.set(cell, sim);
-
-  // hollow one frame late so the per-letter 280ms stagger is visible
-  requestAnimationFrame(() => {
-    if (WATER.get(cell) === sim && !sim.back) {
-      sim.hollow();
-      sim.show(1);
-    }
-  });
-
-  const smooth = (c: CanvasRenderingContext2D, P: [number, number][]): void => {
-    const n = P.length;
-    if (n < 3) return;
-    c.beginPath();
-    c.moveTo((P[n - 1][0] + P[0][0]) / 2, (P[n - 1][1] + P[0][1]) / 2);
-    for (let i = 0; i < n; i++) {
-      const cu = P[i];
-      const nx = P[(i + 1) % n];
-      c.quadraticCurveTo(cu[0], cu[1], (cu[0] + nx[0]) / 2, (cu[1] + nx[1]) / 2);
-    }
-    c.closePath();
-  };
-
-  /** A wobbling, speed-stretched bead outline. */
-  const blob = (
-    c: CanvasRenderingContext2D,
-    x: number,
-    y: number,
-    r: number,
-    ang: number,
-    st: number,
-    ph: number,
-  ): void => {
-    const N = 9;
-    const P: [number, number][] = [];
-    const ca = Math.cos(ang);
-    const sa = Math.sin(ang);
-    const isq = 1 / Math.sqrt(st);
-    for (let i = 0; i < N; i++) {
-      const a = (i / N) * 6.2832;
-      const w =
-        1 + 0.15 * Math.sin(a * 3 + sim.t * 0.045 + ph) + 0.09 * Math.sin(a * 5 - sim.t * 0.033 + ph * 1.7);
-      const px = Math.cos(a) * r * w * st;
-      const py = Math.sin(a) * r * w * isq;
-      P.push([x + px * ca - py * sa, y + px * sa + py * ca]);
-    }
-    smooth(c, P);
-  };
-
-  /** The metaball neck that fuses two beads as they close on each other. */
-  const neck = (c: CanvasRenderingContext2D, a: Bead, b: Bead): void => {
-    const ar = a.r ?? 0;
-    const br = b.r ?? 0;
-    const dx = b.x - a.x;
-    const dy = b.y - a.y;
-    const d = Math.hypot(dx, dy);
-    const maxD = (ar + br) * 1.7;
-    if (d >= maxD || d < 2) return;
-    const t = 1 - d / maxD;
-    const ang = Math.atan2(dy, dx);
-    const s1 = ang + 1.5708;
-    const s2 = ang - 1.5708;
-    const wa = ar * 0.88;
-    const wb = br * 0.88;
-    const nw = (ar + br) * 0.28 * t;
-    const mx = (a.x + b.x) / 2;
-    const my = (a.y + b.y) / 2;
-    c.beginPath();
-    c.moveTo(a.x + Math.cos(s1) * wa, a.y + Math.sin(s1) * wa);
-    c.quadraticCurveTo(mx + Math.cos(s1) * nw, my + Math.sin(s1) * nw, b.x + Math.cos(s1) * wb, b.y + Math.sin(s1) * wb);
-    c.lineTo(b.x + Math.cos(s2) * wb, b.y + Math.sin(s2) * wb);
-    c.quadraticCurveTo(mx + Math.cos(s2) * nw, my + Math.sin(s2) * nw, a.x + Math.cos(s2) * wa, a.y + Math.sin(s2) * wa);
-    c.closePath();
-    const gr = c.createLinearGradient(a.x, a.y, b.x, b.y);
-    gr.addColorStop(0, a.col);
-    gr.addColorStop(1, b.col);
-    c.fillStyle = gr;
-    c.fill();
-  };
-
-  /** The tapered tail a moving bead drags behind it. */
-  const ribbon = (c: CanvasRenderingContext2D, b: Bead, mul: number, alpha: number): void => {
-    const H = b.hist;
-    if (H.length < 3) return;
-    const Lx: [number, number][] = [];
-    const Rx: [number, number][] = [];
-    for (let i = 0; i < H.length; i++) {
-      const p = H[i];
-      const t = i / (H.length - 1);
-      const w = D * 0.46 * mul * Math.pow(t, 1.55) * p.k;
-      Lx.push([p.x + p.nx * w, p.y + p.ny * w]);
-      Rx.push([p.x - p.nx * w, p.y - p.ny * w]);
-    }
-    smooth(c, Lx.concat(Rx.reverse()));
-    c.fillStyle = rgba(b.col, alpha);
-    c.fill();
-  };
-
-  const step = (): void => {
-    sim.t++;
-    const its = sim.items;
-
-    if (sim.back) {
-      if (!sim.undo) {
-        sim.undo = true;
-        sim.undoAt = sim.t;
-        sim.fill();
-        sim.show(0);
-        for (const b of its) {
-          b.ex = b.x;
-          b.ey = b.y;
-          b.f = -1;
-          b.press = 0;
-          b.sigDone = undefined;
-        }
-        sim.sig = 0;
-      }
-      // 32 frames to collapse back into the letter boxes
-      const u = Math.min(1, (sim.t - sim.undoAt) / 32);
-      const ez = u < 0.5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2;
-      for (const b of its) {
-        b.x = b.ex + (b.hx - b.ex) * ez;
-        b.y = b.ey + (b.hy - b.ey) * ez;
-        b.sq = 1 - 0.5 * ez;
-        b.press = 0;
-        if (b.hist.length) b.hist.shift();
-      }
-      if (u >= 1) {
-        sim.show(0);
-        spans.forEach((sp) => {
-          sp.style.transition = '';
-          sp.style.color = '';
-          sp.style.removeProperty('-webkit-text-stroke');
-        });
-        if (g) {
-          g.setTransform(1, 0, 0, 1, 0, 0);
-          g.clearRect(0, 0, off.width, off.height);
-        }
-        sim.dead = true;
-      }
-      return;
-    }
-
-    // after every bead has laid one stroke, they all sign back onto their letters
-    if (!sim.sig && sim.qi > 0 && sim.qi % its.length === 0) {
-      sim.sig = 1;
-      sim.qi = 0;
-      its.forEach((b, i) => {
-        b.sigF = -(i * 6);
-        b.sigDone = false;
-      });
-    }
-    if (!sim.sig && sim.t >= sim.next) {
-      const b = its[sim.qi % its.length];
-      sim.qi++;
-      sim.next = sim.t + 26;
-      if (b.f < 0) {
-        const dab = dabs[sim.di % dabs.length];
-        sim.di += 5;
-        b.ax = dab.x;
-        b.ay = dab.y;
-        b.newCol = dab.col;
-        // aim at the least-painted cell, jittered
-        let bi = 0;
-        let bv = 1e9;
-        for (let k = 0; k < cov.length; k++) {
-          const v = cov[k] + Math.random() * 1.4;
-          if (v < bv) {
-            bv = v;
-            bi = k;
-          }
-        }
-        const gw = (CW - PAD * 2) / GX;
-        const gh = (BOTY - TOPY) / GY;
-        b.tx = PAD + (bi % GX) * gw + gw * (0.25 + Math.random() * 0.5);
-        b.ty = TOPY + Math.floor(bi / GX) * gh + gh * (0.25 + Math.random() * 0.5);
-        const mx = (b.ax + b.tx) / 2;
-        const my = (b.ay + b.ty) / 2;
-        const nx = -(b.ty - b.ay);
-        const ny = b.tx - b.ax;
-        const nl = Math.hypot(nx, ny) || 1;
-        // alternating bow so consecutive strokes read as a wrist arc
-        const bow = (40 + Math.random() * 46) * sim.dir;
-        b.cx = mx + (nx / nl) * bow;
-        b.cy = my + (ny / nl) * bow;
-        b.sx = b.x;
-        b.sy = b.y;
-        b.f = 0;
-        b.rx = undefined;
-        sim.dir *= -1;
-      }
-    }
-    if (sim.sig && its.every((b) => b.sigDone)) {
-      sim.sig = 0;
-      sim.next = sim.t + 40;
-      its.forEach((b) => {
-        b.sigDone = undefined;
-      });
-    }
-
-    for (const b of its) {
-      const ox = b.x;
-      const oy = b.y;
-      if (sim.sig && b.f < 0 && b.sigDone === false) {
-        const f = b.sigF++;
-        if (f >= 0) {
-          if (f <= 22) {
-            const u = f / 22;
-            const e2 = 1 - Math.pow(1 - u, 3.4);
-            b.x = b.px0 === undefined ? b.x : b.px0 + (b.lx + b.lw / 2 - b.px0) * e2;
-            b.y = b.py0 === undefined ? b.y : b.py0 + (b.ly + b.lh * 0.55 - b.py0) * e2;
-            if (f === 0) {
-              b.px0 = ox;
-              b.py0 = oy;
-            }
-            b.press = 0.34 * Math.sin(u * Math.PI);
-          } else {
-            const u = (f - 22) / 14;
-            b.x = b.lx + b.lw / 2;
-            b.y = b.ly + b.lh * 0.55;
-            b.press = Math.max(0, 0.95 * (1 - u));
-            b.sq = 1 + 0.3 * Math.sin(Math.min(1, u) * Math.PI);
-            if (f >= 36) {
-              b.sigDone = true;
-              b.press = 0;
-              b.sq = 1;
-              b.px0 = undefined;
-              b.rx = b.x;
-              b.ry = b.y;
-              b.rvx = 0;
-              b.rvy = 0;
-              b.angT = b.ang;
-            }
-          }
-        } else b.press = 0;
-      } else if (b.f >= 0) {
-        const f = b.f++;
-        if (f < 22) {
-          // travel to the palette dab
-          const u = f / 22;
-          const e2 = 1 - Math.pow(1 - u, 2.4);
-          b.x = b.sx + (b.ax - b.sx) * e2;
-          b.y = b.sy + (b.ay - b.sy) * e2;
-          b.press = 0;
-          b.sq = 1 + 0.1 * Math.sin(u * Math.PI);
-        } else if (f < 36) {
-          // dip into the paint and take its color
-          const u = (f - 22) / 14;
-          const dip = Math.sin(u * Math.PI);
-          b.x = b.ax;
-          b.y = b.ay + dip * 4;
-          b.sq = 1 - 0.34 * dip;
-          b.press = dip * 0.6;
-          if (f === 29) b.col = b.newCol;
-        } else if (f < 74) {
-          // the bowed stroke itself
-          const u = (f - 36) / 38;
-          const e2 = 1 - Math.pow(1 - u, 4.2);
-          const qd = 1 - e2;
-          b.x = qd * qd * b.ax + 2 * qd * e2 * b.cx + e2 * e2 * b.tx;
-          b.y = qd * qd * b.ay + 2 * qd * e2 * b.cy + e2 * e2 * b.ty;
-          b.press = Math.min(1, Math.sin(Math.pow(u, 0.62) * Math.PI) * 1.5);
-        } else {
-          // damped overshoot as the wrist lifts
-          const u = (f - 74) / 34;
-          const tgx = b.tx - b.cx;
-          const tgy = b.ty - b.cy;
-          const tl = Math.hypot(tgx, tgy) || 1;
-          const bo = Math.sin(u * Math.PI * 2.6) * 26 * Math.exp(-u * 3.1);
-          b.x = b.tx + (tgx / tl) * bo;
-          b.y = b.ty + (tgy / tl) * bo;
-          b.press = Math.max(0, 0.5 * (1 - u * 1.5));
-          b.sq = 1 + 0.16 * Math.sin(u * Math.PI * 2.6) * Math.exp(-u * 2.6);
-          if (f >= 108) {
-            b.f = -1;
-            b.press = 0;
-            b.sq = 1;
-            b.rx = b.x;
-            b.ry = b.y;
-            b.rvx = 0;
-            b.rvy = 0;
-            b.angT = b.ang;
-          }
-        }
-      } else {
-        // idle: soft repulsion holds the beads about one diameter apart
-        if (b.rx === undefined) {
-          b.rx = b.x;
-          b.ry = b.y;
-          b.rvx = 0;
-          b.rvy = 0;
-        }
-        let fx = 0;
-        let fy = 0;
-        for (const o of its) {
-          if (o === b) continue;
-          const ax2 = o.rx === undefined ? o.x : o.rx;
-          const ay2 = o.ry === undefined ? o.y : o.ry;
-          const dx2 = ax2 - (b.rx ?? 0);
-          const dy2 = ay2 - (b.ry ?? 0);
-          const dd = Math.hypot(dx2, dy2) || 1;
-          const gap = D * 1.24;
-          const dead = 7;
-          if (dd < gap - dead) {
-            const k = (gap - dead - dd) * 0.0045;
-            fx -= (dx2 / dd) * k;
-            fy -= (dy2 / dd) * k;
-          } else if (dd < D * 2.4 && dd > gap + dead) {
-            const k = (dd - gap - dead) * 0.0022;
-            fx += (dx2 / dd) * k;
-            fy += (dy2 / dd) * k;
-          }
-        }
-        b.rvx = (b.rvx + fx) * 0.82;
-        b.rvy = (b.rvy + fy) * 0.82;
-        const rv = Math.hypot(b.rvx, b.rvy);
-        if (rv > 0.85) {
-          b.rvx *= 0.85 / rv;
-          b.rvy *= 0.85 / rv;
-        }
-        b.rx = (b.rx ?? 0) + b.rvx;
-        b.ry = (b.ry ?? 0) + b.rvy;
-        b.rx = Math.max(PAD, Math.min(CW - PAD, b.rx));
-        b.ry = Math.max(TOPY, Math.min(BOTY, b.ry));
-        b.x = b.rx + Math.sin(sim.t / 62 + b.ph) * 1.15;
-        b.y = b.ry + Math.cos(sim.t / 77 + b.ph) * 0.85;
-        b.press = 0;
-        b.sq = 1;
-      }
-
-      b.x = Math.max(PAD, Math.min(CW - PAD, b.x));
-      b.y = Math.max(TOPY, Math.min(BOTY, b.y));
-      b.vx = b.x - ox;
-      b.vy = b.y - oy;
-      const sp2 = Math.hypot(b.vx, b.vy);
-      b.spd = sp2;
-      const nl = sp2 || 1;
-      b.hist.push({ x: b.x, y: b.y, nx: -b.vy / nl, ny: b.vx / nl, k: Math.max(0.3, 1 - sp2 * 0.04) });
-      const cap = sp2 > 1.4 ? 22 : 9;
-      while (b.hist.length > cap) b.hist.shift();
-
-      // pressure lays permanent pigment on the paint canvas
-      if (b.press > 0.02 && g) {
-        cov[covCell(b.x, b.y)] += b.press;
-        g.globalCompositeOperation = 'source-over';
-        g.globalAlpha = 1;
-        ribbon(g, b, 1.3 + b.press * 1.5, 0.12 * b.press);
-        const rad = D * (0.3 + 0.55 * b.press) * (1 - Math.min(0.4, sp2 * 0.02));
-        const gr = g.createRadialGradient(b.x, b.y, 0, b.x, b.y, rad * 2.4);
-        gr.addColorStop(0, rgba(b.col, 0.2 * b.press));
-        gr.addColorStop(0.55, rgba(b.col, 0.08 * b.press));
-        gr.addColorStop(1, rgba(b.col, 0));
-        g.fillStyle = gr;
-        g.beginPath();
-        g.arc(b.x, b.y, rad * 2.4, 0, 6.283);
-        g.fill();
-      }
-    }
-  };
-
-  const render = (): void => {
-    const its = sim.items;
-    if (g) {
-      /*
-        Pigment fades a shade every frame, so the field settles at a density
-        instead of climbing to a solid slab.
-
-        Strokes are aimed at the least-painted cell of a 6 × 4 coverage grid,
-        which means the canvas is deliberately being filled — and nothing ever
-        took anything off it. Eight seconds of hovering used to leave the whole
-        band opaque. That was survivable while the pigment was a soft wash and
-        is not now: quantised, a saturated field is a wall of colour with no
-        picture left in it. At 0.005 a stroke has a half-life of about two
-        seconds, which is four or five strokes' worth of history on the canvas
-        at any moment.
-      */
-      g.globalCompositeOperation = 'destination-out';
-      g.globalAlpha = 0.005;
-      g.fillStyle = '#000';
-      g.fillRect(15, 15, 450, 259);
-      g.globalAlpha = 1;
-
-      // keep the pigment inside the band — hard cut top and bottom, soft ramp in
-      if (!sim.mask) {
-        const mt = g.createLinearGradient(0, 50, 0, 76);
-        mt.addColorStop(0, '#000');
-        mt.addColorStop(1, 'rgba(0,0,0,0)');
-        const mb = g.createLinearGradient(0, 210, 0, 236);
-        mb.addColorStop(0, 'rgba(0,0,0,0)');
-        mb.addColorStop(1, '#000');
-        sim.mask = [mt, mb];
-      }
-      g.globalCompositeOperation = 'destination-out';
-      g.globalAlpha = 1;
-      g.fillStyle = '#000';
-      g.fillRect(15, 15, 450, 35);
-      g.fillRect(15, 236, 450, 38);
-      g.fillStyle = sim.mask[0];
-      g.fillRect(15, 50, 450, 26);
-      g.fillStyle = sim.mask[1];
-      g.fillRect(15, 210, 450, 26);
-      g.globalCompositeOperation = 'source-over';
-    }
-    if (gb) {
-      prep(gb, cvB, 1 / PIX);
-      gb.globalAlpha = 1;
-      for (const b of its) {
-        const sp2 = b.spd || 0;
-        const rT = D * 0.5 * (1 - Math.min(0.5, sp2 * 0.036)) * b.sq;
-        b.r = b.r === undefined ? rT : b.r + (rT - b.r) * 0.3;
-        if (sp2 > 0.8) b.angT = Math.atan2(b.vy, b.vx);
-        const at = b.angT === undefined ? 0 : b.angT;
-        b.ang =
-          b.ang === undefined ? at : b.ang + Math.atan2(Math.sin(at - b.ang), Math.cos(at - b.ang)) * 0.11;
-        const stT = 1 + Math.min(0.85, sp2 * 0.042);
-        b.st = b.st === undefined ? stT : b.st + (stT - b.st) * 0.26;
-      }
-      for (let i = 0; i < its.length; i++) {
-        for (let j = i + 1; j < its.length; j++) neck(gb, its[i], its[j]);
-      }
-      for (const b of its) {
-        gb.fillStyle = b.col;
-        ribbon(gb, b, 1.15, 0.82);
-        blob(gb, b.x, b.y, b.r ?? 0, b.ang ?? 0, b.st ?? 1, b.ph);
-        gb.fill();
-      }
-    }
-    // Last, so the dither is the final state of what reaches the screen and
-    // nothing draws a smooth edge over it. The pigment is copied off its
-    // accumulation buffer here and dithered as a copy; the beads canvas holds
-    // no history and is dithered where it stands.
-    if (gp && cvP) {
-      gp.clearRect(0, 0, cvP.width, cvP.height);
-      gp.drawImage(off, 0, 0);
-      pixelate(gp, cvP);
-    }
-    pixelate(gb, cvB);
-  };
-
-  /*
-    Fixed 60Hz step, at most 3 catch-up steps per frame. The simulation was
-    already display-independent; the RENDER was not. It ran once per animation
-    frame, so a 120Hz display redrew both canvases twice per simulation step
-    and a 240Hz display four times, for pixel-identical output every time.
-
-    Rendering only when a step actually advanced pins the draw rate to the
-    simulation's own 60Hz on every display. On this machine that is unchanged;
-    on a ProMotion panel it halves the work; on a 240Hz panel it quarters it.
-    It matters more now than it used to, because each render also runs two
-    ordered-dither passes.
-  */
-  const STEP = 1000 / 60;
-  let acc = 0;
-  let prev = 0;
-  const loop = (now: number): void => {
-    if (!prev) prev = now;
-    acc += Math.min(64, now - prev);
-    prev = now;
-    let n = 0;
-    while (acc >= STEP && n < 3) {
-      step();
-      acc -= STEP;
-      n++;
-      if (sim.dead) break;
-    }
-    if (sim.dead) {
-      if (WATER.get(cell) === sim) WATER.delete(cell);
-      return;
-    }
-    if (n) render();
-    sim.raf = requestAnimationFrame(loop);
-  };
-  sim.raf = requestAnimationFrame(loop);
+  ctx.rec.stopFlicker = waterFlicker(cell, waterPaint(cell));
 }
 
 export function waterOff(cell: HTMLElement): void {
-  setHovered(cell, null, 2);
-  staticOff(cell);
-  restoreStyle(cell, '--p');
-  restoreStyle(cell, 'box-shadow');
-  restoreStyle(cell, 'color');
-  const sim = WATER.get(cell);
-  if (sim) {
-    // the exit is part of the personality: the beads expand back into letters,
-    // then the loop tears itself down
-    sim.back = true;
-    return;
-  }
-  waterTeardown(cell);
+  end(cell, 2);
 }
 
-/* ------------------------------------------- 03 · Competizione — the lap */
+/* ------------------------------------------- 03 · Competizione — the checker */
+
+/** On-squares are drawn one step heavier than a major, as the design asks. */
+const CHECK_BUMP = 3;
+
+/**
+ * One beat of the racing board.
+ *
+ * `on = ((floor(dCol/mk) + floor(dRow/mk) + phase) & 1) === 0`, where `mk` is
+ * the major stride, so a square is a whole module and adding one to the phase
+ * marches the pattern one square right.
+ *
+ * The dark squares are edge accents and must never carry type. They cannot:
+ * every point under a run of type is resolved to `transparent`, and this pass
+ * skips those. That is the same mask `.ps-flagmask` used to do in CSS, done
+ * once by the field instead of once per channel.
+ */
+function sweepBeat(cell: HTMLElement): void {
+  const screen = screenOf(cell);
+  const rect = rectOf(cell);
+  const cfg = screen ? cfgOf(screen) : null;
+  if (!screen || !rect || !cfg) return;
+  const rec = chanOf(cell);
+
+  const c0 = Math.ceil((rect.x - cfg.step) / cfg.step);
+  const r0 = Math.ceil((rect.y - cfg.step) / cfg.step);
+  const mk = cfg.major;
+
+  eachPeg(screen, rect, (peg, col, row) => {
+    if (peg.dataset.corner) return;
+    if (peg.dataset.base === 'transparent') return;
+    const on =
+      ((Math.floor((col - c0) / mk) + Math.floor((row - r0) / mk) + rec.phase) & 1) === 0;
+    if (on) paintPeg(peg, COLOR.ink, cfg.majorSize + CHECK_BUMP);
+    else restorePeg(peg);
+  });
+}
+
+function sweepPaint(cell: HTMLElement): void {
+  const screen = screenOf(cell);
+  const rect = rectOf(cell);
+  if (!screen || !rect) return;
+  const rec = chanOf(cell);
+
+  fillFor(screen, rect, { hue: rec.hue, accent: rec.accent, skip: cornerSet(screen, rect) });
+  sweepBeat(cell);
+
+  const gen = rec.gen;
+  window.clearTimeout(rec.settle);
+  rec.settle = window.setTimeout(() => {
+    if (chanOf(cell).gen === gen) sweepBeat(cell);
+  }, REVEAL);
+}
 
 export function sweepOn(cell: HTMLElement): void {
-  setHovered(cell, 3, 3);
-  if (reducedFor(cell)) {
-    staticOn(cell);
-    return;
-  }
-  setStyle(cell, 'background-size', HOVER.ch3.size);
-  setStyle(cell, 'box-shadow', HOVER.ch3.shadow);
-  setStyle(cell, 'color', COLOR.ink);
-
-  // every letter runs the same 3.4s lap, 22ms apart — hard linear skew and
-  // trailing light, so the flash reads as one object passing the whole word
-  qq(cell, '[data-l]').forEach((s, i) => {
-    s.style.display = 'inline-block';
-    s.style.willChange = 'transform,color';
-    s.style.animation = `ps-lap 3400ms linear ${i * 22}ms infinite`;
-  });
-  const w = q(cell, '[data-word]');
-  if (w) w.style.animation = 'ps-breath 3400ms ease-in-out 0ms infinite';
-
-  // the 48px checkered board drifts on a 3.2s cycle against the 3.4s lap, so
-  // coverage never repeats in phase
-  qq(cell, '[data-flag]').forEach((f) => {
-    f.style.transform = '';
-    f.style.filter = '';
-    f.style.opacity = '1';
-    f.style.animation = 'ps-driftR 3200ms linear 0ms infinite,ps-flag 3400ms ease-in-out 0ms infinite';
-  });
-  qq(cell, '[data-frame]').forEach((f) => {
-    f.style.transform = '';
-    f.style.filter = '';
-    f.style.opacity = '1';
-    f.style.animation = 'ps-line 3400ms ease-in-out 0ms infinite';
-  });
+  const ctx = begin(cell, 3, false);
+  if (!ctx) return;
+  ctx.rec.repaint = () => sweepPaint(cell);
+  sweepPaint(cell);
+  if (reducedFor(cell)) return; // the board stands still, it does not march
+  ctx.rec.beat = window.setInterval(() => {
+    ctx.rec.phase += 1;
+    sweepBeat(cell);
+  }, BEAT);
 }
 
 export function sweepOff(cell: HTMLElement): void {
-  setHovered(cell, null, 3);
-  staticOff(cell);
-  restoreStyle(cell, 'background-size');
-  restoreStyle(cell, 'box-shadow');
-  restoreStyle(cell, 'color');
+  end(cell, 3);
+}
 
-  qq(cell, '[data-l]').forEach((s) => {
-    s.style.animation = '';
-    s.style.textShadow = '';
-    s.style.transform = '';
-    s.style.willChange = '';
-  });
-  const w = q(cell, '[data-word]');
-  if (w) w.style.animation = '';
+/* ----------------------------------------------- 04 · Contact — the inversion */
 
-  qq(cell, '[data-flag],[data-frame]').forEach((f) => {
-    // freeze whatever the running keyframes had reached, then fade from there —
-    // canceling the animation alone would snap the board back to frame 0
-    const cs = getComputedStyle(f);
-    const op = cs.opacity;
-    const tf = cs.transform;
-    const fi = cs.filter;
-    f.getAnimations().forEach((a) => {
-      try {
-        a.cancel();
-      } catch {
-        /* already detached */
-      }
-    });
-    f.style.animation = '';
-    if (tf && tf !== 'none') f.style.transform = tf;
-    if (fi && fi !== 'none') f.style.filter = fi;
-    f.style.opacity = op;
-    void f.offsetWidth; // flush so the 300ms opacity transition has a start value
-    f.style.opacity = '0';
-  });
+/**
+ * Paper crosshairs on a near-black band, corners included.
+ *
+ * No held flicker here. The contact strip simply inverts, and a flicker on an
+ * inverted plate reads as a fault rather than as weather.
+ */
+function invertPaint(cell: HTMLElement): void {
+  const screen = screenOf(cell);
+  const rect = rectOf(cell);
+  if (!screen || !rect) return;
+  fillFor(screen, rect, { hue: COLOR.paper, skip: cornerSet(screen, rect) });
+  // Ink corners would vanish into the band, so this channel's four corners take
+  // paper for as long as it is up. They are painted rather than claimed, and
+  // `end` is what puts them back.
+  holdCorners(screen, rect, COLOR.paper);
+}
+
+export function invertOn(cell: HTMLElement): void {
+  const ctx = begin(cell, 4, true);
+  if (!ctx) return;
+  ctx.rec.repaint = () => invertPaint(cell);
+  invertPaint(cell);
+}
+
+export function invertOff(cell: HTMLElement): void {
+  end(cell, 4);
 }

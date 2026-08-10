@@ -1,37 +1,55 @@
 /**
- * Screen 2 · Page 01 — Product designs.
+ * Screen 2b · Page 01 — Product designs, as a mosaic on the lattice.
  *
- * Geometry from `src/design/layout.ts` (PAGE1) and the prototype markup. The
- * row band is this build's one adaptation: the real inventory is eleven cases
- * plus a 58-study motion archive, so eleven 26.4464px rows and a 90.9px
- * full-bleed motion band fill the distance the design gave to four 72.727px
- * rows. `PAGE1.rowH` is redivided every time a case is added; see the note
- * there for the ceiling on `CaseRecord.line`. Everything else — title, thesis,
- * key-frame panel, header, footer, grid overlay — keeps its handoff geometry.
+ * The index is no longer a table of rows under a key-frame panel. It is the
+ * kit's block mosaic on the 60px module: two rails, a title, a standfirst, and
+ * a field of blocks whose four corners are never drawn, because each one is a
+ * background crosshair switched on. `INDEX_BLOCKS` in `design/layout.ts` is the
+ * geometry and this file reads nothing else.
  *
- * Every row on this page is a real control, which is what earns it the glitchy
- * band-stack hover: `wireHovers` auto-binds any element that turns the cursor
- * to pointer, so nothing here hand-rolls a hover state.
+ * THREE LAYERS, and the order is load-bearing — the same stack screen 2a uses:
  *
- * Seven of the eleven rows are anchors to a deployed demo. The other four are
- * not: chellbook, guestpass, lee, mfny, chipotle and df2tm each carry `href: null` and a
- * `subpage`, because there is no deployed app to point at. Chellbook, for
- * instance, is concept-stage: 30 designed screens and two prototypes,
- * so it renders as a real `<button>` that opens a case study inside the stage,
- * and its trailing cell reads "case study →" rather than "source". The
- * distinction is not decoration — an anchor promises somewhere to go, and there
- * is nowhere deployed to go. `rowControl` narrows on the data rather than
- * asserting: a record with no href never becomes an `<a>` with no href.
+ *   z 0   veil + band host   the page's dither canvas, then the hover bands
+ *   z 1   lattice            the crosshairs, inserted by runtime/lattice.ts
+ *   z 2   content            rails, standfirst, the mosaic
+ *   z 3   title              outside [data-pbody]; see below
  *
- * Hovering a row selects the matching key-frame slot: rows carry
- * `data-hov="case" data-case="N"`, slots carry `data-cslot="N"` and crossfade
- * on 240ms linear. `src/runtime/actions.ts` owns the wiring, off both
- * `pointerover` and `focusin`, so the swap is keyboard-reachable.
+ * The band paints UNDER the lattice, which is what keeps the crosshairs visible
+ * over a vivid hover band.
+ *
+ * WHAT SCROLLS, AND WHAT DOES NOT. The lattice is the substrate and never
+ * moves. Neither do the rails. Only the mosaic moves, inside the band between
+ * them, and `runtime/latticescroll.ts` dissolves each block into the field as
+ * it reaches an edge. The title and the standfirst are pinned with the rails
+ * rather than scrolling with the mosaic, for a reason that is structural and
+ * not aesthetic: `[data-ptitle]` is the element the open transition FLIPs out
+ * of the channel word, so it has to sit outside `[data-pbody]` (which does not
+ * fade in until the grow is over) and outside any clipping scroll box (which
+ * would cut the FLIP's travel).
+ *
+ * LINKS ARE STILL LINKS, AND STILL NOT NESTED. Each block is one control
+ * filling its frame, and the case's source repository is a SIBLING of that
+ * control laid over its top right corner, never a child of it. `wireHovers`
+ * binds by finding elements whose `cursor` computes to pointer and whose
+ * parent's does not, so a link inside a link silently moves the band onto the
+ * wrong box. Blocks whose case has `href: null` and a `subpage` are real
+ * `<button>`s that open a case study inside this stage; `blockControl` narrows
+ * on the data rather than asserting, so a record with no href can never become
+ * an `<a>` with no href.
+ *
+ * EVERY LABEL IS ONE LINE. Labels carry `data-fit`, and `fitScreen` solves each
+ * one against its block's inner width when the screen opens. That is not
+ * tidiness either: `wrapWord` rebuilds a hovered label out of inline spans
+ * whose spaces are `white-space: pre`, which removes the wrap opportunity, so a
+ * label that wrapped at rest would snap to one long line under the cursor and
+ * run out of its block.
  */
 
 import { asset, css, el, letters } from '../dom.ts';
-import { COLOR, FONT, rgba, RULE } from '../design/tokens.ts';
-import { MODULE, MOTION_SHEET, PAGE1 } from '../design/layout.ts';
+import { COLOR, FONT, RULE } from '../design/tokens.ts';
+import { BLOCK_PAD, INDEX_BLOCKS, INDEX_TRACK, blockTakesCover } from '../design/layout.ts';
+import { LAT_INDEX } from '../design/lattice.ts';
+import { installLatticeScroll } from '../runtime/latticescroll.ts';
 import * as chellbookPage from './chellbook.ts';
 import * as df2tmPage from './df2tm.ts';
 import * as mfnyPage from './mfny.ts';
@@ -45,9 +63,12 @@ import {
   MOTION_ARCHIVE_LABEL,
   MOTION_STUDIES,
 } from '../data/cases.ts';
+import { STUDIO } from '../data/studio.ts';
 import type { CaseRecord } from '../data/types.ts';
 
-/** Reset so a real <button> can carry the prototype's cell geometry. */
+type BlockSpec = (typeof INDEX_BLOCKS)[number];
+
+/** Reset so a real <button> can carry a block's geometry. */
 const BTN: Record<string, string> = {
   appearance: 'none',
   '-webkit-appearance': 'none',
@@ -70,526 +91,114 @@ const LINK: Record<string, string> = {
   cursor: 'pointer',
 };
 
-/**
- * The trailing cell of a row that opens a screen in this stage instead of
- * navigating away. It sits where the other rows carry `source`, and says where
- * it goes rather than what it links to. The glyph is the design's own → — the
- * three glyphs on this stage are ✕ ← →, and there is no icon set.
- */
-const DEST = { label: 'case study', glyph: '→' } as const;
-
-/** The motion archive band — a destination, not a table row. */
-const MOTION_BAND = {
-  label: 'motion studies',
-  open: 'open the archive',
-  cap: `motion studies · ${MOTION_ARCHIVE_LABEL}`,
-  fig: 'fig 08',
-} as const;
-
-/** 15 × 15px corner marks, two 1px lines, offset -7.5px. */
-const cross = (pos: Record<string, string | number>) =>
-  el('span', {
-    'aria-hidden': 'true',
-    style: css({
-      position: 'absolute',
-      width: 15,
-      height: 15,
-      'pointer-events': 'none',
-      'background-image': `linear-gradient(${COLOR.drape},${COLOR.drape}),linear-gradient(${COLOR.drape},${COLOR.drape})`,
-      'background-size': '1px 15px,15px 1px',
-      'background-position': 'center center,center center',
-      'background-repeat': 'no-repeat',
-      ...pos,
-    }),
-  });
-
-const corners = () => [
-  cross({ left: -7.5, top: -7.5 }),
-  cross({ right: -7.5, top: -7.5 }),
-  cross({ left: -7.5, bottom: -7.5 }),
-  cross({ right: -7.5, bottom: -7.5 }),
-];
-
-/* --------------------------------------------------------------- key frames */
-
-const slotShell = (n: number, ...kids: (Node | string | null)[]) =>
-  el(
-    'div',
-    {
-      'data-cslot': n,
-      // Every slot is mounted at once and crossfaded, so the ten that are not
-      // showing have to leave the accessibility tree or a screen reader walks
-      // all eleven captions in a row. `actions.ts` flips this with the opacity.
-      'aria-hidden': n === 1 ? 'false' : 'true',
-      style: css({
-        position: 'absolute',
-        inset: '0',
-        overflow: 'hidden',
-        opacity: n === 1 ? '1' : '0',
-        transition: 'opacity 240ms linear',
-      }),
-    },
-    ...kids,
-  );
-
-const coverImage = (src: string, alt: string, w: number, h: number) =>
-  el('img', {
-    src: asset(src),
-    alt,
-    loading: 'lazy',
-    decoding: 'async',
-    width: Math.round(w),
-    height: Math.round(h),
-    style: css({
-      display: 'block',
-      width: '100%',
-      height: '100%',
-      'object-fit': 'cover',
-    }),
-  });
-
-/** Slot 08 — a 4 × 2 contact sheet of the eight motion stills. */
-const contactSheet = () =>
-  el(
-    'div',
-    {
-      style: css({
-        position: 'absolute',
-        inset: '0',
-        display: 'grid',
-        'grid-template-columns': `repeat(${MOTION_SHEET.cols},1fr)`,
-        'grid-template-rows': `repeat(${MOTION_SHEET.rows},1fr)`,
-        gap: MOTION_SHEET.gap,
-      }),
-    },
-    ...MOTION_STUDIES.map((m) =>
-      el(
-        'div',
-        { style: css({ position: 'relative', overflow: 'hidden' }) },
-        coverImage(
-          m.poster,
-          `${m.label}, motion study still`,
-          (PAGE1.panel.w - (MOTION_SHEET.cols - 1) * MOTION_SHEET.gap) / MOTION_SHEET.cols,
-          (PAGE1.panel.h - (MOTION_SHEET.rows - 1) * MOTION_SHEET.gap) / MOTION_SHEET.rows,
-        ),
-      ),
-    ),
-  );
-
-function panel(): HTMLElement {
-  // Every case now ships a live capture, so the old "no key frame" plate is
-  // gone. The guard stays only because CaseRecord.image is still nullable — an
-  // asset-less record leaves its slot empty rather than borrowing an image.
-  const slots = CASES.map((c, i) =>
-    slotShell(i + 1, c.image ? coverImage(c.image, c.imageAlt, PAGE1.panel.w, PAGE1.panel.h) : null),
-  );
-  slots.push(slotShell(CASES.length + 1, contactSheet()));
-
-  return el(
-    'div',
-    {
-      'data-intro': 'fade',
-      'data-dfx': 12,
-      'data-in-delay': 150,
-      'data-in-dur': 400,
-      style: css({
-        opacity: '0',
-        position: 'absolute',
-        left: PAGE1.panel.x,
-        top: PAGE1.panel.y,
-        width: PAGE1.panel.w,
-        height: PAGE1.panel.h,
-        border: `1px solid ${RULE.onPaperMajor}`,
-        background: 'rgba(43,11,3,.05)',
-      }),
-    },
-    ...slots,
-    ...corners(),
-  );
-}
-
-/* --------------------------------------------------------------------- rows */
-
-const cellIdx = (text: string) =>
-  el(
-    'span',
-    {
-      style: css({ 'padding-left': MODULE, 'font-size': 13, 'letter-spacing': '.16em' }),
-    },
-    text,
-  );
-
-const cellName = (text: string) =>
-  el(
-    'span',
-    {
-      style: css({
-        'font-family': FONT.display,
-        'font-size': PAGE1.nameSize,
-        'letter-spacing': '-.03em',
-        'white-space': 'nowrap',
-      }),
-    },
-    text,
-  );
-
-const cellLine = (text: string) =>
-  el(
-    'span',
-    {
-      style: css({
-        'font-size': 14,
-        'line-height': '1.4',
-        'letter-spacing': '.02em',
-        'padding-right': 40,
-        'text-wrap': 'pretty',
-        opacity: '.8',
-      }),
-    },
-    text,
-  );
-
-const cellYear = (text: string) =>
-  el('span', { style: css({ 'font-size': 13, 'letter-spacing': '.16em' }) }, text);
-
-/** Discipline, right-aligned. The 24px inset keeps it off the hover band edge. */
-const cellDiscipline = (discipline: string) =>
-  el(
-    'span',
-    {
-      style: css({
-        'padding-right': 24,
-        'text-align': 'right',
-        'font-size': 13,
-        'letter-spacing': '.16em',
-        opacity: '.72',
-      }),
-    },
-    discipline,
-  );
-
-const outLink = (href: string, label: string, aria: string) =>
-  el(
-    'a',
-    {
-      href,
-      target: '_blank',
-      rel: 'noopener noreferrer',
-      'aria-label': aria,
-      style: css({ ...LINK, 'border-bottom': '1px solid currentColor' }),
-    },
-    label,
-  );
-
-/**
- * The source column — outside the row anchor, never inside it. Two reasons:
- * an anchor may not nest, and the row's hover band is a LIGHTS fill whose only
- * legal ink is #0B0B0C, which a second link's rust type would break.
- */
-const sourceCell = (c: CaseRecord) =>
-  el(
-    'span',
-    {
-      style: css({
-        display: 'flex',
-        'align-items': 'center',
-        'justify-content': 'flex-end',
-        'padding-right': 101.8,
-        'font-size': 13,
-        'letter-spacing': '.16em',
-      }),
-    },
-    c.source ? outLink(c.source, 'source', `${c.name}, source code, opens in a new tab`) : null,
-  );
-
-/** The in-stage destination cell — "case study →", right-aligned on `source`. */
-const destCell = () =>
-  el(
-    'span',
-    {
-      style: css({
-        display: 'flex',
-        'align-items': 'center',
-        'justify-content': 'flex-end',
-        gap: 12,
-        'padding-right': 101.8,
-        'font-size': 13,
-        'letter-spacing': '.16em',
-      }),
-    },
-    DEST.label,
-    el(
-      'span',
-      { 'aria-hidden': 'true', style: css({ 'font-size': 17, 'line-height': '1' }) },
-      DEST.glyph,
-    ),
-  );
-
-/** The five columns every row shares, in the order the table header names them. */
-const rowCells = (c: CaseRecord): HTMLElement[] => [
-  cellIdx(c.idx),
-  cellName(c.name),
-  cellLine(c.line),
-  cellYear(c.year),
-  cellDiscipline(c.discipline),
-];
-
-/** The five-column grid, applied inside whatever control owns the row. */
-const CELLS: Record<string, string | number> = {
-  display: 'grid',
-  'grid-template-columns': PAGE1.rowCols,
-  'align-items': 'center',
-  height: '100%',
+/** Rail and meta type: 13px on the .16em tracking every micro line here uses. */
+const MICRO: Record<string, string | number> = {
+  'font-size': 13,
+  'letter-spacing': '.16em',
 };
 
 /**
- * Narrow an optional, nullable data field to a usable string.
+ * Which case sits in which block.
  *
- * This is the guard that keeps `href: null` from becoming `<a>` with no href:
- * the anchor branch is only reachable once `href` is a non-empty string, so
- * there is no cast anywhere and no branch where the attribute goes missing.
+ * Written out rather than matched on the id, because two of them differ
+ * (`mfny` / `mfny-concentrates`, `one-master` / `one-master-affordance`) and a
+ * silent near-match is the kind of thing that puts the wrong evidence tag under
+ * the wrong name.
+ */
+const BLOCK_CASE: Record<string, string> = {
+  'after-tokens': 'after-tokens',
+  chellbook: 'chellbook',
+  guestpass: 'guestpass',
+  lee: 'lee',
+  mfny: 'mfny-concentrates',
+  chipotle: 'chipotle',
+  'one-master': 'one-master-affordance',
+  df2tm: 'df2tm',
+  'adhd-mode': 'adhd-mode',
+  campeon: 'campeon',
+  chickpea: 'chickpea',
+  wildcard: 'wildcard',
+  dither: 'dither',
+};
+
+const specOf = (id: string): BlockSpec => {
+  const s = INDEX_BLOCKS.find((b) => b.id === id);
+  if (!s) throw new Error(`products: no block "${id}"`);
+  return s;
+};
+
+const caseOf = (id: string): CaseRecord => {
+  const c = CASES.find((x) => x.id === BLOCK_CASE[id]);
+  if (!c) throw new Error(`products: no case for block "${id}"`);
+  return c;
+};
+
+/**
+ * Narrow an optional, nullable data field to a usable string. The guard that
+ * keeps `href: null` from becoming an `<a>` with no href.
  */
 const str = (v: string | null | undefined): string | null =>
   typeof v === 'string' && v.trim() !== '' ? v : null;
 
-/** Row 01–07: the row itself is the anchor to the deployed demo. */
-const liveLink = (c: CaseRecord, href: string) =>
-  el(
-    'a',
-    {
-      href,
-      target: '_blank',
-      rel: 'noopener noreferrer',
-      'aria-label': `${c.name}, open the live project, opens in a new tab`,
-      style: css({ ...LINK, ...CELLS }),
-    },
-    ...rowCells(c),
-  );
-
 /**
- * Row 08: a real <button>, because there is nothing deployed to link to.
+ * A block's meta line, derived from the record and never typed out.
  *
- * It spans the whole row — both columns of `rowSplit` — since its trailing cell
- * is a destination label, not a second link, so nothing has to stay outside it
- * the way `sourceCell` does. `data-act` is delegated in runtime/actions.ts.
- * Being cursor:pointer and innermost is what gets it the band stack from
- * wireHovers, exactly like the seven anchors above it.
+ * `evidence` is the devkit's own `evidenceStatus` — "built", "concept",
+ * "simulated", "tested logic" — and it is printed verbatim. These are claim
+ * boundaries, not adjectives: "simulated" is not a synonym for "built", and
+ * nothing here may assemble a stronger word out of them.
  */
-const subpageButton = (c: CaseRecord, act: string) =>
-  el(
-    'button',
-    {
-      type: 'button',
-      'data-act': act,
-      'aria-label': `${c.name}, open the case study`,
-      style: css({
-        ...BTN,
-        display: 'grid',
-        'grid-template-columns': PAGE1.rowSplit,
-        'align-items': 'center',
-        width: '100%',
-        height: '100%',
-      }),
-    },
-    el('span', { style: css(CELLS) }, ...rowCells(c)),
-    destCell(),
-  );
-
-/** A record with neither a deployed href nor a subpage: legible, but inert. */
-const plainRow = (c: CaseRecord) =>
-  el('span', { style: css({ ...CELLS, cursor: 'default' }) }, ...rowCells(c));
-
-const ROW_BASE: Record<string, string | number> = {
-  position: 'absolute',
-  left: 0,
-  right: 0,
-  height: PAGE1.rowH,
-  display: 'grid',
-  'align-items': 'center',
-  'border-bottom': `1px solid ${RULE.onPaperMinor}`,
-};
-
-/**
- * A case row. The control inside it is chosen from the record, never asserted:
- * a `subpage` opens a screen in this stage, an `href` opens a deployed demo,
- * and a record carrying neither degrades to plain type rather than to a dead
- * anchor that still claims to open something.
- *
- * The row carries no hover class — being a real control is what earns it the
- * band stack from wireHovers, and `.ps-hov-invert` on top would fight the band.
- */
-function caseRow(c: CaseRecord, i: number): HTMLElement {
-  const subpage = str(c.subpage);
-  const live = str(c.href);
-
-  // A subpage row owns its trailing cell, so the row is one full-width column.
-  // The anchor rows keep the two-column split, because `source` is a second
-  // link and an anchor may not nest.
-  return el(
-    'div',
-    {
-      'data-hov': 'case',
-      'data-case': i + 1,
-      'data-cap': c.caption,
-      'data-fig': `fig ${c.idx}`,
-      'data-intro': 'wipeX',
-      'data-in-delay': 120 + i * 40,
-      'data-in-dur': 330,
-      style: css({
-        ...ROW_BASE,
-        'grid-template-columns': subpage ? '1fr' : PAGE1.rowSplit,
-        'clip-path': 'inset(0 100% 0 0)',
-        top: PAGE1.rowsY + i * PAGE1.rowH,
-      }),
-    },
-    subpage ? subpageButton(c, subpage) : live ? liveLink(c, live) : plainRow(c),
-    subpage ? null : sourceCell(c),
-  );
-}
-
-/* ------------------------------------------------------------- motion band */
-
-/** The eight stills as a filmstrip. Decorative here — the anchor is named. */
-const filmstrip = () =>
-  el(
-    'div',
-    {
-      'aria-hidden': 'true',
-      style: css({
-        display: 'grid',
-        'grid-template-columns': `repeat(${MOTION_STUDIES.length},1fr)`,
-        gap: MOTION_SHEET.gap,
-        padding: '0 40px',
-      }),
-    },
-    ...MOTION_STUDIES.map((m) =>
-      el(
-        'span',
-        {
-          style: css({
-            display: 'block',
-            position: 'relative',
-            height: PAGE1.motion.still,
-            overflow: 'hidden',
-            'box-shadow': `0 0 0 1px ${RULE.onPaperMajor}`,
-          }),
-        },
-        // stills are 800 × 450; the box is sized off its height at the same 16:9
-        coverImage(m.poster, '', (PAGE1.motion.still * 16) / 9, PAGE1.motion.still),
-      ),
-    ),
-  );
-
-/**
- * The motion archive, as its own full-bleed band above the footer rather than
- * an eighth table row. Everything about it is deliberately a different object
- * from the table — twice the height, a 2px rust rule instead of the rows'
- * hairline, its own ground, the filmstrip, and a named open affordance — while
- * still driving the key-frame panel like a row does, via `data-hov="case"` and
- * the contact-sheet slot index.
- */
-function motionBand(n: number): HTMLElement {
-  const label = el(
-    'span',
-    {
-      style: css({
-        display: 'flex',
-        'flex-direction': 'column',
-        gap: 7,
-        'padding-left': MODULE,
-      }),
-    },
-    el(
-      'span',
-      {
-        style: css({
-          'font-family': FONT.display,
-          'font-size': 40,
-          'line-height': '1',
-          'letter-spacing': '-.03em',
-        }),
-      },
-      MOTION_BAND.label,
-    ),
-    el(
-      'span',
-      { style: css({ 'font-size': 13, 'letter-spacing': '.16em', opacity: '.8' }) },
-      MOTION_ARCHIVE_LABEL,
-    ),
-  );
-
-  const open = el(
-    'span',
-    {
-      style: css({
-        display: 'flex',
-        'align-items': 'center',
-        'justify-content': 'flex-end',
-        gap: 16,
-        'padding-right': 101.8,
-        'font-size': 13,
-        'letter-spacing': '.16em',
-      }),
-    },
-    MOTION_BAND.open,
-    el('span', { 'aria-hidden': 'true', style: css({ 'font-size': 22, 'line-height': '1' }) }, '→'),
-  );
-
-  return el(
-    'a',
-    {
-      href: asset(MOTION_ARCHIVE_HREF),
-      target: '_blank',
-      rel: 'noopener noreferrer',
-      'aria-label': `Motion studies, open the archive, ${MOTION_ARCHIVE_LABEL}, opens in a new tab`,
-      'data-hov': 'case',
-      'data-case': n,
-      'data-cap': MOTION_BAND.cap,
-      'data-fig': MOTION_BAND.fig,
-      'data-intro': 'wipeX',
-      'data-in-delay': 400,
-      'data-in-dur': 420,
-      style: css({
-        ...LINK,
-        'clip-path': 'inset(0 100% 0 0)',
-        position: 'absolute',
-        left: 0,
-        right: 0,
-        top: PAGE1.motion.y,
-        height: PAGE1.motion.h,
-        display: 'grid',
-        'grid-template-columns': PAGE1.motion.cols,
-        'align-items': 'center',
-        'border-top': `2px solid ${COLOR.drape}`,
-        background: rgba(COLOR.shadow, 0.07),
-      }),
-    },
-    label,
-    filmstrip(),
-    open,
-  );
-}
+const metaOf = (c: CaseRecord): string =>
+  [c.year, c.evidence, str(c.subpage) ? 'case study' : null].filter(Boolean).join(' · ');
 
 /* -------------------------------------------------------------------- chrome */
 
-/**
- * The header's inventory cell, derived rather than typed out.
- *
- * It names the split instead of a flat count, because the rows are not all the
- * same thing: most open a deployed demo, the rest open a case study in this
- * stage. "9 cases" would be true and useless; "9 live" would be false.
- *
- * The second group is counted by what it DOES, not by how finished it is. It
- * read "concept" while chellbook was the only member, and that stopped being
- * true when df2tm joined it: df2tm is a shipped plugin with no hosted page,
- * not concept-stage work. What the two share is that there is nothing to
- * navigate to, so the row opens a screen instead.
- */
-const DEPLOYED = CASES.filter((c) => str(c.href) !== null).length;
-const STUDIES = CASES.length - DEPLOYED;
-const INVENTORY = `${DEPLOYED} live, ${STUDIES} case studies, one motion archive`;
+/** A frame from the block table, absolutely positioned in stage space. */
+function frameBox(
+  id: string,
+  extra: Record<string, string | number | null>,
+  ...kids: (Node | string | null)[]
+): HTMLElement {
+  const f = specOf(id);
+  return el(
+    'div',
+    {
+      'data-frame': id,
+      style: css({
+        position: 'absolute',
+        left: f.x,
+        top: f.y,
+        width: f.w,
+        height: f.h,
+        'z-index': '2',
+        'box-sizing': 'border-box',
+        ...extra,
+      }),
+    },
+    ...kids,
+  );
+}
 
-function header(): HTMLElement {
+const railText = (s: string) =>
+  el('span', { style: css({ ...MICRO, 'white-space': 'nowrap' }) }, s);
+
+/**
+ * The rail's inventory cell, derived rather than typed out. It names the split
+ * instead of a flat count: most blocks open a deployed demo, the rest open a
+ * case study in this stage, and the motion archive is neither.
+ */
+const INVENTORY = `${CASES.length} cases · ${MOTION_ARCHIVE_LABEL}`;
+
+/**
+ * The top rail.
+ *
+ * Close is the first cell, not the last. The kit's rail puts it on the right;
+ * this repo's contract is that close is always top left, on every page and on
+ * the evidence viewer, and that is the stronger claim — it is also what
+ * `closeOf` in transitions.ts focuses when the page lands, and what every other
+ * channel on this site trained the visitor to reach for.
+ */
+function rail(): HTMLElement {
   const close = el(
     'button',
     {
@@ -599,11 +208,12 @@ function header(): HTMLElement {
       class: 'ps-hov-invert',
       style: css({
         ...BTN,
+        ...MICRO,
         display: 'flex',
         'align-items': 'center',
-        gap: 16,
-        'padding-left': MODULE,
-        'border-right': `1px solid ${RULE.onPaperMinor}`,
+        gap: 14,
+        height: '100%',
+        padding: `0 ${BLOCK_PAD.x}px`,
         transition: 'background 150ms linear,color 150ms linear',
       }),
     },
@@ -611,129 +221,22 @@ function header(): HTMLElement {
     'close',
   );
 
-  const cell = (text: string, rule: boolean) =>
-    el(
-      'span',
-      {
-        style: css({
-          display: 'flex',
-          'align-items': 'center',
-          padding: '0 20px',
-          'border-right': rule ? `1px solid ${RULE.onPaperMinor}` : null,
-        }),
-      },
-      text,
-    );
-
-  return el(
-    'div',
+  return frameBox(
+    'rail',
     {
-      'data-intro': 'wipeX',
-      'data-in-delay': 0,
-      'data-in-dur': 300,
-      style: css({
-        'clip-path': 'inset(0 100% 0 0)',
-        position: 'absolute',
-        left: 0,
-        right: 0,
-        top: 0,
-        height: PAGE1.headerH,
-        'box-sizing': 'border-box',
-        display: 'grid',
-        'grid-template-columns': PAGE1.headerCols,
-        'border-bottom': `1px solid ${RULE.onPaperMajor}`,
-        'font-size': 13,
-        'letter-spacing': '.16em',
-      }),
+      display: 'flex',
+      'align-items': 'center',
+      'justify-content': 'space-between',
+      color: COLOR.inkSoft,
     },
     close,
-    cell('01 · product designs', true),
-    cell(INVENTORY, true),
-    el(
-      'span',
-      {
-        style: css({
-          display: 'flex',
-          'align-items': 'center',
-          padding: '0 101.8px 0 20px',
-          'justify-content': 'space-between',
-        }),
-      },
-      `module ${MODULE} · rev 04`,
-      el('span', { style: css({ opacity: '.6' }) }, 'grid on'),
-    ),
+    railText('01 · product designs'),
+    el('span', { style: css({ padding: `0 ${BLOCK_PAD.x}px` }) }, railText(INVENTORY)),
   );
 }
 
-function tableHeader(): HTMLElement {
-  // Same two-column split as a row, so the labels sit over the columns they name.
-  const labels = el(
-    'span',
-    {
-      style: css({
-        display: 'grid',
-        'grid-template-columns': PAGE1.rowCols,
-        'align-items': 'center',
-        height: '100%',
-      }),
-    },
-    el('span', { style: css({ 'padding-left': MODULE }) }, 'idx'),
-    el('span', {}, 'case'),
-    el('span', {}, 'thesis'),
-    el('span', {}, 'year'),
-    el('span', { style: css({ 'padding-right': 24, 'text-align': 'right' }) }, 'discipline'),
-  );
-
-  return el(
-    'div',
-    {
-      'data-intro': 'wipeX',
-      'data-in-delay': 80,
-      'data-in-dur': 380,
-      style: css({
-        'clip-path': 'inset(0 100% 0 0)',
-        position: 'absolute',
-        left: 0,
-        right: 0,
-        top: PAGE1.tableHeaderY,
-        height: PAGE1.tableHeaderH,
-        display: 'grid',
-        'grid-template-columns': PAGE1.rowSplit,
-        'align-items': 'center',
-        'border-top': `1px solid ${RULE.onPaperMajor}`,
-        'border-bottom': `1px solid ${RULE.onPaperMinor}`,
-        'font-size': 11.5,
-        'letter-spacing': '.22em',
-        opacity: '.72',
-      }),
-    },
-    labels,
-    el('span', { style: css({ 'padding-right': 101.8, 'text-align': 'right' }) }, 'source'),
-  );
-}
-
-function footer(): HTMLElement {
-  const close = el(
-    'button',
-    {
-      type: 'button',
-      'data-act': 'close',
-      'aria-label': 'Back to studio index',
-      class: 'ps-hov-invert',
-      style: css({
-        ...BTN,
-        display: 'flex',
-        'align-items': 'center',
-        gap: 18,
-        'padding-left': MODULE,
-        'border-right': `1px solid ${RULE.onPaperMinor}`,
-        transition: 'background 150ms linear,color 150ms linear',
-      }),
-    },
-    el('span', { 'aria-hidden': 'true', style: css({ 'font-size': 19, 'line-height': '1' }) }, '←'),
-    'studio index',
-  );
-
+/** The footer rail: the next channel, and the address. */
+function railFooter(): HTMLElement {
   const next = el(
     'button',
     {
@@ -744,70 +247,397 @@ function footer(): HTMLElement {
       class: 'ps-hov-invert',
       style: css({
         ...BTN,
+        ...MICRO,
         display: 'flex',
         'align-items': 'center',
-        'justify-content': 'space-between',
-        padding: '0 101.8px 0 20px',
+        gap: 14,
+        height: '100%',
+        padding: `0 ${BLOCK_PAD.x}px`,
         transition: 'background 150ms linear,color 150ms linear',
       }),
     },
+    // The dash stays: this string is the design handoff's own, and the four
+    // `next — NN` controls are the one place DO-NOT-BREAK §4 exempts.
     'next — 02 paintings',
     el('span', { 'aria-hidden': 'true', style: css({ 'font-size': 19, 'line-height': '1' }) }, '→'),
+  );
+
+  return frameBox(
+    'rail-footer',
+    {
+      display: 'flex',
+      'align-items': 'center',
+      'justify-content': 'space-between',
+      color: COLOR.inkSoft,
+    },
+    next,
+    el('span', { style: css({ padding: `0 ${BLOCK_PAD.x}px` }) }, railText(STUDIO.email)),
+  );
+}
+
+/* -------------------------------------------------------------------- blocks */
+
+/**
+ * Meta on top, then the plate if the block earns one, then the label.
+ *
+ * The secondary tone is OPACITY, not `COLOR.inkSoft`. `hlInk` pins the hovered
+ * control to near-black by writing `style.color` on the control itself, and an
+ * inline color on a descendant outranks that inheritance — which is exactly how
+ * a secondary line drops out over a vivid band. Opacity inherits the pin and
+ * lands on the same near-black.
+ */
+const metaLine = (text: string, arrow: boolean) =>
+  el(
+    'span',
+    {
+      style: css({
+        ...MICRO,
+        display: 'flex',
+        'align-items': 'center',
+        gap: 10,
+        opacity: '.72',
+        'white-space': 'nowrap',
+      }),
+    },
+    text,
+    arrow
+      ? el('span', { 'aria-hidden': 'true', style: css({ 'font-size': 15, 'line-height': '1' }) }, '→')
+      : null,
+  );
+
+/**
+ * The block's label.
+ *
+ * `data-fit` with an explicit budget, so `fit.ts` solves the size against the
+ * block's own inner width when the screen opens and every label is one line at
+ * whatever size that takes, capped at the size the mosaic authored.
+ */
+const labelLine = (text: string, spec: BlockSpec) =>
+  el(
+    'span',
+    {
+      'data-fit': true,
+      'data-fit-w': spec.w - BLOCK_PAD.x * 2,
+      style: css({
+        'font-family': FONT.display,
+        'font-feature-settings': FONT.displayFeatures,
+        'font-size': spec.size,
+        'line-height': '1',
+        'letter-spacing': '-.02em',
+        'white-space': 'nowrap',
+      }),
+    },
+    text,
+  );
+
+/**
+ * The cover plate. Decorative here: the control that owns it already carries
+ * the case's name in its accessible name, and repeating the render's
+ * description after it reads as the same thing twice.
+ */
+const cover = (src: string, spec: BlockSpec) =>
+  el('img', {
+    src: asset(src),
+    alt: '',
+    'aria-hidden': 'true',
+    loading: 'lazy',
+    decoding: 'async',
+    width: Math.round(spec.w - BLOCK_PAD.x * 2),
+    height: Math.round(spec.h - BLOCK_PAD.y * 2),
+    style: css({
+      display: 'block',
+      flex: '1 1 auto',
+      'min-height': '0',
+      width: '100%',
+      margin: '14px 0',
+      'object-fit': 'cover',
+      // The strip is about 115px of a 16:9 capture, so it is a crop whatever
+      // happens. Anchored to the top because that is where a screen capture
+      // puts the thing it is a capture OF, and a centered crop lands on body
+      // text sliced through the middle of a line.
+      'object-position': 'center top',
+    }),
+  });
+
+/** The face every block control wears: padded, meta up, label down. */
+const FACE: Record<string, string | number> = {
+  position: 'absolute',
+  inset: '0',
+  display: 'flex',
+  'flex-direction': 'column',
+  'justify-content': 'space-between',
+  padding: `${BLOCK_PAD.y}px ${BLOCK_PAD.x}px`,
+  'box-sizing': 'border-box',
+  overflow: 'hidden',
+};
+
+function blockBody(c: CaseRecord, spec: BlockSpec): (Node | null)[] {
+  const plate = c.image && blockTakesCover(spec.w, spec.h) ? cover(c.image, spec) : null;
+  return [metaLine(metaOf(c), !!str(c.subpage)), plate, labelLine(c.name, spec)];
+}
+
+/** A block that opens a deployed demo. */
+const liveBlock = (c: CaseRecord, spec: BlockSpec, href: string) =>
+  el(
+    'a',
+    {
+      href,
+      target: '_blank',
+      rel: 'noopener noreferrer',
+      'aria-label': `${c.name}, open the live project, opens in a new tab`,
+      style: css({ ...LINK, ...FACE }),
+    },
+    ...blockBody(c, spec),
+  );
+
+/**
+ * A block that opens a case study inside this stage. A real `<button>`, because
+ * there is nothing deployed to point an anchor at, and an anchor promises
+ * somewhere to go. `data-act` is delegated in runtime/actions.ts.
+ */
+const subpageBlock = (c: CaseRecord, spec: BlockSpec, act: string) =>
+  el(
+    'button',
+    {
+      type: 'button',
+      'data-act': act,
+      'aria-label': `${c.name}, open the case study`,
+      style: css({ ...BTN, ...FACE }),
+    },
+    ...blockBody(c, spec),
+  );
+
+/** A record with neither a deployed href nor a subpage: legible, but inert. */
+const plainBlock = (c: CaseRecord, spec: BlockSpec) =>
+  el('span', { style: css({ ...FACE, cursor: 'default' }) }, ...blockBody(c, spec));
+
+const blockControl = (c: CaseRecord, spec: BlockSpec) => {
+  const sub = str(c.subpage);
+  const live = str(c.href);
+  if (sub) return subpageBlock(c, spec, sub);
+  if (live) return liveBlock(c, spec, live);
+  return plainBlock(c, spec);
+};
+
+/**
+ * The source repository — a SIBLING of the block's control, laid over its top
+ * right corner, never inside it. Two reasons, both hard: an anchor may not
+ * nest, and `wireHovers` picks the innermost pointer element, so a link inside
+ * the block's link would move the band stack onto the word "source".
+ */
+const sourceLink = (c: CaseRecord, href: string) =>
+  el(
+    'a',
+    {
+      href,
+      target: '_blank',
+      rel: 'noopener noreferrer',
+      'aria-label': `${c.name}, source code, opens in a new tab`,
+      style: css({
+        ...LINK,
+        ...MICRO,
+        position: 'absolute',
+        right: BLOCK_PAD.x,
+        top: BLOCK_PAD.y,
+        'z-index': '3',
+        // Opacity, not a color, for the same reason the meta line uses it.
+        opacity: '.72',
+        'border-bottom': `1px solid currentColor`,
+      }),
+    },
+    'source',
+  );
+
+/**
+ * The motion archive: the mosaic's one layout exception, per the kit. Label
+ * left, meta right, both sitting on the block's bottom edge. It is a
+ * destination rather than a case — it opens the 58-study archive — so it takes
+ * no cover plate and no evidence tag.
+ */
+function motionBlock(spec: BlockSpec): HTMLElement {
+  const strip = MOTION_STUDIES.slice(0, 5)
+    .map((m) => m.slug)
+    .join(', ');
+  return el(
+    'a',
+    {
+      href: asset(MOTION_ARCHIVE_HREF),
+      target: '_blank',
+      rel: 'noopener noreferrer',
+      'aria-label': `Motion studies, open the archive, ${MOTION_ARCHIVE_LABEL}, opens in a new tab`,
+      style: css({
+        ...LINK,
+        ...FACE,
+        'flex-direction': 'row',
+        'align-items': 'flex-end',
+        'justify-content': 'space-between',
+      }),
+    },
+    labelLine('motion studies', spec),
+    el(
+      'span',
+      {
+        style: css({
+          ...MICRO,
+          opacity: '.72',
+          'text-align': 'right',
+          'white-space': 'nowrap',
+        }),
+      },
+      `${MOTION_ARCHIVE_LABEL} · ${strip}`,
+    ),
+  );
+}
+
+/**
+ * One mosaic block.
+ *
+ * The frame is the positioned box; the control fills it; the source link sits
+ * over it. `data-b*` carries the geometry in design px so `latticescroll.ts`
+ * can compute a corner's lattice address without measuring anything, and `top`
+ * is track-local — the mosaic's own origin is the band's top edge.
+ */
+function block(spec: BlockSpec, i: number): HTMLElement {
+  const isMotion = spec.id === 'motion';
+  const c = isMotion ? null : caseOf(spec.id);
+  const src = c ? str(c.source) : null;
+
+  return el(
+    'div',
+    {
+      'data-ixblock': spec.id,
+      'data-frame': spec.id,
+      'data-bx': spec.x,
+      'data-by': spec.y - INDEX_TRACK.y,
+      'data-bw': spec.w,
+      'data-bh': spec.h,
+      'data-intro': 'wipeX',
+      'data-in-delay': 120 + i * 40,
+      'data-in-dur': 330,
+      style: css({
+        'clip-path': 'inset(0 100% 0 0)',
+        position: 'absolute',
+        left: spec.x,
+        top: spec.y - INDEX_TRACK.y,
+        width: spec.w,
+        height: spec.h,
+        'z-index': '2',
+        'box-sizing': 'border-box',
+      }),
+    },
+    isMotion || !c ? motionBlock(spec) : blockControl(c, spec),
+    c && src ? sourceLink(c, src) : null,
+  );
+}
+
+/* -------------------------------------------------------------------- track */
+
+/**
+ * The scrolling band.
+ *
+ * A native scroll container, as every other scrolling column on this site is,
+ * with the browser's own snapping doing the settling. The snap targets are
+ * flow spacers, one per mosaic row and exactly its height, so the rest
+ * positions are the row boundaries and never an arbitrary pixel — which is the
+ * whole reason a settled block's four corners are always on the lattice.
+ */
+function trackRegion(): HTMLElement {
+  const mosaic = INDEX_BLOCKS.filter((b) => b.track);
+  const rows = Array.from(new Set(mosaic.map((b) => b.y))).sort((a, b) => a - b);
+  const rowH = rows.map((y) => Math.max(...mosaic.filter((b) => b.y === y).map((b) => b.h)));
+
+  const spacers = rowH.map((h) =>
+    el('span', {
+      'aria-hidden': 'true',
+      style: css({
+        display: 'block',
+        height: h,
+        'scroll-snap-align': 'start',
+        'pointer-events': 'none',
+      }),
+    }),
+  );
+
+  const track = el(
+    'div',
+    { style: css({ position: 'relative', width: '100%' }) },
+    ...spacers,
+    ...mosaic.map(block),
+  );
+
+  const region = el(
+    'div',
+    {
+      'data-ixscroll': true,
+      tabindex: 0,
+      role: 'region',
+      'aria-label': `The index, ${CASES.length} cases and the motion archive, scrollable`,
+      style: css({
+        position: 'absolute',
+        inset: '0',
+        'overflow-y': 'auto',
+        'overflow-x': 'hidden',
+        'scroll-snap-type': 'y mandatory',
+        'scrollbar-width': 'none',
+        'overscroll-behavior': 'contain',
+      }),
+    },
+    track,
+  );
+
+  const thumb = el('span', {
+    'data-ixthumb': true,
+    style: css({
+      position: 'absolute',
+      left: 0,
+      top: 0,
+      width: '100%',
+      height: 0,
+      background: COLOR.drape,
+      display: 'none',
+    }),
+  });
+
+  const rail = el(
+    'div',
+    {
+      'aria-hidden': 'true',
+      style: css({
+        position: 'absolute',
+        // 1884…1890 — inside the 60px margin the mosaic leaves at the right,
+        // ending on the field's last column of points.
+        right: 30,
+        top: 0,
+        bottom: 0,
+        width: 6,
+        background: RULE.gridLine,
+        'pointer-events': 'none',
+      }),
+    },
+    thumb,
   );
 
   return el(
     'div',
     {
-      'data-intro': 'wipeX',
-      'data-in-delay': 230,
-      'data-in-dur': 360,
       style: css({
-        'clip-path': 'inset(0 100% 0 0)',
         position: 'absolute',
         left: 0,
         right: 0,
-        top: PAGE1.footer.y,
-        height: PAGE1.footer.h,
-        display: 'grid',
-        'grid-template-columns': '654.545px 581.818px 1fr',
-        'border-top': `1px solid ${RULE.onPaperMajor}`,
-        'font-size': 13,
-        'letter-spacing': '.16em',
+        top: INDEX_TRACK.y,
+        height: INDEX_TRACK.h,
+        'z-index': '2',
+        overflow: 'hidden',
       }),
     },
-    close,
-    el(
-      'span',
-      {
-        style: css({
-          display: 'flex',
-          'align-items': 'center',
-          padding: '0 20px',
-          'border-right': `1px solid ${RULE.onPaperMinor}`,
-          opacity: '.72',
-        }),
-      },
-      'channel 01 of 04',
-    ),
-    next,
+    region,
+    rail,
   );
 }
 
-/* -------------------------------------------------------------------- build */
+/* --------------------------------------------------------------------- build */
 
 export function build(): HTMLElement {
-  const gridOverlay = el('div', {
-    'aria-hidden': 'true',
-    style: css({
-      position: 'absolute',
-      inset: '0',
-      'pointer-events': 'none',
-      'background-image': `linear-gradient(to right,${RULE.gridLine} 0 ${PAGE1.gridLine}px,rgba(255,255,255,0) ${PAGE1.gridLine}px),linear-gradient(to bottom,${RULE.gridLine} 0 ${PAGE1.gridLine}px,rgba(255,255,255,0) ${PAGE1.gridLine}px)`,
-      'background-size': `${PAGE1.gridPitch}px 100%,100% ${PAGE1.gridPitch}px`,
-      'background-position': '0 0,0 4.45px',
-    }),
-  });
-
   const frost = el('canvas', {
     'data-frost': 'field',
     'data-mode': 1,
@@ -826,81 +656,54 @@ export function build(): HTMLElement {
       'image-rendering': 'pixelated',
       'pointer-events': 'none',
       opacity: '0',
-      'z-index': '1',
+      'z-index': '0',
     }),
   });
 
-  const title = el(
-    'div',
-    {
-      'data-ptitle': true,
-      style: css({
-        position: 'absolute',
-        'z-index': '3',
-        left: PAGE1.title.x,
-        top: PAGE1.title.y,
-        'transform-origin': '0 0',
-        'font-family': FONT.display,
-        'font-size': PAGE1.title.size,
-        'line-height': `${PAGE1.title.lh}px`,
-        'letter-spacing': PAGE1.title.track,
-        'white-space': 'nowrap',
-      }),
-    },
-    ...letters('Product').map((s) => {
-      s.style.display = 'inline-block';
-      return s;
-    }),
-    el('br'),
-    ...letters('designs').map((s) => {
-      s.style.display = 'inline-block';
-      return s;
-    }),
+  /*
+    The band host. z 0, so every band the hover treatment paints lands UNDER
+    the lattice at z 1. Empty at rest; `hover.ts` fills it.
+  */
+  const bandHost = el('div', {
+    'data-bandhost': true,
+    'aria-hidden': 'true',
+    style: css({ position: 'absolute', inset: '0', 'z-index': '0', 'pointer-events': 'none' }),
+  });
+
+  const titleSpec = specOf('title');
+  const title = frameBox(
+    'title',
+    { display: 'flex', 'align-items': 'center', padding: `0 ${BLOCK_PAD.x}px`, 'z-index': '3' },
+    el(
+      'div',
+      {
+        'data-ptitle': true,
+        style: css({
+          'font-family': FONT.display,
+          'font-feature-settings': FONT.displayFeatures,
+          'font-size': titleSpec.size,
+          'line-height': '1',
+          'letter-spacing': '-.02em',
+          'white-space': 'nowrap',
+        }),
+      },
+      ...letters('product designs'),
+    ),
   );
 
-  const thesis = el(
-    'div',
+  const standfirst = frameBox(
+    'standfirst',
     {
-      'data-intro': 'fade',
-      'data-dfx': 7,
-      'data-in-delay': 180,
-      'data-in-dur': 340,
-      style: css({
-        opacity: '0',
-        position: 'absolute',
-        left: PAGE1.thesis.x,
-        top: PAGE1.thesis.y,
-        width: PAGE1.thesis.w,
-        'font-family': FONT.display,
-        'font-size': PAGE1.thesis.size,
-        'line-height': String(PAGE1.thesis.lh),
-        'letter-spacing': PAGE1.thesis.track,
-        'text-wrap': 'pretty',
-      }),
+      display: 'flex',
+      'align-items': 'center',
+      padding: `0 ${BLOCK_PAD.x}px`,
+      'font-size': specOf('standfirst').size,
+      'line-height': '1.4',
+      'letter-spacing': '.01em',
+      color: COLOR.inkSoft,
+      overflow: 'hidden',
     },
     CASES_THESIS,
-  );
-
-  const figCaption = el(
-    'div',
-    {
-      'data-intro': 'wipeX',
-      'data-in-delay': 260,
-      'data-in-dur': 300,
-      style: css({
-        'clip-path': 'inset(0 100% 0 0)',
-        position: 'absolute',
-        left: PAGE1.figCaption.x,
-        top: PAGE1.figCaption.y,
-        width: PAGE1.figCaption.w,
-        display: 'flex',
-        'justify-content': 'space-between',
-        'font-size': 13,
-        'letter-spacing': '.16em',
-      }),
-    },
-    el('span', { 'data-ccap': true }, CASES[0].caption),
-    el('span', { 'data-cfig': true, style: css({ opacity: '.7' }) }, `fig ${CASES[0].idx}`),
   );
 
   const body = el(
@@ -909,17 +712,13 @@ export function build(): HTMLElement {
       'data-pbody': true,
       style: css({ position: 'absolute', inset: '0', 'z-index': '2', opacity: '0' }),
     },
-    header(),
-    thesis,
-    panel(),
-    figCaption,
-    tableHeader(),
-    ...CASES.map(caseRow),
-    motionBand(CASES.length + 1),
-    footer(),
+    rail(),
+    standfirst,
+    trackRegion(),
+    railFooter(),
   );
 
-  return el(
+  const page = el(
     'section',
     {
       'data-page': 1,
@@ -938,22 +737,31 @@ export function build(): HTMLElement {
         overflow: 'hidden',
       }),
     },
-    gridOverlay,
     frost,
+    bandHost,
     title,
     body,
     /*
-      Row 08's case study lives inside this page, the way page 03 carries the
-      Kona N one: `runtime/chellbook.ts` resolves its parts with
-      `screen.closest('[data-page]')`, and it grows out of the row that opened
-      it rather than arriving as a separate route.
+      The six case studies live inside this page, the way page 03 carries the
+      Kona N one: each resolves its parts with `screen.closest('[data-page]')`,
+      and grows out of the block that opened it rather than arriving as a
+      separate route.
     */
     chellbookPage.build(),
-    // the df2tm row's screen, mounted the same way and for the same reasons
     df2tmPage.build(),
     mfnyPage.build(),
     chipotlePage.build(),
     leePage.build(),
     guestpassPage.build(),
   );
+
+  /*
+    The lattice and its scroll, mounted from the builder because
+    `runtime/stage.ts` only mounts the menu's and this module owns no other
+    hook into boot. Nothing here measures: the field is built now, and every
+    pass that reads a rect waits for the screen to be displayed.
+  */
+  installLatticeScroll(page, LAT_INDEX, INDEX_TRACK);
+
+  return page;
 }

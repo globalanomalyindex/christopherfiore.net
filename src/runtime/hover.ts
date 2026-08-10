@@ -2,21 +2,31 @@
  * The in-page button hover treatment.
  *
  * A band stack fills the *whole* button, not just the text: one main light
- * band drawn from SPARK_LIGHTS (56–80% of the height, at a random vertical
- * offset), one or two darker SPARK accents above/below it, a 1.5px inset
- * outline and 13px corner tick marks. Every layer wipes in from its own random
- * direction with a ±7.5px jitter and its own stagger, so the stack assembles
- * glitchily and never reads as a left-to-right sweep.
+ * band drawn from SPARK_LIGHTS, a thin darker SPARK accent above and below it,
+ * and a 1.5px inset outline. Every layer wipes in from its own random direction
+ * with a ±7.5px jitter and its own stagger, so the stack assembles glitchily
+ * and never reads as a left-to-right sweep.
+ *
+ * WHERE THE STACK LIVES DECIDES WHETHER THE LATTICE SURVIVES IT. The three
+ * layers of a lattice screen are band host (z 0) → lattice (z 1) → content
+ * (z 2), so the band has to paint UNDER the crosshairs. A stack built inside
+ * the button is inside the content layer and buries them. When a screen offers
+ * a `[data-bandhost]` the stack is therefore built THERE, positioned at the
+ * target's rect in design px, and only screens without one (every page that is
+ * not the lattice menu) keep the original in-button stack.
  *
  * LEGIBILITY CONTRACT: the band the type sits on is always from SPARK_LIGHTS,
  * the ink on it is always COLOR.nearBlack, and the darker SPARK rows are edge
  * accents that never carry type. SPARK_LIGHTS is *derived* by filtering on
  * measured contrast, so a band that could not carry the ink cannot reach here.
+ * The accent rows are capped at 8% of the height for the same reason: the old
+ * 56–80% main band let an accent fall under a two-line block's meta line, and
+ * near-black ink on a near-black accent is not there at all.
  */
 
 import { css, qq } from '../dom.ts';
 import { COLOR, SPARK, SPARK_LIGHTS } from '../design/tokens.ts';
-import { glitchFont, wrapWord } from './glitch.ts';
+import { glitchFont, holdGlitch, stopHoldGlitch, wrapWord } from './glitch.ts';
 import { state } from './state.ts';
 
 /** The only ink allowed on a band. */
@@ -31,8 +41,15 @@ const INK_RGB = ((n) => `rgb(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255})`
   parseInt(INK.slice(1), 16),
 );
 
-/** Corner tick size for a button-sized band. */
-const TICK = 13;
+/**
+ * The accent rows, top and bottom, as a percentage of the button height.
+ *
+ * 8% is a ceiling, not a taste call. Anything taller reaches the meta line of
+ * a two-line block, and a darker SPARK accent under near-black ink is ink on
+ * ink. The main band takes everything between them, so it is never below 84%.
+ */
+const ACCENT_MIN = 2;
+const ACCENT_MAX = 8;
 
 /** Wipe-in start clips. Two are partial (62%) so some layers only half-travel. */
 const WIPE_IN = [
@@ -57,6 +74,8 @@ const rnd = <T>(a: readonly T[]): T => a[(Math.random() * a.length) | 0];
 interface HoverRec {
   /** the band stack container, kept across enter/leave cycles */
   box: HTMLElement | null;
+  /** true while `box` lives in a screen-level band host rather than in the button */
+  hosted: boolean;
   /** every animatable layer inside the box, in paint order */
   parts: HTMLElement[];
   /** bumped on every enter so a stale exit animation can't hide a fresh stack */
@@ -65,6 +84,14 @@ interface HoverRec {
   word: HTMLElement | null;
   /** requestAnimationFrame handle for the ink pin */
   ink: number;
+  /**
+   * Inline colors captured at enter and written back verbatim at leave. Null
+   * whenever nothing is pinned, which is also the guard that stops a second
+   * enter from capturing INK as if it were the original.
+   */
+  pins: Map<HTMLElement, string> | null;
+  /** the main band's color, so the letter glitch can pick ink that reads on it */
+  band: string;
 }
 
 const RECS = new WeakMap<HTMLElement, HoverRec>();
@@ -72,10 +99,40 @@ const RECS = new WeakMap<HTMLElement, HoverRec>();
 function rec(el: HTMLElement): HoverRec {
   let r = RECS.get(el);
   if (!r) {
-    r = { box: null, parts: [], gen: 0, word: null, ink: 0 };
+    r = {
+      box: null,
+      hosted: false,
+      parts: [],
+      gen: 0,
+      word: null,
+      ink: 0,
+      pins: null,
+      band: COLOR.paper,
+    };
     RECS.set(el, r);
   }
   return r;
+}
+
+/**
+ * The screen-level band host this target belongs to, if its screen has one.
+ *
+ * Found by walking up rather than by a fixed selector: `menu.ts` emits the host
+ * as the first child of `[data-menu]`, and any future screen that wants its
+ * bands under a lattice only has to emit the same marker.
+ */
+function bandHost(el: HTMLElement): HTMLElement | null {
+  for (let p = el.parentElement; p; p = p.parentElement) {
+    const h = p.querySelector<HTMLElement>(':scope > [data-bandhost]');
+    if (h) return h;
+  }
+  return null;
+}
+
+/** Viewport scale of the 1920-wide stage, so rects read back in design px. */
+function scaleOf(node: Element): number {
+  const st = node.closest<HTMLElement>('[data-stage]');
+  return st ? (st.getBoundingClientRect().width || 1920) / 1920 : 1;
 }
 
 const RM = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null;
@@ -91,6 +148,11 @@ function reduced(el: HTMLElement): boolean {
  * Corner crosshair marks: four `sz × sz` boxes hung on the corners at `-sz/2`,
  * each drawn as two `sz/9`-thick bars crossing at its center. Static
  * decoration, authored here — no content ever goes through these nodes.
+ *
+ * The band stack no longer uses these: on a lattice screen the corners of a
+ * band are background pegs switched on, and drawing a tick over one is the
+ * same mark twice. Still exported, because screens without a lattice draw
+ * their own corners and call this.
  */
 export function mkTicks(sz: number): HTMLSpanElement[] {
   const o = (sz / 2).toFixed(1);
@@ -119,37 +181,59 @@ export function mkTicks(sz: number): HTMLSpanElement[] {
 
 /** Build (or rebuild) the band stack behind `el` and pin its ink. */
 export function hlBox(el: HTMLElement): void {
-  const cs = getComputedStyle(el);
-  // The stack sits at z-index -1, so the button needs to be its own stacking
-  // context or the bands would slide under the page background.
-  if (cs.position === 'static') el.style.position = 'relative';
-  if (cs.zIndex === 'auto') el.style.zIndex = '0';
-
   const r = rec(el);
+  const host = bandHost(el);
+
+  // The hosted stack is a fresh node every cycle: `hlBoxOff` removes it, so
+  // that a screen check can assert zero bands in the host between hovers.
+  if (r.box && (!r.box.isConnected || r.hosted !== !!host)) r.box = null;
+
   let b = r.box;
-  if (!b || !b.isConnected) {
+  if (!b) {
     // A span, not a div: these targets are often real <button> elements, which
-    // only admit phrasing content.
+    // only admit phrasing content, and the in-button stack is their child.
     b = document.createElement('span');
     b.setAttribute('data-hbox', '');
-    el.insertBefore(b, el.firstChild);
+    if (host) host.appendChild(b);
+    else el.insertBefore(b, el.firstChild);
     r.box = b;
+    r.hosted = !!host;
   }
   r.gen += 1;
-  b.style.cssText =
-    'display:block;position:absolute;left:0;top:0;width:100%;height:100%;z-index:-1;pointer-events:none';
+
+  if (host) {
+    // Absolute in the host's own 1920×1080 space. Re-measured on every enter
+    // because the button is no longer the stack's parent: nothing else moves
+    // the band when a copy edit or a resize moves the button.
+    const k = scaleOf(el) || 1;
+    const hr = host.getBoundingClientRect();
+    const er = el.getBoundingClientRect();
+    b.style.cssText =
+      `display:block;position:absolute;pointer-events:none;` +
+      `left:${((er.left - hr.left) / k).toFixed(2)}px;top:${((er.top - hr.top) / k).toFixed(2)}px;` +
+      `width:${(er.width / k).toFixed(2)}px;height:${(er.height / k).toFixed(2)}px`;
+  } else {
+    const cs = getComputedStyle(el);
+    // The in-button stack sits at z-index -1, so the button needs to be its own
+    // stacking context or the bands would slide under the page background.
+    if (cs.position === 'static') el.style.position = 'relative';
+    if (cs.zIndex === 'auto') el.style.zIndex = '0';
+    b.style.cssText =
+      'display:block;position:absolute;left:0;top:0;width:100%;height:100%;z-index:-1;pointer-events:none';
+  }
   b.replaceChildren();
 
   const flat = reduced(el);
-  // Main band: 56–80% of the button height, offset within the middle 60% of
-  // the leftover room. Reduced motion collapses this to one full-height band.
-  const mainH = flat ? 100 : 56 + Math.random() * 24;
-  const top = flat ? 0 : (100 - mainH) * (0.2 + Math.random() * 0.6);
-  const rows: [number, number, string][] = [[top, mainH, rnd(SPARK_LIGHTS)]];
+  // A thin darker accent top and bottom, the light band filling everything
+  // between them. Reduced motion collapses the stack to one full-height band.
+  const accT = flat ? 0 : ACCENT_MIN + Math.random() * (ACCENT_MAX - ACCENT_MIN);
+  const accB = flat ? 0 : ACCENT_MIN + Math.random() * (ACCENT_MAX - ACCENT_MIN);
+  const main = rnd(SPARK_LIGHTS);
+  r.band = main;
+  const rows: [number, number, string][] = [[accT, 100 - accT - accB, main]];
   if (!flat) {
-    // Darker accents only where there is more than 3% of height to fill.
-    if (top > 3) rows.unshift([0, top, rnd(SPARK)]);
-    if (100 - top - mainH > 3) rows.push([top + mainH, 100 - top - mainH, rnd(SPARK)]);
+    rows.unshift([0, accT, rnd(SPARK)]);
+    rows.push([100 - accB, accB, rnd(SPARK)]);
   }
 
   const parts: HTMLElement[] = [];
@@ -165,11 +249,9 @@ export function hlBox(el: HTMLElement): void {
   b.appendChild(ol);
   parts.push(ol);
 
-  const tk = document.createElement('span');
-  tk.style.cssText = 'display:block;position:absolute;left:0;top:0;width:100%;height:100%';
-  for (const mark of mkTicks(TICK)) tk.appendChild(mark);
-  b.appendChild(tk);
-  parts.push(tk);
+  // No corner ticks. On a lattice screen the four corners of this rect are
+  // already lattice points switched to PEG_CORNER, and a drawn tick on top of
+  // a peg is two marks in one place.
 
   r.parts = parts;
 
@@ -201,8 +283,28 @@ export function hlBox(el: HTMLElement): void {
 }
 
 /**
+ * Every descendant that sets its own inline color.
+ *
+ * The button's own pin is inherited, and inheritance loses to any inline
+ * declaration — so a secondary span at COLOR.inkSoft keeps its 6.4:1-on-paper
+ * grey while sitting on a vivid band, and drops out. These are the elements
+ * that have to be pinned individually. The band stack is skipped: its layers
+ * carry backgrounds, and nothing inside it is type.
+ */
+function inkNodes(host: HTMLElement): HTMLElement[] {
+  return qq<Element>(host, '*')
+    .filter((n): n is HTMLElement => n instanceof HTMLElement)
+    .filter((n) => n.style.color !== '' && !n.closest('[data-hbox]'));
+}
+
+/**
  * Pin the ink to COLOR.nearBlack while the cursor is inside. Re-asserted every
  * frame so a re-render of the button cannot revert it mid-hover.
+ *
+ * Originals are snapshotted once per hover and written back verbatim, including
+ * the empty string for elements that had no inline color of their own. The
+ * snapshot is taken only when nothing is pinned yet: capturing a second time
+ * mid-hover would record INK as the original and make the pin permanent.
  */
 export function hlInk(el: HTMLElement, on: boolean): void {
   const r = rec(el);
@@ -211,17 +313,62 @@ export function hlInk(el: HTMLElement, on: boolean): void {
     r.ink = 0;
   }
   if (!on) {
-    el.style.color = '';
-    if (r.word) r.word.style.color = '';
+    unpin(r);
     return;
   }
+  if (!r.pins) {
+    const pins = new Map<HTMLElement, string>();
+    pins.set(el, el.style.color);
+    for (const n of inkNodes(el)) pins.set(n, n.style.color);
+    r.pins = pins;
+  }
+  const pins = r.pins;
   const pin = () => {
-    if (el.style.color !== INK_RGB) el.style.color = INK;
-    // Read per frame: the word span is picked after hlBox has already started.
-    if (r.word) r.word.style.color = INK;
+    // The band now lives in a screen-level host, so nothing collects it when
+    // the button is torn out from under an open hover. This is that collector.
+    if (!el.isConnected) {
+      dropBox(r);
+      unpin(r);
+      r.ink = 0;
+      return;
+    }
+    // Read per frame: the word span is picked after hlBox has already started,
+    // and its own inline color has to be captured before the first pin writes.
+    const w = r.word;
+    if (w && !pins.has(w)) pins.set(w, w.style.color);
+    for (const n of pins.keys()) {
+      if (n.style.color !== INK_RGB) n.style.color = INK;
+    }
     r.ink = requestAnimationFrame(pin);
   };
   pin();
+}
+
+/**
+ * Write every captured inline color back, exactly as it was.
+ *
+ * An element that had none gets the empty string, which is its original state.
+ * These are page elements, never lattice pegs: a peg is only ever restored
+ * through `restorePeg`, because clearing a peg's inline color inherits
+ * near-black and scars the field for good.
+ */
+function unpin(r: HoverRec): void {
+  if (!r.pins) return;
+  for (const [n, col] of r.pins) n.style.color = col;
+  r.pins = null;
+}
+
+/** Take a hosted stack out of the host; hide an in-button one, as before. */
+function dropBox(r: HoverRec): void {
+  const b = r.box;
+  if (!b) return;
+  if (r.hosted) {
+    b.remove();
+    r.box = null;
+    r.parts = [];
+  } else {
+    b.style.display = 'none';
+  }
 }
 
 /** Reverse-wipe the band stack out and release the ink. */
@@ -232,7 +379,7 @@ export function hlBoxOff(el: HTMLElement): void {
   if (!b) return;
 
   if (reduced(el)) {
-    b.style.display = 'none';
+    dropBox(r);
     return;
   }
 
@@ -256,8 +403,8 @@ export function hlBoxOff(el: HTMLElement): void {
       },
     );
     a.onfinish = () => {
-      // A re-enter bumps gen; a stale exit must not hide the fresh stack.
-      if (++done >= parts.length && r.gen === gen && r.box === b) b.style.display = 'none';
+      // A re-enter bumps gen; a stale exit must not take down the fresh stack.
+      if (++done >= parts.length && r.gen === gen && r.box === b) dropBox(r);
     };
   }
 }
@@ -308,12 +455,21 @@ function enter(el: HTMLElement): void {
   // 22ms step, scattered order, no color band behind the letters (the band
   // stack is already there); glitchFont boxes the line so nothing reflows.
   glitchFont(w, true, 22, true);
+  // …and the glitch keeps going for as long as the cursor is inside. Without
+  // this the run settles flat after one pass and reads as "the glitch is
+  // gone". The band color goes with it so the held letters are picked for
+  // contrast against the band they are actually sitting on.
+  holdGlitch(w, rec(el).band, 22);
 }
 
 function leave(el: HTMLElement): void {
   hlBoxOff(el);
   const w = rec(el).word;
-  if (w && !reduced(el)) glitchFont(w, false, 18, true);
+  if (!w) return;
+  // Before the walk back, always: stopping clears the held colors, and
+  // glitchFont's own restore would otherwise race the hold's next tick.
+  stopHoldGlitch(w);
+  if (!reduced(el)) glitchFont(w, false, 18, true);
 }
 
 const BOUND = new WeakSet<HTMLElement>();

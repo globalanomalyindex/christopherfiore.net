@@ -23,7 +23,7 @@
  */
 
 import { el, qq } from '../dom.ts';
-import { COLOR, FLASH, FONT, SPARK, SPARK_LIGHTS } from '../design/tokens.ts';
+import { AA, COLOR, FLASH, FONT, SPARK, SPARK_LIGHTS, contrast } from '../design/tokens.ts';
 import { dfxRelease, dfxSeq } from './dither.ts';
 import { fitScreen } from './fit.ts';
 import { state } from './state.ts';
@@ -61,6 +61,16 @@ interface Meta {
   hw?: HTMLElement;
   /** original text of an intro line, so a replay can rebuild it */
   src?: string;
+  /** the held glitch's tick, running for as long as a cursor is inside */
+  hgT?: number;
+  /** the held glitch's one pending settle */
+  hgS?: number;
+  /** every letter the held glitch has colored, so stopping can put each back */
+  hgOn?: Set<HTMLElement>;
+  /** the letters the settle left colored on purpose; the tick never reverts these */
+  hgKeep?: Set<HTMLElement>;
+  /** a single letter's pending revert inside the held glitch */
+  hgRev?: number;
 
   /* stage-level */
   /** ambient loop handle */
@@ -517,12 +527,16 @@ export function introLetters(
 
 /* ----------------------------------------------------------------- flashing */
 
+/** The share of an ambient flash's letters that get a band under them. */
+const FLASH_BAND = 0.6;
+
 /**
- * Flash a set of letters to the alternate behind a color band and back.
- * 26ms between letters; each letter dithers, jitters ±1.3px, holds for `hold`,
- * then reverts. `whole` re-fits the line's tracking once the last letter has
- * landed and restores it after the hold, so a whole-line swap cannot widen the
- * wordmark past the stage.
+ * Flash a set of letters to the alternate, about 60% of them behind a color
+ * band with near-black ink pinned on it and the rest in a FLASH color on the
+ * paper. 26ms between letters; each letter dithers, jitters ±1.3px, holds for
+ * `hold`, then reverts. `whole` re-fits the line's tracking once the last
+ * letter has landed and restores it after the hold, so a whole-line swap cannot
+ * widen the wordmark past the stage.
  */
 export function flashAlt(
   stage: HTMLElement,
@@ -556,8 +570,16 @@ export function flashAlt(
       if (!sp.isConnected || !sp.textContent || sp.hasAttribute('data-hl') || sp.closest('[data-hl]')) return;
       swapLetter(sp, k, true, true);
       const rr = Math.random();
-      hlOn(sp, rr < 0.22 ? col2 : rr < 0.34 ? col3 : col);
-      sp.style.color = COLOR.nearBlack;
+      // A band behind about 60% of them, near-black ink on it — the contract.
+      // The rest fire a FLASH color straight onto the paper, which is the
+      // ground FLASH is derived against, so the line reads as a mix of banded
+      // and bare letters rather than as one solid stripe of highlight.
+      if (Math.random() < FLASH_BAND) {
+        hlOn(sp, rr < 0.22 ? col2 : rr < 0.34 ? col3 : col);
+        sp.style.color = COLOR.nearBlack;
+      } else {
+        sp.style.color = rnd(FLASH);
+      }
       sp.style.transform = `translate(${(Math.random() * 2.6 - 1.3).toFixed(1)}px,0)`;
       dfxSeq(sp, FLASH_SEQ, 11, true);
       hlSync(sp.parentElement);
@@ -664,6 +686,120 @@ export function glitchFont(line: HTMLElement, toAlt: boolean, step?: number, noH
   );
 }
 
+/* ------------------------------------------------------------- held glitch */
+
+/**
+ * The share of a label's letters the settle leaves colored. The run-in used to
+ * put every letter back on ink, and a label that ends exactly where it started
+ * reads as though the glitch never happened.
+ */
+const HOLD_KEEP = 0.3;
+/** Cadence of the held flicker, in the same register as the lattice's 140ms. */
+const HOLD_TICK = 160;
+/** How long a letter the tick fired holds its color before going back to ink. */
+const HOLD_REVERT = 240;
+
+/**
+ * The FLASH members that can be read on `ground`, near-black when none can.
+ *
+ * FLASH is derived by darkening each hue until it clears AA **on paper**, so
+ * on paper the whole set is safe and on a vivid SPARK_LIGHTS band most of it is
+ * not. Filtering here rather than picking by hand keeps the legibility contract
+ * true by construction wherever a held letter ends up sitting: near-black on a
+ * SPARK_LIGHTS band is the contract's own fallback and always clears.
+ */
+function flashOn(ground: string): readonly string[] {
+  const ok = FLASH.filter((c) => contrast(c, ground) >= AA);
+  return ok.length ? ok : [COLOR.nearBlack];
+}
+
+/**
+ * Keep a label glitching for as long as the cursor is inside it.
+ *
+ * `glitchFont` is a one-shot: it walks the letters to the alternate face and
+ * stops. That is right for a page title, which arrives once, and wrong for a
+ * button, where the pass ends and the button then sits there looking as though
+ * the effect had been switched off. This runs on top of that pass — the settle
+ * leaves ~30% of the letters colored, and a tick keeps firing single letters
+ * until `stopHoldGlitch`.
+ *
+ * It is a separate entry point rather than a flag on `glitchFont` because
+ * `transitions.ts` drives every page title through that function, and a title
+ * has no "cursor is inside" to end on: it would flicker for as long as the page
+ * was open. Only a caller that owns an enter/leave pair can own this.
+ *
+ * `ground` is the color the letters sit on, so the palette can be filtered for
+ * contrast against it. No-op under reduced motion.
+ */
+export function holdGlitch(line: HTMLElement, ground: string, step = 22): void {
+  if (!line) return;
+  stopHoldGlitch(line);
+  if (isReduced(line)) return;
+  const ls = qq(line, '[data-l]');
+  if (!ls.length) return;
+
+  const pal = flashOn(ground);
+  const m = meta(line);
+  const on = new Set<HTMLElement>();
+  const keep = new Set<HTMLElement>();
+  m.hgOn = on;
+  m.hgKeep = keep;
+
+  const paint = (sp: HTMLElement): void => {
+    if (!sp.isConnected) return;
+    window.clearTimeout(meta(sp).hgRev);
+    sp.style.color = rnd(pal);
+    on.add(sp);
+  };
+
+  // The settle, timed to land just after glitchFont's last letter.
+  m.hgS = window.setTimeout(
+    () => {
+      for (const sp of ls) {
+        if (Math.random() >= HOLD_KEEP) continue;
+        keep.add(sp);
+        paint(sp);
+      }
+    },
+    30 + ls.length * step + 120,
+  );
+
+  m.hgT = window.setInterval(() => {
+    const sp = rnd(ls);
+    if (!sp.isConnected) return;
+    paint(sp);
+    if (keep.has(sp)) return;
+    meta(sp).hgRev = window.setTimeout(() => {
+      if (!sp.isConnected || keep.has(sp)) return;
+      sp.style.color = '';
+      on.delete(sp);
+    }, HOLD_REVERT);
+  }, HOLD_TICK);
+}
+
+/**
+ * Stop the held glitch and put every letter it colored back on ink.
+ *
+ * Every timer it owns is cancelled here — the tick, the one settle, and each
+ * letter's pending revert — so a leave can never strand one that fires against
+ * a label the next hover has already rebuilt.
+ */
+export function stopHoldGlitch(line: HTMLElement): void {
+  if (!line) return;
+  const m = meta(line);
+  window.clearInterval(m.hgT);
+  window.clearTimeout(m.hgS);
+  m.hgT = undefined;
+  m.hgS = undefined;
+  for (const sp of m.hgOn ?? []) {
+    window.clearTimeout(meta(sp).hgRev);
+    meta(sp).hgRev = undefined;
+    if (sp.isConnected) sp.style.color = '';
+  }
+  m.hgOn = undefined;
+  m.hgKeep = undefined;
+}
+
 /**
  * Hard reset of a title: cancel pending swaps, drop every band, put every
  * letter back on Karrik at its resting tracking. Called before an open and on
@@ -671,6 +807,7 @@ export function glitchFont(line: HTMLElement, toAlt: boolean, step?: number, noH
  */
 export function resetTitleFont(line: HTMLElement): void {
   if (!line) return;
+  stopHoldGlitch(line);
   const m = meta(line);
   (m.gt || []).forEach((t) => window.clearTimeout(t));
   m.gt = [];

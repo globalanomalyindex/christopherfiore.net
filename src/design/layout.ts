@@ -62,29 +62,112 @@ export const MENU_CHANNEL_UNION = { x: 240, y: 600, w: 1440, h: 240 } as const;
 /**
  * Screen 2b — the product designs index, as blocks on the 60px module.
  *
- * `span` is the display size of the block's label. The mosaic is
+ * `size` is the display size of the block's label. The mosaic is
  * aspect-driven: a 720-wide block carries 36px, a 360 or 600-wide one carries
  * 26px, so the label's weight tracks the block's area rather than being set
  * per block.
+ *
+ * `track: false` is the pinned chrome — the two rails, the title and the
+ * standfirst. Those never move. `track: true` is the mosaic, which scrolls
+ * inside the band between the rails, and whose `y` is therefore **the stage
+ * position it holds at scroll 0**, not a fixed address. That is why a mosaic
+ * row can share a `y` with the footer rail: at rest it sits exactly underneath
+ * it, outside the band, and the scroll brings it up.
+ *
+ * ROWS, NOT PIXELS. The scroll snaps to whole mosaic rows rather than to the
+ * 60px module, and the row heights are chosen so that every reachable rest
+ * position fills the 660px band EXACTLY:
+ *
+ *   240 + 240 + 180 = 660   (scroll   0: rows 1–3)
+ *   240 + 180 + 240 = 660   (scroll 240: rows 2–4)
+ *   180 + 240 + 240 = 660   (scroll 480: rows 3–5)
+ *
+ * That is not tidiness. A block is only ever shown when it is ENTIRELY inside
+ * the band, because a block cut off by the band's edge would have two of its
+ * four corners outside the lattice and the whole system rests on all four
+ * landing on a point. Snapping to the 60px module instead would leave three
+ * intermediate rest positions where a 240px row is 60px past the edge — gone,
+ * with a hole where it was. Snapping to the row means there is never a hole.
+ *
+ * The last row is 240 rather than the 180 its content would want for the same
+ * reason: at 180 the track ends at 1380, the last rest position is 420, and
+ * the band opens a 60px gap at its top that no row can fill.
  */
 export const INDEX_BLOCKS = [
-  { id: 'rail', x: 60, y: 60, w: 1800, h: 60, size: 13 },
-  { id: 'title', x: 60, y: 120, w: 1800, h: 120, size: 88 },
-  { id: 'standfirst', x: 60, y: 240, w: 1080, h: 60, size: 15 },
-  { id: 'after-tokens', x: 60, y: 300, w: 720, h: 240, size: 36 },
-  { id: 'guestpass', x: 780, y: 300, w: 360, h: 240, size: 26 },
-  { id: 'chellbook', x: 1140, y: 300, w: 720, h: 240, size: 36 },
-  { id: 'lee', x: 60, y: 540, w: 360, h: 240, size: 36 },
-  { id: 'motion', x: 420, y: 540, w: 1080, h: 240, size: 36 },
-  { id: 'mfny', x: 1500, y: 540, w: 360, h: 240, size: 26 },
-  { id: 'chipotle', x: 60, y: 780, w: 600, h: 180, size: 26 },
-  { id: 'one-master', x: 660, y: 780, w: 600, h: 180, size: 26 },
-  { id: 'df2tm', x: 1260, y: 780, w: 600, h: 180, size: 26 },
-  { id: 'rail-footer', x: 60, y: 960, w: 1800, h: 60, size: 13 },
+  { id: 'rail', x: 60, y: 60, w: 1800, h: 60, size: 13, track: false },
+  { id: 'title', x: 60, y: 120, w: 1800, h: 120, size: 88, track: false },
+  { id: 'standfirst', x: 60, y: 240, w: 1080, h: 60, size: 15, track: false },
+  { id: 'rail-footer', x: 60, y: 960, w: 1800, h: 60, size: 13, track: false },
+
+  /*
+    Row 1. The kit gives these three rectangles and puts chellbook in the
+    second 720. The rectangles are its own and are unchanged; which case sits
+    in which is not, because "apple wallet card sharing concept" is 33
+    characters and does not fit one line in a 360-wide block at any size the
+    display family owns. The mosaic is aspect-driven, so the longest name takes
+    the widest block and chellbook's nine characters take the narrow one.
+    Every block label is one line: `wrapWord` rebuilds a hovered label out of
+    inline spans whose spaces are `white-space: pre`, which removes the wrap
+    opportunity, so a label that wraps at rest would snap to one long line the
+    moment the cursor entered it and run out of its block.
+  */
+  { id: 'after-tokens', x: 60, y: 300, w: 720, h: 240, size: 36, track: true },
+  { id: 'chellbook', x: 780, y: 300, w: 360, h: 240, size: 26, track: true },
+  { id: 'guestpass', x: 1140, y: 300, w: 720, h: 240, size: 36, track: true },
+
+  { id: 'lee', x: 60, y: 540, w: 360, h: 240, size: 36, track: true },
+  { id: 'motion', x: 420, y: 540, w: 1080, h: 240, size: 36, track: true },
+  { id: 'mfny', x: 1500, y: 540, w: 360, h: 240, size: 26, track: true },
+
+  { id: 'chipotle', x: 60, y: 780, w: 600, h: 180, size: 26, track: true },
+  { id: 'one-master', x: 660, y: 780, w: 600, h: 180, size: 26, track: true },
+  { id: 'df2tm', x: 1260, y: 780, w: 600, h: 180, size: 26, track: true },
+
+  /*
+    The five cases the kit's own table has no room for. `ANALYSIS.md` names
+    them as the one blocking inconsistency in the handoff: the rail reads
+    "13 cases" over a mosaic that holds eight. They are two more rows on the
+    same module, reached by scrolling, rather than a second screen.
+  */
+  { id: 'adhd-mode', x: 60, y: 960, w: 720, h: 240, size: 36, track: true },
+  { id: 'campeon', x: 780, y: 960, w: 540, h: 240, size: 26, track: true },
+  { id: 'chickpea', x: 1320, y: 960, w: 540, h: 240, size: 26, track: true },
+
+  { id: 'wildcard', x: 60, y: 1200, w: 900, h: 240, size: 36, track: true },
+  { id: 'dither', x: 960, y: 1200, w: 900, h: 240, size: 36, track: true },
 ] as const;
+
+/**
+ * The scrolling band: the region between the two rails that the mosaic moves
+ * through. The lattice underneath it does not move, and neither do the rails,
+ * the title or the standfirst.
+ *
+ * `end` is where the mosaic stops at scroll 0, so the track is `end - y` tall
+ * and the scroll range is `end - y - h` = 480, which is the third row boundary.
+ *
+ * `fade` is how far a block travels past the band's edge while it dissolves.
+ * It is 180 — the SHORTEST row — and that number is load-bearing in both
+ * directions. Any larger and a block would still be part-way dissolved at a
+ * rest position, which would leave it visible with corners off the lattice.
+ * Any smaller and the dissolve would finish in the first fraction of a 240px
+ * gesture and the rest of the travel would be an empty band sliding.
+ */
+export const INDEX_TRACK = { y: 300, h: 660, end: 1440, fade: 180 } as const;
 
 /** Every block is padded the same, and the label sits at the bottom. */
 export const BLOCK_PAD = { x: 26, y: 22 } as const;
+
+/**
+ * A block wide AND tall enough to carry its case's cover image.
+ *
+ * The kit marks two blocks with a `[ cover 1600×900 ]` placeholder, both of
+ * them the 720-wide ones on the first row. Expressed as a rule rather than a
+ * list so a block that changes size takes its plate with it, and so the rows
+ * added below the fold do not have to be remembered separately. The motion
+ * archive is 1080 wide and qualifies on size, but it is the mosaic's one
+ * layout exception and carries a filmstrip of its own instead.
+ */
+export const blockTakesCover = (w: number, h: number): boolean => w >= 720 && h >= 240;
 
 /**
  * The pixel grid for channel 02's paint simulation.
@@ -109,6 +192,15 @@ export const PAINT_PIX = {
 
 /**
  * Page 01 · Product designs.
+ *
+ * RETIRED BY THE LATTICE REDESIGN, AND KEPT ONLY AS THE RECORD OF WHAT IT
+ * REPLACED. Page 01 is the 2b mosaic now: `INDEX_BLOCKS` above is its geometry
+ * and `pages/products.ts` reads nothing from here. Nothing else in the
+ * codebase imports it either. The arithmetic below is the thirteen-row table
+ * and the divisions that kept it landing on the motion band, and it is worth
+ * having on hand if the table ever has to come back — but it describes a
+ * screen that is no longer built, so do not adapt it in place. `mobile.ts`
+ * ships its own row table and never read these numbers.
  *
  * ADAPTED. The design carries four 72.727px case rows between y 731.7 and the
  * footer. The real inventory is a growing list of cases plus a motion archive
