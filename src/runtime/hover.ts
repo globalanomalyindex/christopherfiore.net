@@ -459,11 +459,29 @@ function pickWord(el: HTMLElement): HTMLElement | null {
   return best;
 }
 
+/**
+ * The smallest type the letter glitch is allowed to touch.
+ *
+ * The alternates are a high-contrast swash italic. At display sizes that swap
+ * is the whole effect; at micro sizes it is just illegible. The page 01 close
+ * control is 13px, and hovering it turned "close" into five swash forms that
+ * read as "c s" — the letters were all present and all correct and none of
+ * them was a letter you could recognise.
+ *
+ * 20 sits above every micro role on the site (13 rails and meta, 15
+ * standfirst) and below every display one (26 and 36 block labels, 48 channel
+ * labels), so a control gets the band and the ink pin and simply keeps its
+ * letterforms. The same reasoning already gates `altKern` at 60 in glitch.ts:
+ * the alternate is a display face and wants treating as one.
+ */
+const MIN_GLITCH_PX = 20;
+
 function enter(el: HTMLElement): void {
   hlBox(el);
   const w = pickWord(el);
   if (!w) return;
   if (reduced(el)) return; // flat band only — no letter glitch
+  if ((parseFloat(getComputedStyle(w).fontSize) || 0) < MIN_GLITCH_PX) return;
   wrapWord(w);
   // 22ms step, scattered order, no color band behind the letters (the band
   // stack is already there); glitchFont boxes the line so nothing reflows.
