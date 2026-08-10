@@ -405,6 +405,251 @@ export function stopDrift(screen: HTMLElement): void {
   L.timer = 0;
 }
 
+/* --------------------------------------------------------------- painting */
+
+/** A rectangle in design px. Every painter below takes one of these. */
+export interface Rect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/** Indices of every point whose position falls inside `r`, inclusive of edges. */
+export function cellsInRect(screen: HTMLElement, r: Rect): number[] {
+  const L = LATS.get(screen);
+  if (!L) return [];
+  const { cfg } = L;
+  const out: number[] = [];
+  const c0 = Math.max(0, Math.ceil((r.x - cfg.step) / cfg.step));
+  const c1 = Math.min(cfg.cols - 1, Math.floor((r.x + r.w - cfg.step) / cfg.step));
+  const r0 = Math.max(0, Math.ceil((r.y - cfg.step) / cfg.step));
+  const r1 = Math.min(cfg.rows - 1, Math.floor((r.y + r.h - cfg.step) / cfg.step));
+  for (let row = r0; row <= r1; row++) {
+    for (let col = c0; col <= c1; col++) out.push(row * cfg.cols + col);
+  }
+  return out;
+}
+
+export type Edge = 'left' | 'right' | 'top' | 'bottom';
+
+export interface FillOpts {
+  /** The hue the interior takes. One of HUES, chosen by the caller. */
+  hue: string;
+  /** Optional accent for the top and bottom 14% of the rect. */
+  accent?: string;
+  /** Size the lit points grow to. Defaults to the major size. */
+  size?: number;
+  /** Which edge the reveal travels from. Random when omitted. */
+  from?: Edge;
+  /** Points the caller wants left alone — an inset ring's interior, say. */
+  skip?: Set<number>;
+}
+
+const EDGES: Edge[] = ['left', 'right', 'top', 'bottom'];
+
+/** Normalized 0…1 distance along `from`, used to order the reveal. */
+function travelOf(cfg: LatticeCfg, idx: number, r: Rect, from: Edge): number {
+  const col = idx % cfg.cols;
+  const row = (idx / cfg.cols) | 0;
+  const x = cfg.step + cfg.step * col;
+  const y = cfg.step + cfg.step * row;
+  if (from === 'left') return r.w ? (x - r.x) / r.w : 0;
+  if (from === 'right') return r.w ? (r.x + r.w - x) / r.w : 0;
+  if (from === 'top') return r.h ? (y - r.y) / r.h : 0;
+  return r.h ? (r.y + r.h - y) / r.h : 0;
+}
+
+/**
+ * Light a rectangle of points.
+ *
+ * The reveal is ordered, not timed per cell: each point gets a threshold of
+ * `bayer × 0.45 + travel × 0.5` and a ramp climbs 0.17 every 40ms, switching
+ * on every point it passes. That is what makes the fill read as dithered
+ * weather crossing the block rather than as a wipe with noise on it.
+ *
+ * Lit points are recorded so the drift skips them and `releaseFor` can put
+ * every one back from `dataset.base` — never from a color captured here, which
+ * would go stale the moment a resolve ran mid-hover.
+ */
+export function fillFor(screen: HTMLElement, r: Rect, opts: FillOpts): void {
+  const L = LATS.get(screen);
+  if (!L) return;
+  const { cfg, cells } = L;
+  const size = opts.size ?? cfg.majorSize;
+  const from = opts.from ?? EDGES[(Math.random() * EDGES.length) | 0];
+  const idxs = cellsInRect(screen, r).filter((i) => !opts.skip?.has(i));
+
+  // Accent bands: the top and bottom 14% of the rect take a different color.
+  const band = r.h * 0.14;
+  const accentOf = (i: number): string => {
+    if (!opts.accent) return opts.hue;
+    const y = cfg.step + cfg.step * ((i / cfg.cols) | 0);
+    return y < r.y + band || y > r.y + r.h - band ? opts.accent : opts.hue;
+  };
+
+  if (reduced(screen)) {
+    for (const i of idxs) {
+      if (cells[i].dataset.base === 'transparent') continue;
+      L.lit.add(i);
+      cells[i].style.color = accentOf(i);
+      cells[i].style.fontSize = `${size}px`;
+    }
+    return;
+  }
+
+  const thresh = new Map<number, number>();
+  for (const i of idxs) {
+    const col = i % cfg.cols;
+    const row = (i / cfg.cols) | 0;
+    thresh.set(i, bayer(col, row) * 0.45 + travelOf(cfg, i, r, from) * 0.5);
+  }
+
+  let ramp = 0;
+  const pending = new Set(idxs);
+  const step = (): void => {
+    ramp += 0.17;
+    for (const i of Array.from(pending)) {
+      if ((thresh.get(i) ?? 0) > ramp) continue;
+      pending.delete(i);
+      // An occluded point stays occluded: type sits there.
+      if (cells[i].dataset.base === 'transparent') continue;
+      L.lit.add(i);
+      cells[i].style.color = accentOf(i);
+      cells[i].style.fontSize = `${size}px`;
+    }
+    if (pending.size) window.setTimeout(step, 40);
+  };
+  step();
+}
+
+/**
+ * Put every lit point back exactly where the resolve pass left it.
+ *
+ * Restores from `dataset.base`, which is the whole reason `setBase` records it.
+ * Clearing the inline color instead would drop each glyph to the inherited
+ * near-black and scar the field permanently.
+ */
+export function releaseFor(screen: HTMLElement): void {
+  const L = LATS.get(screen);
+  if (!L) return;
+  for (const i of L.lit) restorePeg(L.cells[i]);
+  L.lit.clear();
+}
+
+/**
+ * The held flicker: while a fill is up, re-dither a few of its points so the
+ * block keeps breathing instead of sitting as a flat plate.
+ *
+ * Never touches a point whose resolved state is ink — a corner that flickered
+ * would break the one invariant the whole system rests on. Returns its stop.
+ */
+export function holdFlicker(screen: HTMLElement, hue: string, alt: string): () => void {
+  const L = LATS.get(screen);
+  if (!L || reduced(screen)) return () => {};
+  const t = window.setInterval(() => {
+    const pool = Array.from(L.lit);
+    if (!pool.length) return;
+    for (let n = 0; n < 5; n++) {
+      const i = pool[(Math.random() * pool.length) | 0];
+      const cell = L.cells[i];
+      if (cell.dataset.corner) continue;
+      cell.style.color = Math.random() < 0.5 ? alt : hue;
+    }
+  }, 140);
+  return () => window.clearInterval(t);
+}
+
+/**
+ * Sweep a rectangle to one color in Bayer order over `ms`.
+ *
+ * The transition's painter. Deliberately named `paintRect`-style rather than
+ * `sweep`: the drift's row cursor is `sweepRow`, and in the prototype a
+ * counter and a method sharing the name `sweep` overwrote each other on the
+ * first tick, which killed the ambient wave and made the transition throw
+ * before its own teardown was registered.
+ */
+export function sweepRect(
+  screen: HTMLElement,
+  r: Rect,
+  color: string,
+  ms: number,
+  size?: number,
+): void {
+  const L = LATS.get(screen);
+  if (!L) return;
+  const { cfg, cells } = L;
+  const px = size ?? cfg.majorSize;
+  const idxs = cellsInRect(screen, r);
+  if (reduced(screen)) {
+    for (const i of idxs) {
+      L.lit.add(i);
+      cells[i].style.color = color;
+      cells[i].style.fontSize = `${px}px`;
+    }
+    return;
+  }
+  const steps = Math.max(1, Math.round(ms / 40));
+  let n = 0;
+  const tick = (): void => {
+    n++;
+    const cut = n / steps;
+    for (const i of idxs) {
+      if (L.lit.has(i)) continue;
+      const col = i % cfg.cols;
+      const row = (i / cfg.cols) | 0;
+      if (bayer(col, row) * 0.5 + travelOf(cfg, i, r, 'left') * 0.5 > cut) continue;
+      L.lit.add(i);
+      cells[i].style.color = color;
+      cells[i].style.fontSize = `${px}px`;
+    }
+    if (n < steps) window.setTimeout(tick, 40);
+  };
+  tick();
+}
+
+/**
+ * Light exactly one row and one column through a point, full ink.
+ *
+ * Channel 01's cursor scaffolding. Separate from `fillFor` because it is not a
+ * rectangle and because it re-runs on every `pointermove` — it has to be cheap
+ * and it has to clear its own previous cross, not the whole lit set.
+ */
+export function crossAt(
+  screen: HTMLElement,
+  col: number,
+  row: number,
+  color: string,
+  within?: Rect,
+): void {
+  const L = LATS.get(screen);
+  if (!L) return;
+  const { cfg, cells } = L;
+  const inside = within ? new Set(cellsInRect(screen, within)) : null;
+  const take = (i: number): void => {
+    if (inside && !inside.has(i)) return;
+    if (cells[i].dataset.base === 'transparent') return;
+    L.lit.add(i);
+    cells[i].style.color = color;
+    cells[i].style.fontSize = `${cfg.majorSize}px`;
+  };
+  for (let c = 0; c < cfg.cols; c++) take(row * cfg.cols + c);
+  for (let rr = 0; rr < cfg.rows; rr++) take(rr * cfg.cols + col);
+}
+
+/** The lattice index nearest a design-px point, clamped into range. */
+export function nearestIndex(screen: HTMLElement, x: number, y: number): number {
+  const L = LATS.get(screen);
+  if (!L) return -1;
+  const { cfg } = L;
+  const col = Math.max(0, Math.min(cfg.cols - 1, Math.round((x - cfg.step) / cfg.step)));
+  const row = Math.max(0, Math.min(cfg.rows - 1, Math.round((y - cfg.step) / cfg.step)));
+  return row * cfg.cols + col;
+}
+
+/** The config a screen was mounted with, for callers that need its step. */
+export const cfgOf = (screen: HTMLElement): LatticeCfg | null => LATS.get(screen)?.cfg ?? null;
+
 /* ------------------------------------------------------------- diagnostics */
 
 /**
