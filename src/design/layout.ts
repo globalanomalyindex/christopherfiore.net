@@ -35,6 +35,57 @@ export const MENU = {
   crest: { w: 393, left: 1440, top: 22 },
 } as const;
 
+/* ------------------------------------------------- the lattice redesign */
+
+/**
+ * Screen 2a — the menu, as frames on the 120px module.
+ *
+ * Seven frames, every corner on a lattice point (proved by
+ * `offLatticeCorners` in design/lattice.ts). Adjacent channel cells SHARE
+ * their corner points at 240, 600, 960, 1320 and 1680 — that shared corner is
+ * what makes the row read as one modular strip, so there are no gaps between
+ * them and none may be added.
+ */
+export const MENU_FRAMES = [
+  { id: 'rail-top', x: 120, y: 120, w: 1680, h: 120 },
+  { id: 'wordmark', x: 360, y: 240, w: 1200, h: 240 },
+  { id: 'ch1', x: 240, y: 600, w: 360, h: 240 },
+  { id: 'ch2', x: 600, y: 600, w: 360, h: 240 },
+  { id: 'ch3', x: 960, y: 600, w: 360, h: 240 },
+  { id: 'ch4', x: 1320, y: 600, w: 360, h: 240 },
+  { id: 'rail-bottom', x: 120, y: 840, w: 1680, h: 120 },
+] as const;
+
+/** The union the four channel cells occupy, which the open transition grows. */
+export const MENU_CHANNEL_UNION = { x: 240, y: 600, w: 1440, h: 240 } as const;
+
+/**
+ * Screen 2b — the product designs index, as blocks on the 60px module.
+ *
+ * `span` is the display size of the block's label. The mosaic is
+ * aspect-driven: a 720-wide block carries 36px, a 360 or 600-wide one carries
+ * 26px, so the label's weight tracks the block's area rather than being set
+ * per block.
+ */
+export const INDEX_BLOCKS = [
+  { id: 'rail', x: 60, y: 60, w: 1800, h: 60, size: 13 },
+  { id: 'title', x: 60, y: 120, w: 1800, h: 120, size: 88 },
+  { id: 'standfirst', x: 60, y: 240, w: 1080, h: 60, size: 15 },
+  { id: 'after-tokens', x: 60, y: 300, w: 720, h: 240, size: 36 },
+  { id: 'guestpass', x: 780, y: 300, w: 360, h: 240, size: 26 },
+  { id: 'chellbook', x: 1140, y: 300, w: 720, h: 240, size: 36 },
+  { id: 'lee', x: 60, y: 540, w: 360, h: 240, size: 36 },
+  { id: 'motion', x: 420, y: 540, w: 1080, h: 240, size: 36 },
+  { id: 'mfny', x: 1500, y: 540, w: 360, h: 240, size: 26 },
+  { id: 'chipotle', x: 60, y: 780, w: 600, h: 180, size: 26 },
+  { id: 'one-master', x: 660, y: 780, w: 600, h: 180, size: 26 },
+  { id: 'df2tm', x: 1260, y: 780, w: 600, h: 180, size: 26 },
+  { id: 'rail-footer', x: 60, y: 960, w: 1800, h: 60, size: 13 },
+] as const;
+
+/** Every block is padded the same, and the label sits at the bottom. */
+export const BLOCK_PAD = { x: 26, y: 22 } as const;
+
 /**
  * The pixel grid for channel 02's paint simulation.
  *

@@ -12,3 +12,8 @@ _source/
 /menu.png
 /p3-before.png
 /page01.png
+
+# Scratch harness for the lattice primitive — dev only, never built (Vite only
+# emits index.html), but there is no reason for it to be in the history.
+/lattice-check.html
+/src/lattice-check.ts

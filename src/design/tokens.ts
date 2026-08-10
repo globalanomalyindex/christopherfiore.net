@@ -231,6 +231,25 @@ export const LIGHTS: readonly string[] = MARA.filter(
   (c) => contrast(c, COLOR.nearBlack) >= AA,
 );
 
+/* --------------------------------------------------------------- lattice */
+
+/**
+ * The four crosshair states.
+ *
+ * These are the only values the lattice redesign adds. They are deliberately
+ * outside `SPARK` and `LIGHTS`: a crosshair is decoration, it never carries
+ * type, and it is allowed to sit in the contrast range that `drape` occupies
+ * and that text is forbidden from. Do not reuse them for anything readable.
+ */
+/** The ambient, switched-off crosshair. */
+export const PEG_OFF = '#DFE4E6';
+/** A crosshair the drift has passed over. */
+export const PEG_ON = '#9AA6AD';
+/** A crosshair on the module — the visible grid. */
+export const PEG_MAJOR = '#A9B2B7';
+/** A crosshair a frame corner has switched on. Same value as COLOR.ink. */
+export const PEG_CORNER: string = COLOR.ink;
+
 export const rgba = (hex: string, a: number): string => {
   const n = parseInt(hex.slice(1), 16);
   return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;

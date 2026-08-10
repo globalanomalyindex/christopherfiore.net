@@ -1,0 +1,1339 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><meta name="design_doc_mode" content="canvas"><style>
+@font-face{font-family:'Dessign Maison';src:url('fonts/SLTFDessignMaison-Regular.otf') format('opentype');font-weight:400;font-style:normal;font-display:block}
+body{margin:0;background:#f0eee9;font-family:'Dessign Maison',Helvetica,Arial,sans-serif}
+a{color:#28262E}a:hover{color:#c9246b}
+.dv-turn{padding:40px 44px 32px;border-bottom:1px solid rgba(0,0,0,.08);scroll-margin-top:16px}
+.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 20px}
+.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}
+.dv-tname{font:600 13px/1.2 system-ui,sans-serif;color:#1a1a1a}
+.dv-opts{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start}
+.dv-opt{flex:none;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px}
+.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none}
+.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 ui-monospace,Menlo,monospace;color:rgba(0,0,0,.55)}
+.dv-card{max-width:100%;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:2px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden}
+.dv-opt:target .dv-oid{background:#2a78d6;color:#fff}
+.dv-next{margin:22px 0 0;font:12px/1.5 system-ui,sans-serif;color:rgba(0,0,0,.5)}
+</style></helmet>
+<section class="dv-turn" id="t2">
+<div class="dv-thd"><a class="dv-tid" href="#t2">2</a><span class="dv-tname">Riffs on <a class="dv-oid" href="#1a">1a</a> and <a class="dv-oid" href="#1d">1d</a> — ASCII lattice, frames cornered by pegs</span></div>
+<div class="dv-opts">
+
+<div class="dv-opt" id="2a">
+<div class="dv-olabel"><a class="dv-oid" href="#2a">2a</a>home · 120px module · lattice on the grid lines, every frame corner sits on a peg</div>
+<div class="dv-card" style="width:1920px">
+<div data-screen data-m="120" data-screen-label="2a home ascii peg board" style="position:relative;width:1920px;height:1080px;background:#E9EDEE;overflow:hidden">
+<span data-bandhost style="display:block;position:absolute;left:0;top:0;width:1920px;height:1080px;z-index:0;pointer-events:none"></span>
+<div data-peglayer data-step="40" data-cols="47" data-x0="40" data-y0="40" data-mk="3" data-mc0="2" data-mr0="2" data-major-fs="16" style="position:absolute;left:20px;top:20px;width:1880px;height:1040px;display:grid;grid-template-columns:repeat(47,40px);grid-auto-rows:40px;z-index:1;pointer-events:none">
+<sc-for list="{{ pegs1222 }}" as="p" hint-placeholder-count="1222"><span data-peg style="display:flex;align-items:center;justify-content:center;font-size:10px;line-height:1;color:#E2E6E8">+</span></sc-for>
+</div>
+
+<div data-frame style="position:absolute;left:120px;top:120px;width:1680px;height:120px;z-index:2;box-sizing:border-box;padding:0 28px;display:flex;align-items:center;justify-content:space-between;font-size:13px;letter-spacing:.06em;color:#56535E">
+<span>christopher robin fiore</span><span>product designer · new york city</span><span>studio index, rev 04</span>
+</div>
+
+<div data-frame style="position:absolute;left:360px;top:240px;width:1200px;height:240px;z-index:2;display:flex;align-items:center;justify-content:center">
+<span data-glitch-idle style="font-size:128px;line-height:100%;letter-spacing:-.02em;color:#28262E;white-space:nowrap">perfectionsynthétique</span>
+</div>
+
+<div data-btn data-hov="prod" data-frame style="position:absolute;left:240px;top:600px;width:360px;height:240px;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;cursor:pointer;color:#28262E">
+<span style="font-size:13px;letter-spacing:.1em;color:#56535E">01</span>
+<span data-word style="font-size:48px;line-height:100%;letter-spacing:-.02em">product designs</span>
+</div>
+<div data-btn data-hov="paint" data-frame style="position:absolute;left:600px;top:600px;width:360px;height:240px;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;cursor:pointer;color:#28262E">
+<span style="font-size:13px;letter-spacing:.1em;color:#56535E">02</span>
+<span data-word style="font-size:48px;line-height:100%;letter-spacing:-.02em">paintings</span>
+</div>
+<div data-btn data-hov="comp" data-frame style="position:absolute;left:960px;top:600px;width:360px;height:240px;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;cursor:pointer;color:#28262E">
+<span style="font-size:13px;letter-spacing:.1em;color:#56535E">03</span>
+<span data-word style="font-size:48px;line-height:100%;letter-spacing:-.02em">competizione</span>
+</div>
+<div data-btn data-hov="invert" data-frame style="position:absolute;left:1320px;top:600px;width:360px;height:240px;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;cursor:pointer;color:#28262E">
+<span style="font-size:13px;letter-spacing:.1em;color:#56535E">04</span>
+<span data-word style="font-size:48px;line-height:100%;letter-spacing:-.02em">contact</span>
+</div>
+
+<div data-frame style="position:absolute;left:120px;top:840px;width:1680px;height:120px;z-index:2;box-sizing:border-box;padding:0 28px;display:flex;align-items:center;justify-content:space-between;font-size:13px;letter-spacing:.06em;color:#56535E">
+<span>last updated august 3 2026 · 4:25 pm ET</span><span>chrisrobinfiore@gmail.com</span>
+</div>
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="2b">
+<div class="dv-olabel"><a class="dv-oid" href="#2b">2b</a>01 product designs · 60px module · same content as <a class="dv-oid" href="#1d">1d</a>, edges implied by lattice pegs</div>
+<div class="dv-card" style="width:1920px">
+<div data-screen data-m="60" data-screen-label="2b product designs ascii" style="position:relative;width:1920px;height:1080px;background:#E9EDEE;overflow:hidden">
+<span data-bandhost style="display:block;position:absolute;left:0;top:0;width:1920px;height:1080px;z-index:0;pointer-events:none"></span>
+<div data-peglayer data-step="30" data-cols="63" data-x0="30" data-y0="30" data-mk="2" data-mc0="1" data-mr0="1" data-major-fs="13" style="position:absolute;left:15px;top:15px;width:1890px;height:1050px;display:grid;grid-template-columns:repeat(63,30px);grid-auto-rows:30px;z-index:1;pointer-events:none">
+<sc-for list="{{ pegs2205 }}" as="p" hint-placeholder-count="2205"><span data-peg style="display:flex;align-items:center;justify-content:center;font-size:9px;line-height:1;color:#E2E6E8">+</span></sc-for>
+</div>
+
+<div data-frame style="position:absolute;left:60px;top:60px;width:1800px;height:60px;z-index:2;box-sizing:border-box;padding:0 26px;display:flex;align-items:center;justify-content:space-between;font-size:13px;letter-spacing:.06em;color:#56535E"><span>01 · product designs</span><span>13 cases · 58 motion studies</span><span data-btn style="cursor:pointer;color:#28262E"><span data-word>close</span></span></div>
+
+<div data-frame style="position:absolute;left:60px;top:120px;width:1800px;height:120px;z-index:2;box-sizing:border-box;padding:0 26px;display:flex;align-items:center"><span data-glitch-idle style="font-size:88px;line-height:100%;letter-spacing:-.02em;color:#28262E">product designs</span></div>
+
+<div data-frame style="position:absolute;left:60px;top:240px;width:1080px;height:60px;z-index:2;box-sizing:border-box;padding:0 26px;display:flex;align-items:center"><span style="font-size:15px;line-height:150%;color:#56535E;text-wrap:pretty">ambitious products designed, the difficult parts prototyped, and the ideas tested to see whether they hold up.</span></div>
+
+<div data-btn data-frame style="position:absolute;left:60px;top:300px;width:720px;height:240px;z-index:2;box-sizing:border-box;padding:22px 26px;cursor:pointer;color:#28262E;display:flex;flex-direction:column;justify-content:space-between">
+<span style="font-size:13px;letter-spacing:.06em;color:#56535E">2026 · built · [ cover 1600×900 ]</span><span data-word style="font-size:36px;line-height:105%;letter-spacing:-.02em">after tokens</span></div>
+<div data-btn data-frame style="position:absolute;left:780px;top:300px;width:360px;height:240px;z-index:2;box-sizing:border-box;padding:22px 26px;cursor:pointer;color:#28262E;display:flex;flex-direction:column;justify-content:space-between">
+<span style="font-size:13px;letter-spacing:.06em;color:#56535E">2026 · concept</span><span data-word style="font-size:26px;line-height:105%;letter-spacing:-.02em">apple wallet card sharing</span></div>
+<div data-btn data-frame style="position:absolute;left:1140px;top:300px;width:720px;height:240px;z-index:2;box-sizing:border-box;padding:22px 26px;cursor:pointer;color:#28262E;display:flex;flex-direction:column;justify-content:space-between">
+<span style="font-size:13px;letter-spacing:.06em;color:#56535E">2026 · concept · case study · [ cover 1600×900 ]</span><span data-word style="font-size:36px;line-height:105%;letter-spacing:-.02em">chellbook</span></div>
+<div data-btn data-frame style="position:absolute;left:60px;top:540px;width:360px;height:240px;z-index:2;box-sizing:border-box;padding:22px 26px;cursor:pointer;color:#28262E;display:flex;flex-direction:column;justify-content:space-between">
+<span style="font-size:13px;letter-spacing:.06em;color:#56535E">2026</span><span data-word style="font-size:36px;line-height:105%;letter-spacing:-.02em">lee</span></div>
+<div data-btn data-frame style="position:absolute;left:1500px;top:540px;width:360px;height:240px;z-index:2;box-sizing:border-box;padding:22px 26px;cursor:pointer;color:#28262E;display:flex;flex-direction:column;justify-content:space-between">
+<span style="font-size:13px;letter-spacing:.06em;color:#56535E">2026</span><span data-word style="font-size:26px;line-height:105%;letter-spacing:-.02em">mfny concentrates</span></div>
+<div data-btn data-frame style="position:absolute;left:60px;top:780px;width:600px;height:180px;z-index:2;box-sizing:border-box;padding:22px 26px;cursor:pointer;color:#28262E;display:flex;flex-direction:column;justify-content:space-between">
+<span style="font-size:13px;letter-spacing:.06em;color:#56535E">2026 · concept</span><span data-word style="font-size:26px;line-height:105%;letter-spacing:-.02em">chipotle app ui cleanup</span></div>
+<div data-btn data-frame style="position:absolute;left:660px;top:780px;width:600px;height:180px;z-index:2;box-sizing:border-box;padding:22px 26px;cursor:pointer;color:#28262E;display:flex;flex-direction:column;justify-content:space-between">
+<span style="font-size:13px;letter-spacing:.06em;color:#56535E">2026 · simulated</span><span data-word style="font-size:26px;line-height:105%;letter-spacing:-.02em">one master affordance</span></div>
+<div data-btn data-frame style="position:absolute;left:1260px;top:780px;width:600px;height:180px;z-index:2;box-sizing:border-box;padding:22px 26px;cursor:pointer;color:#28262E;display:flex;flex-direction:column;justify-content:space-between">
+<span style="font-size:13px;letter-spacing:.06em;color:#56535E">shipped · claude code plugin</span><span data-word style="font-size:26px;line-height:105%;letter-spacing:-.02em">df2tm</span></div>
+
+<div data-btn data-frame style="position:absolute;left:420px;top:540px;width:1080px;height:240px;z-index:2;box-sizing:border-box;padding:22px 26px;cursor:pointer;color:#28262E;display:flex;align-items:flex-end;justify-content:space-between">
+<span data-word style="font-size:36px;line-height:100%;letter-spacing:-.02em">motion archive</span><span style="font-size:13px;letter-spacing:.06em;color:#56535E">58 studies · swipe-row, vertical-feed, seek, flock, bloom</span></div>
+
+<div data-frame style="position:absolute;left:60px;top:960px;width:1800px;height:60px;z-index:2;box-sizing:border-box;padding:0 26px;display:flex;align-items:center;justify-content:space-between;font-size:13px;letter-spacing:.06em;color:#56535E"><span>next — 02</span><span>chrisrobinfiore@gmail.com</span></div>
+</div>
+</div>
+</div>
+
+</div>
+<p class="dv-next">Try next: "the lit peg ring should stay lit after you leave" · "make an on peg a heavier mark than an off one" · "carry this to paintings and contact"</p>
+</section>
+<section class="dv-turn" id="t1">
+<div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">Modular peg canvas — three home models, then the inner screens</span></div>
+<div class="dv-opts">
+
+<div class="dv-opt" id="1a">
+<div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a>home · peg board · 120px module · 16 × 9 · menu keeps the grow-to-page model</div>
+<div class="dv-card" style="width:1920px">
+<div data-screen data-m="120" data-screen-label="1a home peg board" style="position:relative;width:1920px;height:1080px;background:#E9EDEE;overflow:hidden">
+<div style="position:absolute;inset:0;background-image:url(data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='120'%20height='120'%3E%3Cpath%20d='M60%2056v8M56%2060h8'%20stroke='%23CBD2D5'%20stroke-width='1'/%3E%3C/svg%3E);background-size:120px 120px"></div>
+
+<div style="position:absolute;left:240px;top:120px;width:1440px;height:120px;display:flex;align-items:center;justify-content:space-between;font-size:13px;letter-spacing:.06em;color:#56535E">
+<span>christopher robin fiore</span><span>product designer · new york city</span><span>studio index, rev 04</span>
+</div>
+
+<div style="position:absolute;left:240px;top:360px;width:1440px;height:240px;display:flex;align-items:center;justify-content:center">
+<span data-glitch-idle style="font-size:128px;line-height:100%;letter-spacing:-.02em;color:#28262E;white-space:nowrap">perfectionsynthétique</span>
+</div>
+
+<div style="position:absolute;left:240px;top:720px;width:1440px;height:240px;border:1px solid #28262E;background:#ffffff;box-sizing:border-box"></div>
+<div style="position:absolute;left:240px;top:720px;width:1440px;height:240px;background-image:url(data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='120'%20height='120'%3E%3Cpath%20d='M60%2056v8M56%2060h8'%20stroke='%237C858A'%20stroke-width='1'/%3E%3C/svg%3E);background-size:120px 120px"></div>
+<div style="position:absolute;left:600px;top:720px;width:1px;height:240px;background:#28262E"></div>
+<div style="position:absolute;left:960px;top:720px;width:1px;height:240px;background:#28262E"></div>
+<div style="position:absolute;left:1320px;top:720px;width:1px;height:240px;background:#28262E"></div>
+
+<div data-btn style="position:absolute;left:240px;top:720px;width:360px;height:240px;z-index:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;cursor:pointer;color:#28262E">
+<span style="font-size:13px;letter-spacing:.1em;color:#56535E">01</span><span data-word style="font-size:48px;line-height:100%;letter-spacing:-.02em">product designs</span>
+</div>
+<div data-btn style="position:absolute;left:600px;top:720px;width:360px;height:240px;z-index:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;cursor:pointer;color:#28262E">
+<span style="font-size:13px;letter-spacing:.1em;color:#56535E">02</span><span data-word style="font-size:48px;line-height:100%;letter-spacing:-.02em">paintings</span>
+</div>
+<div data-btn style="position:absolute;left:960px;top:720px;width:360px;height:240px;z-index:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;cursor:pointer;color:#28262E">
+<span style="font-size:13px;letter-spacing:.1em;color:#56535E">03</span><span data-word style="font-size:48px;line-height:100%;letter-spacing:-.02em">competizione</span>
+</div>
+<div data-btn style="position:absolute;left:1320px;top:720px;width:360px;height:240px;z-index:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;cursor:pointer;color:#28262E">
+<span style="font-size:13px;letter-spacing:.1em;color:#56535E">04</span><span data-word style="font-size:48px;line-height:100%;letter-spacing:-.02em">contact</span>
+</div>
+
+<div style="position:absolute;left:240px;top:960px;width:1440px;height:120px;display:flex;align-items:center;justify-content:space-between;font-size:13px;letter-spacing:.06em;color:#56535E">
+<span>last updated august 3 2026 · 4:25 pm ET</span><span>chrisrobinfiore@gmail.com</span>
+</div>
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="1b">
+<div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a>home · index column · 60px module · 32 × 18 · flat IA, no menu→page grow</div>
+<div class="dv-card" style="width:1920px">
+<div data-screen data-m="60" data-screen-label="1b home index column" style="position:relative;width:1920px;height:1080px;background:#E9EDEE;overflow:hidden">
+<div style="position:absolute;inset:0;background-image:url(data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='60'%20height='60'%3E%3Cpath%20d='M30%2026.5v7M26.5%2030h7'%20stroke='%23CBD2D5'%20stroke-width='1'/%3E%3C/svg%3E);background-size:60px 60px"></div>
+
+<div style="position:absolute;left:60px;top:60px;width:480px;height:960px;display:flex;flex-direction:column;justify-content:space-between">
+<div style="display:flex;flex-direction:column;gap:24px">
+<span style="font-size:64px;line-height:92%;letter-spacing:-.02em;color:#28262E">perfection<br>synthétique</span>
+<span style="font-size:15px;line-height:150%;color:#56535E;max-width:360px;text-wrap:pretty">the designs of christopher robin fiore. product designer, design engineer. new york city.</span>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px;font-size:13px;letter-spacing:.06em;color:#56535E">
+<span>chrisrobinfiore@gmail.com</span><span>github.com/globalanomalyindex</span><span>artstation.com/chrisfiore</span><span style="color:#AEB6BA">studio index, rev 04</span>
+</div>
+</div>
+<div style="position:absolute;left:540px;top:60px;width:1px;height:960px;background:rgba(40,38,46,.15)"></div>
+
+<div data-btn style="position:absolute;left:600px;top:60px;width:1260px;height:180px;z-index:0;background:#ffffff;border:1px solid #28262E;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;padding:0 40px;cursor:pointer;color:#28262E">
+<span style="display:flex;align-items:baseline;gap:28px"><span style="font-size:13px;letter-spacing:.1em;color:#56535E">01</span><span data-word style="font-size:48px;line-height:100%;letter-spacing:-.02em">product designs</span></span>
+<span style="font-size:13px;letter-spacing:.06em;color:#56535E">13 cases · 58 motion studies</span>
+</div>
+<div data-btn style="position:absolute;left:600px;top:240px;width:1260px;height:180px;z-index:0;background:#ffffff;border:1px solid #28262E;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;padding:0 40px;cursor:pointer;color:#28262E">
+<span style="display:flex;align-items:baseline;gap:28px"><span style="font-size:13px;letter-spacing:.1em;color:#56535E">02</span><span data-word style="font-size:48px;line-height:100%;letter-spacing:-.02em">paintings</span></span>
+<span style="font-size:13px;letter-spacing:.06em;color:#56535E">20 works · 2023 to 2025</span>
+</div>
+<div data-btn style="position:absolute;left:600px;top:420px;width:1260px;height:180px;z-index:0;background:#ffffff;border:1px solid #28262E;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;padding:0 40px;cursor:pointer;color:#28262E">
+<span style="display:flex;align-items:baseline;gap:28px"><span style="font-size:13px;letter-spacing:.1em;color:#56535E">03</span><span data-word style="font-size:48px;line-height:100%;letter-spacing:-.02em">competizione</span></span>
+<span style="font-size:13px;letter-spacing:.06em;color:#56535E">branchial lateral spine · R1</span>
+</div>
+<div data-btn style="position:absolute;left:600px;top:600px;width:1260px;height:180px;z-index:0;background:#ffffff;border:1px solid #28262E;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;padding:0 40px;cursor:pointer;color:#28262E">
+<span style="display:flex;align-items:baseline;gap:28px"><span style="font-size:13px;letter-spacing:.1em;color:#56535E">04</span><span data-word style="font-size:48px;line-height:100%;letter-spacing:-.02em">contact</span></span>
+<span style="font-size:13px;letter-spacing:.06em;color:#56535E">new york city</span>
+</div>
+
+<div style="position:absolute;left:600px;top:810px;width:1260px;height:30px;display:flex;align-items:center;font-size:13px;letter-spacing:.06em;color:#56535E">recent</div>
+<div style="position:absolute;left:600px;top:840px;width:1260px;height:180px;display:grid;grid-template-columns:repeat(6,1fr);gap:0">
+<div data-btn style="position:relative;z-index:0;border:1px solid #28262E;margin-right:-1px;background:#ffffff;box-sizing:border-box;display:flex;flex-direction:column;justify-content:flex-end;padding:14px;cursor:pointer;color:#28262E"><span data-word style="font-size:15px;line-height:110%">after tokens</span></div>
+<div data-btn style="position:relative;z-index:0;border:1px solid #28262E;margin-right:-1px;background:#ffffff;box-sizing:border-box;display:flex;flex-direction:column;justify-content:flex-end;padding:14px;cursor:pointer;color:#28262E"><span data-word style="font-size:15px;line-height:110%">chellbook</span></div>
+<div data-btn style="position:relative;z-index:0;border:1px solid #28262E;margin-right:-1px;background:#ffffff;box-sizing:border-box;display:flex;flex-direction:column;justify-content:flex-end;padding:14px;cursor:pointer;color:#28262E"><span data-word style="font-size:15px;line-height:110%">wildcard</span></div>
+<div data-btn style="position:relative;z-index:0;border:1px solid #28262E;margin-right:-1px;background:#ffffff;box-sizing:border-box;display:flex;flex-direction:column;justify-content:flex-end;padding:14px;cursor:pointer;color:#28262E"><span data-word style="font-size:15px;line-height:110%">the steppe</span></div>
+<div data-btn style="position:relative;z-index:0;border:1px solid #28262E;margin-right:-1px;background:#ffffff;box-sizing:border-box;display:flex;flex-direction:column;justify-content:flex-end;padding:14px;cursor:pointer;color:#28262E"><span data-word style="font-size:15px;line-height:110%">df2tm</span></div>
+<div data-btn style="position:relative;z-index:0;border:1px solid #28262E;background:#ffffff;box-sizing:border-box;display:flex;flex-direction:column;justify-content:flex-end;padding:14px;cursor:pointer;color:#28262E"><span data-word style="font-size:15px;line-height:110%">shepherd</span></div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="1c">
+<div class="dv-olabel"><a class="dv-oid" href="#1c">1c</a>home · mosaic switchboard · 40px module · 48 × 27 · full-bleed tiling, no margins</div>
+<div class="dv-card" style="width:1920px">
+<div data-screen data-m="40" data-screen-label="1c home mosaic switchboard" style="position:relative;width:1920px;height:1080px;background:#E9EDEE;overflow:hidden">
+<div style="position:absolute;inset:0;background-image:url(data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='40'%20height='40'%3E%3Cpath%20d='M20%2017v6M17%2020h6'%20stroke='%23CBD2D5'%20stroke-width='1'/%3E%3C/svg%3E);background-size:40px 40px"></div>
+
+<div style="position:absolute;left:0;top:0;width:960px;height:600px;box-sizing:border-box;border-right:1px solid #28262E;border-bottom:1px solid #28262E;display:flex;flex-direction:column;justify-content:space-between;padding:40px">
+<div style="display:flex;justify-content:space-between;font-size:13px;letter-spacing:.06em;color:#56535E"><span>christopher robin fiore</span><span>studio index, rev 04</span></div>
+<span style="font-size:104px;line-height:88%;letter-spacing:-.02em;color:#28262E">perfection<br>synthétique</span>
+<span style="font-size:15px;line-height:150%;color:#56535E;max-width:520px;text-wrap:pretty">ambitious products designed, the difficult parts prototyped, and the ideas tested to see whether they actually hold up.</span>
+</div>
+
+<div data-btn style="position:absolute;left:960px;top:0;width:960px;height:320px;z-index:0;box-sizing:border-box;border-bottom:1px solid #28262E;background:#ffffff;display:flex;align-items:flex-end;justify-content:space-between;padding:40px;cursor:pointer;color:#28262E">
+<span data-word style="font-size:48px;line-height:100%;letter-spacing:-.02em">product designs</span><span style="font-size:13px;letter-spacing:.1em;color:#56535E">01</span>
+</div>
+<div data-btn style="position:absolute;left:960px;top:320px;width:480px;height:280px;z-index:0;box-sizing:border-box;border-right:1px solid #28262E;border-bottom:1px solid #28262E;background:#ffffff;display:flex;align-items:flex-end;justify-content:space-between;padding:40px;cursor:pointer;color:#28262E">
+<span data-word style="font-size:48px;line-height:100%;letter-spacing:-.02em">paintings</span><span style="font-size:13px;letter-spacing:.1em;color:#56535E">02</span>
+</div>
+<div data-btn style="position:absolute;left:1440px;top:320px;width:480px;height:280px;z-index:0;box-sizing:border-box;border-bottom:1px solid #28262E;background:#ffffff;display:flex;align-items:flex-end;justify-content:space-between;padding:40px;cursor:pointer;color:#28262E">
+<span data-word style="font-size:40px;line-height:100%;letter-spacing:-.02em">competizione</span><span style="font-size:13px;letter-spacing:.1em;color:#56535E">03</span>
+</div>
+<div data-btn style="position:absolute;left:0;top:600px;width:480px;height:480px;z-index:0;box-sizing:border-box;border-right:1px solid #28262E;background:#1A1820;display:flex;flex-direction:column;justify-content:space-between;padding:40px;cursor:pointer;color:#E9EDEE">
+<span style="font-size:13px;letter-spacing:.1em;color:#AEB6BA">04</span>
+<div style="display:flex;flex-direction:column;gap:18px"><span data-word style="font-size:48px;line-height:100%;letter-spacing:-.02em">contact</span><span style="font-size:13px;letter-spacing:.06em;color:#AEB6BA">chrisrobinfiore@gmail.com</span></div>
+</div>
+
+<div style="position:absolute;left:480px;top:600px;width:1440px;height:480px;display:grid;grid-template-columns:repeat(3,480px);grid-template-rows:480px">
+<div data-btn style="position:relative;z-index:0;box-sizing:border-box;border-right:1px solid #28262E;padding:40px;cursor:pointer;color:#28262E;display:flex;flex-direction:column;justify-content:space-between">
+<span style="font-size:13px;letter-spacing:.06em;color:#56535E">selected · 2026</span><span data-word style="font-size:40px;line-height:100%;letter-spacing:-.02em">branchial<br>lateral spine</span>
+</div>
+<div data-btn style="position:relative;z-index:0;box-sizing:border-box;border-right:1px solid #28262E;padding:40px;cursor:pointer;color:#28262E;display:flex;flex-direction:column;justify-content:space-between">
+<span style="font-size:13px;letter-spacing:.06em;color:#56535E">selected · 2026</span><span data-word style="font-size:40px;line-height:100%;letter-spacing:-.02em">chellbook</span>
+</div>
+<div data-btn style="position:relative;z-index:0;box-sizing:border-box;padding:40px;cursor:pointer;color:#28262E;display:flex;flex-direction:column;justify-content:space-between">
+<span style="font-size:13px;letter-spacing:.06em;color:#56535E">selected · 2025</span><span data-word style="font-size:40px;line-height:100%;letter-spacing:-.02em">the steppe</span>
+</div>
+</div>
+<div style="position:absolute;left:480px;top:600px;width:1440px;height:1px;background:#28262E"></div>
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="1d">
+<div class="dv-olabel"><a class="dv-oid" href="#1d">1d</a>01 product designs · 60px module · aspect-driven mosaic index</div>
+<div class="dv-card" style="width:1920px">
+<div data-screen data-m="60" data-screen-label="1d product designs index" style="position:relative;width:1920px;height:1080px;background:#E9EDEE;overflow:hidden">
+<div style="position:absolute;inset:0;background-image:url(data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='60'%20height='60'%3E%3Cpath%20d='M30%2026.5v7M26.5%2030h7'%20stroke='%23CBD2D5'%20stroke-width='1'/%3E%3C/svg%3E);background-size:60px 60px"></div>
+
+<div style="position:absolute;left:60px;top:60px;width:1800px;height:60px;display:flex;align-items:center;justify-content:space-between;font-size:13px;letter-spacing:.06em;color:#56535E"><span>01 · product designs</span><span>13 cases · 58 motion studies</span><span data-btn style="z-index:0;padding:0 10px;cursor:pointer;color:#28262E"><span data-word>close</span></span></div>
+<div style="position:absolute;left:60px;top:120px;width:1800px;height:120px;display:flex;align-items:center"><span data-glitch-idle style="font-size:88px;line-height:100%;letter-spacing:-.02em;color:#28262E">product designs</span></div>
+<div style="position:absolute;left:60px;top:240px;width:1080px;height:60px;display:flex;align-items:center"><span style="font-size:15px;line-height:150%;color:#56535E;text-wrap:pretty">ambitious products designed, the difficult parts prototyped, and the ideas tested to see whether they hold up.</span></div>
+
+<div data-btn style="position:absolute;left:60px;top:300px;width:720px;height:240px;box-sizing:border-box;border:1px solid #28262E;background:#ffffff;background-image:repeating-linear-gradient(45deg,rgba(40,38,46,.07) 0 5px,rgba(0,0,0,0) 5px 11px);background-origin:border-box;z-index:0;cursor:pointer;color:#28262E;display:flex;flex-direction:column;justify-content:space-between;padding:20px">
+<span style="font-size:13px;letter-spacing:.06em;color:#56535E">2026 · built</span><span data-word style="font-size:36px;line-height:100%;letter-spacing:-.02em">after tokens</span></div>
+
+<div data-btn style="position:absolute;left:780px;top:300px;width:360px;height:240px;box-sizing:border-box;border:1px solid #28262E;background:#ffffff;background-image:url(data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='60'%20height='60'%3E%3Cpath%20d='M30%2026.5v7M26.5%2030h7'%20stroke='%237C858A'%20stroke-width='1'/%3E%3C/svg%3E);background-size:60px 60px;background-origin:border-box;z-index:0;cursor:pointer;color:#28262E;display:flex;flex-direction:column;justify-content:space-between;padding:20px">
+<span style="font-size:13px;letter-spacing:.06em;color:#56535E">2026 · concept</span><span data-word style="font-size:26px;line-height:105%;letter-spacing:-.02em">apple wallet card sharing</span></div>
+
+<div data-btn style="position:absolute;left:1140px;top:300px;width:720px;height:240px;box-sizing:border-box;border:1px solid #28262E;background:#ffffff;background-image:repeating-linear-gradient(45deg,rgba(40,38,46,.07) 0 5px,rgba(0,0,0,0) 5px 11px);background-origin:border-box;z-index:0;cursor:pointer;color:#28262E;display:flex;flex-direction:column;justify-content:space-between;padding:20px">
+<span style="font-size:13px;letter-spacing:.06em;color:#56535E">2026 · concept · case study</span><span data-word style="font-size:36px;line-height:100%;letter-spacing:-.02em">chellbook</span></div>
+
+<div data-btn style="position:absolute;left:60px;top:540px;width:360px;height:240px;box-sizing:border-box;border:1px solid #28262E;background:#ffffff;background-image:url(data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='60'%20height='60'%3E%3Cpath%20d='M30%2026.5v7M26.5%2030h7'%20stroke='%237C858A'%20stroke-width='1'/%3E%3C/svg%3E);background-size:60px 60px;background-origin:border-box;z-index:0;cursor:pointer;color:#28262E;display:flex;flex-direction:column;justify-content:space-between;padding:20px">
+<span style="font-size:13px;letter-spacing:.06em;color:#56535E">2026</span><span data-word style="font-size:36px;line-height:100%;letter-spacing:-.02em">lee</span></div>
+
+<div data-btn style="position:absolute;left:420px;top:540px;width:1080px;height:240px;box-sizing:border-box;border:1px solid #28262E;background:#ffffff;background-image:repeating-linear-gradient(45deg,rgba(40,38,46,.07) 0 5px,rgba(0,0,0,0) 5px 11px);background-origin:border-box;z-index:0;cursor:pointer;color:#28262E;display:flex;align-items:flex-end;justify-content:space-between;padding:20px">
+<span data-word style="font-size:36px;line-height:100%;letter-spacing:-.02em">motion archive</span><span style="font-size:13px;letter-spacing:.06em;color:#56535E">58 studies · swipe-row, vertical-feed, seek, flock, bloom</span></div>
+
+<div data-btn style="position:absolute;left:1500px;top:540px;width:360px;height:240px;box-sizing:border-box;border:1px solid #28262E;background:#ffffff;background-image:url(data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='60'%20height='60'%3E%3Cpath%20d='M30%2026.5v7M26.5%2030h7'%20stroke='%237C858A'%20stroke-width='1'/%3E%3C/svg%3E);background-size:60px 60px;background-origin:border-box;z-index:0;cursor:pointer;color:#28262E;display:flex;flex-direction:column;justify-content:space-between;padding:20px">
+<span style="font-size:13px;letter-spacing:.06em;color:#56535E">2026</span><span data-word style="font-size:26px;line-height:105%;letter-spacing:-.02em">mfny concentrates</span></div>
+
+<div data-btn style="position:absolute;left:60px;top:780px;width:600px;height:180px;box-sizing:border-box;border:1px solid #28262E;background:#ffffff;background-image:url(data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='60'%20height='60'%3E%3Cpath%20d='M30%2026.5v7M26.5%2030h7'%20stroke='%237C858A'%20stroke-width='1'/%3E%3C/svg%3E);background-size:60px 60px;background-origin:border-box;z-index:0;cursor:pointer;color:#28262E;display:flex;flex-direction:column;justify-content:space-between;padding:20px">
+<span style="font-size:13px;letter-spacing:.06em;color:#56535E">2026 · concept</span><span data-word style="font-size:26px;line-height:105%;letter-spacing:-.02em">chipotle app ui cleanup</span></div>
+
+<div data-btn style="position:absolute;left:660px;top:780px;width:600px;height:180px;box-sizing:border-box;border:1px solid #28262E;background:#ffffff;background-image:url(data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='60'%20height='60'%3E%3Cpath%20d='M30%2026.5v7M26.5%2030h7'%20stroke='%237C858A'%20stroke-width='1'/%3E%3C/svg%3E);background-size:60px 60px;background-origin:border-box;z-index:0;cursor:pointer;color:#28262E;display:flex;flex-direction:column;justify-content:space-between;padding:20px">
+<span style="font-size:13px;letter-spacing:.06em;color:#56535E">2026 · simulated</span><span data-word style="font-size:26px;line-height:105%;letter-spacing:-.02em">one master affordance</span></div>
+
+<div data-btn style="position:absolute;left:1260px;top:780px;width:600px;height:180px;box-sizing:border-box;border:1px solid #28262E;background:#ffffff;background-image:url(data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='60'%20height='60'%3E%3Cpath%20d='M30%2026.5v7M26.5%2030h7'%20stroke='%237C858A'%20stroke-width='1'/%3E%3C/svg%3E);background-size:60px 60px;background-origin:border-box;z-index:0;cursor:pointer;color:#28262E;display:flex;flex-direction:column;justify-content:space-between;padding:20px">
+<span style="font-size:13px;letter-spacing:.06em;color:#56535E">shipped · claude code plugin</span><span data-word style="font-size:26px;line-height:105%;letter-spacing:-.02em">df2tm</span></div>
+
+<div style="position:absolute;left:60px;top:960px;width:1800px;height:60px;display:flex;align-items:center;justify-content:space-between;font-size:13px;letter-spacing:.06em;color:#56535E"><span>next — 02</span><span>chrisrobinfiore@gmail.com</span></div>
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="1e">
+<div class="dv-olabel"><a class="dv-oid" href="#1e">1e</a>case study, in-stage · 60px module · sheets column + evidence column</div>
+<div class="dv-card" style="width:1920px">
+<div data-screen data-m="60" data-screen-label="1e case study branchial lateral spine" style="position:relative;width:1920px;height:1080px;background:#E9EDEE;overflow:hidden">
+<div style="position:absolute;inset:0;background-image:url(data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='60'%20height='60'%3E%3Cpath%20d='M30%2026.5v7M26.5%2030h7'%20stroke='%23CBD2D5'%20stroke-width='1'/%3E%3C/svg%3E);background-size:60px 60px"></div>
+
+<div style="position:absolute;left:60px;top:60px;width:1800px;height:60px;display:flex;align-items:center;justify-content:space-between;font-size:13px;letter-spacing:.06em;color:#56535E"><span>03 · competizione / case study</span><span data-btn style="z-index:0;padding:0 10px;cursor:pointer;color:#28262E"><span data-word>close</span></span></div>
+<div style="position:absolute;left:60px;top:120px;width:1800px;height:120px;display:flex;align-items:center"><span style="font-size:88px;line-height:100%;letter-spacing:-.02em;color:#28262E">branchial lateral spine</span></div>
+<div style="position:absolute;left:60px;top:240px;width:1800px;height:60px;display:flex;align-items:center;justify-content:space-between;font-size:13px;letter-spacing:.06em;color:#56535E"><span>kona n · 2026 · R1 · measurement-gated</span><span>12 sheets · 424-page master publication</span></div>
+
+<div style="position:absolute;left:60px;top:300px;width:600px;height:300px;box-sizing:border-box;border:1px solid #28262E;background-image:repeating-linear-gradient(45deg,rgba(40,38,46,.07) 0 5px,rgba(0,0,0,0) 5px 11px);background-origin:border-box;display:flex;align-items:flex-end;padding:16px"><span style="font:11px/1 ui-monospace,Menlo,monospace;color:#56535E">sheet 01 · installed concept</span></div>
+<div style="position:absolute;left:660px;top:300px;width:600px;height:300px;box-sizing:border-box;border:1px solid #28262E;background-image:repeating-linear-gradient(45deg,rgba(40,38,46,.07) 0 5px,rgba(0,0,0,0) 5px 11px);background-origin:border-box;display:flex;align-items:flex-end;padding:16px"><span style="font:11px/1 ui-monospace,Menlo,monospace;color:#56535E">sheet 02 · system plate</span></div>
+<div style="position:absolute;left:60px;top:600px;width:1200px;height:240px;box-sizing:border-box;border:1px solid #28262E;background-image:repeating-linear-gradient(45deg,rgba(40,38,46,.07) 0 5px,rgba(0,0,0,0) 5px 11px);background-origin:border-box;display:flex;align-items:flex-end;padding:16px"><span style="font:11px/1 ui-monospace,Menlo,monospace;color:#56535E">sheet 03 · arch manifold, uncropped · object-fit contain</span></div>
+<div style="position:absolute;left:60px;top:840px;width:600px;height:180px;box-sizing:border-box;border:1px solid #28262E;background-image:repeating-linear-gradient(45deg,rgba(40,38,46,.07) 0 5px,rgba(0,0,0,0) 5px 11px);background-origin:border-box;display:flex;align-items:flex-end;padding:16px"><span style="font:11px/1 ui-monospace,Menlo,monospace;color:#56535E">sheet 04</span></div>
+<div style="position:absolute;left:660px;top:840px;width:600px;height:180px;box-sizing:border-box;border:1px solid #28262E;background-image:repeating-linear-gradient(45deg,rgba(40,38,46,.07) 0 5px,rgba(0,0,0,0) 5px 11px);background-origin:border-box;display:flex;align-items:flex-end;padding:16px"><span style="font:11px/1 ui-monospace,Menlo,monospace;color:#56535E">sheet 05</span></div>
+
+<div style="position:absolute;left:1320px;top:300px;width:540px;height:720px;display:flex;flex-direction:column;gap:24px">
+<span style="font-size:20px;line-height:140%;color:#28262E;text-wrap:pretty">one entry. an R1 production-intent assembly, measurement-gated, not road or track released.</span>
+<div style="height:1px;background:rgba(40,38,46,.15)"></div>
+<div style="display:flex;flex-direction:column;gap:0">
+<div data-btn style="position:relative;z-index:0;height:60px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(40,38,46,.15);cursor:pointer;color:#28262E"><span data-word style="font-size:20px">collector</span><span style="font-size:13px;color:#56535E">R1 gated</span></div>
+<div data-btn style="position:relative;z-index:0;height:60px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(40,38,46,.15);cursor:pointer;color:#28262E"><span data-word style="font-size:20px">throat family</span><span style="font-size:13px;color:#56535E">R1 gated</span></div>
+<div data-btn style="position:relative;z-index:0;height:60px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(40,38,46,.15);cursor:pointer;color:#28262E"><span data-word style="font-size:20px">arch manifold</span><span style="font-size:13px;color:#56535E">R1 gated</span></div>
+<div data-btn style="position:relative;z-index:0;height:60px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(40,38,46,.15);cursor:pointer;color:#28262E"><span data-word style="font-size:20px">opercular outlets</span><span style="font-size:13px;color:#56535E">R1 gated</span></div>
+<div data-btn style="position:relative;z-index:0;height:60px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(40,38,46,.15);cursor:pointer;color:#28262E"><span data-word style="font-size:20px">floor spine</span><span style="font-size:13px;color:#56535E">R1 gated</span></div>
+</div>
+<span style="font-size:13px;line-height:160%;color:#56535E;text-wrap:pretty">installed views are concept visualization only; system plates are design hypothesis, not measured airflow.</span>
+</div>
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="1f">
+<div class="dv-olabel"><a class="dv-oid" href="#1f">1f</a>02 paintings · 60px module · blocks sized from each work's real aspect ratio</div>
+<div class="dv-card" style="width:1920px">
+<div data-screen data-m="60" data-screen-label="1f paintings mosaic" style="position:relative;width:1920px;height:1080px;background:#E9EDEE;overflow:hidden">
+<div style="position:absolute;inset:0;background-image:url(data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='60'%20height='60'%3E%3Cpath%20d='M30%2026.5v7M26.5%2030h7'%20stroke='%23CBD2D5'%20stroke-width='1'/%3E%3C/svg%3E);background-size:60px 60px"></div>
+
+<div style="position:absolute;left:60px;top:60px;width:1800px;height:60px;display:flex;align-items:center;justify-content:space-between;font-size:13px;letter-spacing:.06em;color:#56535E"><span>02 · paintings</span><span>20 works · 2023 to 2025 · photobash, blender, substance</span><span data-btn style="z-index:0;padding:0 10px;cursor:pointer;color:#28262E"><span data-word>close</span></span></div>
+
+<div data-btn style="position:absolute;left:60px;top:120px;width:660px;height:300px;box-sizing:border-box;border:1px solid #28262E;background-image:repeating-linear-gradient(45deg,rgba(40,38,46,.07) 0 5px,rgba(0,0,0,0) 5px 11px);background-origin:border-box;z-index:0;cursor:pointer;color:#28262E;display:flex;align-items:flex-end;justify-content:space-between;padding:16px"><span data-word style="font-size:20px">shepherd</span><span style="font:11px/1 ui-monospace,Menlo,monospace;color:#56535E">1600×715</span></div>
+<div data-btn style="position:absolute;left:720px;top:120px;width:240px;height:300px;box-sizing:border-box;border:1px solid #28262E;background-image:repeating-linear-gradient(45deg,rgba(40,38,46,.07) 0 5px,rgba(0,0,0,0) 5px 11px);background-origin:border-box;z-index:0;cursor:pointer;color:#28262E;display:flex;align-items:flex-end;padding:16px"><span data-word style="font-size:20px">the steppe</span></div>
+<div data-btn style="position:absolute;left:960px;top:120px;width:660px;height:300px;box-sizing:border-box;border:1px solid #28262E;background-image:repeating-linear-gradient(45deg,rgba(40,38,46,.07) 0 5px,rgba(0,0,0,0) 5px 11px);background-origin:border-box;z-index:0;cursor:pointer;color:#28262E;display:flex;align-items:flex-end;justify-content:space-between;padding:16px"><span data-word style="font-size:20px">balance</span><span style="font:11px/1 ui-monospace,Menlo,monospace;color:#56535E">1500×715</span></div>
+<div data-btn style="position:absolute;left:1620px;top:120px;width:240px;height:300px;box-sizing:border-box;border:1px solid #28262E;background-image:repeating-linear-gradient(45deg,rgba(40,38,46,.07) 0 5px,rgba(0,0,0,0) 5px 11px);background-origin:border-box;z-index:0;cursor:pointer;color:#28262E;display:flex;align-items:flex-end;padding:16px"><span data-word style="font-size:20px">verticality</span></div>
+
+<div data-btn style="position:absolute;left:60px;top:420px;width:180px;height:300px;box-sizing:border-box;border:1px solid #28262E;background-image:repeating-linear-gradient(45deg,rgba(40,38,46,.07) 0 5px,rgba(0,0,0,0) 5px 11px);background-origin:border-box;z-index:0;cursor:pointer;color:#28262E;display:flex;align-items:flex-end;padding:16px"><span data-word style="font-size:15px;line-height:110%">one day</span></div>
+<div data-btn style="position:absolute;left:240px;top:420px;width:960px;height:300px;box-sizing:border-box;border:1px solid #28262E;background-image:repeating-linear-gradient(45deg,rgba(40,38,46,.07) 0 5px,rgba(0,0,0,0) 5px 11px);background-origin:border-box;z-index:0;cursor:pointer;color:#28262E;display:flex;align-items:flex-end;justify-content:space-between;padding:16px"><span data-word style="font-size:20px">let's take a walk</span><span style="font:11px/1 ui-monospace,Menlo,monospace;color:#56535E">1904×597 · panorama</span></div>
+<div data-btn style="position:absolute;left:1200px;top:420px;width:660px;height:300px;box-sizing:border-box;border:1px solid #28262E;background-image:repeating-linear-gradient(45deg,rgba(40,38,46,.07) 0 5px,rgba(0,0,0,0) 5px 11px);background-origin:border-box;z-index:0;cursor:pointer;color:#28262E;display:flex;align-items:flex-end;justify-content:space-between;padding:16px"><span data-word style="font-size:20px">four year painting progress</span><span style="font:11px/1 ui-monospace,Menlo,monospace;color:#56535E">1500×715</span></div>
+
+<div data-btn style="position:absolute;left:60px;top:720px;width:540px;height:240px;box-sizing:border-box;border:1px solid #28262E;background-image:repeating-linear-gradient(45deg,rgba(40,38,46,.07) 0 5px,rgba(0,0,0,0) 5px 11px);background-origin:border-box;z-index:0;cursor:pointer;color:#28262E;display:flex;align-items:flex-end;padding:16px"><span data-word style="font-size:20px">i've never seen you before</span></div>
+<div data-btn style="position:absolute;left:600px;top:720px;width:540px;height:240px;box-sizing:border-box;border:1px solid #28262E;background-image:repeating-linear-gradient(45deg,rgba(40,38,46,.07) 0 5px,rgba(0,0,0,0) 5px 11px);background-origin:border-box;z-index:0;cursor:pointer;color:#28262E;display:flex;align-items:flex-end;padding:16px"><span data-word style="font-size:20px">we aren't strong enough yet</span></div>
+<div data-btn style="position:absolute;left:1140px;top:720px;width:540px;height:240px;box-sizing:border-box;border:1px solid #28262E;background-image:repeating-linear-gradient(45deg,rgba(40,38,46,.07) 0 5px,rgba(0,0,0,0) 5px 11px);background-origin:border-box;z-index:0;cursor:pointer;color:#28262E;display:flex;align-items:flex-end;padding:16px"><span data-word style="font-size:20px">icbm</span></div>
+<div data-btn style="position:absolute;left:1680px;top:720px;width:180px;height:240px;box-sizing:border-box;border:1px solid #28262E;background:#ffffff;background-image:url(data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='60'%20height='60'%3E%3Cpath%20d='M30%2026.5v7M26.5%2030h7'%20stroke='%237C858A'%20stroke-width='1'/%3E%3C/svg%3E);background-size:60px 60px;background-origin:border-box;z-index:0;cursor:pointer;color:#28262E;display:flex;flex-direction:column;justify-content:space-between;padding:16px"><span style="font-size:13px;color:#56535E">+ 9</span><span data-word style="font-size:20px;line-height:105%">all works</span></div>
+
+<div style="position:absolute;left:60px;top:960px;width:1800px;height:60px;display:flex;align-items:center;justify-content:space-between;font-size:13px;letter-spacing:.06em;color:#56535E"><span>next — 03</span><span>artstation.com/chrisfiore</span></div>
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="1g">
+<div class="dv-olabel"><a class="dv-oid" href="#1g">1g</a>03 competizione · 60px module · one entry, five assemblies, sheet strip</div>
+<div class="dv-card" style="width:1920px">
+<div data-screen data-m="60" data-screen-label="1g competizione" style="position:relative;width:1920px;height:1080px;background:#E9EDEE;overflow:hidden">
+<div style="position:absolute;inset:0;background-image:url(data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='60'%20height='60'%3E%3Cpath%20d='M30%2026.5v7M26.5%2030h7'%20stroke='%23CBD2D5'%20stroke-width='1'/%3E%3C/svg%3E);background-size:60px 60px"></div>
+
+<div style="position:absolute;left:60px;top:60px;width:1800px;height:60px;display:flex;align-items:center;justify-content:space-between;font-size:13px;letter-spacing:.06em;color:#56535E"><span>03 · competizione</span><span>one entry · rev h</span><span data-btn style="z-index:0;padding:0 10px;cursor:pointer;color:#28262E"><span data-word>close</span></span></div>
+<div style="position:absolute;left:60px;top:120px;width:1800px;height:120px;display:flex;align-items:center"><span style="font-size:88px;line-height:100%;letter-spacing:-.02em;color:#28262E">competizione</span></div>
+
+<div data-btn style="position:absolute;left:60px;top:240px;width:1080px;height:600px;box-sizing:border-box;border:1px solid #28262E;background-image:repeating-linear-gradient(45deg,rgba(40,38,46,.07) 0 5px,rgba(0,0,0,0) 5px 11px);background-origin:border-box;z-index:0;cursor:pointer;color:#28262E;display:flex;flex-direction:column;justify-content:space-between;padding:24px">
+<span style="font:11px/1 ui-monospace,Menlo,monospace;color:#56535E">installed concept · concept visualization only</span>
+<div style="display:flex;align-items:flex-end;justify-content:space-between"><span data-word style="font-size:48px;line-height:100%;letter-spacing:-.02em">branchial lateral spine</span><span style="font-size:13px;color:#56535E">open case study</span></div>
+</div>
+
+<div style="position:absolute;left:1200px;top:240px;width:660px;height:600px;display:flex;flex-direction:column;justify-content:space-between">
+<div style="display:flex;flex-direction:column;gap:18px">
+<span style="font-size:13px;letter-spacing:.06em;color:#56535E">kona n · 2026 · R1 · measurement-gated</span>
+<span style="font-size:20px;line-height:140%;color:#28262E;text-wrap:pretty">a production-intent lateral exhaust assembly, gated on measurement rather than on a release date. not road or track released.</span>
+</div>
+<div style="display:flex;flex-direction:column">
+<div style="height:1px;background:rgba(40,38,46,.15)"></div>
+<div data-btn style="position:relative;z-index:0;height:60px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(40,38,46,.15);cursor:pointer;color:#28262E"><span data-word style="font-size:20px">collector</span><span style="font-size:13px;color:#56535E">01</span></div>
+<div data-btn style="position:relative;z-index:0;height:60px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(40,38,46,.15);cursor:pointer;color:#28262E"><span data-word style="font-size:20px">throat family</span><span style="font-size:13px;color:#56535E">02</span></div>
+<div data-btn style="position:relative;z-index:0;height:60px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(40,38,46,.15);cursor:pointer;color:#28262E"><span data-word style="font-size:20px">arch manifold</span><span style="font-size:13px;color:#56535E">03</span></div>
+<div data-btn style="position:relative;z-index:0;height:60px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(40,38,46,.15);cursor:pointer;color:#28262E"><span data-word style="font-size:20px">opercular outlets</span><span style="font-size:13px;color:#56535E">04</span></div>
+<div data-btn style="position:relative;z-index:0;height:60px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(40,38,46,.15);cursor:pointer;color:#28262E"><span data-word style="font-size:20px">floor spine</span><span style="font-size:13px;color:#56535E">05</span></div>
+</div>
+</div>
+
+<div data-btn style="position:absolute;left:60px;top:840px;width:360px;height:180px;box-sizing:border-box;border:1px solid #28262E;background-image:repeating-linear-gradient(45deg,rgba(40,38,46,.07) 0 5px,rgba(0,0,0,0) 5px 11px);background-origin:border-box;z-index:0;cursor:pointer;display:flex;align-items:flex-end;padding:16px"><span data-word style="font:11px/1 ui-monospace,Menlo,monospace;color:#56535E">system overview</span></div>
+<div data-btn style="position:absolute;left:420px;top:840px;width:360px;height:180px;box-sizing:border-box;border:1px solid #28262E;background-image:repeating-linear-gradient(45deg,rgba(40,38,46,.07) 0 5px,rgba(0,0,0,0) 5px 11px);background-origin:border-box;z-index:0;cursor:pointer;display:flex;align-items:flex-end;padding:16px"><span data-word style="font:11px/1 ui-monospace,Menlo,monospace;color:#56535E">collector + throat</span></div>
+<div data-btn style="position:absolute;left:780px;top:840px;width:360px;height:180px;box-sizing:border-box;border:1px solid #28262E;background-image:repeating-linear-gradient(45deg,rgba(40,38,46,.07) 0 5px,rgba(0,0,0,0) 5px 11px);background-origin:border-box;z-index:0;cursor:pointer;display:flex;align-items:flex-end;padding:16px"><span data-word style="font:11px/1 ui-monospace,Menlo,monospace;color:#56535E">arch manifold</span></div>
+<div data-btn style="position:absolute;left:1140px;top:840px;width:360px;height:180px;box-sizing:border-box;border:1px solid #28262E;background-image:repeating-linear-gradient(45deg,rgba(40,38,46,.07) 0 5px,rgba(0,0,0,0) 5px 11px);background-origin:border-box;z-index:0;cursor:pointer;display:flex;align-items:flex-end;padding:16px"><span data-word style="font:11px/1 ui-monospace,Menlo,monospace;color:#56535E">floor spine</span></div>
+<div data-btn style="position:absolute;left:1500px;top:840px;width:360px;height:180px;box-sizing:border-box;border:1px solid #28262E;background:#1A1820;z-index:0;cursor:pointer;color:#E9EDEE;display:flex;flex-direction:column;justify-content:space-between;padding:16px"><span style="font:11px/1 ui-monospace,Menlo,monospace;color:#AEB6BA">42 MB · SHA-256 printed</span><span data-word style="font-size:20px">master publication</span></div>
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="1h">
+<div class="dv-olabel"><a class="dv-oid" href="#1h">1h</a>04 contact · 60px module · one address block, four facts, three links</div>
+<div class="dv-card" style="width:1920px">
+<div data-screen data-m="60" data-screen-label="1h contact" style="position:relative;width:1920px;height:1080px;background:#E9EDEE;overflow:hidden">
+<div style="position:absolute;inset:0;background-image:url(data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='60'%20height='60'%3E%3Cpath%20d='M30%2026.5v7M26.5%2030h7'%20stroke='%23CBD2D5'%20stroke-width='1'/%3E%3C/svg%3E);background-size:60px 60px"></div>
+
+<div style="position:absolute;left:60px;top:60px;width:1800px;height:60px;display:flex;align-items:center;justify-content:space-between;font-size:13px;letter-spacing:.06em;color:#56535E"><span>04 · contact</span><span>christopher robin fiore · new york city</span><span data-btn style="z-index:0;padding:0 10px;cursor:pointer;color:#28262E"><span data-word>close</span></span></div>
+
+<div data-btn style="position:absolute;left:60px;top:120px;width:1800px;height:300px;box-sizing:border-box;border:1px solid #28262E;background:#ffffff;background-image:url(data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='60'%20height='60'%3E%3Cpath%20d='M30%2026.5v7M26.5%2030h7'%20stroke='%237C858A'%20stroke-width='1'/%3E%3C/svg%3E);background-size:60px 60px;background-origin:border-box;z-index:0;cursor:pointer;color:#28262E;display:flex;align-items:center;justify-content:center"><span data-word style="font-size:88px;line-height:100%;letter-spacing:-.02em">chrisrobinfiore@gmail.com</span></div>
+
+<div style="position:absolute;left:60px;top:480px;width:1800px;height:240px;display:flex;flex-direction:column">
+<div style="height:1px;background:rgba(40,38,46,.15)"></div>
+<div style="height:60px;display:flex;align-items:center;gap:40px;border-bottom:1px solid rgba(40,38,46,.15)"><span style="width:180px;font-size:13px;letter-spacing:.06em;color:#56535E">roles</span><span style="font-size:20px;color:#28262E">product designer, design engineer</span></div>
+<div style="height:60px;display:flex;align-items:center;gap:40px;border-bottom:1px solid rgba(40,38,46,.15)"><span style="width:180px;font-size:13px;letter-spacing:.06em;color:#56535E">domains</span><span style="font-size:20px;color:#28262E">products, research, UI/UX, motion, accessibility, interfaces, AI integration, creative tools</span></div>
+<div style="height:60px;display:flex;align-items:center;gap:40px;border-bottom:1px solid rgba(40,38,46,.15)"><span style="width:180px;font-size:13px;letter-spacing:.06em;color:#56535E">based</span><span style="font-size:20px;color:#28262E">new york city</span></div>
+<div style="height:59px;display:flex;align-items:center;gap:40px"><span style="width:180px;font-size:13px;letter-spacing:.06em;color:#56535E">trained</span><span style="font-size:20px;color:#28262E">concept art at CG Spectrum, graphic design under a senior Disney designer, Method acting at Lee Strasberg</span></div>
+</div>
+
+<div data-btn style="position:absolute;left:60px;top:780px;width:600px;height:180px;box-sizing:border-box;border:1px solid #28262E;background:#ffffff;background-image:url(data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='60'%20height='60'%3E%3Cpath%20d='M30%2026.5v7M26.5%2030h7'%20stroke='%237C858A'%20stroke-width='1'/%3E%3C/svg%3E);background-size:60px 60px;background-origin:border-box;z-index:0;cursor:pointer;color:#28262E;display:flex;flex-direction:column;justify-content:space-between;padding:20px"><span style="font-size:13px;letter-spacing:.06em;color:#56535E">code</span><span data-word style="font-size:26px;line-height:105%">github.com/globalanomalyindex</span></div>
+<div data-btn style="position:absolute;left:660px;top:780px;width:600px;height:180px;box-sizing:border-box;border:1px solid #28262E;background:#ffffff;background-image:url(data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='60'%20height='60'%3E%3Cpath%20d='M30%2026.5v7M26.5%2030h7'%20stroke='%237C858A'%20stroke-width='1'/%3E%3C/svg%3E);background-size:60px 60px;background-origin:border-box;z-index:0;cursor:pointer;color:#28262E;display:flex;flex-direction:column;justify-content:space-between;padding:20px"><span style="font-size:13px;letter-spacing:.06em;color:#56535E">paintings</span><span data-word style="font-size:26px;line-height:105%">artstation.com/chrisfiore</span></div>
+<div data-btn style="position:absolute;left:1260px;top:780px;width:600px;height:180px;box-sizing:border-box;border:1px solid #28262E;background:#ffffff;background-image:url(data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='60'%20height='60'%3E%3Cpath%20d='M30%2026.5v7M26.5%2030h7'%20stroke='%237C858A'%20stroke-width='1'/%3E%3C/svg%3E);background-size:60px 60px;background-origin:border-box;z-index:0;cursor:pointer;color:#28262E;display:flex;flex-direction:column;justify-content:space-between;padding:20px"><span style="font-size:13px;letter-spacing:.06em;color:#56535E">professional</span><span data-word style="font-size:26px;line-height:105%">linkedin.com/in/christopherrobinfiore</span></div>
+
+<div style="position:absolute;left:60px;top:960px;width:1800px;height:60px;display:flex;align-items:center;justify-content:space-between;font-size:13px;letter-spacing:.06em;color:#56535E"><span>next — 01</span><span>last updated august 3 2026 · 4:25 pm ET</span></div>
+</div>
+</div>
+</div>
+
+</div>
+<p class="dv-next">Try next: "build out <a class="dv-oid" href="#1c">1c</a> — bigger tiles, less text" · "rebuild the inner screens on <a class="dv-oid" href="#1a">1a</a>'s 120px module" · "make the pegs react to the cursor too" · "new directions for the home screen"</p>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const SPARK = ['#E2E7E9','#CBD2D5','#AEB6BA','#7C858A','#56535E','#9AA1A5','#3A3742','#FF2D87','#F5D90A','#12D9E8','#FF6B1A','#C9F227','#2B45F5','#35E5C8'];
+const SPARK_LIGHTS = ['#E2E7E9','#CBD2D5','#AEB6BA','#7C858A','#9AA1A5','#FF2D87','#F5D90A','#12D9E8','#FF6B1A','#C9F227','#35E5C8'];
+const FLASH = ['#c9246b','#796b05','#0a777f','#b44b12','#5f7313','#2B45F5','#1c7869','#56535E','#3A3742'];
+const HUES = ['#FF2D87','#F5D90A','#12D9E8','#FF6B1A','#C9F227','#35E5C8'];
+const INK = '#1A1820';
+/** A peg that a frame corner has switched on. */
+const INK_ON = '#28262E';
+/** The ambient, switched-off peg. Restored by name: clearing the inline
+ *  declaration would drop the glyph to the inherited color instead. */
+const PEG_OFF = '#CBD2D5';
+/** The fine ambient lattice: barely there at rest, one step up when the drift
+ *  passes over it. The major points sit on the same grid, one size up. */
+const MICRO_OFF = '#DFE4E6';
+const MICRO_ON = '#9AA6AD';
+const MAJOR_OFF = '#A9B2B7';
+/** The halo ring a lit component throws around itself. */
+const RING = '#7C858A';
+const PAPER = '#E9EDEE';
+/** Ordered dither, the same 4×4 the site's transitions are built on. */
+const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+const bayer = (c, r) => (BAYER[(((r % 4) + 4) % 4) * 4 + (((c % 4) + 4) % 4)] + 0.5) / 16;
+const ALT = "'salt' 1, 'ss01' 1";
+const WIPE_IN = ['inset(0 100% 0 0)','inset(0 0 0 100%)','inset(100% 0 0 0)','inset(0 0 100% 0)','inset(0 62% 0 0)','inset(0 0 0 62%)'];
+const WIPE_OUT = ['inset(0 0 0 100%)','inset(0 100% 0 0)','inset(0 0 100% 0)','inset(100% 0 0 0)'];
+const rnd = (a) => a[(Math.random() * a.length) | 0];
+
+const pegURL = (m, color) => {
+  const c = m / 2, a = m >= 120 ? 4 : m >= 60 ? 3.5 : 3;
+  const d = `M${c} ${c - a}v${a * 2}M${c - a} ${c}h${a * 2}`;
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${m}' height='${m}'><path d='${d}' stroke='${color}' stroke-width='1'/></svg>`;
+  return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+};
+
+/** Four corner crosshair marks, same construction as the site's mkTicks. */
+function ticks(sz) {
+  const o = (sz / 2).toFixed(1), t = Math.max(1, sz / 9).toFixed(1);
+  return [{ left: `-${o}px`, top: `-${o}px` }, { right: `-${o}px`, top: `-${o}px` },
+          { left: `-${o}px`, bottom: `-${o}px` }, { right: `-${o}px`, bottom: `-${o}px` }].map((p) => {
+    const s = document.createElement('span');
+    Object.assign(s.style, p, { position: 'absolute', width: `${sz}px`, height: `${sz}px`,
+      backgroundImage: `linear-gradient(${INK},${INK}),linear-gradient(${INK},${INK})`,
+      backgroundSize: `${t}px ${sz}px,${sz}px ${t}px`, backgroundPosition: 'center center', backgroundRepeat: 'no-repeat' });
+    return s;
+  });
+}
+
+class Component extends DCLogic {
+  componentDidMount() {
+    this.recs = new WeakMap();
+    this.wire();
+    this.schedule();
+    if (document.fonts) document.fonts.ready.then(() => this.schedule());
+    this.mo = new MutationObserver((list) => {
+      this.wire();
+      for (const m of list) {
+        for (const n of m.addedNodes) {
+          if (n.nodeType === 1 && (n.hasAttribute('data-peg') || n.hasAttribute('data-frame') || n.querySelector('[data-peg],[data-frame]'))) {
+            this.schedule();
+            return;
+          }
+        }
+      }
+    });
+    this.mo.observe(document.body, { childList: true, subtree: true });
+    this.rm = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null;
+    this.litSet = new Set();
+    this.drift = setInterval(() => this.ambient(), 120);
+    this.idle = setInterval(() => this.idleGlitch(), 150);
+    this.onResize = () => this.schedule();
+    addEventListener('resize', this.onResize);
+    document.addEventListener('visibilitychange', this.onResize);
+  }
+  componentWillUnmount() {
+    if (this.mo) this.mo.disconnect();
+    clearInterval(this.drift);
+    clearInterval(this.idle);
+    removeEventListener('resize', this.onResize);
+    document.removeEventListener('visibilitychange', this.onResize);
+  }
+
+  renderVals() {
+    const fill = (n) => Array.from({ length: n }, (_, i) => ({ i }));
+    return { pegs1222: fill(1222), pegs2205: fill(2205) };
+  }
+
+  /**
+   * The idle wordmark loop: every so often a burst of letters swaps to the
+   * salt/ss01 alternates in a FLASH color and falls back. glitch.ts's idle
+   * personality, applied to anything marked data-glitch-idle.
+   */
+  idleGlitch() {
+    if (this.rm && this.rm.matches) return;
+    document.querySelectorAll('[data-glitch-idle]').forEach((w) => {
+      let st = w.__idle;
+      if (!st) {
+        const frag = document.createDocumentFragment();
+        for (const ch of w.textContent) {
+          const sp = document.createElement('span');
+          sp.textContent = ch;
+          sp.style.cssText = 'display:inline-block;white-space:pre';
+          frag.appendChild(sp);
+        }
+        w.replaceChildren(frag);
+        st = w.__idle = { L: Array.from(w.children), burst: 0 };
+      }
+      if (st.burst > 0) {
+        st.burst -= 1;
+        const sp = st.L[(Math.random() * st.L.length) | 0];
+        sp.style.fontFeatureSettings = ALT;
+        if (Math.random() < 0.6) {
+          // the color band behind the glitching letter, ink pinned on it
+          sp.style.background = rnd(SPARK_LIGHTS);
+          sp.style.color = INK;
+        } else {
+          sp.style.color = rnd(FLASH);
+        }
+        setTimeout(() => { sp.style.fontFeatureSettings = 'normal'; sp.style.color = ''; sp.style.background = ''; }, 160 + Math.random() * 320);
+      } else if (Math.random() < 0.045) {
+        st.burst = 3 + ((Math.random() * 5) | 0);
+      }
+    });
+  }
+
+  schedule() {
+    if (this.busy) return; // never re-solve mid-transition
+    clearTimeout(this._mt);
+    // Not through requestAnimationFrame: a page that loads hidden never gets a
+    // frame, and the lattice would stay unsolved until the first resize.
+    this._mt = setTimeout(() => this.solveLattice(), 90);
+  }
+
+  /**
+   * Resolve the lattice: which points are major, which are frame corners, and
+   * which fall inside a run of type and must switch off. Idempotent.
+   */
+  solveLattice() {
+    document.querySelectorAll('[data-screen]').forEach((screen) => {
+      const layer = screen.querySelector('[data-peglayer]');
+      if (!layer) return;
+      const st = +layer.getAttribute('data-step');
+      const x0 = +layer.getAttribute('data-x0'), y0 = +layer.getAttribute('data-y0');
+      const cols = +layer.getAttribute('data-cols');
+      const mk = +layer.getAttribute('data-mk');
+      const mc = +layer.getAttribute('data-mc0') % mk, mr = +layer.getAttribute('data-mr0') % mk;
+      const mfs = +layer.getAttribute('data-major-fs');
+      const all = layer.querySelectorAll('[data-peg]');
+      if (!all.length) return;
+      const sr = screen.getBoundingClientRect();
+      const scale = sr.width / screen.offsetWidth || 1;
+
+      for (let i = 0; i < all.length; i++) {
+        const p = all[i], c = i % cols, r = (i / cols) | 0;
+        delete p.dataset.base;
+        if (c % mk === mc && r % mk === mr) {
+          p.dataset.base = MAJOR_OFF;
+          p.style.fontSize = mfs + 'px';
+          p.style.color = MAJOR_OFF;
+        } else {
+          p.style.fontSize = '';
+          p.style.color = MICRO_OFF;
+        }
+      }
+
+      const set = (x, y, col) => {
+        const c = Math.round((x - x0) / st), r = Math.round((y - y0) / st);
+        if (c < 0 || c >= cols || r < 0) return;
+        const p = all[r * cols + c];
+        if (!p) return;
+        p.dataset.base = col;
+        p.style.color = col;
+        if (col === INK_ON) p.style.fontSize = mfs + 6 + 'px';
+      };
+      screen.querySelectorAll('[data-frame]').forEach((f) => {
+        const er = f.getBoundingClientRect();
+        const x = (er.left - sr.left) / scale, y = (er.top - sr.top) / scale;
+        const w = er.width / scale, h = er.height / scale;
+        set(x, y, INK_ON); set(x + w, y, INK_ON); set(x, y + h, INK_ON); set(x + w, y + h, INK_ON);
+      });
+
+      /*
+        A peg whose mark would land inside a run of type switches OFF — the
+        field accommodates what is on the canvas rather than printing through it.
+      */
+      const ph = st * 0.16;
+      const walker = document.createTreeWalker(screen, NodeFilter.SHOW_TEXT, {
+        acceptNode: (n) => (n.parentElement && !n.parentElement.closest('[data-peglayer]') && n.textContent.trim().length
+          ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT),
+      });
+      const range = document.createRange();
+      for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+        const fs = parseFloat(getComputedStyle(n.parentElement).fontSize) || 16;
+        const ih = fs * 0.30;
+        range.selectNodeContents(n);
+        for (const rc of range.getClientRects()) {
+          const L = (rc.left - sr.left) / scale - ph, R = (rc.right - sr.left) / scale + ph;
+          const cy = (rc.top + rc.height / 2 - sr.top) / scale;
+          const c0 = Math.max(0, Math.ceil((L - x0) / st)), c1 = Math.min(cols - 1, Math.floor((R - x0) / st));
+          const r0 = Math.max(0, Math.ceil((cy - ih - ph - y0) / st)), r1 = Math.floor((cy + ih + ph - y0) / st);
+          for (let rr = r0; rr <= r1; rr++) for (let cc = c0; cc <= c1; cc++) {
+            const p = all[rr * cols + cc];
+            if (!p) continue;
+            p.dataset.base = 'transparent';
+            p.style.color = 'transparent';
+          }
+        }
+      }
+    });
+  }
+
+  /**
+   * The ambient drift, dithered into the fine lattice: a slow two-axis wave
+   * thresholded against the Bayer matrix, applied to a random slice of the
+   * field each tick so the whole plate shimmers rather than pulsing in step.
+   */
+  ambient() {
+    if (this.rm && this.rm.matches) return;
+    if (!this.litSet) this.litSet = new Set();
+    this.t = (this.t || 0) + 0.12;
+    this.sweepRow = (this.sweepRow || 0) + 3;
+    const t = this.t;
+    document.querySelectorAll('[data-peglayer]').forEach((layer) => {
+      const st = +layer.getAttribute('data-step');
+      const x0 = +layer.getAttribute('data-x0'), y0 = +layer.getAttribute('data-y0');
+      const cols = +layer.getAttribute('data-cols');
+      const all = layer.querySelectorAll('[data-peg]');
+      if (!all.length) return;
+      // Swept two rows at a time rather than sampled at random: the wave has to
+      // read as a wave crossing the plate, not as scatter.
+      const rows = Math.ceil(all.length / cols);
+      const band = (this.sweepRow || 0) % rows;
+      for (let rr = band; rr < band + 3; rr++) {
+        const row = rr % rows;
+        for (let c = 0; c < cols; c++) {
+          const p = all[row * cols + c];
+          if (!p || p.dataset.base || this.litSet.has(p)) continue;
+          const n = 0.5 + (Math.sin((x0 + c * st) * 0.0026 + t) + Math.sin((y0 + row * st) * 0.0031 - t * 0.7)) / 4;
+          p.style.color = bayer(c, row) < n * 0.68 ? MICRO_ON : MICRO_OFF;
+        }
+      }
+    });
+  }
+
+  rec(el) {
+    let r = this.recs.get(el);
+    if (!r) { r = { box: null, parts: [], gen: 0, halo: null, letters: null, text: '', timer: 0 }; this.recs.set(el, r); }
+    return r;
+  }
+
+  wire() {
+    document.querySelectorAll('[data-btn]').forEach((el) => {
+      if (el.__wired) return;
+      el.__wired = true;
+      el.addEventListener('pointerenter', (e) => this.enter(el, e), { passive: true });
+      el.addEventListener('pointerleave', () => this.leave(el), { passive: true });
+      if (el.hasAttribute('data-hov')) {
+        el.addEventListener('click', () => this.openChannel(el));
+      }
+      if (el.getAttribute('data-hov') === 'prod') {
+        el.addEventListener('pointermove', (e) => this.steer(el, e), { passive: true });
+      }
+    });
+  }
+
+  /* ---- band stack: main light band + darker accents + outline + ticks ---- */
+  bands(el) {
+    const r = this.rec(el);
+    let b = r.box;
+    if (!b || !b.isConnected) {
+      b = document.createElement('span');
+      b.style.cssText = 'display:block;position:absolute;left:0;top:0;width:100%;height:100%;z-index:-1;pointer-events:none';
+      el.insertBefore(b, el.firstChild);
+      r.box = b;
+    }
+    r.gen += 1;
+    b.style.display = 'block';
+    b.replaceChildren();
+
+    const mainH = 56 + Math.random() * 24;
+    const top = (100 - mainH) * (0.2 + Math.random() * 0.6);
+    const rows = [[top, mainH, rnd(SPARK_LIGHTS)]];
+    if (top > 3) rows.unshift([0, top, rnd(SPARK)]);
+    if (100 - top - mainH > 3) rows.push([top + mainH, 100 - top - mainH, rnd(SPARK)]);
+
+    const parts = [];
+    for (const [y, h, col] of rows) {
+      const d = document.createElement('span');
+      d.style.cssText = `display:block;position:absolute;left:0;width:100%;top:${y.toFixed(2)}%;height:${h.toFixed(2)}%;background:${col}`;
+      b.appendChild(d); parts.push(d);
+    }
+    const ol = document.createElement('span');
+    ol.style.cssText = `display:block;position:absolute;left:0;top:0;width:100%;height:100%;box-shadow:inset 0 0 0 1.5px ${INK}`;
+    b.appendChild(ol); parts.push(ol);
+    const tk = document.createElement('span');
+    tk.style.cssText = 'display:block;position:absolute;left:0;top:0;width:100%;height:100%';
+    for (const m of ticks(13)) tk.appendChild(m);
+    b.appendChild(tk); parts.push(tk);
+    r.parts = parts;
+
+    for (const d of parts) {
+      const jx = Math.random() * 15 - 7.5;
+      d.animate([
+        { clipPath: rnd(WIPE_IN), transform: `translateX(${jx.toFixed(1)}px)`, offset: 0 },
+        { clipPath: 'inset(0 0 0 0)', transform: `translateX(${(jx / 2.6).toFixed(1)}px)`, offset: 0.55 },
+        { clipPath: 'inset(0 0 0 0)', transform: 'none', offset: 1 },
+      ], { duration: 150 + Math.random() * 170, delay: Math.random() * 140, easing: 'steps(5,end)', fill: 'both' });
+    }
+  }
+
+  /* ---- the peg ring around the component lights in one vivid hue ---- */
+  halo(el) {
+    const screen = el.closest('[data-screen]');
+    if (!screen) return;
+    const r = this.rec(el);
+    const m = parseInt(screen.getAttribute('data-m'), 10) || 60;
+    const sr = screen.getBoundingClientRect();
+    const scale = sr.width / screen.offsetWidth || 1;
+    const er = el.getBoundingClientRect();
+    const x = (er.left - sr.left) / scale, y = (er.top - sr.top) / scale;
+    const w = er.width / scale, h = er.height / scale;
+    const ring = 2 * m;
+    const hue = rnd(HUES);
+    const s = document.createElement('span');
+    s.style.cssText = `position:absolute;left:${x - ring}px;top:${y - ring}px;width:${w + ring * 2}px;height:${h + ring * 2}px;pointer-events:none;z-index:1;background-image:${pegURL(m, hue)};background-size:${m}px ${m}px;background-position:${(-(ring) % m + m) % m}px ${(-(ring) % m + m) % m}px;opacity:0`;
+    screen.appendChild(s);
+    if (r.halo) r.halo.remove();
+    r.halo = s;
+    s.animate([
+      { opacity: 0, clipPath: 'inset(50% 50% 50% 50%)' },
+      { opacity: 1, clipPath: 'inset(0 0 0 0)' },
+    ], { duration: 260, easing: 'steps(4,end)', fill: 'forwards' });
+  }
+
+  /* ---- per-letter glitch: default glyphs swap to the salt/ss01 alternates ---- */
+  glitch(el, on, palette, settle) {
+    const PAL = palette || FLASH;
+    const SET = settle || INK;
+    const r = this.rec(el);
+    const w = el.querySelector('[data-word]');
+    if (!w) return;
+    if (r.timer) { clearInterval(r.timer); r.timer = 0; }
+    if (on) {
+      if (!r.letters) {
+        r.text = w.innerHTML;
+        const frag = document.createDocumentFragment();
+        for (const ch of w.textContent) {
+          const s = document.createElement('span');
+          s.textContent = ch;
+          s.style.cssText = 'display:inline-block;white-space:pre;transition:color 60ms linear';
+          frag.appendChild(s);
+        }
+        w.replaceChildren(frag);
+        r.letters = Array.from(w.children);
+      }
+      const L = r.letters;
+      const runIn = L.length * 1.6;
+      let i = 0;
+      r.timer = setInterval(() => {
+        if (i <= runIn) {
+          // run-in: letters swap to the alternates in scattered order, each
+          // one firing a FLASH color as it goes
+          for (let k = 0; k < 2; k++) {
+            const s = L[(Math.random() * L.length) | 0];
+            if (!s) continue;
+            s.style.fontFeatureSettings = ALT;
+            s.style.color = rnd(PAL);
+          }
+          if (++i > runIn) for (const s of L) { s.style.fontFeatureSettings = ALT; s.style.color = Math.random() < 0.3 ? rnd(PAL) : SET; }
+          return;
+        }
+        // settled: stays on the alternates, and the FLASH colors keep walking
+        // across the letters for as long as the cursor is inside
+        if (Math.random() > 0.16) return;
+        const s = L[(Math.random() * L.length) | 0];
+        if (!s) return;
+        s.style.color = Math.random() < 0.35 ? SET : rnd(PAL);
+      }, 22);
+    } else if (r.letters) {
+      const L = r.letters;
+      let i = L.length - 1;
+      r.timer = setInterval(() => {
+        const s = L[i];
+        if (s) { s.style.fontFeatureSettings = 'normal'; s.style.color = ''; }
+        if (--i < 0) {
+          clearInterval(r.timer); r.timer = 0;
+          if (r.letters) { w.innerHTML = r.text; r.letters = null; }
+        }
+      }, 18);
+    }
+  }
+
+  /* ---- geometry of a target inside its screen, canvas zoom removed ---- */
+  geo(el) {
+    const screen = el.closest('[data-screen]');
+    if (!screen) return null;
+    const sr = screen.getBoundingClientRect();
+    const scale = sr.width / screen.offsetWidth || 1;
+    const er = el.getBoundingClientRect();
+    return { screen, m: parseInt(screen.getAttribute('data-m'), 10) || 60,
+      x: (er.left - sr.left) / scale, y: (er.top - sr.top) / scale,
+      w: er.width / scale, h: er.height / scale };
+  }
+
+  /**
+   * The hover treatment, dithered into the lattice instead of painted as
+   * bands: the block's own cells plus a two-module ring take the light band's
+   * hue, the top and bottom rows take a darker SPARK accent, and the whole
+   * stack resolves in Bayer order rather than wiping in.
+   */
+  /**
+   * The glitchy color blocks behind a hovered component, painted in the band
+   * host UNDER the peg layer so the crosshairs stay visible over them. The
+   * default is hover.ts's stack: one light band, darker edge accents, a 1.5px
+   * inset outline, every layer wiping in from its own direction. The four
+   * channels keep their channels.ts personalities on top:
+   *   prod   the fill floods the lattice radially from the cell
+   *   paint  the 10px ink frame with its paper hairline snaps in
+   *   comp   the two-row checkered flag strips run through the band
+   *   invert the whole block inverts to near-black, type and pegs to paper
+   */
+  bandStack(el, g, host, kind) {
+    const r = this.rec(el);
+    let b = r.box;
+    if (!b || !b.isConnected) { b = document.createElement('span'); host.appendChild(b); r.box = b; }
+    r.gen += 1;
+    b.style.cssText = `display:block;position:absolute;left:${g.x}px;top:${g.y}px;width:${g.w}px;height:${g.h}px;overflow:hidden;pointer-events:none`;
+    b.replaceChildren();
+    const parts = [];
+    const row = (y, h, col) => {
+      const d = document.createElement('span');
+      d.style.cssText = `display:block;position:absolute;left:0;width:100%;top:${y.toFixed(2)}%;height:${h.toFixed(2)}%;background:${col}`;
+      b.appendChild(d); parts.push(d); return d;
+    };
+    if (kind === 'invert') {
+      row(0, 100, INK);
+    } else {
+      const top = Math.random() < 0.7 ? 2 + Math.random() * 6 : 0;
+      const bot = Math.random() < 0.7 ? 2 + Math.random() * 6 : 0;
+      if (top) row(0, top, rnd(SPARK));
+      row(top, 100 - top - bot, rnd(SPARK_LIGHTS));
+      if (bot) row(100 - bot, bot, rnd(SPARK));
+    }
+    const ol = document.createElement('span');
+    ol.style.cssText = `display:block;position:absolute;left:0;top:0;width:100%;height:100%;box-shadow:inset 0 0 0 1.5px ${kind === 'invert' ? 'rgba(233,237,238,.5)' : INK}`;
+    b.appendChild(ol); parts.push(ol);
+    r.parts = parts;
+    for (const d of parts) {
+      if (d.dataset.noj) {
+        d.animate([{ clipPath: rnd(WIPE_IN) }, { clipPath: 'inset(0 0 0 0)' }],
+          { duration: 170 + Math.random() * 140, delay: Math.random() * 120, easing: 'steps(5,end)', fill: 'both' });
+        continue;
+      }
+      const jx = Math.random() * 15 - 7.5;
+      d.animate([
+        { clipPath: rnd(WIPE_IN), transform: `translateX(${jx.toFixed(1)}px)`, offset: 0 },
+        { clipPath: 'inset(0 0 0 0)', transform: `translateX(${(jx / 2.6).toFixed(1)}px)`, offset: 0.55 },
+        { clipPath: 'inset(0 0 0 0)', transform: 'none', offset: 1 },
+      ], { duration: 150 + Math.random() * 170, delay: Math.random() * 140, easing: 'steps(5,end)', fill: 'both' });
+    }
+  }
+
+  field(el, on, kind, ev) {
+    if (!this.litSet) this.litSet = new Set();
+    const r = this.rec(el);
+    if (r.ramp) { clearInterval(r.ramp); r.ramp = null; }
+    if (r.flick) { clearInterval(r.flick); r.flick = null; }
+
+    if (!on) {
+      if (r.callout) r.callout.style.display = 'none';
+      const cells = r.lit;
+      if (!cells) return;
+      let lvl = 1.05;
+      r.ramp = setInterval(() => {
+        lvl -= 0.26;
+        for (const [p, th, , fs0] of cells) {
+          if (th <= lvl) continue;
+          p.style.color = p.dataset.base || MICRO_OFF;
+          p.style.fontSize = fs0;
+          this.litSet.delete(p);
+        }
+        if (lvl <= 0) {
+          clearInterval(r.ramp); r.ramp = null;
+          for (const [p, , , fs0] of cells) { p.style.color = p.dataset.base || MICRO_OFF; p.style.fontSize = fs0; this.litSet.delete(p); }
+          if (r.lit === cells) r.lit = null;
+        }
+      }, 46);
+      return;
+    }
+
+    if (r.lit) {
+      for (const [p, , , fs0] of r.lit) { p.style.color = p.dataset.base || MICRO_OFF; p.style.fontSize = fs0; this.litSet.delete(p); }
+      r.lit = null;
+    }
+    const g = this.geo(el);
+    if (!g) return;
+    const layer = g.screen.querySelector('[data-peglayer]');
+    if (!layer) return;
+    const st = +layer.getAttribute('data-step');
+    const x0 = +layer.getAttribute('data-x0'), y0 = +layer.getAttribute('data-y0');
+    const cols = +layer.getAttribute('data-cols');
+    const mk = +layer.getAttribute('data-mk');
+    const grow = +layer.getAttribute('data-major-fs');
+    const all = layer.querySelectorAll('[data-peg]');
+    const rows = Math.ceil(all.length / cols);
+    // The component's OWN cells, nothing outside it.
+    const c0 = Math.max(0, Math.round((g.x - x0) / st));
+    const c1 = Math.min(cols - 1, Math.round((g.x + g.w - x0) / st));
+    const r0 = Math.max(0, Math.round((g.y - y0) / st));
+    const r1 = Math.min(rows - 1, Math.round((g.y + g.h - y0) / st));
+    const hue = rnd(HUES), accent = rnd(SPARK_LIGHTS);
+    const K = mk; // one module, in lattice cells
+    // channels.ts: the lattice grows out of the module the cursor entered on
+    const ox = Math.round(((ev && ev.offsetX != null ? g.x + ev.offsetX : g.x + g.w / 2) - x0) / st);
+    const oy = Math.round(((ev && ev.offsetY != null ? g.y + ev.offsetY : g.y + g.h / 2) - y0) / st);
+    const maxD = Math.hypot(c1 - c0, r1 - r0) || 1;
+    const dir = (Math.random() * 4) | 0;
+    r.kind = kind; r.hue = hue; r.st = st; r.x0 = x0; r.y0 = y0; r.mod = K * st;
+    r.gx = ox; r.gy = oy;
+    if (kind === 'prod') {
+      if (!r.callout || !r.callout.isConnected) {
+        const cl = document.createElement('span');
+        cl.style.cssText = 'position:absolute;left:46px;bottom:10px;font-size:13px;letter-spacing:.06em;color:#1A1820;pointer-events:none';
+        el.appendChild(cl);
+        r.callout = cl;
+      }
+      r.callout.style.display = 'block';
+      const ex = ev && ev.offsetX > 0 && ev.offsetX < g.w ? ev.offsetX : g.w / 2;
+      const ey = ev && ev.offsetY > 0 && ev.offsetY < g.h ? ev.offsetY : g.h / 2;
+      const cN = String(Math.floor(ex / (K * st)) + 1).padStart(2, '0');
+      const rN = String(Math.floor(ey / (K * st)) + 1).padStart(2, '0');
+      r.callout.textContent = 'col ' + cN + ' · row ' + rN;
+    }
+    const cells = [];
+    for (let rr = r0; rr <= r1; rr++) for (let cc = c0; cc <= c1; cc++) {
+      const p = all[rr * cols + cc];
+      // pegs inside type stay off; a frame corner stays ink — except on the
+      // inverted channel, where ink would vanish into the near-black band
+      if (!p || p.dataset.base === 'transparent') continue;
+      if (p.dataset.base === INK_ON && kind !== 'invert') continue;
+      const f = (y0 + rr * st - g.y) / g.h;
+      let col, th;
+      if (kind === 'invert') {
+        col = PAPER;
+        th = bayer(cc, rr) * 0.45 + ((rr - r0) / (r1 - r0 || 1)) * 0.5;
+      } else if (kind === 'prod') {
+        // radial flood from the entered module, plus the two dashed guides
+        const guide = cc === ox || rr === oy;
+        col = guide ? INK : hue;
+        th = Math.min(0.99, (Math.hypot(cc - ox, rr - oy) / maxD) * 0.86 + bayer(cc, rr) * 0.13);
+      } else if (kind === 'paint') {
+        // the inset frame, drawn as a one-cell ring of crosshairs just inside
+        // the implied edge — a two-module-tall block has no room for a full
+        // module of inset, and the row it would land on is the label's
+        const ring = (cc === c0 + 1 || cc === c1 - 1) && rr >= r0 + 1 && rr <= r1 - 1
+          || (rr === r0 + 1 || rr === r1 - 1) && cc >= c0 + 1 && cc <= c1 - 1;
+        const inner = cc > c0 + 1 && cc < c1 - 1 && rr > r0 + 1 && rr < r1 - 1;
+        col = ring ? INK : inner ? hue : accent;
+        th = ring ? bayer(cc, rr) * 0.2 : bayer(cc, rr) * 0.5 + 0.45;
+      } else if (kind === 'comp') {
+        col = hue;
+        th = bayer(cc, rr) * 0.34 + ((c1 - cc) / (c1 - c0 || 1)) * 0.6;
+      } else {
+        col = f < 0.14 || f > 0.86 ? accent : hue;
+        const u = dir === 0 ? (cc - c0) / (c1 - c0 || 1)
+          : dir === 1 ? (c1 - cc) / (c1 - c0 || 1)
+          : dir === 2 ? (rr - r0) / (r1 - r0 || 1)
+          : (r1 - rr) / (r1 - r0 || 1);
+        th = Math.min(0.99, bayer(cc, rr) * 0.45 + u * 0.5);
+      }
+      cells.push([p, th, col, p.style.fontSize, true, cc, rr]);
+      this.litSet.add(p);
+    }
+    r.lit = cells;
+    let lvl = 0;
+    r.ramp = setInterval(() => {
+      lvl += 0.17;
+      for (const c of cells) if (c[1] <= lvl) { c[0].style.color = c[2]; c[0].style.fontSize = grow + 'px'; }
+      if (lvl < 1.05) return;
+      clearInterval(r.ramp); r.ramp = null;
+      if (kind === 'comp') {
+        /*
+          The racing board: whole modules of filled crosshairs, alternating like
+          the 48px checker, marching one square right per beat — the crosshairs
+          doing the job the drifting flag did.
+        */
+        let phase = 0;
+        r.flick = setInterval(() => {
+          phase += 1;
+          for (const c of cells) {
+            const sq = ((((c[5] - c0) / K) | 0) + (((c[6] - r0) / K) | 0) + phase) & 1;
+            c[0].style.color = sq ? INK : hue;
+            c[0].style.fontSize = (sq ? grow + 3 : grow) + 'px';
+          }
+        }, 320);
+      } else if (kind === 'prod') {
+        // nothing on a timer: channels.ts moves the guides on pointermove, and
+        // steer() below is what does it
+      } else if (kind !== 'invert') {
+        // the inverted channel is excluded: menu.css's contact strip simply
+        // inverts, and a flicker there would break the paper-on-ink pair
+        r.flick = setInterval(() => {
+          for (let k = 0; k < 5; k++) {
+            const c = cells[(Math.random() * cells.length) | 0];
+            if (!c || c[2] === INK) continue; // frame and guide marks hold
+            c[0].style.color = Math.random() < 0.3 ? rnd(SPARK) : Math.random() < 0.5 ? accent : hue;
+          }
+        }, 140);
+      }
+    }, 40);
+  }
+
+  /**
+   * channels.ts 168-199: the lattice guides and the "col NN · row NN" callout
+   * are moved to the cursor's module on every pointermove.
+   */
+  steer(el, ev) {
+    const r = this.rec(el);
+    if (!r.lit || r.kind !== 'prod') return;
+    const g = this.geo(el);
+    if (!g) return;
+    const gx = Math.round((g.x + ev.offsetX - r.x0) / r.st);
+    const gy = Math.round((g.y + ev.offsetY - r.y0) / r.st);
+    if (gx === r.gx && gy === r.gy) return;
+    r.gx = gx; r.gy = gy;
+    for (const c of r.lit) c[0].style.color = c[5] === gx || c[6] === gy ? INK : r.hue;
+    if (r.callout) {
+      const cN = String(Math.floor(ev.offsetX / r.mod) + 1).padStart(2, '0');
+      const rN = String(Math.floor(ev.offsetY / r.mod) + 1).padStart(2, '0');
+      r.callout.textContent = 'col ' + cN + ' · row ' + rN;
+    }
+  }
+
+  /** Paint a rect of the lattice in Bayer order over ms. */
+  sweep(layer, x, y, w, h, colFn, ms) {
+    const st = +layer.getAttribute('data-step');
+    const x0 = +layer.getAttribute('data-x0'), y0 = +layer.getAttribute('data-y0');
+    const cols = +layer.getAttribute('data-cols');
+    const grow = +layer.getAttribute('data-major-fs');
+    const all = layer.querySelectorAll('[data-peg]');
+    const rows = Math.ceil(all.length / cols);
+    const c0 = Math.max(0, Math.ceil((x - x0) / st)), c1 = Math.min(cols - 1, Math.floor((x + w - x0) / st));
+    const r0 = Math.max(0, Math.ceil((y - y0) / st)), r1 = Math.min(rows - 1, Math.floor((y + h - y0) / st));
+    const cells = [];
+    for (let rr = r0; rr <= r1; rr++) for (let cc = c0; cc <= c1; cc++) {
+      const p = all[rr * cols + cc];
+      if (!p) continue;
+      cells.push([p, bayer(cc, rr), colFn(cc, rr, x0 + cc * st, y0 + rr * st)]);
+    }
+    const steps = 6;
+    for (let i = 1; i <= steps; i++) {
+      this.later(() => {
+        const lvl = i / steps;
+        for (const [p, th, col] of cells) {
+          if (th > lvl || !col) continue;
+          p.style.color = col;
+          if (col !== 'transparent') p.style.fontSize = grow + 'px';
+        }
+      }, (ms / steps) * i);
+    }
+  }
+
+  later(fn, t) {
+    this.seq = this.seq || [];
+    this.seq.push(setTimeout(fn, t));
+  }
+
+  /**
+   * The channel-open transition. The hovered fill floods the other three
+   * buttons and the stack becomes one block; their labels glitch away; the
+   * pressed label centers itself; the fill takes the whole menu; the label
+   * glitches three times, settles, glitches once more and the page arrives.
+   */
+  openChannel(el) {
+    if (this.busy) {
+      if (this.lastRestore) this.lastRestore();
+      else this.busy = false;
+      return;
+    }
+    const g = this.geo(el);
+    if (!g) return;
+    this.busy = true;
+    const screen = g.screen;
+    const layer = screen.querySelector('[data-peglayer]');
+    const host = screen.querySelector('[data-bandhost]');
+    const rec = this.rec(el);
+    const hue = rec.hue || rnd(HUES);
+    const kind = el.getAttribute('data-hov');
+    const inv = kind === 'invert';
+    const fill = inv ? INK : hue;
+    const type = inv ? PAPER : INK;
+    const btns = Array.from(screen.querySelectorAll('[data-btn][data-hov]'));
+    const gs = btns.map((b) => [b, this.geo(b)]);
+    const ux = Math.min(...gs.map(([, r]) => r.x)), uy = Math.min(...gs.map(([, r]) => r.y));
+    const uw = Math.max(...gs.map(([, r]) => r.x + r.w)) - ux;
+    const uh = Math.max(...gs.map(([, r]) => r.y + r.h)) - uy;
+    const word = el.querySelector('[data-word]');
+    // read the label off the word span: el.textContent would also pick up the
+    // channel number and the prod channel's col/row callout
+    const label = word.textContent.trim();
+    const num = (el.querySelector('span') || { textContent: '' }).textContent.trim();
+    if (rec.callout) rec.callout.style.display = 'none';
+    const snap = gs.map(([b]) => [b, b.querySelector('[data-word]').innerHTML, b.style.cssText]);
+
+    // freeze the hover machinery for the duration
+    for (const [b] of gs) { if (this.rec(b).flick) { clearInterval(this.rec(b).flick); this.rec(b).flick = null; } }
+    clearInterval(this.drift);
+
+    this.seq = [];
+    const box = document.createElement('span');
+    box.style.cssText = 'display:block;position:absolute;left:' + g.x + 'px;top:' + g.y + 'px;width:' + g.w + 'px;height:' + g.h + 'px;background:' + fill + ';box-shadow:inset 0 0 0 1.5px ' + (inv ? 'rgba(233,237,238,.5)' : INK) + ';pointer-events:none';
+    host.appendChild(box);
+    const bandTo = (x, y, w, h, ms) => {
+      box.animate([{ left: box.style.left, top: box.style.top, width: box.style.width, height: box.style.height },
+        { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px' }],
+        { duration: ms, easing: 'steps(7,end)', fill: 'forwards' });
+      this.later(() => { box.style.left = x + 'px'; box.style.top = y + 'px'; box.style.width = w + 'px'; box.style.height = h + 'px'; }, ms);
+    };
+
+    // 1 — the fill floods the whole stack, the lines become one block
+    bandTo(ux, uy, uw, uh, 170);
+    this.sweep(layer, ux, uy, uw, uh, () => fill, 170);
+
+    // 2 — the other three labels glitch, then dither away
+    this.later(() => {
+      for (const [b] of gs) {
+        if (b === el) continue;
+        this.glitch(b, true, inv ? SPARK_LIGHTS : null, type);
+      }
+    }, 140);
+    this.later(() => {
+      for (const [b] of gs) {
+        // on the pressed button everything but the label goes too: the brief is
+        // "leaving only the button you pressed's text"
+        const keep = b === el ? word : null;
+        Array.from(b.querySelectorAll('span')).forEach((sp, i) => {
+          if (keep && (sp === keep || keep.contains(sp))) return;
+          this.later(() => { sp.style.opacity = '0'; }, i * 14);
+        });
+      }
+    }, 300);
+
+    // 3 — the pressed label centers itself in the new block
+    const centerOn = (cx, cy, scale, ms) => {
+      const wr = word.getBoundingClientRect();
+      const sr = screen.getBoundingClientRect();
+      const k = sr.width / screen.offsetWidth || 1;
+      const wx = (wr.left + wr.width / 2 - sr.left) / k, wy = (wr.top + wr.height / 2 - sr.top) / k;
+      word.style.transition = 'none';
+      word.animate([{ transform: word.style.transform || 'none' }, { transform: 'translate(' + (cx - wx) + 'px,' + (cy - wy) + 'px) scale(' + scale + ')' }],
+        { duration: ms, easing: 'steps(8,end)', fill: 'forwards' });
+    };
+    this.later(() => centerOn(ux + uw / 2, uy + uh / 2, 1.15, 240), 420);
+
+    // 4 — the fill takes the whole menu, the rails go with it
+    this.later(() => {
+      bandTo(0, 0, 1920, 1080, 260);
+      this.sweep(layer, 0, 0, 1920, 1080, () => fill, 260);
+      screen.querySelectorAll('[data-frame]').forEach((f) => {
+        if (f.hasAttribute('data-btn')) return;
+        f.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 240, easing: 'steps(4,end)', fill: 'forwards' });
+      });
+    }, 620);
+    this.later(() => centerOn(960, 540, 1.6, 300), 780);
+
+    // 5 — three glitch passes, then it settles
+    const pass = (t) => this.later(() => {
+      const L = Array.from(word.children);
+      if (!L.length) return;
+      L.forEach((sp, i) => this.later(() => {
+        sp.style.fontFeatureSettings = ALT;
+        sp.style.color = rnd(inv ? SPARK_LIGHTS : FLASH);
+        this.later(() => { sp.style.color = type; }, 130);
+      }, i * 9));
+    }, t);
+    // a full second of hold once the fill owns the screen, then three flashes
+    pass(2050); pass(2330); pass(2610);
+
+    // the text glitches itself into a vanish, letter by letter in scattered order
+    this.later(() => {
+      const L = Array.from(word.children);
+      const items = L.length ? L : [word];
+      items
+        .map((sp) => [sp, Math.random()])
+        .sort((a, b) => a[1] - b[1])
+        .forEach(([sp], i) => this.later(() => {
+          sp.style.fontFeatureSettings = ALT;
+          sp.style.color = rnd(inv ? SPARK_LIGHTS : FLASH);
+          this.later(() => { sp.style.opacity = '0'; }, 80);
+        }, i * 20));
+    }, 2960);
+
+    // 6 — one last glitch, and the page dithers in
+    this.later(() => {
+      const shell = document.createElement('div');
+      shell.setAttribute('data-om-transition-shell', '');
+      shell.style.cssText = 'position:absolute;left:0;top:0;width:1920px;height:1080px;z-index:6;background:' + PAPER + ';opacity:0;cursor:pointer';
+      shell.innerHTML = '<div style="position:absolute;left:60px;top:60px;width:1800px;height:60px;display:flex;align-items:center;justify-content:space-between;font-size:13px;letter-spacing:.06em;color:#56535E"><span>' + num + ' · ' + label + '</span><span>click to return to the menu</span></div><div style="position:absolute;left:60px;top:120px;width:1800px;height:120px;display:flex;align-items:center"><span data-shell-title style="font-size:88px;line-height:100%;letter-spacing:-.02em;color:#28262E">' + label + '</span></div>';
+      screen.appendChild(shell);
+      shell.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300, easing: 'steps(5,end)', fill: 'forwards' });
+      // and the new screen unglitches: its title resolves out of the alternates
+      const st = shell.querySelector('[data-shell-title]');
+      if (st) {
+        const frag = document.createDocumentFragment();
+        for (const ch of st.textContent) {
+          const sp = document.createElement('span');
+          sp.textContent = ch;
+          sp.style.cssText = "display:inline-block;white-space:pre;font-feature-settings:'salt' 1,'ss01' 1;color:" + rnd(FLASH);
+          frag.appendChild(sp);
+        }
+        st.replaceChildren(frag);
+        const SL = Array.from(st.children);
+        SL.map((sp) => [sp, Math.random()]).sort((a, b) => a[1] - b[1])
+          .forEach(([sp], i) => this.later(() => {
+            sp.style.color = rnd(FLASH);
+            this.later(() => { sp.style.fontFeatureSettings = 'normal'; sp.style.color = INK; }, 90);
+          }, 120 + i * 26));
+      }
+      const back = () => { shell.remove(); restore(); };
+      shell.addEventListener('click', back);
+      this.later(back, 3000);
+    }, 3320);
+
+    const restore = () => {
+      for (const t of this.seq || []) clearTimeout(t);
+      this.seq = [];
+      screen.querySelectorAll('[data-om-transition-shell]').forEach((n) => n.remove());
+      // every band in the host, not just this run's — nothing may be left painted
+      host.replaceChildren();
+      for (const [b, html, css] of snap) {
+        const w = b.querySelector('[data-word]');
+        w.innerHTML = html;
+        w.style.transform = '';
+        b.style.cssText = css;
+        b.querySelectorAll('span').forEach((sp) => { sp.style.opacity = ''; sp.style.color = ''; sp.style.fontFeatureSettings = ''; });
+        const rb = this.rec(b);
+        rb.letters = null;
+        rb.box = null;
+        if (rb.ramp) { clearInterval(rb.ramp); rb.ramp = null; }
+        if (rb.flick) { clearInterval(rb.flick); rb.flick = null; }
+        if (rb.timer) { clearInterval(rb.timer); rb.timer = 0; }
+        rb.lit = null;
+      }
+      screen.querySelectorAll('[data-frame]').forEach((f) => f.getAnimations().forEach((a) => a.cancel()));
+      this.litSet = new Set();
+      this.solveLattice();
+      this.drift = setInterval(() => this.ambient(), 120);
+      this.busy = false;
+      this.lastRestore = null;
+    };
+    this.lastRestore = restore;
+
+    // watchdog: nothing may leave the menu stuck mid-transition
+    this.later(() => { if (this.busy) restore(); }, 8000);
+  }
+
+  enter(el, ev) {
+    const g = this.geo(el);
+    const layer = g && g.screen.querySelector('[data-peglayer]');
+    if (layer) {
+      const kind = el.getAttribute('data-hov') || '';
+      const host = g.screen.querySelector('[data-bandhost]');
+      if (host) this.bandStack(el, g, host, kind);
+      this.field(el, true, kind, ev);
+      const inv = kind === 'invert';
+      this.glitch(el, true, inv ? SPARK_LIGHTS : null, inv ? PAPER : null);
+      this.pinInk(el, true, inv ? PAPER : INK);
+    } else {
+      this.bands(el);
+      this.halo(el);
+      this.glitch(el, true);
+      this.pinInk(el, true);
+    }
+  }
+
+  /**
+   * hover.ts's hlInk: every run of type on a band is near-black, not just the
+   * button's own color. Secondary spans carry an inline #56535E that would
+   * otherwise beat the inherited pin and drop out over an accent row.
+   */
+  pinInk(el, on, ink) {
+    const r = this.rec(el);
+    if (on) {
+      if (!r.pinned) {
+        r.pinned = [[el, el.style.color]];
+        el.querySelectorAll('*').forEach((n) => {
+          if (n.hasAttribute('data-word') || n.closest('[data-word]')) return;
+          if (!n.style.color) return;
+          r.pinned.push([n, n.style.color]);
+        });
+      }
+      for (const [n] of r.pinned) n.style.color = ink || INK;
+    } else if (r.pinned) {
+      for (const [n, prev] of r.pinned) n.style.color = prev;
+      r.pinned = null;
+    }
+  }
+
+  leave(el) {
+    const r = this.rec(el);
+    this.pinInk(el, false);
+    this.glitch(el, false);
+    this.field(el, false);
+    if (r.halo) {
+      const h = r.halo; r.halo = null;
+      h.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 180, easing: 'steps(3,end)', fill: 'forwards' }).onfinish = () => h.remove();
+    }
+    const b = r.box;
+    if (!b) return;
+    const gen = r.gen;
+    const parts = r.parts.length ? r.parts : [b];
+    let done = 0;
+    for (const d of parts) {
+      const a = d.animate([
+        { clipPath: 'inset(0 0 0 0)', transform: 'none' },
+        { clipPath: rnd(WIPE_OUT), transform: `translateX(${(Math.random() * 11 - 5.5).toFixed(1)}px)` },
+      ], { duration: 110 + Math.random() * 130, delay: Math.random() * 100, easing: 'steps(4,end)', fill: 'both' });
+      a.onfinish = () => { if (++done >= parts.length && r.gen === gen && r.box === b) b.style.display = 'none'; };
+    }
+  }
+}
+</script>
+</body>
+</html>
