@@ -42,7 +42,6 @@ import {
   mountLattice,
   nearestIndex,
   restorePeg,
-  scheduleResolve,
   setLatticeBusy,
   solveLattice,
   startDrift,
@@ -204,6 +203,14 @@ function cellAt(S: Scroller, i: number): HTMLElement | null {
 function lightPeg(S: Scroller, i: number): void {
   const cell = cellAt(S, i);
   if (!cell) return;
+  /*
+    An occluded point stays occluded, exactly as every other painter here does.
+    A travelling corner is placed by `nearestIndex`, which rounds, so mid
+    gesture it can round up to half a step inside the block — far enough to
+    land on the row the meta line's occlusion band covers. Without this guard
+    that prints a crosshair straight through the label while it moves.
+  */
+  if (cell.dataset.base === 'transparent') return;
   cell.style.color = PEG_CORNER;
   // The same weight `solveLattice` gives a resolved corner, so a peg this
   // module holds and a peg the resolve holds are indistinguishable.
@@ -358,12 +365,25 @@ function settle(S: Scroller): void {
   if (Math.abs(want - S.region.scrollTop) > 0.5) S.region.scrollTop = want;
 
   S.scrolling = false;
+
+  /*
+    ORDER MATTERS, and the obvious order is wrong.
+
+    Releasing first and then handing the corners back through the DEBOUNCED
+    `scheduleResolve` leaves every block with no corner marks at all for the
+    90ms of the debounce, at the end of every single gesture. It reads as the
+    whole mosaic blinking.
+
+    So the corners are re-established SYNCHRONOUSLY before anything is
+    released: restore the frames, drop this module's claim on the field, run
+    the resolve for real, and only then let the travelling pegs go.
+  */
+  restoreFrames(S);
+  setLatticeBusy(S.screen, false);
+  solveLattice(S.screen);
   releaseAll(S);
   paint(S, false);
-  restoreFrames(S);
   updateThumb(S);
-  setLatticeBusy(S.screen, false);
-  scheduleResolve(S.screen);
 }
 
 /* ------------------------------------------------------- show / hide edge */
@@ -447,10 +467,20 @@ export function installLatticeScroll(
 ): void {
   if (SCROLLERS.has(screen)) return;
 
+  /*
+    Check the markup BEFORE mounting. Bailing after the mount left 2205 peg
+    nodes in a screen with nothing driving them, which is a silent failure that
+    looks exactly like a working lattice until you try to scroll it.
+  */
+  const region = q(screen, '[data-ixscroll]');
+  if (!region) {
+    console.warn('[latticescroll] no [data-ixscroll] on this screen; not mounting');
+    return;
+  }
+
   mountLattice(screen, cfg);
   const mounted = cfgOf(screen);
-  const region = q(screen, '[data-ixscroll]');
-  if (!mounted || !region) return;
+  if (!mounted) return;
 
   const blocks: Geom[] = qq<HTMLElement>(screen, '[data-ixblock]').map((el) => ({
     el,

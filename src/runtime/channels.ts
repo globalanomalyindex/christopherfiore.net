@@ -56,10 +56,11 @@ import {
   fillFor,
   latticeOf,
   nearestIndex,
+  holdLattice,
+  latticeHeld,
   releaseFor,
   restorePeg,
   scheduleResolve,
-  setLatticeBusy,
 } from './lattice';
 import { state } from './state';
 
@@ -153,17 +154,19 @@ function rectOf(cell: HTMLElement): Rect | null {
 /* --------------------------------------------------------------- the hold */
 
 /**
- * Refcounted busy flag. Two cells can be held at once — the pointer on one and
- * keyboard focus on another — and the second to leave is the one that owns the
- * re-solve.
+ * Claim the field for the length of a hover.
+ *
+ * Two cells can be held at once — the pointer on one and keyboard focus on
+ * another — and the second to leave owns the re-solve.
+ *
+ * This delegates to the lattice's own refcount rather than keeping a private
+ * one. It used to keep a local count and push a BOOLEAN down, which meant the
+ * open transition and a channel hover could not both hold the field: the
+ * transition claimed it at t0, its own synthetic pointerout made this release,
+ * and the boolean went false under the transition. One counter, one owner list.
  */
-const HOLDS = new WeakMap<HTMLElement, number>();
-
 function hold(screen: HTMLElement, delta: number): number {
-  const n = Math.max(0, (HOLDS.get(screen) ?? 0) + delta);
-  HOLDS.set(screen, n);
-  setLatticeBusy(screen, n > 0);
-  return n;
+  return holdLattice(screen, delta);
 }
 
 /* -------------------------------------------------------------- the pegs */
@@ -587,6 +590,19 @@ function end(cell: HTMLElement, n: number): void {
   rec.tail = window.setTimeout(() => {
     if (chanOf(cell).gen !== gen) return;
     for (const other of ACTIVE) if (screenOf(other) === screen) return;
+    /*
+      And not while something else owns the field.
+
+      The open transition stands this channel's hover down at t0 by dispatching
+      a pointerout, which arms this tail. 340ms later it fired a SCREEN-WIDE
+      release straight through the middle of the transition's own beat-0 fill
+      and blanked it for the next 280ms of a 3.3 second run. Every mouse-driven
+      open of channels 01 to 03 hit it.
+
+      `latticeHeld` is the transition's own busy flag, so this reads as: the
+      sweep-up is mine to do only while the field is still mine.
+    */
+    if (latticeHeld(screen)) return;
     releaseFor(screen);
     scheduleResolve(screen);
   }, REVEAL + 60);
@@ -701,6 +717,22 @@ function prodMask(cell: HTMLElement): void {
 
   const idx = nearestIndex(screen, rec.px, rec.py);
   if (idx >= 0) crossAt(screen, idx % cfg.cols, (idx / cfg.cols) | 0, COLOR.ink, rect);
+
+  /*
+    Put the frame corners back.
+
+    `crossAt` spares occluded points but not corners, and the flood pass above
+    deliberately skips corners so they hold their ink, so between them nothing
+    re-asserts a corner the cursor's row or column has just run through. It
+    drops from majorSize + 6 to majorSize and stays there, and because the
+    cursor sweeps, the damage accumulates across the block.
+
+    This is not cosmetic. Every frame's four corners landing on a lit point is
+    the one invariant the whole lattice rests on.
+  */
+  eachPeg(screen, rect, (peg) => {
+    if (peg.dataset.corner) restorePeg(peg);
+  });
 
   // The callout last: it clears the pegs it covers, and the two passes above
   // would light them again.

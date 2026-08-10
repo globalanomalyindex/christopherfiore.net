@@ -75,8 +75,10 @@ const SWEEP_ROWS = 3;
  */
 const PEG_CLEAR = 0.6;
 
-/** Resolve is debounced rather than driven by rAF; see `schedule` below. */
+/** Resolve is debounced rather than driven by rAF; see `scheduleResolve`. */
 const RESOLVE_DEBOUNCE = 90;
+/** The longest a resolve request may be deferred by fresh mutations. */
+const MAX_DEFER = 600;
 
 interface Lat {
   cfg: LatticeCfg;
@@ -87,8 +89,12 @@ interface Lat {
   phase: number;
   timer: number;
   resolveT: number;
-  /** Set while a transition owns the field, so the resolve cannot fight it. */
-  busy: boolean;
+  /** When the oldest un-served resolve request arrived; 0 when none is pending. */
+  resolveFirst: number;
+  /** Number of live claims on the field. Nothing global runs while this is >0. */
+  holds: number;
+  /** Whether this screen's one boolean-shaped owner currently holds it. */
+  owned: boolean;
   /** Points a hover currently owns; the drift skips these. */
   lit: Set<number>;
 }
@@ -163,7 +169,9 @@ export function mountLattice(screen: HTMLElement, cfg: LatticeCfg): void {
     phase: 0,
     timer: 0,
     resolveT: 0,
-    busy: false,
+    resolveFirst: 0,
+    holds: 0,
+    owned: false,
     lit: new Set(),
   });
 }
@@ -202,7 +210,7 @@ export function restorePeg(cell: HTMLElement): void {
  */
 export function solveLattice(screen: HTMLElement): void {
   const L = LATS.get(screen);
-  if (!L || L.busy) return;
+  if (!L || L.holds > 0) return;
   const { cfg, cells } = L;
   const k = scaleOf(screen);
   const sr = screen.getBoundingClientRect();
@@ -306,15 +314,73 @@ function occlude(screen: HTMLElement, L: Lat, k: number, sr: DOMRect): void {
 export function scheduleResolve(screen: HTMLElement): void {
   const L = LATS.get(screen);
   if (!L) return;
+  /*
+    Debounced WITH A CEILING, and the ceiling is the whole point.
+
+    A plain trailing debounce can be starved, and on this screen it was. The
+    ambient glitch swaps a letter every one to four seconds forever, and each
+    swap adds and removes nodes, so every one of them re-armed the 90ms timer
+    and the resolve simply never ran. The field sat on whatever it had
+    resolved before the fonts landed — 48 occluded points where it should have
+    had 193 — and crosshairs printed through the wordmark until something
+    happened to leave a long enough gap. It does not look like a starved timer.
+    It looks like the occlusion pass is subtly wrong.
+
+    So a request that has been waiting longer than MAX_DEFER runs now rather
+    than waiting for quiet that a living screen never reaches.
+  */
+  if (!L.resolveFirst) L.resolveFirst = performance.now();
+  if (performance.now() - L.resolveFirst >= MAX_DEFER) {
+    window.clearTimeout(L.resolveT);
+    L.resolveT = 0;
+    L.resolveFirst = 0;
+    solveLattice(screen);
+    return;
+  }
   window.clearTimeout(L.resolveT);
-  L.resolveT = window.setTimeout(() => solveLattice(screen), RESOLVE_DEBOUNCE);
+  L.resolveT = window.setTimeout(() => {
+    L.resolveFirst = 0;
+    solveLattice(screen);
+  }, RESOLVE_DEBOUNCE);
 }
 
-/** Hold the resolve off while a transition owns the field. */
+/**
+ * Claim or release the field. Returns the resulting number of holders.
+ *
+ * A REFCOUNT, not a boolean, and that distinction cost real debugging. Three
+ * separate things claim the lattice — a channel hover, the open transition and
+ * the index scroll — and with a plain flag whichever released last won. The
+ * concrete failure: the transition claimed the field at t0, then its own
+ * synthetic pointerout made the channel hover release, which set the flag back
+ * to false, and 340ms later the channel's sweep-up ran a screen-wide release
+ * straight through the middle of the transition's fill.
+ *
+ * Every claim must be paired. `setLatticeBusy` is kept as the boolean-shaped
+ * front door for callers that genuinely own the whole field for a bounded run.
+ */
+export function holdLattice(screen: HTMLElement, delta: number): number {
+  const L = LATS.get(screen);
+  if (!L) return 0;
+  L.holds = Math.max(0, L.holds + delta);
+  return L.holds;
+}
+
+/** True while anything holds the field. Read it before doing anything global. */
+export const latticeHeld = (screen: HTMLElement): boolean => (LATS.get(screen)?.holds ?? 0) > 0;
+
+/**
+ * Hold the resolve off while one owner has the field for a bounded run.
+ *
+ * Idempotent per screen rather than refcounted: calling it true twice claims
+ * once, and false releases that one claim. Callers that interleave with other
+ * owners want `holdLattice` instead.
+ */
 export function setLatticeBusy(screen: HTMLElement, busy: boolean): void {
   const L = LATS.get(screen);
   if (!L) return;
-  L.busy = busy;
+  if (busy === L.owned) return;
+  L.owned = busy;
+  holdLattice(screen, busy ? 1 : -1);
 }
 
 /**
@@ -341,11 +407,39 @@ export function watchLattice(screen: HTMLElement): () => void {
   window.addEventListener('resize', onResize, { passive: true });
   document.addEventListener('visibilitychange', onVis);
 
-  // Anything that adds a frame or rewrites a label re-resolves too. Attribute
-  // changes are watched as well: a label that switches to the glitch alternate
-  // is a different width, and the corners move with it.
-  const obs = new MutationObserver(() => scheduleResolve(screen));
-  obs.observe(screen, { childList: true, subtree: true, characterData: true });
+  /*
+    Anything that moves type re-resolves, and that has to include STYLE
+    attributes, not just nodes and text.
+
+    The intro reveals the wordmark by writing `visibility` on each letter, and
+    a hidden letter is correctly skipped by the occlusion walk. Watching only
+    childList and characterData meant none of those reveals was seen, so the
+    field kept the state it resolved DURING the intro — 48 occluded points
+    against the 193 the finished screen needs — until some unrelated mutation
+    happened along seconds later. Crosshairs printed through the wordmark for
+    the whole gap.
+
+    Mutations inside the lattice itself are ignored, and that is not an
+    optimisation. `solveLattice` and the drift both write inline styles to
+    these 1222 cells; observing them would make every resolve schedule the
+    next one forever.
+  */
+  const obs = new MutationObserver((records) => {
+    for (const r of records) {
+      const t = r.target;
+      const el = t.nodeType === Node.ELEMENT_NODE ? (t as Element) : t.parentElement;
+      if (el && el.closest('[data-lattice]')) continue;
+      scheduleResolve(screen);
+      return;
+    }
+  });
+  obs.observe(screen, {
+    childList: true,
+    subtree: true,
+    characterData: true,
+    attributes: true,
+    attributeFilter: ['style'],
+  });
 
   return () => {
     window.removeEventListener('resize', onResize);
@@ -375,7 +469,7 @@ export function startDrift(screen: HTMLElement): () => void {
 
   const { cfg, cells } = L;
   L.timer = window.setInterval(() => {
-    if (L.busy) return;
+    if (L.holds > 0) return;
     L.phase += PHASE_STEP;
     const t = L.phase;
     for (let i = 0; i < SWEEP_ROWS; i++) {
@@ -580,7 +674,14 @@ export function sweepRect(
   if (!L) return;
   const { cfg, cells } = L;
   const px = size ?? cfg.majorSize;
-  const idxs = cellsInRect(screen, r);
+  /*
+    Occluded points stay occluded, exactly as `fillFor` and `crossAt` already
+    do. Without this the open transition prints crosshairs straight through the
+    three sibling channel labels and the 128px wordmark for up to 260ms, which
+    is the one thing the occlusion pass exists to prevent. The rule does not
+    get suspended because the field is mid-choreography.
+  */
+  const idxs = cellsInRect(screen, r).filter((i) => cells[i].dataset.base !== 'transparent');
   if (reduced(screen)) {
     for (const i of idxs) {
       L.lit.add(i);
@@ -685,6 +786,10 @@ export function latticeStats(screen: HTMLElement): {
   corners: number;
   occluded: number;
   hued: number;
+  /** Live claims. Anything above 0 at rest is a leaked hold, and it is visible
+   *  as a frozen drift and an occlusion pass that silently stopped running. */
+  holds: number;
+  drifting: boolean;
 } | null {
   const L = LATS.get(screen);
   if (!L) return null;
@@ -703,7 +808,12 @@ export function latticeStats(screen: HTMLElement): {
     // them raw reports every major and every corner as leaked.
     if (b && b !== PEG_OFF && c.style.color && !sameColor(c.style.color, b)) hued++;
   }
-  return { total: L.cells.length, majors, corners, occluded, hued };
+  return { total: L.cells.length, majors, corners, occluded, hued, holds: L.holds, drifting: L.timer !== 0 };
+}
+
+/** Expose the stats to a browser check without reaching into module state. */
+if (typeof window !== 'undefined') {
+  (window as unknown as { __lat?: unknown }).__lat = latticeStats;
 }
 
 /** Every frame declared on a screen, in design px, for the corner assertion. */

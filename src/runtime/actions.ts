@@ -12,6 +12,8 @@
 
 import { q, qq } from '../dom';
 import {
+  invertOff,
+  invertOn,
   prodOff,
   prodOn,
   scafMove,
@@ -85,18 +87,20 @@ function swapSlot(row: HTMLElement, attr: 'data-case' | 'data-system'): void {
 
 /* --------------------------------------------------------- hover routing */
 
-type HovKind = 'prod' | 'water' | 'sweep' | 'case' | 'system';
+type HovKind = 'prod' | 'water' | 'sweep' | 'invert' | 'case' | 'system';
 
 const HOV_ON: Partial<Record<HovKind, (cell: HTMLElement) => void>> = {
   prod: prodOn,
   water: waterOn,
   sweep: sweepOn,
+  invert: invertOn,
 };
 
 const HOV_OFF: Partial<Record<HovKind, (cell: HTMLElement) => void>> = {
   prod: prodOff,
   water: waterOff,
   sweep: sweepOff,
+  invert: invertOff,
 };
 
 /**
@@ -165,7 +169,7 @@ export function bindActions(stage: HTMLElement): void {
 
   const kindOf = (el: HTMLElement): HovKind | null => {
     const v = el.getAttribute('data-hov');
-    return v === 'prod' || v === 'water' || v === 'sweep' || v === 'case' || v === 'system'
+    return v === 'prod' || v === 'water' || v === 'sweep' || v === 'invert' || v === 'case' || v === 'system'
       ? v
       : null;
   };

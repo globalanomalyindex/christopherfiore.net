@@ -294,7 +294,16 @@ export function hlBox(el: HTMLElement): void {
 function inkNodes(host: HTMLElement): HTMLElement[] {
   return qq<Element>(host, '*')
     .filter((n): n is HTMLElement => n instanceof HTMLElement)
-    .filter((n) => n.style.color !== '' && !n.closest('[data-hbox]'));
+    .filter((n) => n.style.color !== '' && !n.closest('[data-hbox]'))
+    /*
+      Letter spans belong to glitch.ts and must never be snapshotted as a
+      resting color. The held glitch is writing FLASH colors onto `[data-l]`
+      spans for as long as the cursor is inside, so a snapshot taken while one
+      of those is mid-flash captures the FLASH color as "the original" and
+      writes it back on leave. The letter is then permanently off-ink, and
+      because the next hover snapshots THAT, the damage compounds.
+    */
+    .filter((n) => !n.matches('[data-l]'));
 }
 
 /**
@@ -329,6 +338,10 @@ export function hlInk(el: HTMLElement, on: boolean): void {
     if (!el.isConnected) {
       dropBox(r);
       unpin(r);
+      // The held glitch runs on its own interval and is only stopped from
+      // `leave()`. A button torn out from under an open hover never gets a
+      // pointerleave, so without this its tick outlives the element forever.
+      if (r.word) stopHoldGlitch(r.word);
       r.ink = 0;
       return;
     }
@@ -539,7 +552,19 @@ function bind(el: HTMLElement): void {
  * Idempotent: elements already bound are skipped.
  */
 export function wireHovers(root: HTMLElement): void {
-  const pages = root.matches('[data-page]') ? [root] : qq(root, '[data-page]');
+  /*
+    The menu is `[data-menu]`, not `[data-page]`, so passing it here used to
+    resolve to an empty list and bind nothing at all. Screen 2a therefore had
+    a band host that nothing ever painted into: `bandHost()` and the hosted
+    branch of `hlBox` had never run in a browser.
+
+    Falling back to the root itself is the whole fix. The channel cells stay
+    out of it either way — `EXCLUDE` carries `[data-channel]`, and
+    `channels.ts` owns all four personalities — so what this actually binds on
+    the menu is the two rails and the email link.
+  */
+  const scoped = qq(root, '[data-page]');
+  const pages = root.matches('[data-page]') ? [root] : scoped.length ? scoped : [root];
   for (const page of pages) {
     const targets = qq<Element>(page, '*')
       .filter((n): n is HTMLElement => n instanceof HTMLElement)

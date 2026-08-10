@@ -765,6 +765,17 @@ export function holdGlitch(line: HTMLElement, ground: string, step = 22): void {
   );
 
   m.hgT = window.setInterval(() => {
+    /*
+      Self-terminate. The tick used to check only whether the LETTER it picked
+      was still connected, which is true right up until the whole label is torn
+      out, and then silently false forever while the interval kept running. One
+      hover that never receives a pointerleave — a page opening under a
+      stationary cursor — left it ticking for the life of the document.
+    */
+    if (!line.isConnected) {
+      stopHoldGlitch(line);
+      return;
+    }
     const sp = rnd(ls);
     if (!sp.isConnected) return;
     paint(sp);

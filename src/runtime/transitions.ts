@@ -629,6 +629,14 @@ function runChannelOpen(
     second teardown.
   */
   cell.dispatchEvent(new PointerEvent('pointerout', { bubbles: true }));
+  /*
+    And the focus flag. `refreshHov` in actions.ts ORs pointer and focus into
+    one state, so clearing only the pointer leaves a KEYBOARD-opened channel
+    still "hovered": its held flicker and its beat intervals keep painting for
+    the whole 3.3 second choreography. Sent as an event for the same reason the
+    pointerout is.
+  */
+  cell.dispatchEvent(new FocusEvent('focusout', { bubbles: true }));
 
   // The resolve must not run while the fill owns the field, or it will paint
   // every swept point back to its resting state under the transition.

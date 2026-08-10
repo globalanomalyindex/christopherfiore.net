@@ -59,6 +59,11 @@ export function mountStage(root: HTMLElement): HTMLElement {
   trackFrost(stage);
 
   for (const page of qq(stage, '[data-page]')) wireHovers(page);
+  // The menu too. It is `[data-menu]`, so it was never in the list above, and
+  // its band host sat unused. Channel cells are excluded by `EXCLUDE`, so this
+  // reaches the rails and the email link only.
+  const menuScreen = stage.querySelector<HTMLElement>('[data-menu]');
+  if (menuScreen) wireHovers(menuScreen);
 
   bindActions(stage);
 
