@@ -22,7 +22,7 @@ import { installLightbox } from './lightbox';
 import { startFrost, trackFrost } from './frost';
 import { wireHovers } from './hover';
 import { LAT_MENU } from '../design/lattice';
-import { mountLattice, solveLattice, startDrift, watchLattice } from './lattice';
+import { latticeFill, mountLattice, solveLattice, watchLattice } from './lattice';
 
 /**
  * Build the stage and wire every runtime that needs a live DOM.
@@ -82,7 +82,8 @@ export function mountStage(root: HTMLElement): HTMLElement {
     mountLattice(menu, LAT_MENU);
     watchLattice(menu);
     solveLattice(menu);
-    startDrift(menu);
+    // The plate assembles rather than arriving finished; see `latticeFill`.
+    latticeFill(menu);
   }
 
   return stage;

@@ -52,11 +52,61 @@ const BAYER4 = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
 const bayer = (col: number, row: number): number =>
   (BAYER4[(row % 4) * 4 + (col % 4)] + 0.5) / 16;
 
-/** Drift cadence. Deliberately slow and stepped; the field is not a shimmer. */
-const TICK = 120;
-const PHASE_STEP = 0.12;
-/** Rows advanced per tick. Sweeping bands reads as a wave; random cells read as noise. */
-const SWEEP_ROWS = 3;
+/**
+ * Drift cadence.
+ *
+ * The field used to sweep three rows a tick and flip each point between two
+ * colours — the site's dither, one bit deep, and stepped hard because a
+ * smoothed dither is mush. It reads as sixteen levels now, in SIZE and VALUE
+ * together, and the smoothing is what makes that legible: at one bit a
+ * transition blurs a decision, and at sixteen it is the thing that turns a
+ * ladder of levels into a swell.
+ *
+ * The whole field is written every tick rather than three rows, because a
+ * wave that reaches a given point once a second is not a wave. It is cheap
+ * enough to do that because a level only writes when it CHANGES, and because
+ * neither property it writes causes layout: `transform` composites and `color`
+ * paints.
+ */
+const TICK = 90;
+const PHASE_STEP = 0.09;
+
+/**
+ * The CSS transition the levels are read through, longer than a tick so a peg
+ * is always still moving when its next target arrives. That is what makes it
+ * continuous rather than a sequence of arrivals.
+ */
+const DRIFT_EASE = 260;
+
+/** Depth of the ladder. Sixteen, because that is the Bayer matrix's own depth. */
+const LEVELS = 16;
+
+/**
+ * How hard the ordered matrix bites.
+ *
+ * At 0 the field is a plain sine swell with no texture; at 3 or more the Bayer
+ * pattern reads as a static checker sitting on top of the wave. Around 2.4 the
+ * matrix is what gives the swell its grain without ever becoming the subject.
+ */
+const BAYER_BITE = 2.4;
+
+/** How much a hovered block swells the field around it, and how far out. */
+const FOCUS_GAIN = 0.55;
+const FOCUS_FALL = 260;
+
+/** Blend two hex colours. The ladder is built from this once per screen. */
+function mix(a: string, b: string, t: number): string {
+  const pa = parseInt(a.slice(1), 16);
+  const pb = parseInt(b.slice(1), 16);
+  const ch = (sh: number): number =>
+    Math.round(((pa >> sh) & 255) + ((((pb >> sh) & 255) - ((pa >> sh) & 255)) * t));
+  return `#${((1 << 24) | (ch(16) << 16) | (ch(8) << 8) | ch(0)).toString(16).slice(1)}`;
+}
+
+/** PEG_OFF at the bottom, PEG_ON at the top, sixteen rungs between. */
+const TINT: readonly string[] = Array.from({ length: LEVELS }, (_, i) =>
+  mix(PEG_OFF, PEG_ON, i / (LEVELS - 1)),
+);
 
 /**
  * Extra clearance around a text run, on top of the run's own box.
@@ -97,6 +147,17 @@ interface Lat {
   owned: boolean;
   /** Points a hover currently owns; the drift skips these. */
   lit: Set<number>;
+  /** The ladder rung each ambient point is on, so a tick only writes changes. */
+  lv: Int8Array | null;
+  /** rAF handle for the ambient ticker, and the wall clock it advances on. */
+  raf: number;
+  clock: number;
+  /** 0…1 arrival gate. Below 1 the field is still coming in; see `latticeFill`. */
+  gate: number;
+  /** ms the arrival takes, 0 once it is done */
+  fill: number;
+  /** the point the field swells around while a channel is hovered */
+  focus: { x: number; y: number } | null;
 }
 
 const LATS = new WeakMap<HTMLElement, Lat>();
@@ -168,6 +229,12 @@ export function mountLattice(screen: HTMLElement, cfg: LatticeCfg): void {
     sweepRow: 0,
     phase: 0,
     timer: 0,
+    lv: null,
+    raf: 0,
+    clock: 0,
+    gate: 1,
+    fill: 0,
+    focus: null,
     resolveT: 0,
     resolveFirst: 0,
     holds: 0,
@@ -187,6 +254,23 @@ export function unmountLattice(screen: HTMLElement): void {
 
 /* ---------------------------------------------------------------- resolve */
 
+/**
+ * The transition a peg is allowed, which depends on what it IS.
+ *
+ * An ambient point eases: it is being driven up and down a sixteen-rung ladder
+ * and the easing is what makes that a swell rather than a staircase. Everything
+ * the resolve owns — majors, frame corners, occluded points — SNAPS, and that
+ * is not a preference. A corner mark is the system's one load-bearing signal,
+ * and a corner that fades in is a corner that is wrong for 260ms every time the
+ * field re-solves.
+ */
+const EASE = `color ${DRIFT_EASE}ms linear,transform ${DRIFT_EASE}ms cubic-bezier(.25,.7,.3,1)`;
+
+function setEase(cell: HTMLElement, ambient: boolean): void {
+  const want = ambient ? EASE : 'none';
+  if (cell.style.transition !== want) cell.style.transition = want;
+}
+
 /** Write a peg's resolved state and remember it for every later restore. */
 function setBase(cell: HTMLElement, color: string, size: number, corner?: boolean): void {
   cell.dataset.base = color;
@@ -195,12 +279,20 @@ function setBase(cell: HTMLElement, color: string, size: number, corner?: boolea
   else delete cell.dataset.corner;
   cell.style.color = color;
   cell.style.fontSize = `${size}px`;
+  setEase(cell, color === PEG_OFF);
+  // A point that has stopped being ambient drops the ambient swell with it.
+  if (color !== PEG_OFF && cell.style.transform) cell.style.transform = '';
 }
 
 /** Put a peg back exactly where the resolve pass left it. Never `color = ''`. */
 export function restorePeg(cell: HTMLElement): void {
-  cell.style.color = cell.dataset.base || PEG_OFF;
+  const base = cell.dataset.base || PEG_OFF;
+  cell.style.color = base;
   cell.style.fontSize = `${cell.dataset.baseSize || 10}px`;
+  setEase(cell, base === PEG_OFF);
+  // Always, not only for resolved points: a released point is back in the
+  // ambient field's hands and the next tick gives it a swell of its own.
+  if (cell.style.transform) cell.style.transform = '';
 }
 
 /**
@@ -259,6 +351,40 @@ export function solveLattice(screen: HTMLElement): void {
  * boxes, because an element box is the whole line track and would clear far
  * more of the field than the ink actually covers.
  */
+/**
+ * Measure the resting face, whatever face the glitch has the letters in.
+ *
+ * THIS IS NOT TIDINESS. The letter glitch swaps individual `[data-l]` spans to
+ * the alternates, which are narrower — between 0.845 and 0.99 of the default —
+ * so a run measures narrower while it is glitched. A resolve landing in that
+ * window clears fewer points than one landing a frame later, and the ten points
+ * either side of the wordmark flickered between cleared and ambient for as long
+ * as the glitch ran. It read as the field being unable to make up its mind, and
+ * it made the "identical after a hover cycle" assertion intermittently false
+ * for reasons that had nothing to do with hovering.
+ *
+ * So the inline face comes off for the length of the measuring pass and goes
+ * back on after. The resting face is by construction the WIDEST the run can be,
+ * which is the conservative direction: a point cleared for the resting face is
+ * cleared for every face the glitch can put it in. One layout for the whole
+ * pass, and resolves are debounced to a handful a second at worst.
+ */
+function unglitch(screen: HTMLElement): () => void {
+  const saved: [HTMLElement, string, string][] = [];
+  for (const sp of qq<HTMLElement>(screen, '[data-l]')) {
+    if (!sp.style.fontFamily && !sp.style.fontFeatureSettings) continue;
+    saved.push([sp, sp.style.fontFamily, sp.style.fontFeatureSettings]);
+    sp.style.fontFamily = '';
+    sp.style.fontFeatureSettings = '';
+  }
+  return () => {
+    for (const [sp, fam, feat] of saved) {
+      sp.style.fontFamily = fam;
+      sp.style.fontFeatureSettings = feat;
+    }
+  };
+}
+
 function occlude(screen: HTMLElement, L: Lat, k: number, sr: DOMRect): void {
   const { cfg, cells } = L;
   const walker = document.createTreeWalker(screen, NodeFilter.SHOW_TEXT, {
@@ -276,6 +402,7 @@ function occlude(screen: HTMLElement, L: Lat, k: number, sr: DOMRect): void {
   // too rather than only points whose center lands inside it.
   const pegPad = cfg.majorSize * PEG_CLEAR;
 
+  const regloss = unglitch(screen);
   const range = document.createRange();
   for (let n = walker.nextNode(); n; n = walker.nextNode()) {
     if (!n.parentElement) continue;
@@ -302,6 +429,7 @@ function occlude(screen: HTMLElement, L: Lat, k: number, sr: DOMRect): void {
     }
   }
   range.detach();
+  regloss();
 }
 
 /**
@@ -467,47 +595,126 @@ export function watchLattice(screen: HTMLElement): () => void {
   };
 }
 
-/* ------------------------------------------------------------------ drift */
+/* ---------------------------------------------------------------- ambient */
 
 /**
- * The ambient wave: the site's dither field, expressed in crosshairs.
+ * The ambient field: the site's dither, expressed as a swell in the crosshairs.
  *
- * Sweeps `SWEEP_ROWS` rows per tick rather than sampling random cells. That is
- * not a performance choice — updating N random cells scrambles the wave into
- * noise, and sweeping bands is what makes it read as something crossing the
- * plate. Points carrying a resolved state (majors, corners, occluded) and
- * points a hover owns are never touched.
+ * Every ambient point gets a value from a slow two-axis sine field, offset by
+ * its own place in the ordered Bayer matrix, and that value drives SIZE and
+ * VALUE together up a sixteen-rung ladder. So the pattern crossing the plate is
+ * the same ordered dither the rest of the site is built on — it is just being
+ * drawn at the resolution of the field instead of the resolution of a pixel.
  *
- * Returns its own stop function.
+ * Three things borrow this one ticker, and they differ only in what they feed
+ * into the same value:
+ *
+ *   default   the sine field alone
+ *   hover     plus a swell centred on the block under the cursor, set by
+ *             `latticeFocus`, so the field leans toward what you are pointing at
+ *   arrival   times a gate that rises from nothing, so the field comes IN in
+ *             Bayer order rather than being there from the first frame
+ *
+ * WHAT IT WILL NOT TOUCH. Only points whose resolved base is `PEG_OFF`. Majors,
+ * frame corners and occluded points hold exactly what the resolve gave them,
+ * which is what keeps every invariant the harness checks true while the field
+ * is moving — and points a hover owns are skipped too, because that module is
+ * driving them.
  */
-export function startDrift(screen: HTMLElement): () => void {
+
+/** The top of the ladder, derived: an ambient peak is exactly a major's size. */
+const topScale = (cfg: LatticeCfg): number => cfg.majorSize / cfg.micro;
+
+function ambientTick(L: Lat, dt: number): void {
+  const { cfg, cells } = L;
+  if (!L.lv) L.lv = new Int8Array(cells.length).fill(-1);
+
+  if (L.fill > 0) {
+    L.gate = Math.min(1, L.gate + dt / L.fill);
+    if (L.gate >= 1) L.fill = 0;
+  }
+
+  L.phase += PHASE_STEP * (dt / TICK);
+  const t = L.phase;
+  const top = topScale(cfg);
+  const f = L.focus;
+
+  for (let row = 0; row < cfg.rows; row++) {
+    const y = cfg.step + cfg.step * row;
+    for (let col = 0; col < cfg.cols; col++) {
+      const idx = row * cfg.cols + col;
+      const cell = cells[idx];
+      if (cell.dataset.base !== PEG_OFF || L.lit.has(idx)) {
+        L.lv[idx] = -1;
+        continue;
+      }
+      const x = cfg.step + cfg.step * col;
+
+      let v = 0.5 + (Math.sin(x * 0.0026 + t) + Math.sin(y * 0.0031 - t * 0.7)) / 4;
+      if (f) {
+        const dx = x - f.x;
+        const dy = y - f.y;
+        v += FOCUS_GAIN * Math.exp(-(dx * dx + dy * dy) / (2 * FOCUS_FALL * FOCUS_FALL));
+      }
+
+      const b = bayer(col, row);
+      const u = clamp01((v - b) * BAYER_BITE + 0.5);
+      // The arrival is Bayer-ordered too, so the field assembles in the same
+      // order it breathes in rather than fading up as a sheet.
+      const g = L.gate >= 1 ? 1 : clamp01(L.gate * 1.7 - b * 0.7);
+      const lv = Math.min(LEVELS - 1, (u * LEVELS) | 0);
+      const key = g >= 1 ? lv : -2 - lv;
+
+      if (L.lv[idx] === key) continue;
+      L.lv[idx] = key;
+      cell.style.color = TINT[lv];
+      const sc = g * (1 + (u * (top - 1)));
+      cell.style.transform = sc === 1 ? '' : `scale(${sc.toFixed(3)})`;
+    }
+  }
+}
+
+const clamp01 = (n: number): number => (n < 0 ? 0 : n > 1 ? 1 : n);
+
+/**
+ * Start the ambient field. Returns its own stop function.
+ *
+ * Paused while the field's ONE boolean-shaped owner holds it — the open
+ * transition and the index scroll, both of which are placing points themselves
+ * — but NOT while a channel hover holds it. A hover is refcounted rather than
+ * owned, and the field leaning toward the cursor is the whole point of the
+ * hover state; the hover's own points are skipped by base and by `lit`, so
+ * there is nothing for the two to fight over.
+ */
+export function startDrift(screen: HTMLElement, fillMs = 0): () => void {
   const L = LATS.get(screen);
   if (!L) return () => {};
   stopDrift(screen);
-  if (reduced(screen)) return () => {};
+  if (reduced(screen)) {
+    // No swell, but the field must still be THERE.
+    L.gate = 1;
+    L.fill = 0;
+    return () => {};
+  }
 
-  const { cfg, cells } = L;
-  L.timer = window.setInterval(() => {
-    if (L.holds > 0) return;
-    L.phase += PHASE_STEP;
-    const t = L.phase;
-    for (let i = 0; i < SWEEP_ROWS; i++) {
-      const row = (L.sweepRow + i) % cfg.rows;
-      const y = cfg.step + cfg.step * row;
-      for (let col = 0; col < cfg.cols; col++) {
-        const idx = row * cfg.cols + col;
-        const cell = cells[idx];
-        // Majors, corners and occluded points hold their resolved value.
-        if (cell.dataset.base !== PEG_OFF) continue;
-        if (L.lit.has(idx)) continue;
-        const x = cfg.step + cfg.step * col;
-        const n = 0.5 + (Math.sin(x * 0.0026 + t) + Math.sin(y * 0.0031 - t * 0.7)) / 4;
-        cell.style.color = bayer(col, row) < n * 0.68 ? PEG_ON : PEG_OFF;
-      }
+  if (fillMs > 0) {
+    L.gate = 0;
+    L.fill = fillMs;
+    L.lv = null;
+    for (const c of L.cells) if (c.dataset.base === PEG_OFF) c.style.transform = 'scale(0)';
+  }
+
+  L.clock = performance.now();
+  const loop = (now: number): void => {
+    L.raf = 0;
+    const dt = Math.min(240, now - L.clock);
+    if (dt >= TICK) {
+      L.clock = now;
+      if (!L.owned) ambientTick(L, dt);
     }
-    L.sweepRow = (L.sweepRow + SWEEP_ROWS) % cfg.rows;
-  }, TICK);
-
+    L.raf = requestAnimationFrame(loop);
+  };
+  L.raf = requestAnimationFrame(loop);
   return () => stopDrift(screen);
 }
 
@@ -516,6 +723,31 @@ export function stopDrift(screen: HTMLElement): void {
   if (!L) return;
   window.clearInterval(L.timer);
   L.timer = 0;
+  if (L.raf) cancelAnimationFrame(L.raf);
+  L.raf = 0;
+}
+
+/**
+ * Lean the field toward a point, or let it go.
+ *
+ * In design px, screen-local. `channels.ts` sets it on enter and clears it on
+ * leave, which is the hover state: the block itself gets its personality and
+ * the field around it swells toward it.
+ */
+export function latticeFocus(screen: HTMLElement, x: number | null, y = 0): void {
+  const L = LATS.get(screen);
+  if (!L) return;
+  L.focus = x === null ? null : { x, y };
+}
+
+/**
+ * The arrival: the field comes in from nothing, in Bayer order.
+ *
+ * Called on boot and on an intro replay, so what a visitor sees is the plate
+ * assembling rather than a page that was already finished when they got there.
+ */
+export function latticeFill(screen: HTMLElement, ms = 1100): void {
+  startDrift(screen, ms);
 }
 
 /* --------------------------------------------------------------- painting */
@@ -592,6 +824,16 @@ export function fillFor(screen: HTMLElement, r: Rect, opts: FillOpts): void {
   const size = opts.size ?? cfg.majorSize;
   const from = opts.from ?? EDGES[(Math.random() * EDGES.length) | 0];
   const idxs = cellsInRect(screen, r).filter((i) => !opts.skip?.has(i));
+
+  /*
+    A claimed point leaves the ambient field, and its swell leaves with it.
+    Without this the ambient `transform: scale()` survives underneath whatever
+    the channel paints, so 03's circuit was drawn at eighteen px times whatever
+    the wave happened to be doing there — a track made of randomly sized marks.
+    `restorePeg` puts nothing back, because the drift re-establishes the swell
+    within a tick of the release.
+  */
+  for (const i of idxs) if (cells[i].style.transform) cells[i].style.transform = '';
 
   // Accent bands: the top and bottom 14% of the rect take a different color.
   const band = r.h * 0.14;

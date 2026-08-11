@@ -22,7 +22,11 @@
  * implies. `travel` is called once per beat and once more on arrival, so a
  * host does its placing there and nowhere else.
  *
- * ONE GESTURE, ONE STEP — see `onWheel`. A trackpad flick is not one event.
+ * IT SCROLLS, AND IT SNAPS. The wheel drives the offset directly, so a flick
+ * carries as far as a flick carries and a slow drag crawls; what the grid does
+ * is quantize where the contents may be, not how far a gesture may take them.
+ * When the wheel goes quiet the offset settles to the nearest rest position.
+ * See `onWheel`.
  */
 
 import { COLOR, RULE } from '../design/tokens.ts';
@@ -46,11 +50,15 @@ const BEAT = 28;
  */
 const MAX_BEATS = 11;
 
-/** Wheel travel that commits one step. About one trackpad flick. */
-const WHEEL_STEP = 90;
-
-/** The same, for a finger. Shorter, because a swipe is a deliberate gesture. */
-const TOUCH_STEP = 56;
+/**
+ * Wheel silence that ends a gesture and starts the settle.
+ *
+ * Long enough to sit inside a trackpad's momentum train, which keeps arriving
+ * for a few hundred milliseconds after the fingers lift — so coasting carries
+ * the contents on rather than being read as a second gesture — and short enough
+ * that letting go feels like letting go.
+ */
+const SETTLE_QUIET = 150;
 
 /**
  * A tab that has been backgrounded comes back with an enormous elapsed time.
@@ -224,12 +232,31 @@ export function reorganize(o: ReorgOpts): Reorg {
   /** cells advanced per beat, re-solved whenever the destination changes */
   let stride = o.cell;
   let moving = false;
+  /** true between the first wheel event of a gesture and the settle */
+  let dragging = false;
+  /** the offset the live gesture is measured from */
+  let dragFrom = 0;
   let last = 0;
   let raf = 0;
   let acc = 0;
   let touchY = 0;
 
   const lastIndex = (): number => Math.max(0, o.positions() - 1);
+  const maxOffset = (): number => o.offsetOf(lastIndex());
+
+  /** The rest position an arbitrary offset is nearest to. */
+  function nearest(px: number): number {
+    let best = 0;
+    let d = Infinity;
+    for (let i = 0; i <= lastIndex(); i++) {
+      const gap = Math.abs(o.offsetOf(i) - px);
+      if (gap < d) {
+        d = gap;
+        best = i;
+      }
+    }
+    return best;
+  }
 
   /** Cells per beat for the distance still to cover, bounded by MAX_BEATS. */
   function solveStride(): void {
@@ -263,8 +290,24 @@ export function reorganize(o: ReorgOpts): Reorg {
     const loop = (now: number): void => {
       raf = 0;
       if (now - last > MAX_CATCHUP) last = now - BEAT;
-      while (now - last >= BEAT) {
+      /*
+        AT MOST ONE BEAT PER FRAME, and this is a departure from how every other
+        timed thing on this site advances.
+    
+        Everywhere else, advancing by whole intervals against the wall clock is
+        what keeps an animation the same length on a 60Hz panel and a 120Hz one,
+        and dropping a frame just means the next one covers more ground. This
+        animation is eight to eleven STEPS, and a frame that covers two of them
+        does not run faster — it deletes one. The whole reason the contents jump
+        by a cell is so the eye can see them land on it.
+    
+        So a slow frame stretches the move instead of thinning it. The step count
+        is bounded by `MAX_BEATS`, so the worst case is eleven frames — a third
+        of a second even on a bad display, and never a cut.
+      */
+      if (now - last >= BEAT) {
         last += BEAT;
+        if (now - last >= BEAT) last = now;
         beat();
       }
       if (cur === to) {
@@ -288,6 +331,9 @@ export function reorganize(o: ReorgOpts): Reorg {
 
   function goTo(i: number): void {
     const dest = clampN(i, 0, lastIndex());
+    // A key press ends any live gesture: they are two hands on the same wheel.
+    dragging = false;
+    window.clearTimeout(quietT);
     if (dest === want && moving) return;
     want = dest;
     if (moving) return;
@@ -315,8 +361,8 @@ export function reorganize(o: ReorgOpts): Reorg {
     if (raf) cancelAnimationFrame(raf);
     raf = 0;
     moving = false;
+    dragging = false;
     acc = 0;
-    armed = true;
     window.clearTimeout(quietT);
     index = clampN(i, 0, lastIndex());
     want = index;
@@ -341,80 +387,103 @@ export function reorganize(o: ReorgOpts): Reorg {
   const at = (): number => (moving ? want : index);
 
   /*
-    ONE GESTURE, ONE STEP.
+    IT SCROLLS, AND IT SNAPS.
 
-    A trackpad flick is not one wheel event. It is the push, and then a train of
-    MOMENTUM events the OS keeps sending as it coasts — thirty or forty of them,
-    a few milliseconds apart, adding up to well over a thousand pixels. Against
-    a plain threshold every one of those past the first crossed it again, so a
-    single flick walked the contents to the end and there was no way to look at
-    anything in between.
+    The wheel moves the contents directly rather than voting for a step. Every
+    event adds its delta to a live offset, that offset is rounded to the grid,
+    and the contents go there — so a flick carries as far as a flick carries,
+    a slow drag crawls, and a long gesture crosses several rest positions
+    without ever asking for a second one. The grid decides where the contents
+    may BE; it does not decide how far a hand is allowed to move them.
 
-    So the wheel arms once and disarms on the step it commits, and only re-arms
-    when the input stops looking like coasting. Two signals say that, and either
-    is enough:
+    This replaced a threshold that committed one step per gesture and then
+    disarmed itself until the wheel went quiet, which was a fix for a real
+    problem — momentum crossing a threshold thirty times — but it made the
+    scroll modal: you could only ever advance one position and then had to let
+    go and start again. Driving the offset makes the momentum an asset instead:
+    coasting simply carries you further, which is what it does everywhere else.
 
-    · the wheel has been silent for `REARM_QUIET`, which is the flick ending;
-    · this event arrived `REARM_GAP` after the last one. Momentum events are
-      dense by construction — the OS emits them on the display's cadence — and
-      nothing a hand does deliberately is that dense. This is what keeps a mouse
-      wheel usable, where every click is a separate push and waiting for silence
-      between them would lose all but the first.
+    The settle is the only thing left on a timer. When the wheel has been quiet
+    for `SETTLE_QUIET` the offset animates to the nearest rest position, so the
+    contents always come to a stop somewhere the layout is whole.
   */
-  const REARM_QUIET = 160;
-  const REARM_GAP = 90;
-  let armed = true;
-  let lastWheel = 0;
   let quietT = 0;
+
+  /** Take the live offset and let it go to the nearest rest position. */
+  function endDrag(): void {
+    if (!dragging) return;
+    dragging = false;
+    acc = 0;
+    const dest = nearest(cur);
+    want = dest;
+    index = dest;
+    to = o.offsetOf(dest);
+    if (cur === to) {
+      o.travel(cur, index);
+      done();
+      return;
+    }
+    moving = true;
+    last = performance.now();
+    solveStride();
+    run();
+  }
+
+  function drag(delta: number): void {
+    if (!dragging) {
+      dragging = true;
+      dragFrom = cur;
+      acc = 0;
+      if (moving) {
+        // A gesture that arrives mid-settle takes over from wherever the
+        // contents have got to, rather than fighting the animation to a
+        // position the hand has already left behind.
+        if (raf) cancelAnimationFrame(raf);
+        raf = 0;
+        moving = false;
+        dragFrom = cur;
+      }
+      o.claim?.();
+    }
+    acc += delta;
+    const raw = clampN(dragFrom + acc, 0, maxOffset());
+    const next = Math.round(raw / o.cell) * o.cell;
+    if (next === cur) return;
+    cur = next;
+    index = nearest(cur);
+    o.travel(cur, index);
+  }
 
   const onWheel = (e: WheelEvent): void => {
     if (yieldsTo(e.target, surface, o.region)) return;
     e.preventDefault();
-    const now = performance.now();
-    const gap = now - lastWheel;
-    lastWheel = now;
-
     window.clearTimeout(quietT);
-    quietT = window.setTimeout(() => {
-      armed = true;
-      acc = 0;
-    }, REARM_QUIET);
-
-    if (!armed) {
-      if (gap < REARM_GAP) return; // still coasting on the last flick
-      armed = true;
-      acc = 0;
-    }
-
-    acc += wheelPx(e);
-    if (Math.abs(acc) < WHEEL_STEP) return;
-    const dir = acc > 0 ? 1 : -1;
-    acc = 0;
-    armed = false;
-    goTo(at() + dir);
+    quietT = window.setTimeout(endDrag, SETTLE_QUIET);
+    drag(wheelPx(e));
   };
 
   /*
-    A finger needs none of that: `touchstart` and `touchend` delimit the gesture
-    exactly, so one swipe arms once and is done.
+    A finger is the same gesture with its own ends. `touchend` settles it
+    immediately rather than waiting out the quiet window, because a lifted
+    finger is not ambiguous the way a wheel going quiet is.
   */
   const onTouchStart = (e: TouchEvent): void => {
+    if (yieldsTo(e.target, surface, o.region)) return;
     touchY = e.touches[0]?.clientY ?? 0;
-    acc = 0;
-    armed = !yieldsTo(e.target, surface, o.region);
   };
 
   const onTouchMove = (e: TouchEvent): void => {
-    if (!armed) return;
+    if (yieldsTo(e.target, surface, o.region)) return;
     const y = e.touches[0]?.clientY ?? touchY;
     e.preventDefault();
-    acc += touchY - y;
+    window.clearTimeout(quietT);
+    drag(touchY - y);
     touchY = y;
-    if (Math.abs(acc) < TOUCH_STEP) return;
-    const dir = acc > 0 ? 1 : -1;
-    acc = 0;
-    armed = false;
-    goTo(at() + dir);
+  };
+
+  const onTouchEnd = (): void => {
+    window.clearTimeout(quietT);
+    endDrag();
   };
 
   /*
@@ -449,6 +518,8 @@ export function reorganize(o: ReorgOpts): Reorg {
   surface.addEventListener('wheel', onWheel, { passive: false });
   surface.addEventListener('touchstart', onTouchStart, { passive: true });
   surface.addEventListener('touchmove', onTouchMove, { passive: false });
+  surface.addEventListener('touchend', onTouchEnd, { passive: true });
+  surface.addEventListener('touchcancel', onTouchEnd, { passive: true });
   o.region.addEventListener('keydown', onKey);
   o.region.addEventListener('scroll', onScroll, { passive: true });
 
@@ -466,6 +537,8 @@ export function reorganize(o: ReorgOpts): Reorg {
       surface.removeEventListener('wheel', onWheel);
       surface.removeEventListener('touchstart', onTouchStart);
       surface.removeEventListener('touchmove', onTouchMove);
+      surface.removeEventListener('touchend', onTouchEnd);
+      surface.removeEventListener('touchcancel', onTouchEnd);
       o.region.removeEventListener('keydown', onKey);
       o.region.removeEventListener('scroll', onScroll);
     },

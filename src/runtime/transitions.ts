@@ -26,6 +26,7 @@ import {
   cfgOf,
   releaseFor,
   setLatticeBusy,
+  latticeFill,
   solveLattice,
   startDrift,
   stopDrift,
@@ -1332,6 +1333,10 @@ export function runIntro(stage: HTMLElement): void {
   }
 
   s.introUntil = performance.now() + INTRO_LOCK;
+  // The field comes in with everything else rather than being the one thing
+  // that was already finished when the visitor arrived.
+  const menuScreen = q(stage, '[data-menu]');
+  if (menuScreen) latticeFill(menuScreen);
   playIn(stage, 0, true);
   if (crest) {
     killAnim(crest);

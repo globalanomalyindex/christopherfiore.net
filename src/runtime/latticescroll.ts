@@ -298,12 +298,48 @@ function show(S: Scroller): void {
   setLatticeBusy(S.screen, false);
   place(S, false);
   restoreFrames(S);
-  solveLattice(S.screen);
-  startDrift(S.screen);
-  // Block labels are `[data-fit]`, and a hidden element measures zero, so the
-  // boot pass in `fit.ts` skipped every one of them. This is the pass that
-  // actually sizes them, and it runs while they are still on the resting face.
+  /*
+    FIT BEFORE SOLVE, and the order is the whole point.
+
+    Block labels are `[data-fit]`, and a hidden element measures zero, so the
+    boot pass in `fit.ts` skipped every one of them — this is the pass that
+    actually sizes them. It used to run last, which left the field solved
+    against type that was about to change size: for the 90ms of the resolve's
+    debounce, points the finished labels cover were still ambient, and the
+    ambient field was lighting them. Solving against the type as it will
+    actually be set closes the window instead of racing it.
+  */
   fitScreen(S.screen);
+  solveLattice(S.screen);
+  // The index's field arrives too, a little quicker than the menu's: the page
+  // has already spent its transition getting here.
+  startDrift(S.screen, 720);
+
+  /*
+    And once more when the transition lets go.
+
+    `[data-ptitle]` FLIPs out of the channel word it was opened from, so for the
+    length of the open its client rect is a transformed one and not the rect it
+    will come to rest at. A field solved against that clears the points the
+    title is passing over and leaves the ones it lands on ambient — and the
+    ambient field then lights them, under the words. The FLIP is a Web
+    Animations transform, so `watchLattice`'s style observer never sees it and
+    nothing else was going to correct it.
+
+    `nav` is the stage's own flag for "a transition owns me", so this waits on
+    the actual condition rather than on a duration that would have to be kept in
+    step with the choreography.
+  */
+  const stage = S.screen.closest<HTMLElement>('[data-stage]');
+  const solveWhenStill = (): void => {
+    if (!S.shown) return;
+    if (stage && state(stage).nav) {
+      window.setTimeout(solveWhenStill, 120);
+      return;
+    }
+    solveLattice(S.screen);
+  };
+  window.setTimeout(solveWhenStill, 120);
 }
 
 function hide(S: Scroller): void {

@@ -58,6 +58,7 @@ import {
   crossAt,
   fillFor,
   latticeOf,
+  latticeFocus,
   nearestIndex,
   holdLattice,
   latticeHeld,
@@ -528,6 +529,10 @@ function begin(cell: HTMLElement, n: number, invert: boolean): Ctx | null {
   rec.accent = invert ? COLOR.paper : apart(SPARK_LIGHTS, main, rec.hue);
   rec.flat = invert || reducedFor(cell);
 
+  // The field leans toward the block for as long as the cursor is on it. The
+  // block's own personality is unchanged; this is the wall around it answering.
+  latticeFocus(screen, rect.x + rect.w / 2, rect.y + rect.h / 2);
+
   rec.band = bandOn(cell, screen, rect, {
     main,
     // The band's own edge rows may come from all of SPARK, darks included: they
@@ -564,6 +569,8 @@ function end(cell: HTMLElement, n: number): void {
   ACTIVE.delete(cell);
   const screen = screenOf(cell);
   if (!screen) return;
+  // Only let the field go if nothing else on this screen still holds it.
+  if (![...ACTIVE].some((o) => screenOf(o) === screen)) latticeFocus(screen, null);
 
   releaseFor(screen);
   // Corners are never claimed, so the release does not reach them. Only 04
@@ -1164,8 +1171,7 @@ function lapPaint(cell: HTMLElement): void {
   const gen = rec.gen;
   // The track over the fill, once the reveal ramp has finished writing —
   // painting it now would have the ramp's tail re-color the circuit.
-  window.clearTimeout(rec.settle);
-  rec.settle = window.setTimeout(() => {
+  const ink = (): void => {
     if (chanOf(cell).gen !== gen) return;
     for (const i of ring) {
       const peg = L.cells[i];
@@ -1173,6 +1179,22 @@ function lapPaint(cell: HTMLElement): void {
         paintPeg(peg, COLOR.ink, cfg.majorSize + TRACK_BUMP);
     }
     lapStep(cell, ring);
+  };
+  /*
+    Asserted TWICE, and the second one is not belt and braces.
+
+    `fillFor`'s reveal is a chain of 40ms timeouts with no cancel, and a chain
+    of timeouts is only as punctual as the main thread is idle. `REVEAL` is the
+    length that chain runs when nothing else is happening; under load — the
+    ambient field is now writing the whole lattice every 90ms — the tail lands
+    late and repaints part of the circuit back to the fill hue, leaving a track
+    with holes in it until the car happens past them. One more pass, well clear
+    of anything the ramp can do, closes it without making the first one wait.
+  */
+  window.clearTimeout(rec.settle);
+  rec.settle = window.setTimeout(() => {
+    ink();
+    window.setTimeout(ink, 140);
   }, REVEAL);
 }
 

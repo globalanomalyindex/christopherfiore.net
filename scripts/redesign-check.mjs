@@ -76,9 +76,22 @@ const geom = async () => pg.evaluate(() => {
       for (const [x,y] of c) if (!(onPt(x)&&onPt(y))) off.push(`${f.getAttribute('data-frame')} ${x.toFixed(1)},${y.toFixed(1)}`);
     }
     // peg ink vs text ink
+    /*
+      Measured at the size it is DRAWN, transform included.
+
+      The ambient field swells its points with `transform: scale()`, up to the
+      size of a major. `measureText` only knows the font size, so without this
+      the check would compute a 10px ink box for a point drawing at 16 and pass
+      while that point sat on a letter. The scale is about the element's centre,
+      so the box is expanded about the centre too.
+    */
     const pegs = [...lat.children].filter(s => s.style.color !== 'transparent' && s.dataset.base !== 'transparent')
       .map(s => { const q = s.getBoundingClientRect(); const m = window.__H.ink(s, '+'); const v = window.__H.band(q, m);
-        return { l: q.left + (q.width - m.width)/2, r: q.left + (q.width + m.width)/2, t: v.t, b: v.b }; });
+        const mm = /scale\(([\d.]+)\)/.exec(s.style.transform || '');
+        const sc = mm ? parseFloat(mm[1]) : 1;
+        const cx = q.left + q.width / 2, cy = q.top + q.height / 2;
+        const hw = (m.width / 2) * sc;
+        return { l: cx - hw, r: cx + hw, t: cy - (cy - v.t) * sc, b: cy + (v.b - cy) * sc }; });
     const texts = []; const w = document.createTreeWalker(screen, NodeFilter.SHOW_TEXT, { acceptNode: n =>
       (n.textContent||'').trim() && !n.parentElement.closest('[data-lattice]') && window.__H.vis(n.parentElement)
         ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT });
@@ -242,12 +255,27 @@ const posNow = () => pg.evaluate(() => {
 });
 if (!snaps) { say(false, '[2b] no [data-ixscroll] region'); }
 else {
-  console.log(`  (band ${snaps.h}px, driven by wheel)`);
+  console.log(`  (band ${snaps.h}px, driven by keyboard)`);
+  /*
+    Driven by ArrowDown, not by one big wheel event.
+
+    The wheel is a continuous drag now — it moves the mosaic by whatever the
+    device reports and snaps when it goes quiet — so a single 400px event lands
+    on whichever rest position is nearest 400px, which is not "one step". The
+    keyboard is the input that still means exactly one position, and stepping
+    the geometry through every one of them is what this section is for. The
+    wheel gets its own checks below, on the two things that are actually true of
+    it: everything on the grid, and a stop at a rest position.
+  */
+  await pg.evaluate(() => document.querySelector('[data-ixscroll]')?.focus());
   const seenPos = [];
   for (let step = 0; step < 4; step += 1) {
     if (step > 0) {
-      await pg.mouse.move(960, 600);
-      await pg.mouse.wheel(0, 400);
+      // Re-focused every time. The page's own landing focus and the geometry
+      // pass between iterations can both take it back, and a keypress with the
+      // region unfocused is a keypress the module never sees.
+      await pg.evaluate(() => document.querySelector('[data-ixscroll]')?.focus());
+      await pg.keyboard.press('ArrowDown');
       await pg.waitForTimeout(1500);
     }
     const pos = await posNow();
@@ -290,19 +318,67 @@ else {
   await pg.evaluate(() => document.querySelector('[data-ixscroll]')?.focus());
   await pg.keyboard.press('Home');
   await pg.waitForTimeout(1500);
+  /*
+    Sampled on rAF, not on an interval. These are the frames the browser
+    actually paints, which is the only sampling that can honestly say what a
+    visitor saw — a timer can miss half a 224ms move and report a cut.
+  */
   await pg.evaluate(() => {
-    window.__mid = new Set();
-    window.__midT = setInterval(() => {
+    window.__mid = [];
+    window.__midOn = true;
+    const tick = () => {
       const b = document.querySelector('[data-ixblock]');
-      if (b) window.__mid.add(Math.round(parseFloat(b.style.top) || 0));
-    }, 10);
+      if (b) {
+        const v = Math.round(parseFloat(b.style.top) || 0);
+        if (window.__mid[window.__mid.length - 1] !== v) window.__mid.push(v);
+      }
+      if (window.__midOn) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
   });
-  await pg.mouse.move(960, 600);
-  await pg.mouse.wheel(0, 400);
+  await pg.evaluate(() => document.querySelector('[data-ixscroll]')?.focus());
+  await pg.keyboard.press('ArrowDown');
   await pg.waitForTimeout(1200);
-  const mid = await pg.evaluate(() => { clearInterval(window.__midT); return [...window.__mid]; });
-  say(mid.length >= 5, `[1] the mosaic travels rather than cutting (${mid.length} frames)`);
+  const mid = await pg.evaluate(() => { window.__midOn = false; return window.__mid; });
+  say(mid.length >= 5, `[1] a keyboard step travels rather than cutting (${mid.length} frames)`);
   say(mid.every((v) => v % 30 === 0), `[1] every frame of the travel is a whole lattice cell (${mid.join(',')})`);
+
+  /*
+    And the wheel, on its own two terms. It is a drag: it follows the gesture
+    rather than committing steps, so what has to be true of it is that it never
+    puts the mosaic anywhere but on the grid, and that letting go leaves it on a
+    rest position — where the band is full and every corner is on a point.
+  */
+  await pg.keyboard.press('Home');
+  await pg.waitForTimeout(1500);
+  await pg.evaluate(() => {
+    window.__drag = [];
+    window.__dragOn = true;
+    const tick = () => {
+      const b = document.querySelector('[data-ixblock]');
+      if (b) {
+        const v = Math.round(parseFloat(b.style.top) || 0);
+        if (window.__drag[window.__drag.length - 1] !== v) window.__drag.push(v);
+      }
+      if (window.__dragOn) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  });
+  // a flick: the push, then the momentum train the OS keeps sending
+  await pg.evaluate(async () => {
+    const t = document.querySelector('[data-page="1"]');
+    const send = (d) => t.dispatchEvent(new WheelEvent('wheel', { deltaY: d, deltaMode: 0, bubbles: true, cancelable: true }));
+    send(40);
+    let d = 60;
+    for (let i = 0; i < 60; i++) { await new Promise((r) => setTimeout(r, 8)); send(d); d = Math.max(0.4, d * 0.95); }
+  });
+  await pg.waitForTimeout(1400);
+  const drag = await pg.evaluate(() => { window.__dragOn = false; return window.__drag; });
+  const rest = -Math.round(await posNow() * -1);
+  say(drag.length >= 6, `[2b] one flick keeps scrolling (${drag.length} offsets)`);
+  say(drag.every((v) => v % 30 === 0), `[2b] and never leaves the grid (${drag.slice(0, 6).join(',')}…)`);
+  say([0, 240, 480, 660].includes(await posNow()), `[2b] and settles on a rest position (${await posNow()})`);
+  void rest;
 
   // no nested links, and every href matches the data
   const links = await pg.evaluate(() => {
