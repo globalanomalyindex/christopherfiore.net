@@ -5,8 +5,9 @@
  * they are `runtime/reorganize.ts`, shared with page 02's gallery, and the
  * header of that module is where the idea is written down. What lives here is
  * everything about this reorganize that is about the LATTICE — the rest
- * positions the mosaic can take, the corner pegs that move with the blocks, and
- * the position mark in the field's outermost column.
+ * positions the mosaic can take, and the corner pegs that move with the blocks.
+ * The position is shown by the same plate rail page 02 carries, built here
+ * because this is the module that knows how many positions there are.
  *
  * REST POSITIONS ARE THE ONLY POSITIONS. `layout.ts` sizes the mosaic's rows so
  * that every reachable position fills the band exactly (240+240+180,
@@ -42,9 +43,13 @@ import {
   stopDrift,
   watchLattice,
 } from './lattice.ts';
-import { type Reorg, type ReorgItem, clampN, clearMask, reorganize } from './reorganize.ts';
+import { type ReorgItem, clearMask, plateRail, reorganize } from './reorganize.ts';
+import type { PlateRail, Reorg } from './reorganize.ts';
 import { fitScreen } from './fit.ts';
 import { state } from './state.ts';
+
+/** The plate rail's bar width. The same 6px page 02's rail has always used. */
+const RAIL_W = 6;
 
 /** The band the mosaic sits in, in design px. `INDEX_TRACK` supplies it. */
 export interface ScrollBand {
@@ -53,8 +58,6 @@ export interface ScrollBand {
   /** viewport height */
   readonly h: number;
 }
-
-const clamp01 = (n: number): number => clampN(n, 0, 1);
 
 /* ------------------------------------------------------------------ state */
 
@@ -73,8 +76,8 @@ interface Scroller {
   band: ScrollBand;
   cfg: LatticeCfg;
   region: HTMLElement;
-  /** lattice indices of the live position mark, empty at rest */
-  caret: number[];
+  /** one tick per rest position, always up; see `plateRail` */
+  rail: PlateRail | null;
   blocks: Geom[];
   /** the lattice's flat, row-major cell list */
   cells: HTMLCollection | null;
@@ -199,50 +202,6 @@ function place(S: Scroller, corners: boolean): void {
   S.owned = next;
 }
 
-/**
- * The position, spoken in the field's own language.
- *
- * There is no scrollbar and no thumb. While a step is running, a short run of
- * ink pegs in the lattice's outermost column marks which rest position the
- * mosaic is committed to, so the position is read OFF THE CROSSHAIRS rather
- * than off a widget floating above them. It only ever takes one of a handful of
- * rows, because the mosaic only ever takes one of a handful of positions, and
- * it is dropped at settle so the column returns to ambient.
- *
- * The caret never lands on an occluded point, same as every painter here.
- */
-const CARET_LEN = 3;
-
-function paintCaret(S: Scroller): void {
-  dropCaret(S);
-
-  const over = S.trackH - S.band.h;
-  if (over <= 0) return;
-  const cfg = S.cfg;
-  const col = cfg.cols - 1;
-  const rowAt = (y: number): number => Math.round(y / cfg.step) - 1;
-  const r0 = rowAt(S.band.y);
-  const r1 = rowAt(S.band.y + S.band.h);
-  const span = r1 - r0 - (CARET_LEN - 1);
-  const top = r0 + Math.round(clamp01(S.pos / over) * span);
-  for (let k = 0; k < CARET_LEN; k++) {
-    const i = (top + k) * cfg.cols + col;
-    const c = cellAt(S, i);
-    if (!c || c.dataset.base === 'transparent') continue;
-    c.style.color = PEG_CORNER;
-    c.style.fontSize = `${cfg.majorSize + 2}px`;
-    S.caret.push(i);
-  }
-}
-
-function dropCaret(S: Scroller): void {
-  for (const i of S.caret) {
-    const c = cellAt(S, i);
-    if (c) restorePeg(c);
-  }
-  S.caret.length = 0;
-}
-
 /** Blocks that are settled and wholly inside the band get their frame back. */
 function restoreFrames(S: Scroller): void {
   for (const g of S.blocks) {
@@ -285,7 +244,6 @@ function claim(S: Scroller): void {
   setLatticeBusy(S.screen, false);
   solveLattice(S.screen);
   setLatticeBusy(S.screen, true);
-  paintCaret(S);
 }
 
 function settle(S: Scroller): void {
@@ -301,7 +259,6 @@ function settle(S: Scroller): void {
     restore the frames, drop this module's claim on the field, run the resolve
     for real, and only then let the held pegs go.
   */
-  dropCaret(S);
   restoreFrames(S);
   setLatticeBusy(S.screen, false);
   solveLattice(S.screen);
@@ -321,7 +278,7 @@ function show(S: Scroller): void {
   S.reorg?.reset(0);
   S.pos = S.snaps[0] ?? 0;
   S.region.scrollTop = 0;
-  dropCaret(S);
+  S.rail?.set(0);
   releaseAll(S);
   setLatticeBusy(S.screen, false);
   place(S, false);
@@ -339,7 +296,6 @@ function hide(S: Scroller): void {
   S.shown = false;
   S.reorg?.reset(S.reorg.index());
   stopDrift(S.screen);
-  dropCaret(S);
   releaseAll(S);
   setLatticeBusy(S.screen, false);
 }
@@ -427,7 +383,7 @@ export function installLatticeScroll(
     band,
     cfg: mounted,
     region,
-    caret: [],
+    rail: null,
     blocks,
     cells: q(screen, '[data-lattice]')?.children ?? null,
     snaps,
@@ -451,11 +407,30 @@ export function installLatticeScroll(
     commit: (i) => {
       S.pos = S.snaps[i] ?? 0;
       place(S, true);
-      paintCaret(S);
+      S.rail?.set(i);
     },
     items: (dir) => waveItems(S, dir),
     settle: () => settle(S),
   });
+
+  /*
+    The plate rail, built here rather than in the page module because this is
+    where the number of rest positions is known — the page has the geometry, but
+    the count falls out of it and would have to be re-derived to be written down
+    twice.
+
+    Its lane is derived too: half a lattice cell out from the mosaic's right
+    edge, which is exactly the gap between the last block's column of points and
+    the next one, so the bar sits BETWEEN peg columns rather than on top of one.
+  */
+  const right = blocks.reduce((m, g) => Math.max(m, g.x + g.w), 0);
+  const rail = plateRail(snaps.length, {
+    height: band.h,
+    width: RAIL_W,
+    place: { left: right + mounted.step / 2 - RAIL_W / 2 },
+  });
+  region.parentElement?.appendChild(rail.node);
+  S.rail = rail;
 
   assertCorners(S);
   watchLattice(screen);

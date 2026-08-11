@@ -24,6 +24,9 @@
  * same lives here.
  */
 
+import { COLOR, RULE } from '../design/tokens.ts';
+import { css, el } from '../dom.ts';
+
 /** One dither beat. Every duration here is a whole number of these. */
 const BEAT = 28;
 
@@ -131,6 +134,87 @@ export function clearMask(b: HTMLElement): void {
   for (const p of MASK_PROPS) {
     b.style.removeProperty(p);
     b.style.removeProperty(`-webkit-${p}`);
+  }
+}
+
+/* ------------------------------------------------------------- plate rail */
+
+/**
+ * The position, as one tick per rest position.
+ *
+ * Neither screen scrolls, so neither gets a scrollbar, and a proportional thumb
+ * would be claiming a continuum that does not exist. A tick per position says
+ * the two true things instead: how many there are, and which one you are on.
+ * The first of those is the one that matters — without it a screen that fills
+ * its viewport exactly gives a visitor no reason to believe there is anything
+ * past it.
+ *
+ * It is always up, unlike the peg caret this replaced on 2b, which only
+ * appeared while a step was already running and so could only ever confirm a
+ * scroll somebody had already thought to try.
+ */
+export const PLATE_ON: string = COLOR.ink;
+export const PLATE_OFF: string = RULE.onPaperMinor;
+
+/** Space between ticks. Enough to read as separate marks at 6px wide. */
+const TICK_GAP = 4;
+
+export interface PlateRail {
+  node: HTMLElement;
+  set: (i: number) => void;
+}
+
+export function plateRail(
+  count: number,
+  o: { height: number; width: number; place?: Record<string, string | number> },
+): PlateRail {
+  const h = (o.height - TICK_GAP * (count - 1)) / count;
+  const ticks = Array.from({ length: count }, (_, i) =>
+    el('span', {
+      'data-plate': i,
+      style: css({
+        position: 'absolute',
+        left: 0,
+        width: '100%',
+        top: i * (h + TICK_GAP),
+        height: h,
+        background: i === 0 ? PLATE_ON : PLATE_OFF,
+        // steps, not a ramp: this design does not fade
+        transition: 'background 120ms steps(3,end)',
+      }),
+    }),
+  );
+  const node = el(
+    'div',
+    {
+      'data-platerail': true,
+      'aria-hidden': 'true',
+      style: css({
+        position: 'absolute',
+        top: 0,
+        height: o.height,
+        width: o.width,
+        'pointer-events': 'none',
+        'z-index': '3',
+        ...(o.place ?? { right: 0 }),
+      }),
+    },
+    ...ticks,
+  );
+  return { node, set: (i) => markPlate(node, i) };
+}
+
+/**
+ * Mark a position on whatever rail is inside `root`.
+ *
+ * By query rather than by a held reference, because 2b's rail is built by the
+ * page module and driven by the runtime module, and those two have no channel
+ * between them except the markup — the same contract `[data-ixscroll]` and
+ * `[data-ixblock]` already run on.
+ */
+export function markPlate(root: HTMLElement, i: number): void {
+  for (const t of root.querySelectorAll<HTMLElement>('[data-plate]')) {
+    t.style.background = Number(t.dataset.plate) === i ? PLATE_ON : PLATE_OFF;
   }
 }
 
@@ -350,6 +434,10 @@ export function reorganize(o: ReorgOpts): Reorg {
     phase = 'idle';
     beat = 0;
     acc = 0;
+    // A page that closes mid-flick must not come back still disarmed, waiting
+    // out a gesture whose hand left the trackpad a minute ago.
+    armed = true;
+    window.clearTimeout(quietT);
     wipe();
     items = [];
     index = clampN(i, 0, lastIndex());
@@ -371,18 +459,67 @@ export function reorganize(o: ReorgOpts): Reorg {
 
   const at = (): number => (phase === 'idle' ? index : want);
 
+  /*
+    ONE GESTURE, ONE STEP.
+
+    A trackpad flick is not one wheel event. It is the push, and then a train of
+    MOMENTUM events the OS keeps sending as it coasts — thirty or forty of them,
+    a few milliseconds apart, adding up to well over a thousand pixels. Against
+    a plain threshold every one of those past the first crossed it again, so a
+    single flick walked the layout to the end of the wall and there was no way
+    to look at anything in between.
+
+    So the wheel arms once and disarms on the step it commits, and only re-arms
+    when the input stops looking like coasting. Two signals say that, and either
+    is enough:
+
+    · the wheel has been silent for `REARM_QUIET`, which is the flick ending;
+    · this event arrived `REARM_GAP` after the last one. Momentum events are
+      dense by construction — the OS emits them on the display's cadence — and
+      nothing a hand does deliberately is that dense. This is what keeps a mouse
+      wheel usable, where every click is a separate push and waiting for silence
+      between them would lose all but the first.
+  */
+  const REARM_QUIET = 160;
+  const REARM_GAP = 90;
+  let armed = true;
+  let lastWheel = 0;
+  let quietT = 0;
+
   const onWheel = (e: WheelEvent): void => {
     e.preventDefault();
+    const now = performance.now();
+    const gap = now - lastWheel;
+    lastWheel = now;
+
+    window.clearTimeout(quietT);
+    quietT = window.setTimeout(() => {
+      armed = true;
+      acc = 0;
+    }, REARM_QUIET);
+
+    if (!armed) {
+      if (gap < REARM_GAP) return; // still coasting on the last flick
+      armed = true;
+      acc = 0;
+    }
+
     acc += wheelPx(e);
     if (Math.abs(acc) < WHEEL_STEP) return;
     const dir = acc > 0 ? 1 : -1;
     acc = 0;
+    armed = false;
     goTo(at() + dir);
   };
 
+  /*
+    A finger needs none of that: `touchstart` and `touchend` delimit the gesture
+    exactly, so one swipe arms once and is done.
+  */
   const onTouchStart = (e: TouchEvent): void => {
     touchY = e.touches[0]?.clientY ?? 0;
     acc = 0;
+    armed = true;
   };
 
   const onTouchMove = (e: TouchEvent): void => {
@@ -390,9 +527,10 @@ export function reorganize(o: ReorgOpts): Reorg {
     e.preventDefault();
     acc += touchY - y;
     touchY = y;
-    if (Math.abs(acc) < TOUCH_STEP) return;
+    if (!armed || Math.abs(acc) < TOUCH_STEP) return;
     const dir = acc > 0 ? 1 : -1;
     acc = 0;
+    armed = false;
     goTo(at() + dir);
   };
 
@@ -440,6 +578,7 @@ export function reorganize(o: ReorgOpts): Reorg {
     destroy() {
       if (raf) cancelAnimationFrame(raf);
       raf = 0;
+      window.clearTimeout(quietT);
       phase = 'idle';
       o.region.removeEventListener('wheel', onWheel);
       o.region.removeEventListener('touchstart', onTouchStart);

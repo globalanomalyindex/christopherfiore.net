@@ -54,7 +54,7 @@ import { asset, css, el, letters } from '../dom.ts';
 import { COLOR, FONT, RULE } from '../design/tokens.ts';
 import { PAGE2 } from '../design/layout.ts';
 import { PAINTINGS, PAINTINGS_COUNT_LABEL, PAINTINGS_META } from '../data/paintings.ts';
-import { reorganize } from '../runtime/reorganize.ts';
+import { type PlateRail, plateRail, reorganize } from '../runtime/reorganize.ts';
 import { state } from '../runtime/state.ts';
 import type { PaintingRecord } from '../data/types.ts';
 
@@ -294,7 +294,7 @@ interface Gallery {
   region: HTMLElement;
   items: Placed[];
   works: HTMLElement[];
-  ticks: HTMLElement[];
+  rail: PlateRail;
   plates: number;
 }
 
@@ -302,44 +302,11 @@ interface Gallery {
  * The plate indicator.
  *
  * The rail used to carry a proportional thumb, which is a scrollbar, and this
- * screen no longer scrolls. It carries one tick per plate now: the wall has a
- * known number of plates and you are on one of them, which is the whole truth
- * about the position and is a smaller claim than a thumb was making.
+ * screen no longer scrolls. `plateRail` gives it one tick per plate instead:
+ * the wall has a known number of plates and you are on one of them, which is
+ * the whole truth about the position and is a smaller claim than a thumb was
+ * making. Screen 2b carries the same rail, built from the same function.
  */
-const TICK_GAP = 4;
-
-function railTicks(plates: number): { rail: HTMLElement; ticks: HTMLElement[] } {
-  const h = (PAGE2.gallery.h - TICK_GAP * (plates - 1)) / plates;
-  const ticks = Array.from({ length: plates }, (_, i) =>
-    el('span', {
-      style: css({
-        position: 'absolute',
-        left: 0,
-        width: '100%',
-        top: i * (h + TICK_GAP),
-        height: h,
-        background: RULE.onPaperMinor,
-        transition: 'background 120ms steps(3,end)',
-      }),
-    }),
-  );
-  const rail = el(
-    'div',
-    {
-      'aria-hidden': 'true',
-      style: css({
-        position: 'absolute',
-        right: 0,
-        top: 0,
-        bottom: 0,
-        width: PAGE2.railW,
-        'pointer-events': 'none',
-      }),
-    },
-    ...ticks,
-  );
-  return { rail, ticks };
-}
 
 function gallery(): Gallery {
   const { items, plates } = layOut(PAINTINGS);
@@ -385,7 +352,7 @@ function gallery(): Gallery {
     sheet,
   );
 
-  const { rail, ticks } = railTicks(plates);
+  const rail = plateRail(plates, { height: PAGE2.gallery.h, width: PAGE2.railW });
 
   const node = el(
     'div',
@@ -403,10 +370,10 @@ function gallery(): Gallery {
       }),
     },
     region,
-    rail,
+    rail.node,
   );
 
-  return { node, region, items, works, ticks, plates };
+  return { node, region, items, works, rail, plates };
 }
 
 /* ------------------------------------------------------------- the plates */
@@ -444,9 +411,7 @@ function wireGallery(g: Gallery): void {
       */
       w.style.visibility = p.plate === i ? '' : 'hidden';
     }
-    for (const [k, t] of g.ticks.entries()) {
-      t.style.background = k === i ? COLOR.ink : RULE.onPaperMinor;
-    }
+    g.rail.set(i);
   };
 
   /**
