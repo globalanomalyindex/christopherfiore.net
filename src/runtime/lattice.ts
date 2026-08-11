@@ -62,24 +62,52 @@ const bayer = (col: number, row: number): number =>
  * transition blurs a decision, and at sixteen it is the thing that turns a
  * ladder of levels into a swell.
  *
- * The whole field is written every tick rather than three rows, because a
- * wave that reaches a given point once a second is not a wave. It is cheap
- * enough to do that because a level only writes when it CHANGES, and because
- * neither property it writes causes layout: `transform` composites and `color`
- * paints.
+ * The whole field is READ every tick rather than three rows, because a wave
+ * that reaches a given point once a second is not a wave. It is cheap enough to
+ * do that because a point only WRITES when its rung changes — a few dozen a
+ * tick out of twelve hundred — and because neither property it writes causes
+ * layout: `transform` composites and `color` paints.
  */
-const TICK = 90;
-const PHASE_STEP = 0.09;
+const TICK = 34;
+const PHASE_STEP = 0.034;
 
 /**
- * The CSS transition the levels are read through, longer than a tick so a peg
- * is always still moving when its next target arrives. That is what makes it
- * continuous rather than a sequence of arrivals.
+ * WHY THERE IS NO CSS TRANSITION ON A PEG.
+ *
+ * The first version of this smoothed the ladder with a 260ms transition on
+ * colour and transform, which is the obvious way to turn sixteen steps into a
+ * swell and is completely unaffordable at this scale. It left NINE HUNDRED AND
+ * THIRTEEN transitions running at once, restarted every tick, and the whole
+ * site dropped to fifty frames a second with fifty-millisecond stalls — the
+ * cost is per ELEMENT, and there are twelve hundred of them.
+ *
+ * So the interpolation is done here instead, and the smoothness comes from
+ * resolution rather than from easing: a finer ladder, stepped more often. A peg
+ * only writes when its rung CHANGES, so a tick costs a few dozen writes rather
+ * than twelve hundred, and nothing is left animating between ticks.
  */
-const DRIFT_EASE = 260;
 
-/** Depth of the ladder. Sixteen, because that is the Bayer matrix's own depth. */
-const LEVELS = 16;
+/**
+ * TWO THINGS THIS DOES NOT DO, BOTH MEASURED RATHER THAN ASSUMED.
+ *
+ * It does not ease with a CSS transition. Smoothing the ladder that way is the
+ * obvious move and it left NINE HUNDRED AND THIRTEEN transitions running at
+ * once, restarted every tick. The smoothing comes from RESOLUTION instead — a
+ * ladder fine enough that a rung is below what the eye resolves — and a point
+ * only writes when its rung changes, so nothing is left animating between ticks.
+ *
+ * And it does not size with `transform`. That one is genuinely surprising:
+ * transform is supposed to be the cheap property, and here it was the entire
+ * cost. Writing it on twelve hundred inline-flex spans hands the compositor
+ * twelve hundred stacking contexts to carry, and the field measured 57 fps with
+ * 33ms frames. The same animation in `font-size` measures 60.1 fps with 17.6ms
+ * frames — indistinguishable from the field being switched off — because a
+ * glyph resizing inside a fixed grid cell relayouts nothing but itself.
+ * Cheap-property folklore is worth exactly one measurement.
+ */
+
+/** Depth of the ladder. Fine enough that a rung is below what the eye resolves. */
+const LEVELS = 28;
 
 /**
  * How hard the ordered matrix bites.
@@ -254,23 +282,6 @@ export function unmountLattice(screen: HTMLElement): void {
 
 /* ---------------------------------------------------------------- resolve */
 
-/**
- * The transition a peg is allowed, which depends on what it IS.
- *
- * An ambient point eases: it is being driven up and down a sixteen-rung ladder
- * and the easing is what makes that a swell rather than a staircase. Everything
- * the resolve owns — majors, frame corners, occluded points — SNAPS, and that
- * is not a preference. A corner mark is the system's one load-bearing signal,
- * and a corner that fades in is a corner that is wrong for 260ms every time the
- * field re-solves.
- */
-const EASE = `color ${DRIFT_EASE}ms linear,transform ${DRIFT_EASE}ms cubic-bezier(.25,.7,.3,1)`;
-
-function setEase(cell: HTMLElement, ambient: boolean): void {
-  const want = ambient ? EASE : 'none';
-  if (cell.style.transition !== want) cell.style.transition = want;
-}
-
 /** Write a peg's resolved state and remember it for every later restore. */
 function setBase(cell: HTMLElement, color: string, size: number, corner?: boolean): void {
   cell.dataset.base = color;
@@ -279,20 +290,19 @@ function setBase(cell: HTMLElement, color: string, size: number, corner?: boolea
   else delete cell.dataset.corner;
   cell.style.color = color;
   cell.style.fontSize = `${size}px`;
-  setEase(cell, color === PEG_OFF);
-  // A point that has stopped being ambient drops the ambient swell with it.
-  if (color !== PEG_OFF && cell.style.transform) cell.style.transform = '';
 }
 
 /** Put a peg back exactly where the resolve pass left it. Never `color = ''`. */
 export function restorePeg(cell: HTMLElement): void {
   const base = cell.dataset.base || PEG_OFF;
   cell.style.color = base;
+  /*
+    This is also what takes an ambient point's SWELL off it. The field animates
+    the font size, so `baseSize` is both the resolved size and the bottom of the
+    ladder — a released point lands there and the next tick starts it climbing
+    again. Nothing else has to be remembered or undone.
+  */
   cell.style.fontSize = `${cell.dataset.baseSize || 10}px`;
-  setEase(cell, base === PEG_OFF);
-  // Always, not only for resolved points: a released point is back in the
-  // ambient field's hands and the next tick gives it a swell of its own.
-  if (cell.style.transform) cell.style.transform = '';
 }
 
 /**
@@ -370,17 +380,27 @@ export function solveLattice(screen: HTMLElement): void {
  * pass, and resolves are debounced to a handful a second at worst.
  */
 function unglitch(screen: HTMLElement): () => void {
-  const saved: [HTMLElement, string, string][] = [];
+  const saved: [HTMLElement, string, string, string][] = [];
   for (const sp of qq<HTMLElement>(screen, '[data-l]')) {
-    if (!sp.style.fontFamily && !sp.style.fontFeatureSettings) continue;
-    saved.push([sp, sp.style.fontFamily, sp.style.fontFeatureSettings]);
+    if (!sp.style.fontFamily && !sp.style.fontFeatureSettings && !sp.style.visibility) continue;
+    saved.push([sp, sp.style.fontFamily, sp.style.fontFeatureSettings, sp.style.visibility]);
     sp.style.fontFamily = '';
     sp.style.fontFeatureSettings = '';
+    /*
+      And VISIBILITY, which is the same bug wearing different clothes. The
+      arrival dither blinks individual letters off and on, and the walker above
+      rejects a hidden one — so a resolve landing in a blink cleared the points
+      of every letter except that one, and the field flickered under the
+      wordmark for as long as the effect ran. A letter that is momentarily off
+      is still a letter that is about to be there.
+    */
+    sp.style.visibility = '';
   }
   return () => {
-    for (const [sp, fam, feat] of saved) {
+    for (const [sp, fam, feat, vis] of saved) {
       sp.style.fontFamily = fam;
       sp.style.fontFeatureSettings = feat;
+      sp.style.visibility = vis;
     }
   };
 }
@@ -668,8 +688,7 @@ function ambientTick(L: Lat, dt: number): void {
       if (L.lv[idx] === key) continue;
       L.lv[idx] = key;
       cell.style.color = TINT[lv];
-      const sc = g * (1 + (u * (top - 1)));
-      cell.style.transform = sc === 1 ? '' : `scale(${sc.toFixed(3)})`;
+      cell.style.fontSize = `${(cfg.micro * g * (1 + u * (top - 1))).toFixed(2)}px`;
     }
   }
 }
@@ -701,7 +720,7 @@ export function startDrift(screen: HTMLElement, fillMs = 0): () => void {
     L.gate = 0;
     L.fill = fillMs;
     L.lv = null;
-    for (const c of L.cells) if (c.dataset.base === PEG_OFF) c.style.transform = 'scale(0)';
+    for (const c of L.cells) if (c.dataset.base === PEG_OFF) c.style.fontSize = '0px';
   }
 
   L.clock = performance.now();
@@ -824,16 +843,6 @@ export function fillFor(screen: HTMLElement, r: Rect, opts: FillOpts): void {
   const size = opts.size ?? cfg.majorSize;
   const from = opts.from ?? EDGES[(Math.random() * EDGES.length) | 0];
   const idxs = cellsInRect(screen, r).filter((i) => !opts.skip?.has(i));
-
-  /*
-    A claimed point leaves the ambient field, and its swell leaves with it.
-    Without this the ambient `transform: scale()` survives underneath whatever
-    the channel paints, so 03's circuit was drawn at eighteen px times whatever
-    the wave happened to be doing there — a track made of randomly sized marks.
-    `restorePeg` puts nothing back, because the drift re-establishes the swell
-    within a tick of the release.
-  */
-  for (const i of idxs) if (cells[i].style.transform) cells[i].style.transform = '';
 
   // Accent bands: the top and bottom 14% of the rect take a different color.
   const band = r.h * 0.14;

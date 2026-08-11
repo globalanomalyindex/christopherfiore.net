@@ -93,6 +93,11 @@ interface Blob {
 
 interface Frost {
   cv: HTMLCanvasElement;
+  /**
+   * The screen this canvas belongs to, or null for the ones on the stage
+   * itself. Cached because it is read once per canvas per frame; see `frame`.
+   */
+  page: HTMLElement | null;
   g: CanvasRenderingContext2D;
   W: number;
   H: number;
@@ -157,7 +162,29 @@ let rafId = 0;
 
 const frame = (now: number): void => {
   rafId = 0;
-  for (const f of LIVE) tick(f, now);
+  for (const f of LIVE) {
+    /*
+      A CANVAS ON A SCREEN NOBODY IS LOOKING AT DOES NOT RENDER.
+
+      `startFrost` is called on every `[data-frost]` in the stage at boot, and
+      the stage carries one per page and one per case study — twelve of them
+      now, of which at most two can be on screen at once. All twelve were
+      dithering every frame into buffers behind `display: none`, which is ten
+      canvases' worth of per-pixel work thrown away sixty times a second, and it
+      is the reason the whole site felt heavy. It got worse every time a case
+      study was added, which is exactly how this kind of cost hides.
+
+      Read off the page's inline `display`, which `transitions.ts` is the only
+      writer of, so this costs a property read rather than a layout. Zeroing
+      `last` means a screen coming back redraws on its first frame instead of
+      waiting out the frame gate.
+    */
+    if (f.page && f.page.style.display === 'none') {
+      f.last = 0;
+      continue;
+    }
+    tick(f, now);
+  }
   ensureLoop();
 };
 
@@ -748,6 +775,7 @@ export function startFrost(cv: HTMLCanvasElement): FrostHandle {
 
   const f: Frost = {
     cv,
+    page: cv.closest<HTMLElement>('[data-page]'),
     g,
     W,
     H,

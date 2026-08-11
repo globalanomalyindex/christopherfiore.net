@@ -35,9 +35,43 @@ const HELPERS = () => {
     },
     band(q, m) { const bl = q.top + (q.height - (m.fontBoundingBoxAscent + m.fontBoundingBoxDescent)) / 2 + m.fontBoundingBoxAscent;
       return { t: bl - m.actualBoundingBoxAscent, b: bl + m.actualBoundingBoxDescent }; },
+    /*
+      An AMBIENT point's font size is live now — the field animates it up and
+      down a ladder between its resolved size and a major's — so comparing it
+      literally would report the wave as a leak. Its resolved state still has to
+      be identical, and `ambientOk` below is what checks the live half: on the
+      ladder, in the ladder's colours, and nowhere near a channel's hue.
+    */
     snap(screen) {
       return [...screen.querySelectorAll('[data-lattice] > span')]
-        .map(c => `${c.dataset.base}|${c.dataset.baseSize}|${c.dataset.corner || ''}|${c.style.fontSize}`).join(';');
+        .map(c => `${c.dataset.base}|${c.dataset.baseSize}|${c.dataset.corner || ''}|` +
+          (c.dataset.base === '#DFE4E6' ? 'ambient' : c.style.fontSize)).join(';');
+    },
+    /**
+     * Every ambient point is somewhere the ambient field could have put it.
+     *
+     * Size between nothing and a major — the top of the ladder is derived as
+     * `majorSize / micro`, which is why a swollen point is never bigger than a
+     * mark the occlusion clearance was already computed for. Colour on the line
+     * from PEG_OFF to PEG_ON, which a channel's fill hue never is, so a point a
+     * hover forgot to release fails this even though its size would not.
+     */
+    ambientOk(screen) {
+      const lat = screen.querySelector('[data-lattice]');
+      const step = Math.round(parseFloat(getComputedStyle(lat).gridAutoRows));
+      const bad = [];
+      for (const c of lat.children) {
+        if (c.dataset.base !== '#DFE4E6') continue;
+        const fs = parseFloat(c.style.fontSize) || 0;
+        if (fs < -0.01 || fs > step) { bad.push(`size ${fs}`); continue; }
+        const m = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(c.style.color || '');
+        if (!m) continue;
+        const [r, g, bl] = [+m[1], +m[2], +m[3]];
+        // PEG_OFF #DFE4E6 -> PEG_ON #9AA6AD, with a little slack each way
+        const inb = (v, lo, hi) => v >= lo - 2 && v <= hi + 2;
+        if (!(inb(r, 154, 223) && inb(g, 166, 228) && inb(bl, 173, 230))) bad.push(`colour ${c.style.color}`);
+      }
+      return bad;
     },
     stats(screen) {
       const cells = [...screen.querySelectorAll('[data-lattice] > span')];
@@ -129,6 +163,8 @@ for (const n of [1,2,3,4]) {
   await pg.mouse.move(20, 1060); await pg.waitForTimeout(2400);
   const after = await pg.evaluate(() => { const s = window.__H.scr()[0]; return { snap: window.__H.snap(s), stats: window.__H.stats(s) }; });
   say(before.snap === after.snap, `[3] channel ${n}: lattice identical after hover cycle`);
+  const amb = await pg.evaluate(() => window.__H.ambientOk(window.__H.scr()[0]));
+  say(amb.length === 0, `[3] channel ${n}: ambient field within its own ladder (${amb.slice(0,2).join(', ') || 'all'})`);
   say(after.stats.hued === 0, `[3] channel ${n}: ${after.stats.hued} cells left holding a hue`);
   say(before.stats.corners === after.stats.corners, `[3] channel ${n}: corners ${before.stats.corners} -> ${after.stats.corners}`);
 }
