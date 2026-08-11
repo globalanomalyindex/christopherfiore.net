@@ -122,6 +122,36 @@ const BAYER_BITE = 2.4;
 const FOCUS_GAIN = 0.55;
 const FOCUS_FALL = 260;
 
+/**
+ * THE CURSOR WAVE.
+ *
+ * The hero's dither used to answer the cursor: moving across it pushed a wake
+ * that spread and settled, and that reaction is what made the field feel like a
+ * surface rather than a texture. It is the same idea here and the same shape —
+ * a short trail of disturbances, each carrying the momentum of the movement
+ * that made it and each dying on its own clock — except that what it displaces
+ * is the size and value of crosshairs instead of the threshold of a pixel.
+ *
+ * `TRAIL_R` is a little over five cells, so one disturbance is a patch of
+ * marks and not a single mark: it has to be big enough to read as a wave and
+ * small enough that the cursor is clearly the thing making it.
+ */
+const TRAIL_MAX = 18;
+const TRAIL_LIFE = 620;
+const TRAIL_R = 210;
+const TRAIL_GAIN = 0.85;
+/** Momentum from one pointermove, clamped. The frost field used the same shape. */
+const TRAIL_CLAMP = 9;
+
+interface Wave {
+  x: number;
+  y: number;
+  /** signed momentum, roughly -1…1 */
+  m: number;
+  /** life remaining, 1 down to 0 */
+  l: number;
+}
+
 /** Blend two hex colours. The ladder is built from this once per screen. */
 function mix(a: string, b: string, t: number): string {
   const pa = parseInt(a.slice(1), 16);
@@ -186,6 +216,22 @@ interface Lat {
   fill: number;
   /** the point the field swells around while a channel is hovered */
   focus: { x: number; y: number } | null;
+  /** live cursor disturbances, newest last */
+  trail: Wave[];
+  /**
+   * The trail, accumulated into the field's own grid once per tick.
+   *
+   * Per peg per wave would be twelve hundred times eighteen exponentials every
+   * tick. Splatting each wave into its own bounding box instead costs about two
+   * thousand adds for the whole field, and the per-peg loop then reads one
+   * number — the disturbance is computed at the resolution it is drawn at,
+   * which is the resolution it should have been computed at anyway.
+   */
+  disturb: Float32Array | null;
+  /** last pointer position in design px, for the momentum of the next move */
+  px: number;
+  py: number;
+  seen: boolean;
 }
 
 const LATS = new WeakMap<HTMLElement, Lat>();
@@ -263,6 +309,11 @@ export function mountLattice(screen: HTMLElement, cfg: LatticeCfg): void {
     gate: 1,
     fill: 0,
     focus: null,
+    trail: [],
+    disturb: null,
+    px: 0,
+    py: 0,
+    seen: false,
     resolveT: 0,
     resolveFirst: 0,
     holds: 0,
@@ -659,6 +710,39 @@ function ambientTick(L: Lat, dt: number): void {
   const top = topScale(cfg);
   const f = L.focus;
 
+  /*
+    Age the trail, then splat what is left into the field's own grid.
+    Bounding boxes, and a quadratic falloff rather than a gaussian: no
+    exponentials, no square roots, and a wave that reaches exactly as far as
+    `TRAIL_R` rather than trailing off forever and being clipped anyway.
+  */
+  let D: Float32Array | null = null;
+  if (L.trail.length) {
+    for (const w of L.trail) w.l -= dt / TRAIL_LIFE;
+    L.trail = L.trail.filter((w) => w.l > 0);
+  }
+  if (L.trail.length) {
+    D = L.disturb ??= new Float32Array(cells.length);
+    D.fill(0);
+    const R2 = TRAIL_R * TRAIL_R;
+    for (const w of L.trail) {
+      const c0 = Math.max(0, Math.ceil((w.x - TRAIL_R - cfg.step) / cfg.step));
+      const c1 = Math.min(cfg.cols - 1, Math.floor((w.x + TRAIL_R - cfg.step) / cfg.step));
+      const r0 = Math.max(0, Math.ceil((w.y - TRAIL_R - cfg.step) / cfg.step));
+      const r1 = Math.min(cfg.rows - 1, Math.floor((w.y + TRAIL_R - cfg.step) / cfg.step));
+      for (let row = r0; row <= r1; row++) {
+        const dy = cfg.step + cfg.step * row - w.y;
+        for (let col = c0; col <= c1; col++) {
+          const dx = cfg.step + cfg.step * col - w.x;
+          const d2 = dx * dx + dy * dy;
+          if (d2 >= R2) continue;
+          const g2 = 1 - d2 / R2;
+          D[row * cfg.cols + col] += w.m * g2 * g2 * w.l;
+        }
+      }
+    }
+  }
+
   for (let row = 0; row < cfg.rows; row++) {
     const y = cfg.step + cfg.step * row;
     for (let col = 0; col < cfg.cols; col++) {
@@ -671,6 +755,7 @@ function ambientTick(L: Lat, dt: number): void {
       const x = cfg.step + cfg.step * col;
 
       let v = 0.5 + (Math.sin(x * 0.0026 + t) + Math.sin(y * 0.0031 - t * 0.7)) / 4;
+      if (D) v += TRAIL_GAIN * D[idx];
       if (f) {
         const dx = x - f.x;
         const dy = y - f.y;
@@ -757,6 +842,59 @@ export function latticeFocus(screen: HTMLElement, x: number | null, y = 0): void
   const L = LATS.get(screen);
   if (!L) return;
   L.focus = x === null ? null : { x, y };
+}
+
+/**
+ * Wire a screen's field to the cursor.
+ *
+ * Each move pushes one disturbance carrying the momentum of that move — the
+ * same `(dx + dy × 0.45) × 1.15` the frost field used, so the hero answers a
+ * horizontal sweep more than a vertical one exactly as it always did — and the
+ * trail is capped so a fast drag across the screen leaves a wake rather than a
+ * solid bar. `pointerleave` stops feeding it and lets what is there die out,
+ * which is the field settling rather than being switched off.
+ *
+ * Idempotent: a screen already tracked is left alone.
+ */
+const TRACKED = new WeakSet<HTMLElement>();
+
+export function trackLatticeCursor(screen: HTMLElement): void {
+  if (TRACKED.has(screen)) return;
+  TRACKED.add(screen);
+
+  const push = (e: PointerEvent): void => {
+    const L = LATS.get(screen);
+    if (!L || reduced(screen)) return;
+    const k = scaleOf(screen);
+    const r = screen.getBoundingClientRect();
+    const x = (e.clientX - r.left) / k;
+    const y = (e.clientY - r.top) / k;
+    if (L.seen) {
+      const dx = x - L.px;
+      const dy = y - L.py;
+      if (dx || dy) {
+        let m = (dx + dy * 0.45) * 1.15;
+        if (m > TRAIL_CLAMP) m = TRAIL_CLAMP;
+        else if (m < -TRAIL_CLAMP) m = -TRAIL_CLAMP;
+        L.trail.push({ x, y, m: m / TRAIL_CLAMP, l: 1 });
+        if (L.trail.length > TRAIL_MAX) L.trail.shift();
+      }
+    }
+    L.px = x;
+    L.py = y;
+    L.seen = true;
+  };
+
+  screen.addEventListener('pointermove', push, { passive: true });
+  screen.addEventListener('pointerdown', push, { passive: true });
+  screen.addEventListener(
+    'pointerleave',
+    () => {
+      const L = LATS.get(screen);
+      if (L) L.seen = false;
+    },
+    { passive: true },
+  );
 }
 
 /**
