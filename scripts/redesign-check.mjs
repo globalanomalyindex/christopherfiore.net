@@ -120,6 +120,53 @@ for (const n of [1,2,3,4]) {
   say(before.stats.corners === after.stats.corners, `[3] channel ${n}: corners ${before.stats.corners} -> ${after.stats.corners}`);
 }
 
+/*
+  Waiting on the STATE rather than on a stopwatch.
+
+  A fixed sleep was fine while every channel took the same time to open, and it
+  stopped being fine the moment one of them took a little longer: the Escape
+  landed while the transition still owned the stage, `locked` swallowed it, the
+  page stayed up, and everything downstream ran against the wrong screen while
+  reporting a failure three sections later. These poll instead.
+*/
+const displayed = () => pg.evaluate(() =>
+  [...document.querySelectorAll('[data-page]')]
+    .filter((p) => getComputedStyle(p).display !== 'none')
+    .map((p) => p.getAttribute('data-page')));
+
+/**
+ * Poll until the set of displayed pages holds still, with a floor.
+ *
+ * The floor is the point. A transition takes a beat to put anything on screen,
+ * so "stable for 600ms" is trivially true the instant after the click and this
+ * returned the state BEFORE the transition rather than after it — which then
+ * had every downstream section running against the wrong screen. `minMs` is
+ * longer than the longest open, so stability only counts once the choreography
+ * has had its chance.
+ */
+async function upPages(ms, minMs = 4200) {
+  let prev = null;
+  let still = 0;
+  for (let t = 0; t < ms; t += 200) {
+    await pg.waitForTimeout(200);
+    const now = (await displayed()).join(',');
+    still = now === prev ? still + 1 : 0;
+    prev = now;
+    if (still >= 3 && t >= minMs) break;
+  }
+  return prev ? prev.split(',').filter(Boolean) : [];
+}
+
+/** Escape until nothing is displayed over the menu. True if it got there. */
+async function toMenu(tries = 4) {
+  for (let i = 0; i < tries; i++) {
+    if ((await displayed()).length === 0) return true;
+    await pg.keyboard.press('Escape');
+    await upPages(6000, 2600);
+  }
+  return (await displayed()).length === 0;
+}
+
 // [4] transition teardown
 console.log('\n--- open + teardown ---');
 await pg.evaluate(() => document.querySelector('[data-act="open"][data-open="1"]')?.click());
@@ -127,7 +174,7 @@ await pg.waitForTimeout(4200);
 const opened = await pg.evaluate(() => { const p = [...document.querySelectorAll('[data-page]')].find(x => getComputedStyle(x).display !== 'none');
   return p ? (p.getAttribute('data-screen-label') || 'page') : 'NONE'; });
 say(opened !== 'NONE', `[4] channel 01 opens a page (${opened})`);
-await pg.keyboard.press('Escape'); await pg.waitForTimeout(2600);
+await toMenu();
 
 /*
   Escape returns focus to the channel you opened, and a focused channel MUST
@@ -146,12 +193,21 @@ say(td.bands === 0, `[4] band host empty once nothing is focused (${td.bands})`)
 say(td.stats.hued === 0, `[4] no cell left holding a hue (${td.stats.hued})`);
 say(td.menuUp, `[4] menu is back up`);
 
-// second click must always recover
+/*
+  A second click DURING the transition must be ignored.
+
+  This assertion used to read "double click still recovers to the menu", and it
+  was codifying the bug rather than catching it: two clicks landing inside the
+  same open re-entered the choreography, the two runs stomped each other, and
+  what the visitor was left looking at was the menu with nothing open at all.
+  Clicks are now swallowed at the stage for the length of a transition, so the
+  right assertion is that the first click wins and the page it opened is the
+  one that is up.
+*/
 await pg.evaluate(() => { const c = document.querySelector('[data-act="open"][data-open="2"]'); c?.click(); c?.click(); });
-await pg.waitForTimeout(4200);
-await pg.keyboard.press('Escape'); await pg.waitForTimeout(2400);
-const rec = await pg.evaluate(() => getComputedStyle(document.querySelector('[data-menu]')).display !== 'none');
-say(rec, '[4] double click still recovers to the menu');
+const dbl = await upPages(6000);
+say(dbl.length === 1 && dbl[0] === '2', `[4] a second click inside the transition is ignored (up: ${dbl.join(',') || 'menu'})`);
+say(await toMenu(), '[4] and the page it opened still closes');
 
 // [DO-NOT-BREAK 2] focus parity: a channel reached by keyboard must raise the
 // same state a pointer does. Tested with a real Tab rather than by relying on
@@ -165,16 +221,37 @@ say(rec, '[4] double click still recovers to the menu');
 console.log('\n--- index (2b) ---');
 await pg.evaluate(() => document.querySelector('[data-act="open"][data-open="1"]')?.click());
 await pg.waitForTimeout(4200);
+/*
+  The mosaic is driven the way a visitor drives it, and read back from where the
+  blocks actually are.
+
+  It used to be driven by writing `scrollTop`, which was correct while this was
+  a native scroll container and is now a no-op — the region is `overflow:
+  hidden` and `latticescroll.ts` owns the position. A check that sets a value
+  nothing reads does not fail; it silently asserts the SAME position four times
+  and reports four passes, which is worse than a failure. So the wheel does the
+  driving and the first block's own `top` reports the result.
+*/
 const snaps = await pg.evaluate(() => {
   const r = document.querySelector('[data-ixscroll]');
-  return r ? { max: r.scrollHeight - r.clientHeight, h: r.clientHeight } : null;
+  return r ? { h: r.clientHeight } : null;
+});
+const posNow = () => pg.evaluate(() => {
+  const b = document.querySelector('[data-ixblock]');
+  return b ? -Math.round(parseFloat(b.style.top) || 0) : -1;
 });
 if (!snaps) { say(false, '[2b] no [data-ixscroll] region'); }
 else {
-  console.log(`  (band ${snaps.h}px, scroll range ${snaps.max}px)`);
-  for (const pos of [0, 240, 480, snaps.max]) {
-    await pg.evaluate((y) => { const r = document.querySelector('[data-ixscroll]'); if (r) r.scrollTop = y; }, pos);
-    await pg.waitForTimeout(1500);
+  console.log(`  (band ${snaps.h}px, driven by wheel)`);
+  const seenPos = [];
+  for (let step = 0; step < 4; step += 1) {
+    if (step > 0) {
+      await pg.mouse.move(960, 600);
+      await pg.mouse.wheel(0, 400);
+      await pg.waitForTimeout(1500);
+    }
+    const pos = await posNow();
+    seenPos.push(pos);
     const g = (await geom()).find(x => /product designs/i.test(x.screen));
     if (!g) { say(false, `[2b] scroll ${pos}: screen not found`); continue; }
     say(g.offLattice.length === 0, `[1] scroll ${pos}: ${g.offLattice.length} off-lattice corners of ${g.frames} frames ${g.offLattice.slice(0,2).join(' | ')}`);
@@ -189,8 +266,17 @@ else {
       }
       return cut;
     });
-    say(part === 0, `[2b] scroll ${pos}: ${part} visible blocks cut by the band edge`);
+    say(part === 0, `[2b] position ${pos}: ${part} visible blocks cut by the band edge`);
   }
+  /*
+    The wheel has to have actually moved it, and only ever to a rest position.
+    Four distinct offsets, each the start of a mosaic row, is the whole contract
+    the redesign rests on: there is no in-between state to get wrong because
+    there is no in-between state.
+  */
+  say(new Set(seenPos).size === 4, `[2b] the wheel walks four distinct positions (${seenPos.join(' -> ')})`);
+  say(seenPos.every((p) => [0, 240, 480, 660].includes(p)), `[2b] every one of them is a rest position`);
+
   // no nested links, and every href matches the data
   const links = await pg.evaluate(() => {
     const a = [...document.querySelectorAll('[data-ixblock] a')];
@@ -203,8 +289,10 @@ else {
      removes descendants from the sequence, but the tabIndex PROPERTY is
      unaffected by it, so a check that reads the property reports every control
      in every scrolled-out block and is simply measuring the wrong thing. */
-  await pg.evaluate(() => { const r = document.querySelector('[data-ixscroll]'); if (r) r.scrollTop = 0; });
-  await pg.waitForTimeout(1200);
+  // back to the top, through the module's own keyboard contract
+  await pg.evaluate(() => document.querySelector('[data-ixscroll]')?.focus());
+  await pg.keyboard.press('Home');
+  await pg.waitForTimeout(1500);
   let intoHidden = 0;
   for (let i = 0; i < 40; i++) {
     await pg.keyboard.press('Tab');
@@ -216,7 +304,7 @@ else {
   }
   say(intoHidden === 0, `[2b] Tab landed inside a hidden block ${intoHidden} times in 40 presses`);
 }
-await pg.keyboard.press('Escape'); await pg.waitForTimeout(2000);
+await toMenu();
 
 console.log('\n--- focus parity ---');
 await pg.mouse.move(1910, 1075); await pg.waitForTimeout(300);

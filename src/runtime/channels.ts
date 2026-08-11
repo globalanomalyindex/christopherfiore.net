@@ -15,10 +15,10 @@
  *      a one-cell-thick ink ring just inside the block, with the interior
  *      dithering in the fill hue and breathing under a held flicker.
  *   03 competizione    — sweepOn / sweepOff
- *      a lap: an ink circuit of crosshairs one cell inside the block, and one
- *      crosshair driving around it like a car, trailing the fill hue. It steps
- *      peg to peg every 110ms, about 2.4s a lap, and passes BEHIND the label
- *      because occluded points are skipped without skipping the position.
+ *      a lap: an ink road course laid around the word, and one crosshair
+ *      driving it like a car, trailing the fill hue. It steps peg to peg every
+ *      95ms, about 2.3s a lap. Occluded points are skipped without skipping
+ *      the position, so a course that did run under type would pass behind it.
  *   04 contact         — invertOn / invertOff
  *      inversion: a near-black band, paper type and paper crosshairs, and the
  *      frame corners flipped to paper so they survive the band.
@@ -43,8 +43,9 @@
  * · The legibility contract. The band under a label is always from
  *   `SPARK_LIGHTS` and the ink on it is always `COLOR.nearBlack`; the darker
  *   `SPARK` accents are capped at 8% of the height so no accent row can slide
- *   under a line of type. 03's ink circuit is the same kind of edge accent,
- *   which is why the car never paints an occluded point.
+ *   under a line of type. 03's circuit obeys the same rule from the other side:
+ *   it is routed through the rows and columns the label does not reach, and a
+ *   point it does reach is skipped rather than painted.
  */
 
 import { COLOR, FONT, LIGHTS, SPARK, SPARK_LIGHTS, rgba } from '../design/tokens';
@@ -447,6 +448,12 @@ interface Chan {
   callout: HTMLElement | null;
   px: number;
   py: number;
+  /** The callout's measured ink box, design px. Zero means "measure me". */
+  cw: number;
+  ch: number;
+  /** The cell's type band, cell-local design px, measured once per hover. */
+  bandT: number;
+  bandB: number;
   /**
    * This channel's whole lattice paint, so a cell still held elsewhere can be
    * put back after a screen-wide `releaseFor`.
@@ -473,6 +480,10 @@ function chanOf(cell: HTMLElement): Chan {
       callout: null,
       px: 0,
       py: 0,
+      cw: 0,
+      ch: 0,
+      bandT: 0,
+      bandB: 0,
       repaint: null,
     };
     CHANS.set(cell, c);
@@ -639,16 +650,43 @@ function designXY(screen: HTMLElement, clientX: number, clientY: number): [numbe
 const pad2 = (n: number): string => String(n + 1).padStart(2, '0');
 
 /**
- * The callout's ink box, bounded rather than measured.
+ * The callout's offset from its module's corner, and the clearance it asks the
+ * field for on top of its own measured ink.
  *
- * The string is always fifteen characters at 13px, so one constant covers every
- * position it can take, and a constant avoids a forced layout read on every
- * `pointermove`. It is deliberately generous — the box clears the crosshairs
- * underneath, which is the same thing the resolve pass does for every other run
- * of type on the screen, and clearing one column too many is invisible while
- * clearing one too few puts a lit peg through the text.
+ * The box used to be a constant 132 × 18, which was wrong twice. The string is
+ * set in the display face, not a monospace, so fifteen characters measure about
+ * 90 design px — the constant cleared forty px of crosshairs that nothing was
+ * printed on, and read as a hole punched in the flood. And a fixed box says
+ * nothing about where the LABEL is, which is the other half of the problem
+ * below.
+ *
+ * `pad` is half a peg glyph either side, the same clearance the resolve pass
+ * gives every other run of type on the screen.
  */
-const CALLOUT = { dx: 10, dy: 10, w: 132, h: 18 } as const;
+const CALLOUT = { dx: 10, dy: 10, pad: 10, gap: 8 } as const;
+
+/**
+ * The cell's own type, as a band in cell-local design px.
+ *
+ * The channel number and the 48px label are both centered on the frame, so on
+ * a two-module block the second module row starts INSIDE the label — which is
+ * exactly where the callout was landing, printing `col 02 · row 02` through
+ * the middle of "product designs". Measured rather than assumed, because the
+ * label is fitted at runtime and its height is not knowable from the table.
+ */
+function typeBand(cell: HTMLElement, screen: HTMLElement): [number, number] {
+  const k = (screen.getBoundingClientRect().width || 1920) / 1920;
+  const c = cell.getBoundingClientRect();
+  let t = Infinity;
+  let b = -Infinity;
+  for (const n of qq<HTMLElement>(cell, '[data-chnum],[data-chlabel]')) {
+    const r = n.getBoundingClientRect();
+    if (!r.height) continue;
+    t = Math.min(t, (r.top - c.top) / k);
+    b = Math.max(b, (r.bottom - c.top) / k);
+  }
+  return t <= b ? [t, b] : [0, 0];
+}
 
 /**
  * The band's edge accents are capped at 8% of the height, and they are the one
@@ -753,20 +791,57 @@ function prodMask(cell: HTMLElement): void {
     rec.callout = node;
   }
   const text = `col ${pad2(mcol)} · row ${pad2(mrow)}`;
-  if (node.textContent !== text) node.textContent = text;
+  if (node.textContent !== text) {
+    node.textContent = text;
+    rec.cw = 0;
+  }
+  // One layout read per string, not per pointermove: the text only changes when
+  // the cursor crosses into another module, so this is at most six reads for a
+  // hover that visits every one of them.
+  if (!rec.cw) {
+    const k = (screen.getBoundingClientRect().width || 1920) / 1920;
+    const q = node.getBoundingClientRect();
+    rec.cw = q.width / k;
+    rec.ch = q.height / k;
+  }
+
   // Held inside the block. On the last module the callout would otherwise run
   // past the cell and clear points nothing has claimed — points no release puts
   // back, which reads as a hole punched in the neighbour's field.
-  const lx = Math.min(mcol * md + CALLOUT.dx, rect.w - CALLOUT.w - CALLOUT.dx);
-  const ly = Math.min(
-    Math.max(mrow * md + CALLOUT.dy, rect.h * ACCENT_CAP + CALLOUT.dy),
-    rect.h - CALLOUT.h - CALLOUT.dy,
-  );
+  const lx = Math.max(0, Math.min(mcol * md + CALLOUT.dx, rect.w - rec.cw - CALLOUT.dx));
+
+  /*
+    Vertically it is a three-way clamp, and the order matters.
+
+    First the band accents: those are drawn from all of SPARK, darks included,
+    precisely because no type ever goes on them, so the callout may not either.
+    Then the cell's own type, which the natural position sits inside on the
+    lower module row. The callout goes to whichever side of the label it was
+    already nearer, and only crosses to the other side if its own side has no
+    room — so it stays near the cursor rather than teleporting.
+  */
+  const lo = rect.h * ACCENT_CAP + CALLOUT.dy;
+  const hi = rect.h * (1 - ACCENT_CAP) - rec.ch - CALLOUT.dy;
+  let ly = Math.min(Math.max(mrow * md + CALLOUT.dy, lo), hi);
+  if (rec.bandT < rec.bandB && ly < rec.bandB + CALLOUT.gap && ly + rec.ch > rec.bandT - CALLOUT.gap) {
+    const above = rec.bandT - CALLOUT.gap - rec.ch;
+    const below = rec.bandB + CALLOUT.gap;
+    const near = ly + rec.ch / 2 < (rec.bandT + rec.bandB) / 2 ? above : below;
+    const far = near === above ? below : above;
+    ly = near >= lo && near <= hi ? near : far;
+    ly = Math.min(Math.max(ly, lo), hi);
+  }
+
   node.style.left = `${lx}px`;
   node.style.top = `${ly}px`;
   eachPeg(
     screen,
-    { x: rect.x + lx, y: rect.y + ly, w: CALLOUT.w, h: CALLOUT.h },
+    {
+      x: rect.x + lx - CALLOUT.pad,
+      y: rect.y + ly - CALLOUT.pad,
+      w: rec.cw + CALLOUT.pad * 2,
+      h: rec.ch + CALLOUT.pad * 2,
+    },
     (peg) => {
       if (peg.dataset.corner) return;
       peg.style.color = 'transparent';
@@ -828,6 +903,11 @@ export function prodOn(cell: HTMLElement): void {
     : [ctx.rect.x + ctx.rect.w / 2, ctx.rect.y + ctx.rect.h / 2];
   ctx.rec.px = x;
   ctx.rec.py = y;
+  ctx.rec.cw = 0;
+  // Measured BEFORE the alternates land: the label's box is what the callout
+  // has to keep clear of, and the swash forms are narrower, so the resting
+  // measurement is the conservative one.
+  [ctx.rec.bandT, ctx.rec.bandB] = typeBand(cell, ctx.screen);
   ctx.rec.repaint = () => prodPaint(cell);
   prodPaint(cell);
   // The alternates are narrower, so the centered label tightens a little as
@@ -940,26 +1020,73 @@ export function waterOff(cell: HTMLElement): void {
 
 /* ------------------------------------------- 03 · Competizione — the lap */
 
-/** The car, drawn well past a major so it reads as the moving thing. */
+/*
+  A weight ladder, because colour alone was not carrying it.
+
+  The fill claims every point in the block at the major size, and the circuit
+  used to be drawn at the SAME size in ink — which left the course a change of
+  colour inside a field of identical marks, and at a glance it read as noise
+  rather than as a shape. Each rung is two px, and the top of the ladder is the
+  weight a frame corner already has, so nothing here outranks the marks the
+  whole system rests on.
+
+    fill 16  <  track 18  <  trail 20  <  car 22  =  corner 22
+*/
+const TRACK_BUMP = 2;
+/** The trail behind the car, proud of the track it is running on. */
+const TRAIL_BUMP = 4;
+/** The car itself, the heaviest thing in the block while it is moving. */
 const CAR_BUMP = 6;
-/** The trail behind it, just proud of the track. */
-const TRAIL_BUMP = 2;
 /**
- * One car step. The ring around a 360 × 240 block is 22 points, so this is a
- * lap of about 2.4 seconds — brisk enough to read as a car, slow enough that
+ * One car step. The course around a 360 × 240 block is 24 points, so this is a
+ * lap of about 2.3 seconds — brisk enough to read as a car, slow enough that
  * the eye can follow one crosshair rather than perceive a shimmer.
  */
-const LAP_MS = 110;
+const LAP_MS = 95;
 
 /**
- * The track: the ring of points one cell inside the block, ordered CLOCKWISE
- * from the top-left corner. The order is the racing line — `lapStep` drives a
- * car around it by advancing an index, so the array being in travel order is
- * the whole mechanism.
+ * The circuit, drawn on a canonical 10 × 5 field and in travel order.
  *
- * One cell inset for the same reason as channel 02's ring: a two-module block
- * has no room for a module of inset, and the frame's own corners stay outside
- * the track holding their marks.
+ *     0 1 2 3 4 5 6 7 8 9
+ *   0 . X . . . . X X X .
+ *   1 X . X X X X . . . X
+ *   2 X . . . . . . . . X
+ *   3 X . . . . . . . . X
+ *   4 X X X X X X X X X X
+ *
+ * A road course, not a rectangle: a tight loop at the left, a long flat middle,
+ * a broad sweeping crest at the right, and a full-length bottom straight. The
+ * array is the racing line — `lapStep` drives a car by advancing an index — so
+ * travel order is the whole mechanism, and it runs CLOCKWISE.
+ *
+ * WHY THE COURSE HUGS THE BLOCK LEFT AND RIGHT BUT NOT TOP AND BOTTOM. The
+ * label occludes the two middle rows of the block across every inset column;
+ * a peg there is never painted, which is what kept the old inset ring from
+ * reading as a circuit at all — its left and right sides simply were not
+ * drawn, and what was left was two dotted horizontals. The block's own
+ * boundary columns are outside the label's ink and are clear at every row, so
+ * the verticals go there. The four frame corners sit one row further out on
+ * those same columns and are never claimed, so they still hold their marks.
+ */
+const CIRCUIT: readonly (readonly [number, number])[] = [
+  [0, 4], [0, 3], [0, 2], [0, 1],
+  [1, 0],
+  [2, 1], [3, 1], [4, 1], [5, 1],
+  [6, 0], [7, 0], [8, 0],
+  [9, 1], [9, 2], [9, 3], [9, 4],
+  [8, 4], [7, 4], [6, 4], [5, 4], [4, 4], [3, 4], [2, 4], [1, 4],
+];
+const CIRCUIT_W = 10;
+const CIRCUIT_H = 5;
+
+/**
+ * The circuit's points on this screen's lattice, in travel order.
+ *
+ * The template is mapped proportionally rather than placed, so the shape
+ * survives a block that is not exactly ten cells by five — on the 360 × 240
+ * channel frames the mapping is 1:1 and every template cell keeps its own
+ * point. Consecutive duplicates are dropped, which is what a smaller block
+ * would produce, and the closing point is dropped because the ring wraps.
  */
 function lapTrack(cell: HTMLElement): number[] {
   const screen = screenOf(cell);
@@ -969,16 +1096,26 @@ function lapTrack(cell: HTMLElement): number[] {
   const st = cfg.step;
   const colAt = (x: number): number => Math.round(x / st) - 1;
   const rowAt = (y: number): number => Math.round(y / st) - 1;
-  const c0 = colAt(rect.x + st);
-  const c1 = colAt(rect.x + rect.w - st);
+  const c0 = colAt(rect.x);
+  const c1 = colAt(rect.x + rect.w);
   const r0 = rowAt(rect.y + st);
   const r1 = rowAt(rect.y + rect.h - st);
-  const ring: number[] = [];
-  for (let c = c0; c <= c1; c++) ring.push(r0 * cfg.cols + c);
-  for (let r = r0 + 1; r <= r1; r++) ring.push(r * cfg.cols + c1);
-  for (let c = c1 - 1; c >= c0; c--) ring.push(r1 * cfg.cols + c);
-  for (let r = r1 - 1; r > r0; r--) ring.push(r * cfg.cols + c0);
-  return ring;
+  const w = c1 - c0;
+  const h = r1 - r0;
+  if (w < 1 || h < 1) return [];
+
+  const out: number[] = [];
+  let last = -1;
+  for (const [tc, tr] of CIRCUIT) {
+    const col = c0 + Math.round((tc / (CIRCUIT_W - 1)) * w);
+    const row = r0 + Math.round((tr / (CIRCUIT_H - 1)) * h);
+    const i = row * cfg.cols + col;
+    if (i === last) continue;
+    out.push(i);
+    last = i;
+  }
+  if (out.length > 1 && out[0] === out[out.length - 1]) out.pop();
+  return out;
 }
 
 /**
@@ -1000,7 +1137,8 @@ function lapStep(cell: HTMLElement, ring: number[]): void {
   const at = (k: number): HTMLElement | null => L.cells[ring[((k % n) + n) % n]] ?? null;
 
   const wake = at(rec.phase - 3);
-  if (wake && wake.dataset.base !== 'transparent') paintPeg(wake, COLOR.ink, cfg.majorSize);
+  if (wake && wake.dataset.base !== 'transparent')
+    paintPeg(wake, COLOR.ink, cfg.majorSize + TRACK_BUMP);
   for (const back of [2, 1]) {
     const t = at(rec.phase - back);
     if (t && t.dataset.base !== 'transparent')
@@ -1031,7 +1169,8 @@ function lapPaint(cell: HTMLElement): void {
     if (chanOf(cell).gen !== gen) return;
     for (const i of ring) {
       const peg = L.cells[i];
-      if (peg && peg.dataset.base !== 'transparent') paintPeg(peg, COLOR.ink, cfg.majorSize);
+      if (peg && peg.dataset.base !== 'transparent')
+        paintPeg(peg, COLOR.ink, cfg.majorSize + TRACK_BUMP);
     }
     lapStep(cell, ring);
   }, REVEAL);

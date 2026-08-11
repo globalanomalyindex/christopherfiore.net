@@ -17,10 +17,11 @@
  * The band paints UNDER the lattice, which is what keeps the crosshairs visible
  * over a vivid hover band.
  *
- * WHAT SCROLLS, AND WHAT DOES NOT. The lattice is the substrate and never
- * moves. Neither do the rails. Only the mosaic moves, inside the band between
- * them, and `runtime/latticescroll.ts` dissolves each block into the field as
- * it reaches an edge. The title and the standfirst are pinned with the rails
+ * NOTHING SCROLLS. The lattice is the substrate and never moves, and neither
+ * do the rails, and neither does the mosaic: `runtime/latticescroll.ts` turns a
+ * gesture into a rest position and the grid dithers apart and re-forms at the
+ * new one, so there is no vertical travel on this screen at any point. The
+ * title and the standfirst are pinned with the rails
  * rather than scrolling with the mosaic, for a reason that is structural and
  * not aesthetic: `[data-ptitle]` is the element the open transition FLIPs out
  * of the channel word, so it has to sit outside `[data-pbody]` (which does not
@@ -533,35 +534,31 @@ function block(spec: BlockSpec, i: number): HTMLElement {
 /* -------------------------------------------------------------------- track */
 
 /**
- * The scrolling band.
+ * The band the mosaic reorganizes inside.
  *
- * A native scroll container, as every other scrolling column on this site is,
- * with the browser's own snapping doing the settling. The snap targets are
- * flow spacers, one per mosaic row and exactly its height, so the rest
- * positions are the row boundaries and never an arbitrary pixel — which is the
- * whole reason a settled block's four corners are always on the lattice.
+ * NOT a scroll container. It used to be one, with the browser's own snapping
+ * doing the settling, and a native container translates its content — which
+ * meant that between two rest positions the mosaic was visibly sliding, and a
+ * block caught half way had two of its four corners off the lattice.
+ *
+ * So this is an input surface: `overflow: hidden`, nothing to translate, and
+ * `runtime/latticescroll.ts` turning the wheel, the arrows and a swipe into a
+ * row index. Every block's `top` is written from that index and from nothing
+ * else, so the only positions that exist are the ones where the band is full
+ * and every corner is on a point. `touch-action: none` because the module
+ * consumes the gesture itself and the browser must not also try to pan.
+ *
+ * It keeps `tabindex` and the scrollable region role: to a keyboard or a
+ * screen reader this is still a region you move through with the arrows, and
+ * `latticescroll.ts` binds those keys because there is no native scroller left
+ * to provide them.
  */
 function trackRegion(): HTMLElement {
   const mosaic = INDEX_BLOCKS.filter((b) => b.track);
-  const rows = Array.from(new Set(mosaic.map((b) => b.y))).sort((a, b) => a - b);
-  const rowH = rows.map((y) => Math.max(...mosaic.filter((b) => b.y === y).map((b) => b.h)));
-
-  const spacers = rowH.map((h) =>
-    el('span', {
-      'aria-hidden': 'true',
-      style: css({
-        display: 'block',
-        height: h,
-        'scroll-snap-align': 'start',
-        'pointer-events': 'none',
-      }),
-    }),
-  );
 
   const track = el(
     'div',
     { style: css({ position: 'relative', width: '100%' }) },
-    ...spacers,
     ...mosaic.map(block),
   );
 
@@ -575,10 +572,8 @@ function trackRegion(): HTMLElement {
       style: css({
         position: 'absolute',
         inset: '0',
-        'overflow-y': 'auto',
-        'overflow-x': 'hidden',
-        'scroll-snap-type': 'y mandatory',
-        'scrollbar-width': 'none',
+        overflow: 'hidden',
+        'touch-action': 'none',
         'overscroll-behavior': 'contain',
       }),
     },
@@ -586,12 +581,11 @@ function trackRegion(): HTMLElement {
   );
 
   /*
-    No thumb and no rail. The scroll indicator is the LATTICE's own outermost
-    column of points: while a gesture is live, `latticescroll.ts` lights a
-    short run of ink pegs there that tracks the position, and drops them at
-    settle. A widget floating above the field would say the scroll is a
-    different thing from the crosshairs, and the whole direction here is that
-    it is not.
+    No thumb and no rail. The position mark is the LATTICE's own outermost
+    column of points: while a step is running, `latticescroll.ts` lights a
+    short run of ink pegs there, and drops them at settle. A widget floating
+    above the field would say the scroll is a different thing from the
+    crosshairs, and the whole direction here is that it is not.
   */
   return el(
     'div',

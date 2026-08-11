@@ -186,7 +186,32 @@ export function bindActions(stage: HTMLElement): void {
       : null;
   };
 
-  /* ---- click ---- */
+  /* ---- click ----
+
+     Nothing on the stage is clickable while a transition owns it.
+
+     This is a CAPTURE listener that swallows the event whole rather than a
+     guard inside the switch below, because the switch is not the only thing a
+     click can reach. A mosaic block is a real `<a>`, and a second click landing
+     during the 3.3 seconds of an open would follow it; the close control would
+     tear down a screen that is still growing; a `next` would start a second
+     transition on top of the first. Killing the event at the stage covers all
+     three and every handler added later, and `preventDefault` is what stops the
+     anchors, which have no `data-act` for a guard to test.
+
+     The intro's own lock is deliberately NOT included. It runs for four and a
+     half seconds on arrival, and a visitor who clicks a channel in that window
+     means it. */
+
+  stage.addEventListener(
+    'click',
+    (e) => {
+      if (!state(stage).nav) return;
+      e.preventDefault();
+      e.stopPropagation();
+    },
+    { capture: true },
+  );
 
   stage.addEventListener('click', (e) => {
     const t =

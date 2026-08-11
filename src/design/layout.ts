@@ -166,7 +166,7 @@ export const INDEX_BLOCKS = [
  * Any smaller and the dissolve would finish in the first fraction of a 240px
  * gesture and the rest of the travel would be an empty band sliding.
  */
-export const INDEX_TRACK = { y: 300, h: 660, end: 1620, fade: 180 } as const;
+export const INDEX_TRACK = { y: 300, h: 660, end: 1620 } as const;
 
 /** Every block is padded the same, and the label sits at the bottom. */
 export const BLOCK_PAD = { x: 26, y: 22 } as const;
