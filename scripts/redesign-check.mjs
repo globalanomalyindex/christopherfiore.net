@@ -277,6 +277,33 @@ else {
   say(new Set(seenPos).size === 4, `[2b] the wheel walks four distinct positions (${seenPos.join(' -> ')})`);
   say(seenPos.every((p) => [0, 240, 480, 660].includes(p)), `[2b] every one of them is a rest position`);
 
+  /*
+    And every frame BETWEEN them is on the lattice too.
+
+    The mosaic travels now rather than dissolving, so the corner invariant is no
+    longer something that only has to hold where it stops. The rows sit on the
+    60px module and the field's step is 30, so a whole-cell stride keeps all four
+    corners of every visible block on a point continuously — and a stride that
+    ever went fractional would break §1 at forty frames a second while still
+    passing every check that samples at rest.
+  */
+  await pg.evaluate(() => document.querySelector('[data-ixscroll]')?.focus());
+  await pg.keyboard.press('Home');
+  await pg.waitForTimeout(1500);
+  await pg.evaluate(() => {
+    window.__mid = new Set();
+    window.__midT = setInterval(() => {
+      const b = document.querySelector('[data-ixblock]');
+      if (b) window.__mid.add(Math.round(parseFloat(b.style.top) || 0));
+    }, 10);
+  });
+  await pg.mouse.move(960, 600);
+  await pg.mouse.wheel(0, 400);
+  await pg.waitForTimeout(1200);
+  const mid = await pg.evaluate(() => { clearInterval(window.__midT); return [...window.__mid]; });
+  say(mid.length >= 5, `[1] the mosaic travels rather than cutting (${mid.length} frames)`);
+  say(mid.every((v) => v % 30 === 0), `[1] every frame of the travel is a whole lattice cell (${mid.join(',')})`);
+
   // no nested links, and every href matches the data
   const links = await pg.evaluate(() => {
     const a = [...document.querySelectorAll('[data-ixblock] a')];
