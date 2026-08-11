@@ -43,7 +43,7 @@ import {
   stopDrift,
   watchLattice,
 } from './lattice.ts';
-import { type ReorgItem, clearMask, plateRail, reorganize } from './reorganize.ts';
+import { plateRail, reorganize } from './reorganize.ts';
 import type { PlateRail, Reorg } from './reorganize.ts';
 import { fitScreen } from './fit.ts';
 import { state } from './state.ts';
@@ -137,9 +137,25 @@ function releaseAll(S: Scroller): void {
 
 /* ------------------------------------------------------------------ paint */
 
-/** Whether a block is wholly inside the band at `pos`. There is no partly. */
+/**
+ * Whether a block is WHOLLY inside the band. Only true at a rest position, by
+ * construction: `layout.ts` sizes the rows so every reachable one fills the
+ * band exactly. It is what decides whether a block may carry `data-frame` and
+ * so hand its corners back to the resolve.
+ */
 const inBand = (S: Scroller, g: Geom, pos: number): boolean =>
   g.ty - pos >= -0.5 && g.ty - pos + g.h <= S.band.h + 0.5;
+
+/**
+ * Whether any of it is in the band at all.
+ *
+ * This is the visibility test, and it has to be the looser one now that the
+ * mosaic TRAVELS between rest positions: mid-step a block is half in and half
+ * out, and the band's own `overflow: hidden` is what cuts it. At rest the two
+ * tests agree, because at rest the visible rows fill the band exactly.
+ */
+const touchesBand = (S: Scroller, g: Geom, pos: number): boolean =>
+  g.ty - pos < S.band.h - 0.5 && g.ty - pos + g.h > 0.5;
 
 /**
  * Address every block for `S.pos` and light the corners that go with it.
@@ -159,14 +175,13 @@ function place(S: Scroller, corners: boolean): void {
     const top = g.ty - S.pos;
     b.style.top = `${top}px`;
 
-    if (!inBand(S, g, S.pos)) {
+    if (!touchesBand(S, g, S.pos)) {
       // Gone. `visibility` rather than `display` so nothing reflows on the way
       // back, and because a hidden block must also leave the tab order and stop
       // being hit-testable — `opacity: 0` alone does neither.
       if (b.style.visibility !== 'hidden') {
         b.style.opacity = '0';
         b.style.visibility = 'hidden';
-        clearMask(b);
       }
       b.removeAttribute('data-frame');
       continue;
@@ -185,6 +200,10 @@ function place(S: Scroller, corners: boolean): void {
       [g.x, y0 + g.h],
       [g.x + g.w, y0 + g.h],
     ] as [number, number][]) {
+      // A corner that has travelled past the band belongs to the pinned
+      // chrome's rows, not to this block. Lighting it prints a mark under the
+      // rail, and mid-travel half the block's corners are out there.
+      if (cy < S.band.y - 0.5 || cy > S.band.y + S.band.h + 0.5) continue;
       const i = nearestIndex(S.screen, cx, cy);
       if (i >= 0) next.add(i);
     }
@@ -213,22 +232,18 @@ function restoreFrames(S: Scroller): void {
 /* ------------------------------------------------------------------ drive */
 
 /**
- * Order the visible rows for the wave, in the direction of travel.
+ * Put the mosaic at `px` and light the corners that go with it.
  *
- * Going down, the row that leaves is the one at the top, so the top row goes
- * first and the wave runs downward. Going up it is the other way. The arriving
- * row is ranked last on the same axis, so the out and the in read as one
- * continuous sweep rather than two opposed ones.
+ * Called once per beat, and `px` is always a whole number of lattice cells:
+ * the rows are on the 60px module and the field's step is 30, so every corner
+ * of every visible block lands on a point at EVERY frame of the travel, not
+ * only at the rest positions. The invariant the whole system rests on is
+ * therefore true continuously rather than at the ends.
  */
-function waveItems(S: Scroller, dir: number): ReorgItem[] {
-  const live = S.blocks.filter((g) => inBand(S, g, S.pos));
-  const tys = [...new Set(live.map((g) => g.ty))].sort((a, b) => (dir >= 0 ? a - b : b - a));
-  return live.map((g) => ({
-    el: g.el,
-    rank: Math.max(0, tys.indexOf(g.ty)),
-    x: g.x,
-    y: S.band.y + (g.ty - S.pos),
-  }));
+function travel(S: Scroller, px: number, i: number): void {
+  S.pos = px;
+  place(S, true);
+  S.rail?.set(i);
 }
 
 /**
@@ -397,19 +412,15 @@ export function installLatticeScroll(
 
   S.reorg = reorganize({
     region,
+    // The whole screen takes the wheel, not just the band: a cursor over the
+    // title or the rails is still a cursor on this page.
+    surface: screen,
     positions: () => S.snaps.length,
     cell: mounted.step,
-    // The field's own cell grid starts a half step in, and the speckle has to
-    // sit where the crosshairs are.
-    phase: mounted.step / 2,
     reduced: () => isReduced(screen),
     claim: () => claim(S),
-    commit: (i) => {
-      S.pos = S.snaps[i] ?? 0;
-      place(S, true);
-      S.rail?.set(i);
-    },
-    items: (dir) => waveItems(S, dir),
+    offsetOf: (i) => S.snaps[i] ?? 0,
+    travel: (px, i) => travel(S, px, i),
     settle: () => settle(S),
   });
 

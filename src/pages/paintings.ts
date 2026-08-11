@@ -28,18 +28,21 @@
  * strip rather than a tall painting with its ends cut off. That is the whole
  * reason the layout is a masonry rather than a grid.
  *
- * AND NOTHING SCROLLS. The wall is packed into PLATES, each exactly the height
- * of the band, and a gesture commits the gallery to a different plate rather
- * than sliding it: the works dither away in Bayer order, the next plate's works
- * dither in where they sit, and nothing on this screen moves vertically at any
- * point. `runtime/reorganize.ts` is the machine and its header is where the
- * idea is written down; screen 2b's mosaic runs on the same one.
+ * THE WALL SCROLLS AND NOTHING ELSE DOES. The works are packed into PLATES,
+ * each exactly the height of the band, stacked into one column; a gesture
+ * translates that column to the next plate. It moves a whole CROSSHAIR CELL per
+ * frame, so it reads as scrolling and it reads as mechanical, and the field
+ * behind it lights and goes out as the works uncover and cover it. The border,
+ * the rails, the title and the field itself never move a pixel — what the eye
+ * sees travelling is the material, and the page around it has not shifted.
+ * `runtime/reorganize.ts` is the machine and its header has the rest of it;
+ * screen 2b's mosaic runs on the same one.
  *
- * That is why the packer below has a height cap. A plate that a work hangs off
- * the bottom of would show that work cut in half at rest, which is the one
- * thing this page's layout exists to prevent — and unlike a scroll, there is no
- * moment afterwards where the rest of it arrives. Two works in the inventory
- * draw taller than the band at full column width; they are drawn to the band's
+ * That is why the packer below has a height cap. A plate a work hangs off the
+ * bottom of would show it cut at REST, which is the one thing this page's
+ * layout exists to prevent — being cut on the way past is a scroll, being cut
+ * when everything has stopped is a mistake. Two works in the inventory draw
+ * taller than the band at full column width; they are drawn to the band's
  * height instead and keep their ratio exactly, so they come in a little smaller
  * with air either side rather than cropped.
  *
@@ -277,7 +280,10 @@ function workNode(p: Placed, reveal: number | null): HTMLAnchorElement {
         position: 'absolute',
         display: 'block',
         left: p.left,
-        top: p.top,
+        // TRACK coordinate, not plate-local: the plates are stacked into one
+        // column so the sheet can be translated between them. A plate is
+        // exactly the band, so plate `n` starts at `n × PLATE_H`.
+        top: p.plate * PLATE_H + p.top,
         width: p.w,
         height: p.h,
         'box-shadow': `0 0 0 1px ${RULE.onPaperMajor}`,
@@ -292,10 +298,90 @@ function workNode(p: Placed, reveal: number | null): HTMLAnchorElement {
 interface Gallery {
   node: HTMLElement;
   region: HTMLElement;
+  sheet: HTMLElement;
   items: Placed[];
   works: HTMLElement[];
+  pegs: { el: HTMLElement; x: number; y: number }[];
   rail: PlateRail;
   plates: number;
+}
+
+/**
+ * The crosshair field, and the grid the scroll snaps to.
+ *
+ * The band is 1696 × 550, and those two numbers have no useful common divisor,
+ * so the cell is not square: 1696 ÷ 32 is 53 exactly and 550 ÷ 11 is 50
+ * exactly. Both axes divide, which is the rule this site's other two fields
+ * keep, and a 53 × 50 cell is 6% off square, which is nothing to look at.
+ *
+ * The vertical figure is the load-bearing one. It is the step the contents
+ * move in, so it has to divide the plate height or the travel would end
+ * somewhere between two rows of crosshairs and the field would stop being the
+ * thing the scroll is measured against.
+ */
+const CELL_X = 53;
+const CELL_Y = 50;
+
+/**
+ * The lit colour, which is the page's own drape rather than the lattice's
+ * ambient peg.
+ *
+ * 2b's field sits on bare paper, so its ambient `PEG_OFF` reads at a whisper.
+ * This one sits over the veil canvas, which is a full-strength checker at rest,
+ * and at that value the crosshairs simply disappeared into it. Drape is what
+ * every other mark on this page is already drawn in — the work corners, the
+ * border — so the field joins the page's own marks rather than importing
+ * another screen's.
+ */
+const FIELD_ON: string = COLOR.drape;
+
+function crossField(): { node: HTMLElement; pegs: { el: HTMLElement; x: number; y: number }[] } {
+  const cols = Math.round(PAGE2.gallery.w / CELL_X);
+  const rows = Math.round(PAGE2.gallery.h / CELL_Y);
+  const pegs: { el: HTMLElement; x: number; y: number }[] = [];
+  const node = el('div', {
+    'data-pgfield': true,
+    'aria-hidden': 'true',
+    style: css({
+      position: 'absolute',
+      inset: '0',
+      'z-index': '0',
+      'pointer-events': 'none',
+      overflow: 'hidden',
+    }),
+  });
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      // Half a cell in, so the marks sit in the middle of their cells and the
+      // field has an even margin rather than a row of them on the edge.
+      const x = CELL_X / 2 + c * CELL_X;
+      const y = CELL_Y / 2 + r * CELL_Y;
+      const peg = el(
+        'span',
+        {
+          'data-pgpeg': true,
+          style: css({
+            position: 'absolute',
+            left: x,
+            top: y,
+            width: 0,
+            height: 0,
+            display: 'flex',
+            'align-items': 'center',
+            'justify-content': 'center',
+            'font-size': 13,
+            'line-height': '1',
+            color: FIELD_ON,
+            'user-select': 'none',
+          }),
+        },
+        '+',
+      );
+      pegs.push({ el: peg, x, y });
+      node.appendChild(peg);
+    }
+  }
+  return { node, pegs };
 }
 
 /**
@@ -316,22 +402,36 @@ function gallery(): Gallery {
     workNode(p, p.plate === 0 ? 140 + i * 70 : null),
   );
 
+  /*
+    One column, all the plates. It is `PLATE_H` per plate tall and the region
+    shows one plate of it at a time; `travel` writes its transform and nothing
+    else ever moves it.
+  */
   const sheet = el(
     'div',
-    { style: css({ position: 'relative', width: INNER_W, height: PAGE2.gallery.h }) },
+    {
+      'data-pgsheet': true,
+      style: css({
+        position: 'relative',
+        width: INNER_W,
+        height: PAGE2.gallery.h * plates,
+        'will-change': 'transform',
+      }),
+    },
     ...works,
   );
 
   /*
-    An input surface, not a scroll container. `overflow: hidden` because there
-    is nothing to scroll — every work sits at its own plate-local top and stays
-    there — and `touch-action: none` because `reorganize.ts` consumes the
-    gesture itself and the browser must not also try to pan.
+    The window onto the wall, not a scroll container. `overflow: hidden` is what
+    cuts the plates above and below the one you are on, and `touch-action: none`
+    because `reorganize.ts` consumes the gesture itself and the browser must not
+    also try to pan.
 
     It keeps `tabindex` and the scrollable region role: to a keyboard or a
     screen reader this is still a region you move through with the arrows, and
     `reorganize.ts` binds those keys because there is no native scroller left to
-    provide them.
+    provide them. The WHEEL is not bound here though — it is bound on the whole
+    page, so a cursor out on the wall still scrolls.
   */
   const region = el(
     'div',
@@ -353,6 +453,7 @@ function gallery(): Gallery {
   );
 
   const rail = plateRail(plates, { height: PAGE2.gallery.h, width: PAGE2.railW });
+  const field = crossField();
 
   const node = el(
     'div',
@@ -369,69 +470,59 @@ function gallery(): Gallery {
         height: PAGE2.gallery.h,
       }),
     },
+    field.node,
     region,
     rail.node,
   );
 
-  return { node, region, items, works, rail, plates };
+  return { node, region, sheet, items, works, pegs: field.pegs, rail, plates };
 }
 
 /* ------------------------------------------------------------- the plates */
 
 /**
- * The dither cell.
+ * Half the ink of a crosshair, near enough.
  *
- * The page's own veil canvas is 240 × 135 stretched over the 1920 × 1080 stage,
- * so one of its pixels is exactly 8 design px anchored at the stage origin.
- * Dissolving on that same grid is what makes a work look like it is going INTO
- * the field rather than carrying its own noise with it — the same reason 2b's
- * dissolve is anchored to the lattice.
+ * A peg is covered when a work overlaps the little box its glyph draws in, not
+ * when it overlaps the peg's zero-width anchor point — otherwise a mark sitting
+ * a pixel outside a painting's edge stays lit with half of itself on top of the
+ * painting.
  */
-const DITHER_CELL = 8;
+const PEG_HALF = 7;
 
 function wireGallery(g: Gallery): void {
-  const stageX = PAGE2.gallery.x;
-  const stageY = PAGE2.gallery.y;
-
-  /** Show one plate. Nothing moves: a work only ever appears or goes away. */
-  const showPlate = (i: number): void => {
-    for (const [k, p] of g.items.entries()) {
-      const w = g.works[k];
-      if (!w) continue;
-      /*
-        `visibility` rather than `display` so nothing reflows, and because a
-        hidden work must also leave the tab order and stop being hit-testable,
-        which `opacity: 0` does neither of.
-
-        And `visibility` ALONE. The first plate's works carry the arrival dither
-        and start at `opacity: 0` with the intro owning when that lifts, so a
-        second owner writing opacity here has no way to tell "hidden by me" from
-        "not arrived yet" — hide and re-show one and it would come back
-        invisible, or come back early and skip its entrance.
-      */
-      w.style.visibility = p.plate === i ? '' : 'hidden';
-    }
-    g.rail.set(i);
-  };
-
   /**
-   * The wave, in the direction of travel: going down, the top of the plate goes
-   * first; going up, the bottom does. Ranked by row so works that hang level
-   * dissolve together.
+   * Put the wall at `px` and light the field for it.
+   *
+   * Two writes and a sweep. The sheet takes a transform — the ONLY thing on
+   * this screen that ever moves — and every crosshair the wall now covers goes
+   * out while every one it has uncovered comes back. `px` is always a whole
+   * multiple of `CELL_Y`, so the works land on the field's own rows at every
+   * frame of the travel and the marks switch cleanly rather than flickering
+   * through a half-covered state.
+   *
+   * The border, the rails, the title and the field itself are untouched, which
+   * is the whole point: what the eye sees moving is the material, and the page
+   * around it has not shifted at all.
    */
-  const items = (dir: number): { el: HTMLElement; rank: number; x: number; y: number }[] => {
-    const live = g.items
-      .map((p, k) => ({ p, el: g.works[k] }))
-      .filter((it) => it.el && it.el.style.visibility !== 'hidden');
-    const rows = [...new Set(live.map((it) => it.p.top))].sort((a, b) =>
-      dir >= 0 ? a - b : b - a,
-    );
-    return live.map((it) => ({
-      el: it.el,
-      rank: Math.max(0, rows.indexOf(it.p.top)),
-      x: stageX + it.p.left,
-      y: stageY + it.p.top,
-    }));
+  const travel = (px: number, i: number): void => {
+    g.sheet.style.transform = `translateY(${-px}px)`;
+    g.rail.set(i);
+
+    for (const peg of g.pegs) {
+      let covered = false;
+      for (const [k, p] of g.items.entries()) {
+        const w = g.works[k];
+        if (!w) continue;
+        const top = p.plate * PLATE_H + p.top - px;
+        if (top > peg.y + PEG_HALF || top + p.h < peg.y - PEG_HALF) continue;
+        if (p.left > peg.x + PEG_HALF || p.left + p.w < peg.x - PEG_HALF) continue;
+        covered = true;
+        break;
+      }
+      const want = covered ? 'transparent' : FIELD_ON;
+      if (peg.el.style.color !== want) peg.el.style.color = want;
+    }
   };
 
   const stage = (): HTMLElement | null => g.node.closest('[data-stage]');
@@ -441,13 +532,36 @@ function wireGallery(g: Gallery): void {
     return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
   };
 
+  const page = g.node.closest<HTMLElement>('[data-page]');
+
   const reorg = reorganize({
     region: g.region,
+    // The whole screen takes the wheel. With it on the band alone, a cursor
+    // anywhere else on the page — the title, the rails, the wall around the
+    // works, most of the screen — got nothing at all for a scroll.
+    surface: page ?? g.region,
     positions: () => g.plates,
-    cell: DITHER_CELL,
+    cell: CELL_Y,
     reduced,
-    commit: (i) => showPlate(i),
-    items,
+    offsetOf: (i) => i * PLATE_H,
+    travel,
+  });
+
+  /*
+    Tab has to bring the wall with it.
+
+    While the plates dissolved, a work that was not on the current one was
+    `visibility: hidden` and so out of the tab order entirely — which kept focus
+    honest but made fourteen of the twenty works unreachable without scrolling
+    to them first. They are all in the order now, because the wall is clipped
+    rather than hidden, so focus landing on one has to move the wall to it. That
+    is what a native scroll container does for free and what this one owes.
+  */
+  g.region.addEventListener('focusin', (e) => {
+    const t = e.target instanceof Element ? e.target.closest<HTMLElement>('[data-pgwork]') : null;
+    if (!t) return;
+    const plate = Number(t.getAttribute('data-pgwork'));
+    if (Number.isFinite(plate) && plate !== reorg.index()) reorg.goTo(plate);
   });
 
   /*
@@ -471,7 +585,6 @@ function wireGallery(g: Gallery): void {
     if (now && !was) {
       reorg.reset(0);
       g.region.scrollTop = 0;
-      showPlate(0);
     }
     was = now;
   };
@@ -479,10 +592,10 @@ function wireGallery(g: Gallery): void {
     const r = root();
     if (!r) return;
     new MutationObserver(life).observe(r, { attributes: true, attributeFilter: ['style'] });
-    // The first plate has to be up before the arrival dither runs, and `life`
-    // only fires on the edge — which for the very first open has not happened
-    // yet at the moment the page is built.
-    showPlate(0);
+    // The first plate has to be placed before the arrival dither runs, and
+    // `life` only fires on the edge — which for the very first open has not
+    // happened yet at the moment the page is built.
+    travel(0, 0);
     life();
   });
 }
