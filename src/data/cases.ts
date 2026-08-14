@@ -258,6 +258,29 @@ export const CASES: CaseRecord[] = [
     href: 'https://globalanomalyindex.github.io/dither/',
     source: null,
   },
+  {
+    id: 'three-zones',
+    idx: '14',
+    name: 'three zones: camera market ui fix',
+    line: 'a two-zone gallery dead ends at the video, so give the middle a job',
+    year: '2026',
+    discipline: 'product design, interaction, prototyping',
+    /*
+      `concept`, and it stays `concept`. This is an argued proposal with a
+      working prototype of the fix, not a change anybody shipped: the listing it
+      is about belongs to somebody else, and the clip inside it is a still frame
+      with a pan because no footage came with the handoff. The page says so
+      itself, in its own words, above the fold of section 3.
+    */
+    evidence: 'concept',
+    image: null,
+    imageAlt: '',
+    caption: 'three zones · interactive teardown · 2026',
+    // Self-hosted rather than a deployment of somebody else's site; the block
+    // control routes a relative href through `asset()`.
+    href: 'three-zones/index.html',
+    source: null,
+  },
 ];
 
 /**

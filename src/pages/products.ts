@@ -120,6 +120,7 @@ const BLOCK_CASE: Record<string, string> = {
   chickpea: 'chickpea',
   wildcard: 'wildcard',
   dither: 'dither',
+  'three-zones': 'three-zones',
 };
 
 const specOf = (id: string): BlockSpec => {
@@ -416,7 +417,9 @@ const blockControl = (c: CaseRecord, spec: BlockSpec) => {
   const sub = str(c.subpage);
   const live = str(c.href);
   if (sub) return subpageBlock(c, spec, sub);
-  if (live) return liveBlock(c, spec, live);
+  // An absolute href is somebody else's deployment; a relative one is a page
+  // this site hosts, and has to be resolved against the build's base.
+  if (live) return liveBlock(c, spec, /^[a-z]+:/i.test(live) ? live : asset(live));
   return plainBlock(c, spec);
 };
 

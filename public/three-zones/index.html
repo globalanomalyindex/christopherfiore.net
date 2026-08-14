@@ -1,0 +1,1297 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Get past the video without leaving the frame — three zones</title>
+<meta name="description" content="A product design note arguing that a two-zone image gallery breaks down at the video, and proposing a third hit zone in the middle of the frame.">
+<link rel="icon" href="data:,">
+<style>
+/*
+  Three zones — gallery hover zones, rebuilt from the handoff.
+
+  One stylesheet, no inline styles. The prototype was inline-styled because of
+  the tool that produced it; the handoff says so explicitly and says not to
+  carry that pattern over.
+
+  Three colours carry the page: paper, ink, one red. There is no fourth.
+*/
+:root {
+  --paper: #F4F1E9;
+  --ink: #1A1917;
+  --muted: #6E6A62;
+  --accent: #C4402A;
+  --accent-tint: rgba(196, 64, 42, 0.1);
+  --photo-red: #F0522F;
+  --hairline: rgba(26, 25, 23, 0.14);
+  --diagram: #EDE9DE;
+  --video-chrome: rgba(26, 25, 23, 0.82);
+
+  /* Zone geometry. The middle is a range, 20 to 60, so it can be argued with. */
+  --mid: 50%;
+  --side: 25%;
+
+  --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
+    "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  padding: 0 40px 140px;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 19px;
+  line-height: 1.6;
+  text-wrap: pretty;
+  -webkit-font-smoothing: antialiased;
+}
+
+.page { max-width: 1080px; margin: 0 auto; }
+
+/* ---------------------------------------------------------------- type */
+
+.eyebrow { font-size: 15px; line-height: 1.4; color: var(--muted); margin: 0; }
+
+h1 {
+  font-size: clamp(38px, 5.2vw, 60px);
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  max-width: 22ch;
+  text-wrap: balance;
+  margin: 14px 0 0;
+}
+
+h2 {
+  font-size: 29px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+h3 {
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.3;
+  margin: 0;
+}
+
+/* Paragraph stacks are flex with a gap, never margins. */
+.stack { display: flex; flex-direction: column; gap: 20px; max-width: 660px; }
+.stack p { margin: 0; }
+
+.intro { padding-top: 34px; }
+
+/* ------------------------------------------------------------ sections */
+
+section {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  gap: 0 24px;
+  padding-top: 88px;
+}
+section:first-of-type { padding-top: 92px; }
+
+.num {
+  font-size: 15px;
+  line-height: 1.5;
+  font-weight: 600;
+  color: var(--accent);
+  padding-top: 6px;
+}
+
+.body { display: flex; flex-direction: column; gap: 26px; min-width: 0; }
+.body > .stack { max-width: 660px; }
+
+/* ------------------------------------------------------------ gallery */
+
+.gallery { max-width: 900px; }
+
+.stage {
+  position: relative;
+  aspect-ratio: 3 / 2;
+  background: #ffffff;
+  border: 1px solid var(--hairline);
+  border-radius: 0;
+  overflow: hidden;
+  user-select: none;
+  touch-action: pan-y;
+}
+
+/*
+  `cursor: none` is applied by script only once the pill is live, and taken off
+  on leave, blur and error. A page that hides the cursor and then fails to draw
+  a replacement has taken the pointer away from the visitor.
+*/
+.stage.pill-live { cursor: none; }
+
+.frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: none;
+}
+.frame.on { display: block; }
+.frame.red { background: var(--photo-red); }
+
+/* the stand-in clip: a still with a slow pan. See the note in section 3. */
+.clip { position: absolute; inset: 0; overflow: hidden; background: #EDEAE3; display: none; }
+.clip.on { display: block; }
+.clip img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform-origin: 50% 50%;
+  will-change: transform;
+}
+
+.seams { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+.seams span {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  /*
+    Two tone, not one. A single white dashed line vanishes on a light photo,
+    which the handoff lists as a known gap. The dark stroke sits under the light
+    one and offset by a pixel, so one of the two always reads.
+  */
+  border-left: 1px dashed rgba(255, 255, 255, 0.6);
+  box-shadow: -1px 0 0 rgba(26, 25, 23, 0.28);
+}
+.seams .a { left: var(--side); }
+.seams .b { right: var(--side); }
+.gallery[data-seams="off"] .seams { display: none; }
+
+.zones { position: absolute; inset: 0; z-index: 3; }
+.zone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  appearance: none;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  cursor: inherit;
+  color: inherit;
+}
+.zone.prev { left: 0; width: var(--side); }
+.zone.open { left: var(--side); width: var(--mid); }
+.zone.next { right: 0; width: var(--side); }
+/* the broken gallery has two halves and no middle */
+.gallery[data-zones="2"] .zone.prev { width: 50%; }
+.gallery[data-zones="2"] .zone.next { width: 50%; }
+.gallery[data-zones="2"] .zone.open { display: none; }
+.gallery[data-zones="2"] .seams { display: none; }
+
+/*
+  A focus ring that reads on both light and dark frames: a light inner stroke
+  inside a dark outer one, so whichever the photo is, one of them survives.
+*/
+.zone:focus-visible,
+.rail button:focus-visible,
+.corner:focus-visible,
+.playpill button:focus-visible,
+.lb button:focus-visible,
+.tweaks input:focus-visible {
+  outline: 2px solid rgba(244, 241, 233, 0.9);
+  outline-offset: -4px;
+  box-shadow: 0 0 0 2px rgba(26, 25, 23, 0.75);
+}
+
+/* the broken gallery's video trap: one target over both halves */
+.trap {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  appearance: none;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: inherit;
+  display: none;
+}
+.trap.on { display: block; }
+
+.corner {
+  position: absolute;
+  right: 18px;
+  bottom: 18px;
+  z-index: 5;
+  width: 50px;
+  height: 50px;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 1px solid rgba(26, 25, 23, 0.1);
+  box-shadow: 0 1px 3px rgba(26, 25, 23, 0.16);
+  font: inherit;
+  font-size: 17px;
+  line-height: 1;
+  color: var(--ink);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.corner[hidden] { display: none; }
+
+/*
+  Touch has no hover, so the pill cannot be the affordance. These two sit over
+  the outer edges and are only shown where there is no fine pointer; the corner
+  button and a horizontal swipe cover the other two actions.
+*/
+.edge {
+  position: absolute;
+  top: 50%;
+  z-index: 5;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(26, 25, 23, 0.1);
+  box-shadow: 0 1px 3px rgba(26, 25, 23, 0.16);
+  font: inherit;
+  font-size: 19px;
+  line-height: 1;
+  color: var(--ink);
+  cursor: pointer;
+  display: none;
+  place-items: center;
+}
+.edge.l { left: 12px; }
+.edge.r { right: 12px; }
+.edge[aria-disabled="true"] { opacity: 0.32; }
+@media (hover: none), (pointer: coarse) {
+  .edge { display: grid; }
+}
+
+.pill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 6;
+  width: 60px;
+  height: 60px;
+  margin: -30px 0 0 -30px;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: 0 1px 4px rgba(26, 25, 23, 0.2);
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--ink);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 120ms cubic-bezier(0.32, 0.72, 0.20, 1);
+}
+.pill.on { opacity: 1; }
+.pill.dim { color: rgba(26, 25, 23, 0.28); }
+
+/* inline playback pill, fixed gallery only */
+.playpill {
+  position: absolute;
+  left: 18px;
+  bottom: 18px;
+  z-index: 5;
+  border-radius: 999px;
+  background: var(--video-chrome);
+  padding: 8px 14px 8px 8px;
+  display: none;
+  align-items: center;
+  gap: 11px;
+}
+.playpill.on { display: flex; }
+.playpill button {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: var(--paper);
+  border: 0;
+  color: var(--ink);
+  font: inherit;
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.track { width: 104px; height: 3px; background: rgba(244, 241, 233, 0.28); }
+.track i { display: block; height: 100%; background: var(--paper); }
+.clock {
+  font-size: 13px;
+  line-height: 1;
+  color: #EDEAE3;
+  font-variant-numeric: tabular-nums;
+}
+
+.rail { display: flex; gap: 10px; margin-top: 12px; }
+.rail button {
+  width: 74px;
+  height: 52px;
+  padding: 0;
+  border: 1px solid var(--hairline);
+  border-bottom: 2px solid transparent;
+  background: none;
+  cursor: pointer;
+  opacity: 0.6;
+  display: block;
+}
+.rail button img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.rail button[aria-current="true"] { border-bottom-color: var(--ink); opacity: 1; }
+
+.say { font-size: 22px; font-weight: 500; line-height: 1.4; margin: 0; }
+.why { font-size: 16px; line-height: 1.5; color: var(--muted); margin: 0; }
+.say.lose, .say.win { color: var(--accent); }
+
+.runlog { font-size: 15px; line-height: 1.5; color: var(--muted); margin: 0; }
+.runlog ol { list-style: none; margin: 6px 0 0; padding: 0; }
+.runlog li.end { color: var(--accent); }
+
+.live { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+
+/* ------------------------------------------------------------ figures */
+
+figure { margin: 0; max-width: 900px; }
+figcaption { font-size: 16px; line-height: 1.5; color: var(--muted); margin-top: 12px; }
+
+.diagrams { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; max-width: 900px; }
+.diagram {
+  position: relative;
+  aspect-ratio: 3 / 2;
+  background: var(--diagram);
+  display: flex;
+}
+.diagram div {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 15px;
+  color: var(--muted);
+  border-right: 1px dashed rgba(26, 25, 23, 0.28);
+}
+.diagram div:last-child { border-right: 0; }
+.diagram div.middle { flex: 2; background: var(--accent-tint); color: var(--accent); }
+.diagram span { font-size: 20px; line-height: 1; }
+
+table { border-collapse: collapse; width: 100%; max-width: 760px; font-size: 17px; line-height: 1.45; }
+th, td { text-align: left; padding: 12px 16px 12px 0; border-bottom: 1px solid rgba(26, 25, 23, 0.12); }
+th { font-weight: 600; }
+th.middle, td.middle { color: var(--accent); }
+
+ul { margin: 0; padding-left: 20px; font-size: 17px; line-height: 1.45; }
+ul li + li { margin-top: 6px; }
+
+.quotes { list-style: none; padding: 0; }
+.quotes li { color: var(--muted); }
+
+.ends { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; max-width: 900px; }
+.endshot { position: relative; aspect-ratio: 3 / 2; background: var(--diagram); overflow: hidden; border: 1px solid var(--hairline); }
+.endshot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.endshot .g {
+  position: absolute;
+  top: 50%;
+  width: 44px;
+  height: 44px;
+  margin-top: -22px;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: 0 1px 4px rgba(26, 25, 23, 0.2);
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+}
+.endshot .g.l { left: 16px; }
+.endshot .g.r { right: 16px; }
+.endshot .g.off { color: rgba(26, 25, 23, 0.28); }
+
+.closing { font-size: 22px; font-weight: 500; line-height: 1.4; color: var(--accent); margin: 0; }
+
+/* ------------------------------------------------------------- tweaks */
+
+.tweaks {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 18px;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--muted);
+  padding-top: 16px;
+  border-top: 1px solid rgba(26, 25, 23, 0.2);
+  margin-top: 26px;
+  max-width: 900px;
+}
+.tweaks label { display: flex; align-items: center; gap: 10px; }
+.tweaks output { font-variant-numeric: tabular-nums; color: var(--ink); }
+
+/* --------------------------------------------------------- full screen */
+
+.lb {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(26, 25, 23, 0.95);
+  display: none;
+  flex-direction: column;
+  color: var(--paper);
+}
+.lb.on { display: flex; }
+.lb header { padding: 18px 24px; display: flex; align-items: center; justify-content: space-between; }
+.lb .label { font-size: 15px; line-height: 1.4; color: rgba(244, 241, 233, 0.6); }
+.lb button {
+  appearance: none;
+  background: transparent;
+  border: 1px solid rgba(244, 241, 233, 0.24);
+  border-radius: 999px;
+  color: var(--paper);
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.lb .close { width: 36px; height: 36px; font-size: 16px; }
+.lb .body { flex: 1; position: relative; display: grid; place-items: center; padding: 16px 88px 30px; min-height: 0; }
+.lb .body img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
+.lb .vidbox { width: 100%; max-width: 1180px; aspect-ratio: 3 / 2; overflow: hidden; position: relative; background: #EDEAE3; }
+.lb .vidbox img { width: 100%; height: 100%; object-fit: cover; transform-origin: 50% 50%; }
+.lb .nav { position: absolute; top: 50%; margin-top: -23px; width: 46px; height: 46px; font-size: 18px; }
+.lb .nav.prev { left: 22px; }
+.lb .nav.next { right: 22px; }
+.lb .nav[aria-disabled="true"] { opacity: 0.25; }
+.lb .scrub { display: none; justify-content: center; align-items: center; gap: 14px; padding: 0 24px 30px; }
+.lb .scrub.on { display: flex; }
+.lb .scrub button { width: 34px; height: 34px; background: var(--paper); border: 0; color: var(--ink); font-size: 13px; }
+.lb .scrub .track { width: 240px; }
+.lb .scrub .clock { color: rgba(244, 241, 233, 0.7); }
+
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* --------------------------------------------------------------- note */
+
+.note {
+  max-width: 660px;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--muted);
+  border-left: 2px solid var(--hairline);
+  padding-left: 16px;
+  margin: 0;
+}
+
+/* -------------------------------------------------------- responsive */
+
+@media (max-width: 900px) {
+  body { padding: 0 24px 140px; font-size: 17px; }
+  section { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .num { padding-top: 0; padding-bottom: 6px; }
+  .diagrams, .ends { grid-template-columns: minmax(0, 1fr); }
+  .lb .body { padding: 16px 16px 24px; }
+  .lb .nav.prev { left: 8px; }
+  .lb .nav.next { right: 8px; }
+}
+
+/*
+  The stand-in clip animates unconditionally in the prototype, which the handoff
+  lists as a gap. It holds still here, and everything else that moves is a
+  120ms opacity or a 320ms transform, both of which go to nothing.
+*/
+@media (prefers-reduced-motion: reduce) {
+  * { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <p class="eyebrow">Notes on a product page</p>
+  <h1>Get past the video without leaving the frame</h1>
+
+  <div class="stack intro">
+    <p>I was shopping for a lens and clicking through the photos on the listing. The gallery splits every photo down the middle. Hover the left half and the cursor turns into a back arrow. Hover the right half and it turns into a forward arrow.</p>
+    <p>So here is a small game. Start on the first photo and get to the last one. Click inside the photo as much as you want. The row of thumbnails underneath is off limits.</p>
+  </div>
+
+  <!-- ------------------------------------------------ the broken gallery -->
+
+  <div class="gallery" id="gB" data-zones="2" data-seams="off" style="margin-top:34px">
+    <div class="stage" id="stB">
+      <img class="frame on" data-i="0" src="assets/p1.png" alt="A lens mounted on a camera body, three-quarter view.">
+      <img class="frame red" data-i="1" src="assets/p3.png" alt="A camera and lens on a red background.">
+      <div class="clip" data-i="2" role="img" aria-label="A stand-in for the video: a still frame with a slow pan."><img src="assets/p4.png" alt=""></div>
+      <img class="frame" data-i="3" src="assets/p2.png" alt="A lens mounted on a camera body, side view.">
+      <div class="seams" aria-hidden="true"><span class="a"></span><span class="b"></span></div>
+      <div class="zones">
+        <button class="zone prev" type="button"></button>
+        <button class="zone open" type="button"></button>
+        <button class="zone next" type="button"></button>
+      </div>
+      <button class="trap" type="button"></button>
+      <button class="edge l" type="button" aria-hidden="true" tabindex="-1">‹</button>
+      <button class="edge r" type="button" aria-hidden="true" tabindex="-1">›</button>
+      <button class="corner" type="button" aria-label="Zoom this photo">⊕</button>
+      <div class="pill" aria-hidden="true"><span></span></div>
+    </div>
+    <div class="rail" role="group" aria-label="Choose a frame"></div>
+    <div class="live">
+      <p class="say"></p>
+      <p class="why"></p>
+      <div class="runlog"><span class="count"></span><ol></ol></div>
+    </div>
+  </div>
+
+  <!-- ------------------------------------------------------------ 1 -->
+
+  <section>
+    <p class="num">1</p>
+    <div class="body">
+      <h2>The middle is doing nothing</h2>
+      <div class="stack">
+        <p>Everybody loses that one. Back and forward own the whole photo, so play and pause have nowhere to sit except on top of them. When you reach the video the split quietly turns off, and the thumbnails become the only way out. On a phone they sit below the fold.</p>
+        <p>The middle of the photo, where the lens actually sits, has no job at all. That felt like the place to put the thing people already want, which is a closer look.</p>
+        <p>Here is the idea. Leave the arrows out on the edges and give the middle half one job, which is to open the photo bigger. It does that same job on every frame, video included. Play and pause get a small button of their own down in the corner.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------------------ 2 -->
+
+  <section>
+    <p class="num">2</p>
+    <div class="body">
+      <h2>Where to put the middle</h2>
+      <div class="stack">
+        <p>People look at the center of a photo because the subject sits there. A pointer heading sideways passes through the edges anyway, so the arrows stay easy to reach out there.</p>
+        <p>I gave the middle half the width. The slider in the tweaks panel moves it if you want to see how other splits feel.</p>
+      </div>
+
+      <div class="diagrams">
+        <figure>
+          <div class="diagram">
+            <div><span>‹</span>Back</div>
+            <div><span>›</span>Forward</div>
+          </div>
+          <figcaption>Today. Two halves, and the zoom hides in a corner button. On the video both halves fall through to play and pause.</figcaption>
+        </figure>
+        <figure>
+          <div class="diagram">
+            <div><span>‹</span>Back</div>
+            <div class="middle"><span>⌕</span>Open</div>
+            <div><span>›</span>Forward</div>
+          </div>
+          <figcaption>The idea. The middle opens the photo and the edges keep the arrows. Same on every frame.</figcaption>
+        </figure>
+      </div>
+
+      <h3>What each part does</h3>
+      <table>
+        <thead>
+          <tr><th></th><th>Left edge</th><th class="middle">Middle</th><th>Right edge</th></tr>
+        </thead>
+        <tbody>
+          <tr><th scope="row">A photo</th><td>Go back one</td><td class="middle">Open it full screen</td><td>Go forward one</td></tr>
+          <tr><th scope="row">The video</th><td>Go back one</td><td class="middle">Open it full screen and keep it playing</td><td>Go forward one</td></tr>
+        </tbody>
+      </table>
+
+      <div class="stack">
+        <p>Play and pause move to a small button in the bottom corner, so clicking the photo never stops the video by accident.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------------------ 3 -->
+
+  <section>
+    <p class="num">3</p>
+    <div class="body">
+      <h2>Now play it again</h2>
+      <div class="stack">
+        <p>Same gallery, same rules, three zones. Get to the last photo without touching the thumbnails. Escape closes the full screen view.</p>
+      </div>
+
+      <div class="gallery" id="gA" data-zones="3" data-seams="on">
+        <div class="stage" id="stA">
+          <img class="frame on" data-i="0" src="assets/p1.png" alt="A lens mounted on a camera body, three-quarter view.">
+          <img class="frame red" data-i="1" src="assets/p3.png" alt="A camera and lens on a red background.">
+          <div class="clip" data-i="2" role="img" aria-label="A stand-in for the video: a still frame with a slow pan."><img src="assets/p4.png" alt=""></div>
+          <img class="frame" data-i="3" src="assets/p2.png" alt="A lens mounted on a camera body, side view.">
+          <div class="seams" aria-hidden="true"><span class="a"></span><span class="b"></span></div>
+          <div class="zones">
+            <button class="zone prev" type="button"></button>
+            <button class="zone open" type="button"></button>
+            <button class="zone next" type="button"></button>
+          </div>
+          <button class="edge l" type="button" aria-hidden="true" tabindex="-1">‹</button>
+          <button class="edge r" type="button" aria-hidden="true" tabindex="-1">›</button>
+          <div class="playpill">
+            <button type="button" class="pp"></button>
+            <div class="track"><i></i></div>
+            <span class="clock"></span>
+          </div>
+          <button class="corner" type="button" aria-label="Open full screen">⊕</button>
+          <div class="pill" aria-hidden="true"><span></span></div>
+        </div>
+        <div class="rail" role="group" aria-label="Choose a frame"></div>
+        <div class="live">
+          <p class="say"></p>
+        </div>
+      </div>
+
+      <p class="note">The clip in both galleries is simulated: a still frame with a slow pan, a progress bar and a clock, because no real footage was supplied with the handoff. Everything the argument depends on — the zones, the controls, the full screen view — is real and clickable.</p>
+
+      <div class="stack">
+        <p>Three things changed. The middle half opens whatever frame you are on. Play and pause became their own button with a label. Back and forward keep working on the video, so the thumbnails go back to being a shortcut.</p>
+        <p>I left the corner button alone. It does the same thing the middle does now, and on a touch screen it is the only thing there is.</p>
+      </div>
+
+      <div class="tweaks">
+        <label>
+          Middle width
+          <input id="midw" type="range" min="20" max="60" step="5" value="50">
+          <output for="midw" id="midv">50%</output>
+        </label>
+        <label>
+          <input id="seams" type="checkbox" checked>
+          Show the zone seams
+        </label>
+      </div>
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------------------ 4 -->
+
+  <section>
+    <p class="num">4</p>
+    <div class="body">
+      <h2>What happens at the ends</h2>
+      <div class="ends">
+        <figure>
+          <div class="endshot">
+            <img src="assets/p1.png" alt="">
+            <span class="g l off">‹</span><span class="g r">›</span>
+          </div>
+          <figcaption>First photo. The left edge stops doing anything and its arrow fades out. Nothing wraps around.</figcaption>
+        </figure>
+        <figure>
+          <div class="endshot">
+            <img src="assets/p2.png" alt="">
+            <span class="g l">‹</span><span class="g r off">›</span>
+          </div>
+          <figcaption>Last photo. Same on the right side. The middle keeps working at both ends, which is the point.</figcaption>
+        </figure>
+        <figure>
+          <div class="endshot">
+            <img src="assets/p4.png" alt="">
+            <span class="g l">‹</span><span class="g r">›</span>
+          </div>
+          <figcaption>Video partway through. Opening it keeps the time and the play state. Closing it drops you back on the same frame, still running.</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------------------ 5 -->
+
+  <section>
+    <p class="num">5</p>
+    <div class="body">
+      <h2>Getting through it without a mouse</h2>
+      <div class="stack">
+        <p>The three zones are real buttons, so a keyboard walks through them in order. Everything below is what the version above actually does.</p>
+      </div>
+
+      <h3>Tab order</h3>
+      <ul>
+        <li>Back</li>
+        <li>Open</li>
+        <li>Forward</li>
+        <li>Play or pause, on video frames</li>
+        <li>The corner open button</li>
+        <li>The four thumbnails</li>
+      </ul>
+
+      <h3>What a screen reader says</h3>
+      <ul class="quotes">
+        <li>“Previous photo, 1 of 4”</li>
+        <li>“Open photo 2 of 4 full screen”</li>
+        <li>“Open the video full screen, playing”</li>
+        <li>“Pause the video”</li>
+      </ul>
+
+      <div class="stack">
+        <p>The full screen view opens as a dialog. Focus jumps to the close button, and escape sends it back to the zone that opened it.</p>
+        <p>Frame changes go out on a polite live region, so the count gets read without stealing focus. Hovering a zone never moves focus, so the pointer and the keyboard stay out of each other's way.</p>
+        <p>Arrow keys move between frames and the space bar plays or pauses the video. The current site does this too. The catch is that nobody finds out. There is no legend on the page, and every other control on the site is a big obvious button with an icon on it, so a keyboard shortcut is the last place a shopper looks. Shortcuts speed things up for people who already know they exist. They cannot carry the flow by themselves.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------------------ 6 -->
+
+  <section>
+    <p class="num">6</p>
+    <div class="body">
+      <h2>Still deciding</h2>
+      <div class="stack">
+        <p>I keep flipping on what the middle should do to a still photo. Full screen feels right for the video, since it needs the room and the controls. For a photo, holding to zoom in place might feel quicker, and it keeps you where you were.</p>
+      </div>
+      <p class="closing">Which one would you try first?</p>
+    </div>
+  </section>
+
+</div>
+
+<!-- ------------------------------------------------------- full screen -->
+
+<div class="lb" id="lb" role="dialog" aria-modal="true" aria-label="Full screen view">
+  <header>
+    <span class="label" id="lbLabel"></span>
+    <button class="close" type="button" aria-label="Close full screen">×</button>
+  </header>
+  <div class="body" id="lbBody">
+    <button class="nav prev" type="button" aria-label="Previous frame">‹</button>
+    <button class="nav next" type="button" aria-label="Next frame">›</button>
+  </div>
+  <div class="scrub">
+    <button type="button" class="pp"></button>
+    <div class="track"><i></i></div>
+    <span class="clock"></span>
+  </div>
+</div>
+
+<p class="sr" id="announce" role="status" aria-live="polite"></p>
+
+<script>
+(function () {
+  'use strict';
+
+  var VID = 2, LAST = 3;
+  var NAMES = ['photo 1', 'photo 2', 'the video', 'photo 4'];
+  var CLIP_LEN = 8;
+  var cap = function (s) { return s.charAt(0).toUpperCase() + s.slice(1); };
+  var quiet = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /*
+    A real m:ss formatter. The prototype's was `'0:0' + seconds`, which prints
+    "0:012" from ten seconds on — listed in the handoff as a known bug.
+  */
+  function clock(sec) {
+    var s = Math.max(0, Math.floor(sec));
+    return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+  }
+
+  /* ------------------------------------------------------------ gallery */
+
+  function Gallery(root, opts) {
+    var g = this;
+    g.root = root;
+    g.broken = !!opts.broken;
+    g.stage = root.querySelector('.stage');
+    g.frames = [].slice.call(root.querySelectorAll('.frame, .clip'));
+    g.zones = {
+      prev: root.querySelector('.zone.prev'),
+      open: root.querySelector('.zone.open'),
+      next: root.querySelector('.zone.next')
+    };
+    g.trap = root.querySelector('.trap');
+    g.corner = root.querySelector('.corner');
+    g.edgeL = root.querySelector('.edge.l');
+    g.edgeR = root.querySelector('.edge.r');
+    g.pill = root.querySelector('.pill');
+    g.pillGlyph = g.pill.querySelector('span');
+    g.rail = root.querySelector('.rail');
+    g.say = root.querySelector('.say');
+    g.why = root.querySelector('.why');
+    g.logBox = root.querySelector('.runlog');
+    g.playpill = root.querySelector('.playpill');
+
+    g.idx = 0;
+    g.zone = null;
+    /*
+      Each gallery owns its own media state. The prototype ran both off one
+      shared loop, which the handoff flags: two galleries showing the same clip
+      at the same instant is a prototype artefact, not a design.
+    */
+    g.t = 0;
+    g.playing = true;
+    g.raf = 0;
+    g.last = 0;
+
+    g.clicks = 0;
+    g.videoClicks = 0;
+    g.log = [];
+    g.lost = null;
+    g.rail_used = false;
+
+    g.buildRail();
+    g.wire();
+    g.show(0, true);
+    g.tick();
+  }
+
+  Gallery.prototype.buildRail = function () {
+    var g = this;
+    ['assets/p1.png', 'assets/p3.png', 'assets/p4.png', 'assets/p2.png'].forEach(function (src, i) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.setAttribute('aria-label', cap(NAMES[i]) + ', ' + (i + 1) + ' of 4');
+      var im = document.createElement('img');
+      im.src = src;
+      im.alt = '';
+      b.appendChild(im);
+      b.addEventListener('click', function () { g.railPick(i); });
+      g.rail.appendChild(b);
+    });
+  };
+
+  Gallery.prototype.railPick = function (i) {
+    if (this.broken) {
+      this.count('Used the thumbnails', true);
+      this.lost = 'left';
+    } else {
+      this.rail_used = true;
+    }
+    this.show(i);
+  };
+
+  /* what a click in each zone does, and what it is called */
+  Gallery.prototype.label = function (which) {
+    var i = this.idx, n = i + 1;
+    if (which === 'prev') return i === 0 ? 'Previous photo, at the first frame' : 'Previous photo, ' + n + ' of 4';
+    if (which === 'next') return i === LAST ? 'Next photo, at the last frame' : 'Next photo, ' + n + ' of 4';
+    if (i === VID) return 'Open the video full screen, ' + (this.playing ? 'playing' : 'paused');
+    return 'Open ' + NAMES[i] + ' of 4 full screen';
+  };
+
+  Gallery.prototype.show = function (i, first) {
+    var g = this;
+    g.idx = Math.max(0, Math.min(LAST, i));
+    g.frames.forEach(function (f) { f.classList.toggle('on', +f.dataset.i === g.idx); });
+    [].forEach.call(g.rail.children, function (b, k) {
+      b.setAttribute('aria-current', k === g.idx ? 'true' : 'false');
+    });
+
+    var onVid = g.idx === VID;
+    // The corner button is hidden on the video frame in both galleries.
+    g.corner.hidden = onVid;
+    if (g.trap) g.trap.classList.toggle('on', g.broken && onVid);
+    if (g.playpill) g.playpill.classList.toggle('on', !g.broken && onVid);
+
+    g.zones.prev.setAttribute('aria-disabled', g.idx === 0 ? 'true' : 'false');
+    g.zones.next.setAttribute('aria-disabled', g.idx === LAST ? 'true' : 'false');
+    g.zones.prev.setAttribute('aria-label', g.label('prev'));
+    g.zones.next.setAttribute('aria-label', g.label('next'));
+    if (g.zones.open) g.zones.open.setAttribute('aria-label', g.label('open'));
+    g.edgeL.setAttribute('aria-disabled', g.idx === 0 ? 'true' : 'false');
+    g.edgeR.setAttribute('aria-disabled', g.idx === LAST ? 'true' : 'false');
+
+    g.paint();
+    if (!first) say(cap(NAMES[g.idx]) + ', ' + (g.idx + 1) + ' of 4');
+  };
+
+  Gallery.prototype.go = function (d) {
+    var to = this.idx + d;
+    if (to < 0 || to > LAST) return false;
+    this.show(to);
+    return true;
+  };
+
+  /* ---- the game, broken gallery only ---- */
+
+  Gallery.prototype.count = function (what, ends) {
+    if (!this.broken) return;
+    this.clicks += 1;
+    this.log.unshift({ text: what, ends: !!ends });
+    if (this.log.length > 6) this.log.pop();
+    this.paintLog();
+  };
+
+  Gallery.prototype.paintLog = function () {
+    if (!this.broken) return;
+    this.logBox.querySelector('.count').textContent = 'Your run, ' + this.clicks + ' click' + (this.clicks === 1 ? '' : 's');
+    var ol = this.logBox.querySelector('ol');
+    ol.innerHTML = '';
+    this.log.forEach(function (e) {
+      var li = document.createElement('li');
+      li.textContent = e.text;
+      if (e.ends) li.className = 'end';
+      ol.appendChild(li);
+    });
+  };
+
+  /* ---- copy ---- */
+
+  Gallery.prototype.copyBroken = function () {
+    var g = this;
+    if (g.lost === 'trapped') return {
+      say: 'You lose.',
+      why: 'Both halves of the video do the same thing, which is play and pause. Nothing here moves you to photo 4. The only way onward is the thumbnail row, and reaching for it means leaving the frame.'
+    };
+    if (g.lost === 'left') return {
+      say: 'You lose.',
+      why: 'You left the frame. That is the only exit the video gives you, and it is why the run ends there.'
+    };
+    if (g.idx === VID) {
+      if (g.videoClicks === 1) return { say: 'It paused.', why: 'Try the other half. Or try the same half again.' };
+      return { say: 'You are on the video.', why: 'A click pauses it. Keep going and see where forward takes you.' };
+    }
+    if (g.idx === LAST) return { say: 'You made it to the last photo.', why: 'Which means you found a way around the video.' };
+    if (g.zone === 'prev') {
+      return g.idx === 0
+        ? { say: 'Nothing back here.', why: 'You are on the first photo.' }
+        : { say: 'This half goes back one.', why: cap(NAMES[g.idx - 1]) + '.' };
+    }
+    if (g.zone === 'next') return { say: 'This half goes forward one.', why: cap(NAMES[g.idx + 1]) + '.' };
+    return { say: 'Move your pointer over the photo.', why: 'The cursor tells you what a click will do.' };
+  };
+
+  Gallery.prototype.copyFixed = function () {
+    var g = this;
+    if (g.idx === LAST && !g.rail_used) return 'You made it to the last photo without leaving the frame!!! Woohoo :)';
+    if (g.idx === LAST && g.rail_used) return 'You got there, but you used the thumbnails. Reload and try it with the photo alone.';
+    if (g.zone === 'prev') {
+      return g.idx === 0 ? 'Nothing back here. You are on the first photo.' : 'The left edge goes back to ' + NAMES[g.idx - 1] + '.';
+    }
+    if (g.zone === 'next') return 'The right edge goes forward to ' + NAMES[g.idx + 1] + '.';
+    if (g.zone === 'open') {
+      return g.idx === VID
+        ? 'The middle opens the video full screen and keeps it playing.'
+        : 'The middle opens ' + NAMES[g.idx] + ' full screen.';
+    }
+    return 'Move your pointer over the photo.';
+  };
+
+  Gallery.prototype.paint = function () {
+    var g = this;
+    if (g.broken) {
+      var c = g.copyBroken();
+      g.say.textContent = c.say;
+      g.why.textContent = c.why;
+      g.say.classList.toggle('lose', !!g.lost);
+      g.paintLog();
+    } else {
+      g.say.textContent = g.copyFixed();
+      g.say.classList.toggle('win', g.idx === LAST);
+    }
+  };
+
+  /* ---- the pill ---- */
+
+  Gallery.prototype.zoneAt = function (pct) {
+    if (this.broken) return pct < 50 ? 'prev' : 'next';
+    var side = (100 - MID) / 2;
+    return pct < side ? 'prev' : pct > 100 - side ? 'next' : 'open';
+  };
+
+  Gallery.prototype.movePill = function (e) {
+    var g = this;
+    var r = g.stage.getBoundingClientRect();
+    var pct = ((e.clientX - r.left) / r.width) * 100;
+    g.zone = g.zoneAt(pct);
+    g.pill.style.transform = 'translate3d(' + (e.clientX - r.left) + 'px,' + (e.clientY - r.top) + 'px,0)';
+    var glyph = '‹', dim = false;
+    if (g.zone === 'next') { glyph = '›'; dim = g.idx === LAST; }
+    else if (g.zone === 'prev') { glyph = '‹'; dim = g.idx === 0; }
+    else { glyph = g.idx === VID ? '⤢' : '⌕'; }
+    g.pillGlyph.textContent = glyph;
+    g.pill.classList.toggle('dim', dim);
+    g.pill.classList.add('on');
+    g.stage.classList.add('pill-live');
+    g.paint();
+  };
+
+  Gallery.prototype.dropPill = function () {
+    this.zone = null;
+    this.pill.classList.remove('on');
+    // Give the system cursor back the moment the pill is not standing in for it.
+    this.stage.classList.remove('pill-live');
+    this.paint();
+  };
+
+  /* ---- wiring ---- */
+
+  Gallery.prototype.wire = function () {
+    var g = this, pending = null, raf = 0;
+
+    // rAF coalesced: pointermove fires far more often than the screen redraws
+    g.stage.addEventListener('pointermove', function (e) {
+      if (e.pointerType === 'touch') return;
+      pending = { clientX: e.clientX, clientY: e.clientY };
+      if (raf) return;
+      raf = requestAnimationFrame(function () { raf = 0; if (pending) g.movePill(pending); });
+    });
+    g.stage.addEventListener('pointerleave', function () { if (raf) cancelAnimationFrame(raf); raf = 0; pending = null; g.dropPill(); });
+    window.addEventListener('blur', function () { g.dropPill(); });
+
+    g.zones.prev.addEventListener('click', function () {
+      g.count(g.idx === 0 ? 'Left half, nothing back there' : 'Left half, back one');
+      g.go(-1);
+    });
+    g.zones.next.addEventListener('click', function () {
+      g.count(g.idx === LAST ? 'Right half, nothing forward' : 'Right half, forward one');
+      g.go(1);
+    });
+    if (g.zones.open) g.zones.open.addEventListener('click', function () { openLightbox(g); });
+
+    g.edgeL.addEventListener('click', function () { g.count('Left arrow, back one'); g.go(-1); });
+    g.edgeR.addEventListener('click', function () { g.count('Right arrow, forward one'); g.go(1); });
+
+    g.corner.addEventListener('click', function () {
+      if (g.broken) { g.count('Corner button, zoomed in place'); g.zoomPulse(); }
+      else openLightbox(g);
+    });
+
+    if (g.trap) g.trap.addEventListener('click', function () {
+      g.videoClicks += 1;
+      g.playing = !g.playing;
+      g.count(g.playing ? 'Video, played it again' : 'Video, paused it', g.videoClicks >= 2);
+      if (g.videoClicks >= 2) g.lost = 'trapped';
+      g.paint();
+    });
+
+    if (g.playpill) g.playpill.querySelector('.pp').addEventListener('click', function () {
+      g.playing = !g.playing;
+      g.paintPlay();
+    });
+
+    /*
+      Swipe, for touch. The zones still work as taps, but the handoff is explicit
+      that a tap on an invisible third of a photo cannot be the only way to find
+      any of the three actions.
+    */
+    var sx = 0, sy = 0, tracking = false;
+    g.stage.addEventListener('touchstart', function (e) {
+      if (e.touches.length !== 1) return;
+      sx = e.touches[0].clientX; sy = e.touches[0].clientY; tracking = true;
+    }, { passive: true });
+    g.stage.addEventListener('touchend', function (e) {
+      if (!tracking) return;
+      tracking = false;
+      var t = e.changedTouches[0];
+      var dx = t.clientX - sx, dy = t.clientY - sy;
+      if (Math.abs(dx) < 44 || Math.abs(dx) < Math.abs(dy)) return;
+      g.count(dx < 0 ? 'Swiped forward' : 'Swiped back');
+      g.go(dx < 0 ? 1 : -1);
+    }, { passive: true });
+
+    /*
+      Arrows and space on the inline gallery too, not only inside the dialog.
+      Section 5 says the current site binds them and nobody finds out; binding
+      them here at least makes the page's own claim true.
+    */
+    g.stage.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowLeft') { e.preventDefault(); g.go(-1); }
+      else if (e.key === 'ArrowRight') { e.preventDefault(); g.go(1); }
+      else if (e.key === ' ' && g.idx === VID && !g.broken) { e.preventDefault(); g.playing = !g.playing; g.paintPlay(); }
+    });
+  };
+
+  Gallery.prototype.zoomPulse = function () {
+    var f = this.frames[this.idx];
+    if (!f || quiet) return;
+    f.style.transition = 'transform 320ms cubic-bezier(0.32,0.72,0.20,1)';
+    f.style.transform = f.style.transform === 'scale(1.35)' ? 'scale(1)' : 'scale(1.35)';
+  };
+
+  Gallery.prototype.paintPlay = function () {
+    if (!this.playpill) return;
+    this.playpill.querySelector('.pp').textContent = this.playing ? '❙❙' : '▶';
+    this.playpill.querySelector('.pp').setAttribute('aria-label', this.playing ? 'Pause the video' : 'Play the video');
+    if (lbOwner === this) paintScrub();
+  };
+
+  /* ---- the stand-in clip ---- */
+
+  Gallery.prototype.tick = function () {
+    var g = this;
+    g.last = performance.now();
+    var step = function (now) {
+      var dt = Math.min(0.25, (now - g.last) / 1000);
+      g.last = now;
+      if (g.playing && !quiet) g.t = (g.t + dt / CLIP_LEN) % 1;
+      g.paintClip();
+      g.raf = requestAnimationFrame(step);
+    };
+    g.raf = requestAnimationFrame(step);
+  };
+
+  Gallery.prototype.paintClip = function () {
+    var g = this;
+    var t = g.t;
+    var ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    var tf = 'scale(' + (1.1 + 0.2 * ease) + ') translateX(' + (5 - 10 * ease) + '%)';
+    var im = g.frames[VID].querySelector('img');
+    if (im) im.style.transform = tf;
+    if (g.playpill) {
+      g.playpill.querySelector('.track i').style.width = (t * 100) + '%';
+      g.playpill.querySelector('.clock').textContent = clock(t * CLIP_LEN) + ' / ' + clock(CLIP_LEN);
+    }
+    if (lbOwner === g && lb.classList.contains('on')) {
+      var lim = lbBody.querySelector('.vidbox img');
+      if (lim) lim.style.transform = tf;
+      paintScrub();
+    }
+  };
+
+  /* ------------------------------------------------------- full screen */
+
+  var lb = document.getElementById('lb');
+  var lbBody = document.getElementById('lbBody');
+  var lbLabel = document.getElementById('lbLabel');
+  var lbScrub = lb.querySelector('.scrub');
+  var lbOwner = null;
+  var lbReturn = null;
+  var MID = 50;
+
+  function paintScrub() {
+    if (!lbOwner) return;
+    lbScrub.querySelector('.track i').style.width = (lbOwner.t * 100) + '%';
+    lbScrub.querySelector('.clock').textContent = clock(lbOwner.t * CLIP_LEN) + ' / ' + clock(CLIP_LEN);
+    var pp = lbScrub.querySelector('.pp');
+    pp.textContent = lbOwner.playing ? '❙❙' : '▶';
+    pp.setAttribute('aria-label', lbOwner.playing ? 'Pause the video' : 'Play the video');
+  }
+
+  function paintLb() {
+    var g = lbOwner;
+    if (!g) return;
+    lbLabel.textContent = 'Full screen, ' + NAMES[g.idx];
+    var old = lbBody.querySelector('img, .vidbox');
+    if (old) old.remove();
+    var node;
+    if (g.idx === VID) {
+      node = document.createElement('div');
+      node.className = 'vidbox';
+      var im = document.createElement('img');
+      im.src = 'assets/p4.png';
+      im.alt = 'A stand-in for the video: a still frame with a slow pan.';
+      node.appendChild(im);
+    } else {
+      node = document.createElement('img');
+      node.src = g.frames[g.idx].getAttribute('src');
+      node.alt = g.frames[g.idx].getAttribute('alt') || '';
+    }
+    lbBody.insertBefore(node, lbBody.firstChild);
+    lbScrub.classList.toggle('on', g.idx === VID);
+    lb.querySelector('.nav.prev').setAttribute('aria-disabled', g.idx === 0 ? 'true' : 'false');
+    lb.querySelector('.nav.next').setAttribute('aria-disabled', g.idx === LAST ? 'true' : 'false');
+    paintScrub();
+  }
+
+  function openLightbox(g) {
+    lbOwner = g;
+    lbReturn = document.activeElement;
+    lb.classList.add('on');
+    // Lock the page behind the dialog rather than letting it scroll under it.
+    document.body.style.overflow = 'hidden';
+    paintLb();
+    lb.querySelector('.close').focus();
+    say('Full screen, ' + NAMES[g.idx]);
+  }
+
+  function closeLightbox() {
+    lb.classList.remove('on');
+    document.body.style.overflow = '';
+    if (lbReturn && lbReturn.focus) lbReturn.focus();
+    lbReturn = null;
+  }
+
+  lb.querySelector('.close').addEventListener('click', closeLightbox);
+  lb.querySelector('.nav.prev').addEventListener('click', function () { if (lbOwner && lbOwner.go(-1)) paintLb(); });
+  lb.querySelector('.nav.next').addEventListener('click', function () { if (lbOwner && lbOwner.go(1)) paintLb(); });
+  lbScrub.querySelector('.pp').addEventListener('click', function () {
+    if (!lbOwner) return;
+    lbOwner.playing = !lbOwner.playing;
+    lbOwner.paintPlay();
+    paintScrub();
+  });
+  // Backdrop click closes, but only when the backdrop itself is the target.
+  lb.addEventListener('mousedown', function (e) { if (e.target === lb || e.target === lbBody) closeLightbox(); });
+
+  document.addEventListener('keydown', function (e) {
+    if (!lb.classList.contains('on')) return;
+    if (e.key === 'Escape') { e.preventDefault(); closeLightbox(); return; }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); if (lbOwner.go(-1)) paintLb(); return; }
+    if (e.key === 'ArrowRight') { e.preventDefault(); if (lbOwner.go(1)) paintLb(); return; }
+    if (e.key === ' ' && lbOwner && lbOwner.idx === VID) {
+      e.preventDefault();
+      lbOwner.playing = !lbOwner.playing;
+      lbOwner.paintPlay();
+      return;
+    }
+    /*
+      Keep Tab inside the dialog. Without this the focus ring walks off into the
+      page behind the scrim, which is the whole reason a dialog is a dialog.
+    */
+    if (e.key === 'Tab') {
+      var f = [].slice.call(lb.querySelectorAll('button')).filter(function (b) { return b.offsetParent !== null; });
+      if (!f.length) return;
+      var first = f[0], last = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  });
+
+  /* ---------------------------------------------------------- announce */
+
+  var announce = document.getElementById('announce');
+  var sayT = 0;
+  function say(msg) {
+    // Re-announcing the same string needs the node to change; a short clear
+    // does it without the reader speaking an empty message.
+    clearTimeout(sayT);
+    announce.textContent = '';
+    sayT = setTimeout(function () { announce.textContent = msg; }, 60);
+  }
+
+  /* ------------------------------------------------------------- boot */
+
+  var gB = new Gallery(document.getElementById('gB'), { broken: true });
+  var gA = new Gallery(document.getElementById('gA'), { broken: false });
+  gA.paintPlay();
+  gB.paintPlay();
+
+  var midw = document.getElementById('midw');
+  var midv = document.getElementById('midv');
+  midw.addEventListener('input', function () {
+    MID = +midw.value;
+    midv.textContent = MID + '%';
+    document.documentElement.style.setProperty('--mid', MID + '%');
+    document.documentElement.style.setProperty('--side', ((100 - MID) / 2) + '%');
+  });
+
+  var seams = document.getElementById('seams');
+  seams.addEventListener('change', function () {
+    gA.root.dataset.seams = seams.checked ? 'on' : 'off';
+  });
+})();
+</script>
+</body>
+</html>

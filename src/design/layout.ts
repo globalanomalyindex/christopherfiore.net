@@ -147,8 +147,25 @@ export const INDEX_BLOCKS = [
   { id: 'campeon', x: 780, y: 1200, w: 540, h: 240, size: 26, track: true },
   { id: 'chickpea', x: 1320, y: 1200, w: 540, h: 240, size: 26, track: true },
 
-  { id: 'wildcard', x: 60, y: 1440, w: 900, h: 180, size: 36, track: true },
-  { id: 'dither', x: 960, y: 1440, w: 900, h: 180, size: 36, track: true },
+  /*
+    Row 6 was two 900s and is three 600s, which is row 3's rhythm exactly.
+
+    Adding a fourteenth case had two shapes available: a seventh row, or a
+    re-solve of a row that had room. A seventh row would have been a second
+    full-width band — and a full-width band already MEANS something here, it is
+    what marks the motion archive as a destination rather than a case, so a
+    second one would have blurred the one signal this mosaic carries. Splitting
+    a row costs nothing instead: the row height stays 180, the 240/240/180
+    repeat is untouched, and the scroll's four rest positions are exactly the
+    ones they were.
+
+    `three zones: camera market ui fix` is 32 characters, which is why it needs
+    600 and not the 360 that broke `apple wallet card sharing concept` on row 1.
+    At the 26px a 600 block carries it draws about 430 of the 548 available.
+  */
+  { id: 'wildcard', x: 60, y: 1440, w: 600, h: 180, size: 26, track: true },
+  { id: 'dither', x: 660, y: 1440, w: 600, h: 180, size: 26, track: true },
+  { id: 'three-zones', x: 1260, y: 1440, w: 600, h: 180, size: 26, track: true },
 ] as const;
 
 /**
