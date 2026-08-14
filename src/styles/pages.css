@@ -15,6 +15,16 @@
                          footer close, footer next.
     .ps-hov-dim          opacity:.6    — page 02 footer close and footer next.
     .ps-hov-dim-55       opacity:.55   — page 02 header close.
+                         BOTH ARE NOW UNUSED, and kept only as the prototype's
+                         record. They dimmed the CONTROL, which was a complete
+                         hover in the prototype and is half a hover here: every
+                         control on every screen also raises hover.ts's band
+                         stack, and opacity on the element takes the band down
+                         with it. Page 02's three controls were the only ones on
+                         the site whose band came up at 60%, which read as the
+                         button fading rather than as the same glitch everything
+                         else does. They carry .ps-hov-invert now, like page 01
+                         and page 03 — the other two light screens.
     .ps-hov-email        color:#7C858A — page 04 email.
     .ps-hov-evidence     the page-03 hero as the evidence viewer's door. NEW —
                          no prototype equivalent. Inverts the .ps-ev-chip tab

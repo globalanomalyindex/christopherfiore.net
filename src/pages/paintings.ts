@@ -609,7 +609,7 @@ function headerBar(): HTMLElement {
       type: 'button',
       'data-act': 'close',
       'aria-label': 'Close, back to studio index',
-      class: 'ps-hov-dim',
+      class: 'ps-hov-invert',
       style: css({
         ...BTN,
         display: 'flex',
@@ -618,7 +618,7 @@ function headerBar(): HTMLElement {
         gap: 14,
         'padding-right': 28,
         'margin-right': -28,
-        transition: 'opacity 150ms linear',
+        transition: 'background 150ms linear,color 150ms linear',
       }),
     },
     el('span', { 'aria-hidden': 'true', style: css({ 'font-size': 15 }) }, '✕'),
@@ -660,7 +660,7 @@ function footerBar(): HTMLElement {
       type: 'button',
       'data-act': 'close',
       'aria-label': 'Back to studio index',
-      class: 'ps-hov-dim',
+      class: 'ps-hov-invert',
       style: css({
         ...BTN,
         display: 'flex',
@@ -682,7 +682,7 @@ function footerBar(): HTMLElement {
       'data-act': 'next',
       'data-next': 3,
       'aria-label': 'Next channel, 03 Competizione',
-      class: 'ps-hov-dim',
+      class: 'ps-hov-invert',
       style: css({
         ...BTN,
         display: 'flex',

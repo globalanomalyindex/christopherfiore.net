@@ -42,14 +42,27 @@ const INK_RGB = ((n) => `rgb(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255})`
 );
 
 /**
- * The accent rows, top and bottom, as a percentage of the button height.
+ * The accent rows, top and bottom, in DESIGN PIXELS.
  *
- * 8% is a ceiling, not a taste call. Anything taller reaches the meta line of
- * a two-line block, and a darker SPARK accent under near-black ink is ink on
- * ink. The main band takes everything between them, so it is never below 84%.
+ * They used to be a percentage of the control's height, which meant the same
+ * hover was a different treatment on every control it landed on: 2–8% is 0.7 to
+ * 2.9px on a 36px view toggle and 3.7 to 14.7px on chellbook's 184px door card.
+ * One reads as a hairline, the other as a stripe, and a visitor moving down a
+ * screen sees the band change character button by button rather than seeing one
+ * treatment applied to different-sized things.
+ *
+ * In pixels the edge is the edge everywhere, the way the 1.5px outline already
+ * was. It is also a STRONGER guarantee than the percentage it replaces: the old
+ * 8% ceiling was there because a taller accent reached the meta line of a
+ * two-line block and a darker SPARK accent under near-black ink is ink on ink,
+ * and 6px cannot reach the meta line of anything.
+ *
+ * `ACCENT_CAP` is now only about very short controls — a 36px chip, where 6px
+ * top and bottom would be a third of it. It keeps the main band at 76% or more.
  */
-const ACCENT_MIN = 2;
-const ACCENT_MAX = 8;
+const ACCENT_PX_MIN = 2;
+const ACCENT_PX_MAX = 6;
+const ACCENT_CAP = 12;
 
 /** Wipe-in start clips. Two are partial (62%) so some layers only half-travel. */
 const WIPE_IN = [
@@ -115,16 +128,43 @@ function rec(el: HTMLElement): HoverRec {
 }
 
 /**
- * The screen-level band host this target belongs to, if its screen has one.
+ * A screen root: the boundary the search for a band host may not cross.
+ *
+ * `[data-page]` is a channel's page, `[data-menu]` is screen 2a, and
+ * `[data-screen-label]` is every case study and the evidence viewer — screens
+ * that are built as CHILDREN of the page they grow out of rather than as
+ * siblings, so that they can FLIP out of the block that opened them.
+ */
+const SCREEN = '[data-page],[data-menu],[data-screen-label]';
+
+/**
+ * The screen-level band host this target belongs to, if ITS OWN screen has one.
  *
  * Found by walking up rather than by a fixed selector: `menu.ts` emits the host
  * as the first child of `[data-menu]`, and any future screen that wants its
  * bands under a lattice only has to emit the same marker.
+ *
+ * THE WALK STOPS AT THE TARGET'S OWN SCREEN, and that is not a refinement — it
+ * is the whole correctness of this function. Two screens emit a host: the menu
+ * and page 01. The six case studies are built INSIDE page 01, because the open
+ * transition FLIPs each one out of the block that opened it and a sibling
+ * screen could not be grown from a rect in another screen's coordinate space.
+ * So an unbounded walk from a control on the chellbook screen sailed past
+ * chellbook, found PAGE 01's host, and painted the band there: in another
+ * screen's coordinates, at z 0, under page 01's lattice, under the opaque
+ * case-study section laid over the top of it. The band was built, animated and
+ * torn down every time, and never appeared. Every control on all six case
+ * studies had a hover made only of its CSS class — a dim or an invert — with
+ * the band and the letter glitch missing.
+ *
+ * Stopping at the screen root gives those controls no host, which is the right
+ * answer: they fall to the in-button stack, exactly as page 02, 03 and 04 do.
  */
 function bandHost(el: HTMLElement): HTMLElement | null {
   for (let p = el.parentElement; p; p = p.parentElement) {
     const h = p.querySelector<HTMLElement>(':scope > [data-bandhost]');
     if (h) return h;
+    if (p.matches(SCREEN)) return null;
   }
   return null;
 }
@@ -224,10 +264,25 @@ export function hlBox(el: HTMLElement): void {
   b.replaceChildren();
 
   const flat = reduced(el);
-  // A thin darker accent top and bottom, the light band filling everything
-  // between them. Reduced motion collapses the stack to one full-height band.
-  const accT = flat ? 0 : ACCENT_MIN + Math.random() * (ACCENT_MAX - ACCENT_MIN);
-  const accB = flat ? 0 : ACCENT_MIN + Math.random() * (ACCENT_MAX - ACCENT_MIN);
+  /*
+    A thin darker accent top and bottom, the light band filling everything
+    between them. Reduced motion collapses the stack to one full-height band.
+
+    The accents are authored in design px and converted here, so the edge is
+    the same weight on a 36px chip and a 184px card. The layers themselves stay
+    in percentages because the box they sit in is sized in percentages, and a
+    percentage cannot go stale if the control resizes under an open hover.
+  */
+  const hDesign = el.getBoundingClientRect().height / (scaleOf(el) || 1);
+  const accent = (): number =>
+    Math.min(
+      ACCENT_CAP,
+      ((ACCENT_PX_MIN + Math.random() * (ACCENT_PX_MAX - ACCENT_PX_MIN)) /
+        Math.max(1, hDesign)) *
+        100,
+    );
+  const accT = flat ? 0 : accent();
+  const accB = flat ? 0 : accent();
   const main = rnd(SPARK_LIGHTS);
   r.band = main;
   const rows: [number, number, string][] = [[accT, 100 - accT - accB, main]];

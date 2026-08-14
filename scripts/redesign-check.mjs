@@ -511,6 +511,55 @@ else {
     return out;
   });
   say(insets.length === 0, `[2b] every card edge is inset half a step` + (insets.length ? ` — ${insets.join('; ')}` : ''));
+
+  /*
+    The case studies' hovers.
+
+    Six screens are built INSIDE page 01 so the open transition can FLIP each
+    one out of the block that opened it. Page 01 emits a `[data-bandhost]`, so
+    an unbounded walk up from a control on one of those screens found page 01's
+    host and painted the band there — behind the opaque case study, in another
+    screen's coordinate space. Every control on all six had a hover made only
+    of its CSS class, and the band and the letter glitch never appeared.
+
+    So: a control on a case study must raise its band INSIDE ITSELF, and the
+    accent rows must be the same weight there as anywhere else.
+  */
+  for (const sub of ['chellbook', 'lee']) {
+    await pg.evaluate((a) => document.querySelector(`[data-act="${a}"]`)?.click(), sub);
+    await pg.waitForTimeout(4200);
+    const hv = await pg.evaluate(async (name) => {
+      const scr = [...document.querySelectorAll('[data-screen-label]')]
+        .filter((e) => getComputedStyle(e).display !== 'none' && e.getBoundingClientRect().width > 100)
+        .pop();
+      const el = [...scr.querySelectorAll('a[target="_blank"]')]
+        .find((e) => { const q = e.getBoundingClientRect(); return q.width > 200 && q.height > 40; });
+      if (!el) return { err: `${name}: no door` };
+      el.dispatchEvent(new PointerEvent('pointerenter', { bubbles: false }));
+      await new Promise((r) => setTimeout(r, 500));
+      const box = el.querySelector(':scope > [data-hbox]');
+      const out = {
+        name,
+        inside: !!box,
+        hosted: !!scr.querySelector('[data-bandhost] > [data-hbox]'),
+        h: Math.round(el.getBoundingClientRect().height),
+        // children are [accent top, main band, accent bottom, outline]
+        acc: box
+          ? [0, 2].map((i) => +(parseFloat(box.children[i]?.style.height) || 0).toFixed(2))
+          : [],
+      };
+      el.dispatchEvent(new PointerEvent('pointerleave', { bubbles: false }));
+      return out;
+    }, sub);
+    say(hv.inside && !hv.hosted, `[hov] ${sub}: the door raises its band inside itself`);
+    // The accents are authored in design px and stored as a % of the control,
+    // so they must come back inside 2..6 whatever that control's height is.
+    const px = (hv.acc || []).map((v) => (v / 100) * hv.h);
+    const ok = px.length === 2 && px.every((v) => v >= 1.5 && v <= 6.5);
+    say(ok, `[hov] ${sub}: accent rows are ${px.map((v) => v.toFixed(1)).join('/')}px on a ${hv.h}px control`);
+    await pg.evaluate((a) => document.querySelector(`[data-act="${a}-close"]`)?.click(), sub);
+    await pg.waitForTimeout(3600);
+  }
 }
 await toMenu();
 

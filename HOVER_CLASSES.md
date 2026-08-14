@@ -35,8 +35,8 @@ inline on the cell with the rest of its geometry.
 |---|---|---|
 | `.ps-hov-invert` | `background:#C62C05; color:#DFCBFA` | 24×: page 01 header close (92), case rows (109, 116, 123, 130), footer close (138), footer next (140); page 02 wall list, 11 rows (174–184); page 03 header close (202), concept rows (211, 215, 219), footer close (224), footer next (226) |
 | `.ps-hov-invert-dark` | `background:#DFCBFA; color:#0B0B0C` | 3×: page 04 header close (239), footer close (261), footer next (263) |
-| `.ps-hov-dim` | `opacity:.6` | 2×: page 02 footer close and footer next (186) |
-| `.ps-hov-dim-55` | `opacity:.55` | page 02 header close (150) |
+| `.ps-hov-dim` | `opacity:.6` | 2×: page 02 footer close and footer next (186) — **no longer applied**, see below |
+| `.ps-hov-dim-55` | `opacity:.55` | page 02 header close (150) — **no longer applied**, see below |
 | `.ps-hov-email` | `color:#FF2D87` | page 04 email (241) |
 | `.ps-hov-evidence` | frame `0 0 0 1px #C62C05`; `.ps-ev-chip` → `background:#C9F227; color:#0B0B0C` | **NEW, no prototype equivalent** — page 03's hero as the evidence viewer's door |
 
@@ -49,6 +49,14 @@ band stack paints at `z-index:-1` — invisible behind an opaque render — and 
 ink pin would drag the tab's lavender type to near-black on its own dark
 plaque. `#C9F227` is from `LIGHTS` and the ink on it is `#0B0B0C`, so the
 inverted tab still keeps the legibility contract.
+
+The two `dim` classes are kept as the prototype's record and are applied to
+nothing. A dim was a whole hover in the prototype; here it is half of one,
+because every control also raises `hover.ts`'s band stack, and `opacity` on the
+element takes the band down with it. Page 02's three controls were the only ones
+on the site whose band came up at 60% — which reads as the button fading rather
+than as the treatment every other control does — so they carry `.ps-hov-invert`
+now, like page 01 and page 03, the other two light screens.
 
 Ink pairs are the legibility contract, not a preference: on a rust fill the ink
 is lavender, on a lavender fill the ink is near-black. Do not swap one for the
