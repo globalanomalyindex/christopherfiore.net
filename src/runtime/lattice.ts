@@ -424,34 +424,44 @@ export function solveLattice(screen: HTMLElement): void {
  * it made the "identical after a hover cycle" assertion intermittently false
  * for reasons that had nothing to do with hovering.
  *
- * So the inline face comes off for the length of the measuring pass and goes
- * back on after. The resting face is by construction the WIDEST the run can be,
- * which is the conservative direction: a point cleared for the resting face is
- * cleared for every face the glitch can put it in. One layout for the whole
- * pass, and resolves are debounced to a handful a second at worst.
+ * So every inline property a letter animation writes comes off for the length
+ * of the measuring pass and goes back on after, and there are FIVE of them, not
+ * one. The face and its feature settings, because the alternates are narrower.
+ * The visibility, because the arrival dither blinks letters off and the walker
+ * above rejects a hidden one entirely. The right margin, because `altKern`
+ * corrects pair kerning on the alternate face and that moves every letter after
+ * it. And the transform, because the flash jitters letters by a pixel either
+ * way and a Range's client rects are transformed rects.
+ *
+ * All five had the same symptom and each one had to be found separately, which
+ * is the argument for the shape of the fix rather than a list of five patches:
+ * measure the RESTING state, which is by construction the widest and the most
+ * complete, so a point cleared for it is cleared for every state any of these
+ * animations can produce. One layout for the whole pass, and resolves are
+ * debounced to a handful a second at worst.
  */
+/** Everything a letter animation writes that moves the letter's box. */
+const GLITCH_PROPS = [
+  'fontFamily',
+  'fontFeatureSettings',
+  'visibility',
+  'marginRight',
+  'transform',
+] as const;
+
 function unglitch(screen: HTMLElement): () => void {
-  const saved: [HTMLElement, string, string, string][] = [];
+  const saved: [HTMLElement, string[]][] = [];
   for (const sp of qq<HTMLElement>(screen, '[data-l]')) {
-    if (!sp.style.fontFamily && !sp.style.fontFeatureSettings && !sp.style.visibility) continue;
-    saved.push([sp, sp.style.fontFamily, sp.style.fontFeatureSettings, sp.style.visibility]);
-    sp.style.fontFamily = '';
-    sp.style.fontFeatureSettings = '';
-    /*
-      And VISIBILITY, which is the same bug wearing different clothes. The
-      arrival dither blinks individual letters off and on, and the walker above
-      rejects a hidden one — so a resolve landing in a blink cleared the points
-      of every letter except that one, and the field flickered under the
-      wordmark for as long as the effect ran. A letter that is momentarily off
-      is still a letter that is about to be there.
-    */
-    sp.style.visibility = '';
+    const was = GLITCH_PROPS.map((k) => sp.style[k]);
+    if (!was.some(Boolean)) continue;
+    saved.push([sp, was]);
+    for (const k of GLITCH_PROPS) sp.style[k] = '';
   }
   return () => {
-    for (const [sp, fam, feat, vis] of saved) {
-      sp.style.fontFamily = fam;
-      sp.style.fontFeatureSettings = feat;
-      sp.style.visibility = vis;
+    for (const [sp, was] of saved) {
+      GLITCH_PROPS.forEach((k, i) => {
+        sp.style[k] = was[i];
+      });
     }
   };
 }
