@@ -3,18 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Get past the video without leaving the frame — three zones</title>
+<title>Get past the video without leaving the frame · three zones</title>
 <meta name="description" content="A product design note arguing that a two-zone image gallery breaks down at the video, and proposing a third hit zone in the middle of the frame.">
 <link rel="icon" href="data:,">
 <style>
 /*
-  Three zones — gallery hover zones, rebuilt from the handoff.
+  Three zones: gallery hover zones, rebuilt from the handoff.
 
   One stylesheet, no inline styles. The prototype was inline-styled because of
   the tool that produced it; the handoff says so explicitly and says not to
   carry that pattern over.
 
-  Three colours carry the page: paper, ink, one red. There is no fourth.
+  Three colors carry the page: paper, ink, one red. There is no fourth.
 */
 :root {
   --paper: #F4F1E9;
@@ -664,7 +664,7 @@ ul li + li { margin-top: 6px; }
         </div>
       </div>
 
-      <p class="note">The clip in both galleries is simulated: a still frame with a slow pan, a progress bar and a clock, because no real footage was supplied with the handoff. Everything the argument depends on — the zones, the controls, the full screen view — is real and clickable.</p>
+      <p class="note">The clip in both galleries is simulated: a still frame with a slow pan, a progress bar and a clock, because no real footage was supplied with the handoff. Everything the argument depends on is real and clickable: the zones, the controls, the full screen view.</p>
 
       <div class="stack">
         <p>Three things changed. The middle half opens whatever frame you are on. Play and pause became their own button with a label. Back and forward keep working on the video, so the thumbnails go back to being a shortcut.</p>
@@ -800,7 +800,7 @@ ul li + li { margin-top: 6px; }
 
   /*
     A real m:ss formatter. The prototype's was `'0:0' + seconds`, which prints
-    "0:012" from ten seconds on — listed in the handoff as a known bug.
+    "0:012" from ten seconds on, listed in the handoff as a known bug.
   */
   function clock(sec) {
     var s = Math.max(0, Math.floor(sec));
@@ -837,7 +837,7 @@ ul li + li { margin-top: 6px; }
     /*
       Each gallery owns its own media state. The prototype ran both off one
       shared loop, which the handoff flags: two galleries showing the same clip
-      at the same instant is a prototype artefact, not a design.
+      at the same instant is a prototype artifact, not a design.
     */
     g.t = 0;
     g.playing = true;

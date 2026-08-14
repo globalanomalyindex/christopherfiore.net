@@ -65,6 +65,17 @@ export interface GuestpassSection {
    * the column. A section with no honest match leaves the plate alone.
    */
   view?: number;
+  /**
+   * A marked aside: a direction to explore, set off from the argument.
+   *
+   * IT IS SET OFF BECAUSE IT IS A DIFFERENT KIND OF CLAIM. Everything else on
+   * this screen is concept work that exists: fifteen renders, a rationale, a
+   * build spec. An aside is a thought that has not been drawn, and running it
+   * on as one more paragraph would let a reader take it for part of the design.
+   * `pages/guestpass.ts` gives it a rule down its left side and its own label so
+   * it cannot be read as the argument continuing.
+   */
+  aside?: { label: string; paras: string[] };
 }
 
 export const GUESTPASS = {
@@ -245,6 +256,21 @@ export const GUESTPASS_SECTIONS: GuestpassSection[] = [
         'the owner sees when setting up, so the interface and the security model are the same ' +
         'object. they cannot drift apart.',
     ],
+    aside: {
+      label: 'edge case · exploratory, not drawn',
+      paras: [
+        'something i want to explore rather than something i decided. today a charge over the ' +
+          'limit has one answer, which is to ask the owner to raise it. that answer stays, and ' +
+          'it stays first. the second one is a thing every register already knows how to do: ' +
+          'split the payment. the borrowed card covers up to the limit and a card of your own ' +
+          'covers the difference. offering both means nobody has to interrupt somebody over four ' +
+          'dollars, and nobody gets quietly pushed into paying when asking was the better move.',
+        'three things i cannot answer yet. whether two cards in one tap is possible on this ' +
+          'hardware at all. what the owner sees on a receipt for a purchase that was only partly ' +
+          'theirs. and whether an easy way out makes people stop asking when they should ask. ' +
+          'this is a direction and not a design. nothing is drawn and nothing is tested.',
+      ],
+    },
   },
   {
     id: 'surveillance',

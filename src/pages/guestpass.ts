@@ -672,6 +672,51 @@ function glanceColumn(): HTMLElement {
 
 /* ----------------------------------------------------------- text column */
 
+/**
+ * A marked aside inside a section.
+ *
+ * SET OFF, NOT JUST INDENTED. Everything else in this column is concept work
+ * that exists: fifteen renders, a rationale, a build spec. An aside is a
+ * direction that has not been drawn, and a reader who takes one for the other
+ * has been told something untrue about what was done. So it gets a rule down
+ * its left side, its own label saying what kind of thing it is, and a smaller
+ * size than the argument it sits inside.
+ *
+ * An `<aside>`, and the element is the point: a screen reader announces it as a
+ * complementary region rather than reading straight on from the paragraph
+ * above, which is the same separation the rule makes visually.
+ */
+function asideBlock(a: { label: string; paras: string[] }): HTMLElement {
+  return el(
+    'aside',
+    {
+      'aria-label': a.label,
+      style: css({
+        margin: '22px 0 0',
+        padding: '2px 0 2px 18px',
+        'border-left': `2px solid ${MAJOR}`,
+      }),
+    },
+    microLabel(a.label, '.72'),
+    ...a.paras.map((p) =>
+      el(
+        'p',
+        {
+          style: css({
+            margin: '10px 0 0',
+            'font-family': MONO,
+            'font-size': 15,
+            'line-height': '1.55',
+            opacity: '.88',
+            'text-wrap': 'pretty',
+          }),
+        },
+        p,
+      ),
+    ),
+  );
+}
+
 function textSections(): HTMLElement[] {
   const lead = el(
     'section',
@@ -726,6 +771,7 @@ function textSections(): HTMLElement[] {
           p,
         ),
       ),
+      sec.aside ? asideBlock(sec.aside) : null,
     ),
   );
 
