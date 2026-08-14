@@ -24,6 +24,7 @@ export const CASES: CaseRecord[] = [
     imageAlt:
       'The After Tokens playground running live: a resolved answer with its reveal controls and grammar selector',
     caption: 'after tokens · working prototype · 2026',
+    card: 'projects/card/after-tokens.webp',
     href: 'https://globalanomalyindex.github.io/after-tokens/',
     source: 'https://github.com/globalanomalyindex/after-tokens',
   },
@@ -46,6 +47,7 @@ export const CASES: CaseRecord[] = [
     imageAlt:
       'A design render of the borrowed card: a card with a dashed edge reading "Alex\'s Apple Card" and "Expires 9:41 PM", shown beside a phone where the same card sits at the bottom of a Wallet stack under two solid-edged cards',
     caption: 'apple wallet card sharing concept · design renders · 2026',
+    card: 'projects/card/guestpass.webp',
     // The case is hosted in this site's own public/ directory, as chellbook's,
     // lee's, mfny's and chipotle's are. The row opens the case study.
     href: null,
@@ -66,6 +68,7 @@ export const CASES: CaseRecord[] = [
     imageAlt:
       'The Chellbook product design showcase: the wordmark, the value line, and the spec table listing 13 sections and 30 screens',
     caption: 'chellbook · design spec · 2026',
+    card: 'projects/card/chellbook.webp',
     // No deployed app to link to — the row opens the case study in the stage,
     // which is where both hosted prototypes are linked from.
     href: null,
@@ -90,6 +93,7 @@ export const CASES: CaseRecord[] = [
     imageAlt:
       'A design render of the Lee record screen: a teleprompter line under the lens, an eyeline guide across the camera feed, glyph controls and a centered record button, with the reader panel on the right',
     caption: 'lee · design renders · 2026',
+    card: 'projects/card/lee.webp',
     // The prototype is hosted in this site's own public/ directory, as
     // chellbook's, mfny's and chipotle's are. The row opens the case study.
     href: null,
@@ -111,6 +115,7 @@ export const CASES: CaseRecord[] = [
     imageAlt:
       'The redesigned concentrates grid: eleven strain cards, each carrying its own type tags and an in-card form switcher',
     caption: 'mfny concentrates · working demo · 2026',
+    card: 'projects/card/mfny-concentrates.webp',
     // The demo is hosted in this site's own public/ directory rather than on a
     // separate Pages repo, exactly as chellbook's two prototypes are.
     href: null,
@@ -136,6 +141,7 @@ export const CASES: CaseRecord[] = [
     imageAlt:
       'Design renders of the two final screens: a checkout with one pickup time between a minus and a plus button, and a confirmation screen with a single ETA',
     caption: 'chipotle app ui cleanup · design renders · 2026',
+    card: 'projects/card/chipotle.webp',
     // The prototype is hosted in this site's own public/ directory, as
     // chellbook's and mfny's are. The row opens the case study in the stage.
     href: null,
@@ -154,6 +160,7 @@ export const CASES: CaseRecord[] = [
     imageAlt:
       'The One Master Affordance prototype running live: the assisted-targeting surface with its measurement readouts',
     caption: 'one master affordance · coded prototype · 2026',
+    card: 'projects/card/one-master-affordance.webp',
     href: 'https://globalanomalyindex.github.io/carplay-siri-contacts/',
     source: 'https://github.com/globalanomalyindex/carplay-siri-contacts',
   },
@@ -169,6 +176,7 @@ export const CASES: CaseRecord[] = [
     imageAlt:
       'ADHD Mode running live: a bounded session with its post and time limits, action dock and return state',
     caption: 'adhd mode · portfolio prototype · 2026',
+    card: 'projects/card/adhd-mode.webp',
     href: 'https://globalanomalyindex.github.io/adhd-mode-linkedin/',
     source: 'https://github.com/globalanomalyindex/adhd-mode-linkedin',
   },
@@ -184,6 +192,7 @@ export const CASES: CaseRecord[] = [
     imageAlt:
       "The df2tm repository showing a teaching aside in context: a user's request, the fix Claude made, and the concept it taught",
     caption: 'df2tm · shipped claude code plugin · 2026',
+    card: 'projects/card/df2tm.webp',
     // No hosted demo — it is a plugin you install into your own Claude Code.
     // The subpage carries the repository link as a real anchor.
     href: null,
@@ -202,6 +211,7 @@ export const CASES: CaseRecord[] = [
     imageAlt:
       'campeón running live: the four aim drills and the entry into the sensitivity search',
     caption: 'campeón · working instrument · 2026',
+    card: 'projects/card/campeon.webp',
     href: 'https://globalanomalyindex.github.io/campeon/',
     source: 'https://github.com/globalanomalyindex/campeon',
   },
@@ -217,6 +227,7 @@ export const CASES: CaseRecord[] = [
     imageAlt:
       'The Chickpea studio running live: the generative grid and color tool',
     caption: 'chickpea · working browser studio · 2026',
+    card: 'projects/card/chickpea.webp',
     href: 'https://globalanomalyindex.github.io/chickpea/',
     source: 'https://github.com/globalanomalyindex/chickpea',
     /*
@@ -239,6 +250,7 @@ export const CASES: CaseRecord[] = [
     imageAlt:
       'Wildcard running live: the external-draw protocol with its freeze and retain rules',
     caption: 'wildcard · installable plugin · 2026',
+    card: 'projects/card/wildcard.webp',
     href: 'https://globalanomalyindex.github.io/wildcard/',
     source: 'https://github.com/globalanomalyindex/wildcard',
     caseHref: 'https://globalanomalyindex.github.io/wildcard/case-study/',
@@ -255,6 +267,7 @@ export const CASES: CaseRecord[] = [
     imageAlt:
       'The DITHER studio running live: the dither, grain and paint modes over an empty canvas',
     caption: 'dither · browser studio · 2026',
+    card: 'projects/card/dither.webp',
     href: 'https://globalanomalyindex.github.io/dither/',
     source: null,
   },
@@ -276,6 +289,7 @@ export const CASES: CaseRecord[] = [
     image: null,
     imageAlt: '',
     caption: 'three zones · interactive teardown · 2026',
+    card: 'projects/card/three-zones.webp',
     // Self-hosted rather than a deployment of somebody else's site; the block
     // control routes a relative href through `asset()`.
     href: 'three-zones/index.html',

@@ -24,6 +24,19 @@ export interface CaseRecord {
   /** key-frame image for the panel, or null for a typographic plate */
   image: string | null;
   imageAlt: string;
+  /**
+   * The index card's preview window.
+   *
+   * A SEPARATE FILE from `image`, not a crop of it at render time. `image` is a
+   * 1456 × 874 full-page capture, and the card's window is between 0.9:1 and
+   * 1.3:1 at about a fifth the size — so letting `object-fit` decide the crop
+   * gives you whichever part of the capture happens to be in the middle, which
+   * on a screen capture is the header. Each of these is cropped to the part of
+   * the project that is worth seeing at 200px and written out at twice the slot
+   * it fills. See `scripts/build-cards.mjs`, which holds the crop per case and
+   * is how these are regenerated.
+   */
+  card: string | null;
   /** caption shown under the key-frame panel */
   caption: string;
   /** live project, if the devkit declared one */

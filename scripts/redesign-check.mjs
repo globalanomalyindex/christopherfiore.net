@@ -442,6 +442,75 @@ else {
     });
   }
   say(intoHidden === 0, `[2b] Tab landed inside a hidden block ${intoHidden} times in 40 presses`);
+
+  /*
+    The cards.
+
+    `cardShot` in design/layout.ts decides how wide a card's preview window is;
+    `scripts/build-cards.mjs` writes the files at twice that. The two live in
+    different languages and cannot import each other, so the agreement between
+    them is asserted here instead: every loaded window is exactly 2x the box it
+    is drawn into. A block whose width changes without the file being rebuilt
+    fails this rather than shipping a soft image.
+  */
+  const shots = await pg.evaluate(() => {
+    const out = { seen: 0, bad: [], srcs: [] };
+    for (const im of document.querySelectorAll('[data-page="1"] img[data-cardshot]')) {
+      out.srcs.push(im.getAttribute('src'));
+      const blk = im.closest('[data-ixblock]');
+      if (!blk || getComputedStyle(blk).visibility === 'hidden') continue;
+      if (!im.naturalWidth) { out.bad.push(`${blk.dataset.ixblock}: never loaded`); continue; }
+      out.seen++;
+      const q = im.getBoundingClientRect();
+      const k = document.querySelector('[data-stage]').getBoundingClientRect().width / 1920;
+      const w = Math.round(q.width / k);
+      const h = Math.round(q.height / k);
+      if (im.naturalWidth !== w * 2 || im.naturalHeight !== h * 2) {
+        out.bad.push(`${blk.dataset.ixblock}: file ${im.naturalWidth}x${im.naturalHeight}, slot ${w}x${h}`);
+      }
+    }
+    return out;
+  });
+  say(
+    shots.seen > 0 && shots.bad.length === 0,
+    `[2b] every card window is exactly twice its slot (${shots.seen} on screen)` +
+      (shots.bad.length ? ` — ${shots.bad.join('; ')}` : ''),
+  );
+
+  // Every window, including the ones no rest position has on screen right now.
+  const missing = [];
+  for (const s of [...new Set(shots.srcs)]) {
+    const u = new URL(s, BASE).href;
+    const r = await pg.evaluate((x) => fetch(x).then((v) => v.status).catch(() => 0), u);
+    if (r !== 200) missing.push(`${s} → ${r}`);
+  }
+  say(
+    shots.srcs.length === 14 && missing.length === 0,
+    `[2b] all ${shots.srcs.length} card windows resolve` +
+      (missing.length ? ` — ${missing.join('; ')}` : ''),
+  );
+
+  /*
+    The card's edge is inset HALF A LATTICE STEP inside its block, which is what
+    opens a one-step gutter between two cards that share an edge and leaves the
+    block's corner pegs outside the card rather than under it.
+  */
+  const insets = await pg.evaluate(() => {
+    const k = document.querySelector('[data-stage]').getBoundingClientRect().width / 1920;
+    const out = [];
+    for (const blk of document.querySelectorAll('[data-page="1"] [data-ixblock]')) {
+      if (getComputedStyle(blk).visibility === 'hidden') continue;
+      const fr = blk.querySelector(':scope > span[aria-hidden="true"]');
+      if (!fr) { out.push(`${blk.dataset.ixblock}: no card edge`); continue; }
+      const a = blk.getBoundingClientRect();
+      const c = fr.getBoundingClientRect();
+      const d = [c.left - a.left, c.top - a.top, a.right - c.right, a.bottom - c.bottom]
+        .map((v) => Math.round(v / k));
+      if (d.some((v) => v !== 15)) out.push(`${blk.dataset.ixblock}: ${d.join(',')}`);
+    }
+    return out;
+  });
+  say(insets.length === 0, `[2b] every card edge is inset half a step` + (insets.length ? ` — ${insets.join('; ')}` : ''));
 }
 await toMenu();
 

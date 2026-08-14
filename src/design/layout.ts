@@ -102,20 +102,27 @@ export const INDEX_BLOCKS = [
   { id: 'rail-footer', x: 60, y: 960, w: 1800, h: 60, size: 13, track: false },
 
   /*
-    Row 1. The kit gives these three rectangles and puts chellbook in the
-    second 720. The rectangles are its own and are unchanged; which case sits
-    in which is not, because "apple wallet card sharing concept" is 33
-    characters and does not fit one line in a 360-wide block at any size the
-    display family owns. The mosaic is aspect-driven, so the longest name takes
-    the widest block and chellbook's nine characters take the narrow one.
+    Row 1, re-solved from the kit's 720/360/720 to 660/480/660.
+
+    THE RULE IS UNCHANGED AND IS WHY THE NUMBERS MOVED: the longest name takes
+    the widest block. "apple wallet card sharing concept" is 33 characters and
+    is the mosaic's longest by nine, so it now sits on a 900 in row 4 and
+    `one-master` takes the row-1 slot it vacated. At 900 that name draws at the
+    family's own 36px; at 720 `fitDisplay` had to solve it down to 26 and it
+    read as a smaller case than its neighbours, which is the opposite of what
+    the block table is for.
     Every block label is one line: `wrapWord` rebuilds a hovered label out of
     inline spans whose spaces are `white-space: pre`, which removes the wrap
     opportunity, so a label that wraps at rest would snap to one long line the
     moment the cursor entered it and run out of its block.
+
+    The other 60px went to chellbook, 360 → 480. Below about 420 a block cannot
+    carry a preview window AND a readable text column beside it, so at 360 it
+    was the one case in fourteen with nothing to look at. See `cardShot`.
   */
-  { id: 'after-tokens', x: 60, y: 300, w: 720, h: 240, size: 36, track: true },
-  { id: 'chellbook', x: 780, y: 300, w: 360, h: 240, size: 26, track: true },
-  { id: 'guestpass', x: 1140, y: 300, w: 720, h: 240, size: 36, track: true },
+  { id: 'after-tokens', x: 60, y: 300, w: 660, h: 240, size: 36, track: true },
+  { id: 'chellbook', x: 720, y: 300, w: 480, h: 240, size: 26, track: true },
+  { id: 'one-master', x: 1200, y: 300, w: 660, h: 240, size: 36, track: true },
 
   /*
     The motion archive is a FULL-WIDTH BAND and takes a row to itself.
@@ -134,7 +141,8 @@ export const INDEX_BLOCKS = [
   { id: 'mfny', x: 660, y: 780, w: 600, h: 180, size: 26, track: true },
   { id: 'chipotle', x: 1260, y: 780, w: 600, h: 180, size: 26, track: true },
 
-  { id: 'one-master', x: 60, y: 960, w: 900, h: 240, size: 36, track: true },
+  /* The 900 `guestpass` moved down to; see the note on row 1. */
+  { id: 'guestpass', x: 60, y: 960, w: 900, h: 240, size: 36, track: true },
   { id: 'df2tm', x: 960, y: 960, w: 900, h: 240, size: 36, track: true },
 
   /*
@@ -185,25 +193,64 @@ export const INDEX_BLOCKS = [
  */
 export const INDEX_TRACK = { y: 300, h: 660, end: 1620 } as const;
 
-/** Every block is padded the same, and the label sits at the bottom. */
+/** Every block is padded the same. */
 export const BLOCK_PAD = { x: 26, y: 22 } as const;
 
 /**
- * A block wide AND tall enough to carry its case's cover image.
+ * The card inside a block.
  *
- * The kit marks two blocks with a `[ cover 1600×900 ]` placeholder, both of
- * them the 720-wide ones on the first row. Expressed as a rule rather than a
- * list so a block that changes size takes its plate with it, and so the rows
- * added below the fold do not have to be remembered separately. The motion
- * archive is the full 1800 wide and qualifies on size, but it is not a case at
- * all and never goes through the block builder: it carries a filmstrip of its
- * own instead.
+ * A block used to be a transparent rectangle with its meta line pinned to the
+ * top edge and its name pinned to the bottom, which in a 240px block put 150px
+ * of nothing between two lines that belong to each other. Nothing said where
+ * one case ended and the next began, so fourteen cases read as twenty-eight
+ * floating fragments over a field of two thousand crosshairs.
  *
- * Five blocks satisfy it now rather than the kit's two, because the rule is a
- * rule. The kit's imagery is explicitly not final (README, Fidelity), so the
- * placeholders were showing where a plate CAN go, not licensing only two.
+ * So a block now holds a CARD: a hairline rectangle inset `inset` inside it.
+ *
+ * `inset` IS HALF A LATTICE STEP, and that is the whole reason the number is
+ * 15. Blocks tile the band with no gutters — adjacent blocks share their edges,
+ * exactly as the menu's channel cells share their corner points — so insetting
+ * each card by half a step opens a gutter of exactly one step between any two
+ * cards, with one column or row of crosshairs running down the middle of it.
+ * The block's own four corners stay where they were, which means the corner
+ * pegs now sit OUTSIDE the card, in that gutter, and read as registration marks
+ * around it rather than as marks buried under content. The lattice invariant is
+ * untouched: the card is a drawn rectangle, the block is still the frame.
  */
-export const blockTakesCover = (w: number, h: number): boolean => w >= 720 && h >= 240;
+export const CARD = { inset: 15, padX: 24, padY: 20, gap: 22 } as const;
+
+/**
+ * How wide a card's preview window is, or 0 for a card that carries none.
+ *
+ * The old rule was `w >= 720 && h >= 240`, which gave five of the fourteen
+ * cases a picture and left nine as text alone. That was never a judgement about
+ * the nine; it was the largest crop the old composition could fit, and the crop
+ * it did fit was a full-bleed strip about 3.4:1 taken from the top of a 1.67
+ * screen capture — which is to say the header of each project, sliced.
+ *
+ * Now the window is a panel down the card's left side at the card's full
+ * height, so its width is what has to be solved. Two ceilings, and the smaller
+ * wins:
+ *
+ *   height × 1.3    the shape. The source captures are all 1.67; a window
+ *                   near that stays a recognizable view of the thing rather
+ *                   than a slice of it.
+ *   width × 0.42    the share. Past this the text column can no longer hold a
+ *                   name at the size its block authored plus the case's own
+ *                   one-line description, and the picture starts costing more
+ *                   than it pays.
+ *
+ * Under 420 the two cannot both be satisfied and the card would carry a sliver,
+ * so it carries nothing instead. No block is under 420 today — chellbook's was,
+ * at 360, and row 1 was re-solved to 480 rather than leave one case in fourteen
+ * with nothing to look at.
+ */
+export const cardShot = (w: number, h: number): number => {
+  const cw = w - CARD.inset * 2;
+  const ch = h - CARD.inset * 2;
+  if (cw < 420 - CARD.inset * 2) return 0;
+  return Math.min(Math.round(ch * 1.3), Math.round(cw * 0.42));
+};
 
 /**
  * The pixel grid for channel 02's paint simulation.

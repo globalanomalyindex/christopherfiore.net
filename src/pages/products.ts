@@ -39,16 +39,26 @@
  * an `<a>` with no href.
  *
  * EVERY LABEL IS ONE LINE. Labels carry `data-fit`, and `fitScreen` solves each
- * one against its block's inner width when the screen opens. That is not
- * tidiness either: `wrapWord` rebuilds a hovered label out of inline spans
- * whose spaces are `white-space: pre`, which removes the wrap opportunity, so a
- * label that wrapped at rest would snap to one long line under the cursor and
- * run out of its block.
+ * one against its card's TEXT COLUMN — the card less its preview window less
+ * its padding — when the screen opens. That is not tidiness: `wrapWord`
+ * rebuilds a hovered label out of inline spans whose spaces are
+ * `white-space: pre`, which removes the wrap opportunity, so a label that
+ * wrapped at rest would snap to one long line under the cursor and run out of
+ * its block. The case's one-line description underneath it is ordinary text and
+ * wraps freely; it is clamped to three lines rather than fitted.
+ *
+ * A BLOCK IS NOT A CARD. The block is the frame — its four corners are the
+ * lattice points the whole system rests on, and they have not moved. The card
+ * is a hairline rectangle drawn half a lattice step inside it, which is what
+ * gives fourteen cases fourteen edges without touching a single corner. See
+ * `CARD` and `cardShot` in `design/layout.ts` for why that number is 15 and how
+ * wide the preview window comes out; `scripts/build-cards.mjs` is where the
+ * windows themselves are made.
  */
 
 import { asset, css, el, letters } from '../dom.ts';
-import { COLOR, FONT } from '../design/tokens.ts';
-import { BLOCK_PAD, INDEX_BLOCKS, INDEX_TRACK, blockTakesCover } from '../design/layout.ts';
+import { COLOR, FONT, RULE } from '../design/tokens.ts';
+import { BLOCK_PAD, CARD, INDEX_BLOCKS, INDEX_TRACK, cardShot } from '../design/layout.ts';
 import { LAT_INDEX } from '../design/lattice.ts';
 import { installLatticeScroll } from '../runtime/latticescroll.ts';
 import * as chellbookPage from './chellbook.ts';
@@ -280,7 +290,14 @@ function railFooter(): HTMLElement {
 /* -------------------------------------------------------------------- blocks */
 
 /**
- * Meta on top, then the plate if the block earns one, then the label.
+ * The text column's width inside a card, which is what every label on this
+ * screen is fitted against. The card less its preview window less its padding.
+ */
+const textW = (spec: BlockSpec): number =>
+  spec.w - CARD.inset * 2 - cardShot(spec.w, spec.h) - CARD.padX * 2;
+
+/**
+ * The meta line: year, evidence, and whether the block opens a case study.
  *
  * The secondary tone is OPACITY, not `COLOR.inkSoft`. `hlInk` pins the hovered
  * control to near-black by writing `style.color` on the control itself, and an
@@ -311,15 +328,15 @@ const metaLine = (text: string, arrow: boolean) =>
  * The block's label.
  *
  * `data-fit` with an explicit budget, so `fit.ts` solves the size against the
- * block's own inner width when the screen opens and every label is one line at
- * whatever size that takes, capped at the size the mosaic authored.
+ * TEXT COLUMN — not the block — when the screen opens, and every label is one
+ * line at whatever size that takes, capped at the size the mosaic authored.
  */
-const labelLine = (text: string, spec: BlockSpec) =>
+const labelLine = (text: string, spec: BlockSpec, budget?: number) =>
   el(
     'span',
     {
       'data-fit': true,
-      'data-fit-w': spec.w - BLOCK_PAD.x * 2,
+      'data-fit-w': budget ?? textW(spec),
       style: css({
         'font-family': FONT.display,
         'font-feature-settings': FONT.displayFeatures,
@@ -333,49 +350,124 @@ const labelLine = (text: string, spec: BlockSpec) =>
   );
 
 /**
- * The cover plate. Decorative here: the control that owns it already carries
- * the case's name in its accessible name, and repeating the render's
- * description after it reads as the same thing twice.
+ * The case's one line, which this screen never used to print.
+ *
+ * It has always been in the data — `CaseRecord.line`, written for the old
+ * table's thesis column — and dropping it when the table became a mosaic is
+ * most of why a block had 150px of nothing in the middle of it. That gap was
+ * never a spacing problem; it was a missing sentence. It is also the only thing
+ * on the card that says what a case IS rather than what it is called.
+ *
+ * Clamped to three lines. Every `line` in the data is inside 80 characters, so
+ * three is slack rather than a limit, but a card may not grow and an unclamped
+ * line in the narrowest column would push the meta out of the card.
  */
-const cover = (src: string, spec: BlockSpec) =>
+const caseLine = (text: string, small: boolean) =>
+  el(
+    'span',
+    {
+      style: css({
+        'font-size': small ? 13 : 14,
+        'line-height': '1.42',
+        'letter-spacing': '.005em',
+        opacity: '.72',
+        display: '-webkit-box',
+        '-webkit-line-clamp': '3',
+        '-webkit-box-orient': 'vertical',
+        overflow: 'hidden',
+      }),
+    },
+    text,
+  );
+
+/**
+ * The preview window: a panel down the card's left side, at the card's full
+ * height, bleeding to three of its edges.
+ *
+ * Decorative, and `aria-hidden`: the control that owns it already carries the
+ * case's name in its accessible name, and describing the render after it reads
+ * as the same thing twice.
+ *
+ * `object-fit: cover` with the default centred position, because these files
+ * are cut to their slot by `scripts/build-cards.mjs` rather than being full
+ * page captures that need steering. Cover is the guard for a block whose width
+ * changes later, not the crop itself.
+ */
+const shot = (src: string, w: number, h: number) =>
   el('img', {
+    // Marked so `redesign-check.mjs` can assert that every one of these files
+    // is exactly twice the slot it is drawn into, which is what keeps
+    // `cardShot` here and the sizes in `scripts/build-cards.mjs` honest.
+    'data-cardshot': true,
     src: asset(src),
     alt: '',
     'aria-hidden': 'true',
     loading: 'lazy',
     decoding: 'async',
-    width: Math.round(spec.w - BLOCK_PAD.x * 2),
-    height: Math.round(spec.h - BLOCK_PAD.y * 2),
+    width: w,
+    height: h,
     style: css({
       display: 'block',
-      flex: '1 1 auto',
-      'min-height': '0',
-      width: '100%',
-      margin: '14px 0',
+      flex: `0 0 ${w}px`,
+      width: w,
+      height: '100%',
       'object-fit': 'cover',
-      // The strip is about 115px of a 16:9 capture, so it is a crop whatever
-      // happens. Anchored to the top because that is where a screen capture
-      // puts the thing it is a capture OF, and a centered crop lands on body
-      // text sliced through the middle of a line.
-      'object-position': 'center top',
+      // The window sits ON the card's ground, so it takes the same hairline the
+      // card does on the one edge that is not the card's own.
+      'box-shadow': `1px 0 0 0 ${RULE.onPaperMinor}`,
     }),
   });
 
-/** The face every block control wears: padded, meta up, label down. */
+/** The face every block control wears: the window, then the text column. */
 const FACE: Record<string, string | number> = {
   position: 'absolute',
-  inset: '0',
+  inset: `${CARD.inset}px`,
   display: 'flex',
-  'flex-direction': 'column',
-  'justify-content': 'space-between',
-  padding: `${BLOCK_PAD.y}px ${BLOCK_PAD.x}px`,
+  'align-items': 'stretch',
   'box-sizing': 'border-box',
   overflow: 'hidden',
 };
 
+/**
+ * Name and line as one group, the meta pinned to the card's bottom edge.
+ *
+ * Not `space-between` on all three, which is what the block used to do and is
+ * what put the meta on the top edge and the name on the bottom with a void
+ * between them. A name and its description belong to each other and sit
+ * together; the meta is a footnote and sits where footnotes sit.
+ */
+function textColumn(c: CaseRecord, spec: BlockSpec): HTMLElement {
+  const small = spec.h < 240;
+  return el(
+    'span',
+    {
+      style: css({
+        display: 'flex',
+        'flex-direction': 'column',
+        'justify-content': 'space-between',
+        flex: '1 1 auto',
+        'min-width': '0',
+        padding: `${small ? 16 : CARD.padY}px ${CARD.padX}px`,
+        'box-sizing': 'border-box',
+        overflow: 'hidden',
+      }),
+    },
+    el(
+      'span',
+      { style: css({ display: 'flex', 'flex-direction': 'column', gap: small ? 8 : 11 }) },
+      labelLine(c.name, spec),
+      caseLine(c.line, small),
+    ),
+    metaLine(metaOf(c), !!str(c.subpage)),
+  );
+}
+
 function blockBody(c: CaseRecord, spec: BlockSpec): (Node | null)[] {
-  const plate = c.image && blockTakesCover(spec.w, spec.h) ? cover(c.image, spec) : null;
-  return [metaLine(metaOf(c), !!str(c.subpage)), plate, labelLine(c.name, spec)];
+  const w = cardShot(spec.w, spec.h);
+  return [
+    w && c.card ? shot(c.card, w, spec.h - CARD.inset * 2) : null,
+    textColumn(c, spec),
+  ];
 }
 
 /** A block that opens a deployed demo. */
@@ -429,7 +521,7 @@ const blockControl = (c: CaseRecord, spec: BlockSpec) => {
  * nest, and `wireHovers` picks the innermost pointer element, so a link inside
  * the block's link would move the band stack onto the word "source".
  */
-const sourceLink = (c: CaseRecord, href: string) =>
+const sourceLink = (c: CaseRecord, spec: BlockSpec, href: string) =>
   el(
     'a',
     {
@@ -441,8 +533,16 @@ const sourceLink = (c: CaseRecord, href: string) =>
         ...LINK,
         ...MICRO,
         position: 'absolute',
-        right: BLOCK_PAD.x,
-        top: BLOCK_PAD.y,
+        /*
+          Bottom right of the CARD, level with the meta line rather than above
+          it. It used to sit top right, which on the narrower blocks put it on
+          the same row as the meta and read as the end of that sentence — "2026
+          · simulated ... source". Down here the two are a pair holding the
+          card's bottom edge, one on each side, and neither can be read as the
+          continuation of the other.
+        */
+        right: CARD.inset + CARD.padX,
+        bottom: CARD.inset + (spec.h < 240 ? 16 : CARD.padY),
         'z-index': '3',
         // Opacity, not a color, for the same reason the meta line uses it.
         opacity: '.72',
@@ -454,14 +554,57 @@ const sourceLink = (c: CaseRecord, href: string) =>
 
 /**
  * The motion archive: the mosaic's one layout exception, per the kit. Label
- * left, meta right, both sitting on the block's bottom edge. It is a
- * destination rather than a case — it opens the 58-study archive — so it takes
- * no cover plate and no evidence tag.
+ * left, meta right, both sitting on the card's bottom edge. It is a destination
+ * rather than a case — it opens the 58-study archive — so it takes no evidence
+ * tag and never goes through the case block builder.
+ *
+ * WHAT IT SHOWS NOW. The kit's arrangement leaves everything above that bottom
+ * row empty, which in an 1800 × 240 band is most of the largest block on the
+ * screen holding nothing. It used to spend that on a comma-separated list of
+ * five slugs — the names of motion studies, printed as text, on the one block
+ * whose whole subject is what motion looks like. So the band above the label
+ * carries the eight posters instead, at 16:9, which is the shape they were
+ * captured in.
+ *
+ * The kit's bottom row is unchanged: this adds to the block, it does not
+ * rearrange it.
  */
+/**
+ * Frames at 16:9, the shape the studies were captured in.
+ *
+ * 163 and not 210. At 210 the eight filled the card's inner width edge to edge
+ * and the band became a wall of saturated color — the loudest thing on a screen
+ * whose subject is the fourteen cases under it, and a poster rather than a
+ * strip. At 163 the same eight sit in the same width with air between them,
+ * which is what a contact strip looks like, and it leaves the 36px label
+ * underneath as the block's loudest mark.
+ */
+const STRIP = { w: 163, h: 92, gap: 6 } as const;
+
 function motionBlock(spec: BlockSpec): HTMLElement {
-  const strip = MOTION_STUDIES.slice(0, 5)
-    .map((m) => m.slug)
-    .join(', ');
+  const frames = MOTION_STUDIES.map((m) =>
+    el('img', {
+      // The archive's own posters, re-encoded to the strip's size — 800 × 450
+      // PNGs are 292 kB across the eight and this screen already carries
+      // fourteen card windows.
+      src: asset(`motion/strip/${m.slug}.webp`),
+      alt: '',
+      'aria-hidden': 'true',
+      loading: 'lazy',
+      decoding: 'async',
+      width: STRIP.w,
+      height: STRIP.h,
+      style: css({
+        display: 'block',
+        flex: `0 0 ${STRIP.w}px`,
+        width: STRIP.w,
+        height: STRIP.h,
+        'object-fit': 'cover',
+        'box-shadow': `inset 0 0 0 1px ${RULE.onPaperMinor}`,
+      }),
+    }),
+  );
+
   return el(
     'a',
     {
@@ -472,32 +615,71 @@ function motionBlock(spec: BlockSpec): HTMLElement {
       style: css({
         ...LINK,
         ...FACE,
-        'flex-direction': 'row',
-        'align-items': 'flex-end',
+        'flex-direction': 'column',
         'justify-content': 'space-between',
+        padding: `16px ${CARD.padX}px`,
       }),
     },
-    labelLine('motion studies', spec),
+    el(
+      'span',
+      { style: css({ display: 'flex', gap: STRIP.gap, 'justify-content': 'space-between' }) },
+      ...frames,
+    ),
     el(
       'span',
       {
         style: css({
-          ...MICRO,
-          opacity: '.72',
-          'text-align': 'right',
-          'white-space': 'nowrap',
+          display: 'flex',
+          'align-items': 'flex-end',
+          'justify-content': 'space-between',
         }),
       },
-      `${MOTION_ARCHIVE_LABEL} · ${strip}`,
+      labelLine('motion studies', spec, 520),
+      el(
+        'span',
+        { style: css({ ...MICRO, opacity: '.72', 'white-space': 'nowrap' }) },
+        MOTION_ARCHIVE_LABEL,
+      ),
     ),
   );
 }
 
 /**
+ * The card's edge.
+ *
+ * A hairline rectangle inset half a lattice step inside the block, and the
+ * whole reason fourteen cases now read as fourteen objects instead of
+ * twenty-eight fragments. Blocks tile the band with no gutters — adjacent ones
+ * share their edges — so the inset opens a one-step channel between any two
+ * cards with a column of crosshairs running down it, and leaves the block's own
+ * four corner pegs OUTSIDE the card, framing it.
+ *
+ * A LINE AND NOT A FILL, and that is not a small distinction. The hover band is
+ * painted into the screen's band host at z 0, under the lattice at z 1, which
+ * is what keeps the crosshairs visible over a vivid band. An opaque card would
+ * sit at z 2 and hide the band completely — the same trap `.ps-hov-evidence`
+ * documents for page 03's hero. A hairline costs the band nothing.
+ *
+ * `pointer-events: none` because `wireHovers` binds the innermost element whose
+ * cursor computes to pointer, and a box laid over the control could take it.
+ */
+const cardFrame = () =>
+  el('span', {
+    'aria-hidden': 'true',
+    style: css({
+      position: 'absolute',
+      inset: `${CARD.inset}px`,
+      'box-shadow': `inset 0 0 0 1px ${RULE.onPaperMinor}`,
+      'pointer-events': 'none',
+      'z-index': '1',
+    }),
+  });
+
+/**
  * One mosaic block.
  *
- * The frame is the positioned box; the control fills it; the source link sits
- * over it. `data-b*` carries the geometry in design px so `latticescroll.ts`
+ * The frame is the positioned box; the card's edge is drawn inside it; the
+ * control fills the card; the source link sits over it. `data-b*` carries the geometry in design px so `latticescroll.ts`
  * can compute a corner's lattice address without measuring anything, and `top`
  * is track-local — the mosaic's own origin is the band's top edge.
  */
@@ -529,8 +711,9 @@ function block(spec: BlockSpec, i: number): HTMLElement {
         'box-sizing': 'border-box',
       }),
     },
+    cardFrame(),
     isMotion || !c ? motionBlock(spec) : blockControl(c, spec),
-    c && src ? sourceLink(c, src) : null,
+    c && src ? sourceLink(c, spec, src) : null,
   );
 }
 
