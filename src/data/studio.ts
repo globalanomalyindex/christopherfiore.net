@@ -13,7 +13,7 @@ export const STUDIO = {
   roles: 'product designer',
   rev: 'studio index, rev 04',
   /** Bump this with any substantive content change; it is shown in the header. */
-  updated: 'last updated august 3 2026 · 4:25 pm ET',
+  updated: 'last updated august 14 2026 · 5:34 pm ET',
   email: 'chrisrobinfiore@gmail.com',
 } as const;
 
