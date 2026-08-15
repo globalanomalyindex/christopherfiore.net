@@ -145,6 +145,51 @@ const geom = async () => pg.evaluate(() => {
 let fails = 0;
 const say = (ok, msg) => { if (!ok) fails++; console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${msg}`); };
 
+console.log('\n--- the glass pointer ---');
+{
+  /*
+    The cursor is the only one on the site, which means `cursor: none` is on
+    every element — and `hover.ts` decides what a control IS by reading that
+    property. The stamping in `markPointers` is what keeps the two compatible,
+    so all three of these are one assertion pulled apart: the arrow is there,
+    it is ON the pointer, and the controls are still findable underneath it.
+  */
+  await pg.mouse.move(880, 460);
+  await pg.waitForTimeout(300);
+  const c = await pg.evaluate(() => {
+    const root = document.querySelector('[data-cursor]');
+    if (!root) return { err: 'no [data-cursor]' };
+    const p = root.querySelector('svg path');
+    const L = p.getTotalLength();
+    let best = Infinity;
+    let tip = null;
+    for (let i = 0; i <= 3000; i++) {
+      const q = p.getPointAtLength((i / 3000) * L);
+      if (q.x + q.y < best) { best = q.x + q.y; tip = q; }
+    }
+    const s = new DOMPoint(tip.x, tip.y).matrixTransform(p.getScreenCTM());
+    const ink = p.getBoundingClientRect();
+    return {
+      on: root.hasAttribute('data-on'),
+      err: null,
+      dx: +(s.x - 880).toFixed(2),
+      dy: +(s.y - 460).toFixed(2),
+      ink: +ink.width.toFixed(1),
+      hidden: getComputedStyle(document.querySelector('[data-stage] button')).cursor,
+      stamped: document.querySelectorAll('[data-ptr="1"]').length,
+    };
+  });
+  say(!c.err && c.on, `[cur] the glass pointer is mounted and live`);
+  const off = Math.hypot(c.dx || 0, c.dy || 0);
+  say(off < 0.5, `[cur] its apex sits on the pointer (off by ${off.toFixed(2)}px)`);
+  say(c.hidden === 'none', `[cur] the OS cursor is hidden even on buttons (${c.hidden})`);
+  // 84 bindable controls across ten screens, plus their pointer-cursor
+  // ancestors and the elements that inherit it. The floor is what matters:
+  // zero here means the hide ran before the reading and every hover is dead.
+  say(c.stamped > 300, `[cur] ${c.stamped} controls were read before the hide`);
+  say(c.ink > 22 && c.ink < 30, `[cur] it is slightly larger than the system arrow (${c.ink}px ink)`);
+}
+
 console.log('\n--- menu (2a) ---');
 for (const g of await geom()) {
   say(g.offLattice.length === 0, `[1] ${g.screen}: ${g.offLattice.length} off-lattice corners of ${g.frames} frames ${g.offLattice.slice(0,3).join(' | ')}`);

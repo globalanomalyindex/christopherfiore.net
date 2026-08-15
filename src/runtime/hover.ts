@@ -624,6 +624,41 @@ function bind(el: HTMLElement): void {
 }
 
 /**
+ * Whether an element is a click target, remembered on the element itself.
+ *
+ * REMEMBERED, BECAUSE THE CURSOR GETS HIDDEN. `runtime/cursor.ts` puts
+ * `cursor: none` on everything so the glass pointer is the only one on the
+ * site, and after that `getComputedStyle(el).cursor` reads "none" on every
+ * element — including all fourteen index cards, every rail and every door. This
+ * binding is the one place on the site that reads that property to decide what
+ * a control IS, so the answer is taken while it is still true and kept.
+ *
+ * Only the true answers are written down. Stamping every element would put an
+ * attribute on all 2205 lattice pegs; a miss costs one `getComputedStyle` and
+ * cannot go stale in the direction that matters.
+ */
+function isPointer(el: HTMLElement): boolean {
+  if (el.dataset.ptr === '1') return true;
+  if (getComputedStyle(el).cursor !== 'pointer') return false;
+  el.dataset.ptr = '1';
+  return true;
+}
+
+/**
+ * Record what every element's cursor says before anything hides it.
+ *
+ * `wireHovers` stamps as it goes, but it only ever walks `[data-page]` and the
+ * menu. This walks the whole document, so a control that lives outside those —
+ * the lightbox's own ground button, anything added later — is still correctly
+ * identified after `cursor: none` lands. Called by `runtime/cursor.ts`.
+ */
+export function markPointers(root: HTMLElement): void {
+  for (const el of qq<Element>(root, '*')) {
+    if (el instanceof HTMLElement) isPointer(el);
+  }
+}
+
+/**
  * Auto-bind every click target inside a page. `cursor` inherits, so the target
  * is the element that turns the cursor to pointer — its text children inherit
  * pointer too and must not be bound, or the band would only cover the words.
@@ -648,9 +683,9 @@ export function wireHovers(root: HTMLElement): void {
       .filter((n): n is HTMLElement => n instanceof HTMLElement)
       .filter((el) => {
         if (el.closest(EXCLUDE)) return false;
-        if (getComputedStyle(el).cursor !== 'pointer') return false;
+        if (!isPointer(el)) return false;
         const p = el.parentElement;
-        return !(p && getComputedStyle(p).cursor === 'pointer');
+        return !(p && isPointer(p));
       });
     for (const el of targets) bind(el);
   }

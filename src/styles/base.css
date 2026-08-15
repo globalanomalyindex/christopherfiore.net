@@ -161,6 +161,77 @@ body.ps-stage-host {
   overflow: hidden;
 }
 
+/* ---------- the glass pointer ---------- */
+
+/*
+  ONE CURSOR ON THE WHOLE SITE. `runtime/cursor.ts` draws it, adds `ps-cursor`
+  to <html>, and there is no second state: no hand over a link, no text beam, no
+  resize arrows. The arrow is the cursor everywhere.
+
+  `!important` on a universal selector, which is not a thing to do lightly and
+  is correct here. Controls set `cursor: pointer` INLINE — `BTN` in half a dozen
+  page builders and `[data-stage] button` above — and an inline declaration
+  outranks any normal author rule, so the hand would survive on exactly the
+  elements it most needs to be gone from.
+
+  THE CLASS IS ADDED AFTER `markPointers` HAS RUN, and that order is the whole
+  reason the site still works: `hover.ts` identifies a control by reading its
+  computed cursor, which this rule overwrites on every element on the page.
+
+  Gated on a fine pointer. A touch device has no cursor to replace and would
+  otherwise pay for a `backdrop-filter` element that never moves.
+*/
+@media (hover: hover) and (pointer: fine) {
+  html.ps-cursor,
+  html.ps-cursor *,
+  html.ps-cursor *::before,
+  html.ps-cursor *::after {
+    cursor: none !important;
+  }
+}
+
+[data-cursor] {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  z-index: 2147483647;
+  pointer-events: none;
+  opacity: 0;
+  /* Its own layer, so moving it never asks the page to repaint. */
+  will-change: transform;
+  contain: layout style;
+}
+
+/* Nothing to draw until a pointer has actually reported a position; without
+   this the arrow spends the first moments of every visit parked at 0,0. */
+[data-cursor][data-on] {
+  opacity: 1;
+}
+
+/*
+  The frosted body.
+
+  `blur` and `saturate` are the frost, `brightness` keeps it from reading as a
+  smudge on the near-black case studies, and `url(#ps-cur-lens)` is the
+  refraction — a displacement map, which is the one part of this a bitmap
+  cursor could never do. The order is left to right: soften, lift, then bend.
+*/
+[data-cursor-glass] {
+  backdrop-filter: blur(2px) saturate(1.7) brightness(1.06) url(#ps-cur-lens);
+  -webkit-backdrop-filter: blur(2px) saturate(1.7) brightness(1.06);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* No refraction where the compositor will not give us one; the frost and the
+   two-tone rim still carry it. */
+@supports not (backdrop-filter: url(#x)) {
+  [data-cursor-glass] {
+    backdrop-filter: blur(2.5px) saturate(1.8) brightness(1.07);
+  }
+}
+
 /* ---------- utilities ---------- */
 
 /* Visually hidden, still announced. For accessible names that the graphic

@@ -50,6 +50,21 @@ ink pin would drag the tab's lavender type to near-black on its own dark
 plaque. `#C9F227` is from `LIGHTS` and the ink on it is `#0B0B0C`, so the
 inverted tab still keeps the legibility contract.
 
+## The cursor is hidden, and this binding used to depend on it
+
+`hover.ts` finds a control by asking for `getComputedStyle(el).cursor ===
+'pointer'`. `runtime/cursor.ts` now puts `cursor: none !important` on every
+element on the site so the glass pointer is the only one, which makes that
+question return "none" everywhere and would have unbound all 84 controls in one
+line of CSS.
+
+So the reading is taken first and kept. `markPointers()` walks the whole
+document before the `ps-cursor` class is added and stamps `data-ptr="1"` on
+every element that was a pointer target; `isPointer()` prefers that stamp over
+the live value. **Anything that adds a click target after boot has to be built
+before `installCursor` runs, or stamp itself.** Everything on the site is built
+in `mountStage`, which is why the order in `main.ts` is load-bearing and says so.
+
 The two `dim` classes are kept as the prototype's record and are applied to
 nothing. A dim was a whole hover in the prototype; here it is half of one,
 because every control also raises `hover.ts`'s band stack, and `opacity` on the
