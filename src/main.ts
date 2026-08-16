@@ -12,7 +12,6 @@ import './styles/mobile.css';
 
 import { qq } from './dom.ts';
 import { buildMobile, isMobile } from './mobile.ts';
-import { installCursor } from './runtime/cursor.ts';
 import { fitStage, mountStage } from './runtime/stage.ts';
 import { fitWhenReady } from './runtime/fit.ts';
 import { runIntro } from './runtime/transitions.ts';
@@ -135,14 +134,6 @@ function boot(): void {
 
   const stage = mountStage(app);
   fitStage(stage);
-  /*
-    After mountStage, and that is not a preference. mountStage runs wireHovers,
-    which decides what a control is by reading its computed `cursor`; this hides
-    every cursor on the site. installCursor takes its own full-document reading
-    first, but running it before the stage exists would leave it nothing to
-    read. See the header of runtime/cursor.ts.
-  */
-  installCursor();
   // Display sizes are measured, not computed — the face is proportional now.
   // Runs behind document.fonts.ready, which lands before anything is painted
   // because every face is font-display: block.
