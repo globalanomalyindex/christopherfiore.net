@@ -26,13 +26,13 @@
  * listener in `src/runtime/actions.ts`.
  */
 
-import { css, el, letters } from '../dom.ts';
+import { asset, css, el, letters } from '../dom.ts';
 import { COLOR, FONT } from '../design/tokens.ts';
 import { MENU_FRAMES, STAGE } from '../design/layout.ts';
 import { CASES } from '../data/cases.ts';
 import { CZ_META } from '../data/competizione.ts';
 import { PAINTINGS_COUNT_LABEL } from '../data/paintings.ts';
-import { STUDIO } from '../data/studio.ts';
+import { RESUME, STUDIO } from '../data/studio.ts';
 
 /* ------------------------------------------------------------------ content */
 
@@ -112,7 +112,7 @@ const railText = (s: string) =>
  * either end — at 13px the glyphs would otherwise sit on top of the pegs the
  * frame just switched on.
  */
-function rail(id: string, items: string[]): HTMLElement {
+function rail(id: string, items: (string | Node)[]): HTMLElement {
   return frameBox(
     id,
     {
@@ -123,7 +123,62 @@ function rail(id: string, items: string[]): HTMLElement {
       color: COLOR.inkSoft,
       'data-intro': null,
     },
-    ...items.map(railText),
+    ...items.map((i) => (typeof i === 'string' ? railText(i) : i)),
+  );
+}
+
+/**
+ * The resume, in the bottom rail's middle cell.
+ *
+ * HERE BECAUSE THIS IS THE FIRST SCREEN AND IT NEVER SCROLLS. The rail is up
+ * from the intro's first frame and stays put behind every page, so the one
+ * document somebody might have come for is never more than a glance away and
+ * never needs a channel opened to find. The middle cell is `space-between`
+ * doing the work: `updated` holds the left edge and the address holds the
+ * right, so a third item centres itself with no geometry to author.
+ *
+ * A real anchor with a real target, so it is a link a browser can open in a
+ * background tab, copy, or hand to a screen reader as one. The full case is
+ * on page 04, which is where the download and the file's own facts live.
+ */
+function resumeRail(): HTMLElement {
+  return el(
+    'a',
+    {
+      href: asset(RESUME.href),
+      target: '_blank',
+      rel: 'noopener noreferrer',
+      'aria-label': `View the resume, ${RESUME.pages}, PDF, opens in a new tab`,
+      class: 'ps-hov-invert',
+      style: css({
+        color: 'inherit',
+        /*
+          TRANSPARENT, INLINE, AND THAT IS THE WHOLE POINT OF THE DECLARATION.
+          The menu paints its hover band into `[data-bandhost]` at z 0, under
+          the lattice. `.ps-hov-invert:hover` would put an opaque near-black
+          background on this anchor at z 2, which covers that band completely
+          and leaves near-black ink on a near-black fill. An inline background
+          outranks the class, so the band shows and the class is inert — which
+          is exactly how page 01's rail controls behave, and the class stays for
+          the `:focus-visible` parity it also carries.
+        */
+        background: 'transparent',
+        'text-decoration': 'none',
+        cursor: 'pointer',
+        display: 'flex',
+        'align-items': 'center',
+        gap: 10,
+        padding: '6px 12px',
+        margin: '0 -12px',
+        'font-size': 13,
+        'letter-spacing': '.06em',
+        'white-space': 'nowrap',
+        'border-bottom': `1px solid ${COLOR.drape}`,
+        transition: 'background 150ms linear,color 150ms linear',
+      }),
+    },
+    RESUME.label,
+    el('span', { 'aria-hidden': 'true', style: css({ 'font-size': 15, 'line-height': '1' }) }, '↗'),
   );
 }
 
@@ -271,7 +326,7 @@ export function build(): HTMLElement {
 
     ...CHANNELS.map(channel),
 
-    rail('rail-bottom', [STUDIO.updated, STUDIO.email]),
+    rail('rail-bottom', [STUDIO.updated, resumeRail(), STUDIO.email]),
   );
 
   // Kept off the frame boxes themselves: `data-intro` drives a clip-path

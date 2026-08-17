@@ -17,6 +17,31 @@ export const STUDIO = {
   email: 'chrisrobinfiore@gmail.com',
 } as const;
 
+/**
+ * The resume, hosted here.
+ *
+ * `bytes` and `checksum` are printed beside the download, which is the same
+ * treatment the 424-page master publication gets on channel 03 and is a rule
+ * rather than a flourish: a file this site hands somebody says what it is
+ * before they take it. Both are measured from the file in `public/documents`,
+ * so a new revision has to update them or the page is lying about what it
+ * serves.
+ *
+ * TWO CONTROLS, NOT ONE, and they are different verbs. "view" opens the PDF in
+ * a new tab and lets the browser's own reader do the reading. "download" hands
+ * the file over. A single control has to pick one, and on a resume both are
+ * things a person actually came to do.
+ */
+export const RESUME = {
+  href: 'documents/christopher-robin-fiore-resume-2026.pdf',
+  /** What the file lands on disk as, rather than the slug it is served under. */
+  file: 'christopher robin fiore resume 2026.pdf',
+  label: 'resume',
+  pages: '2 pages',
+  bytes: '136,509 bytes',
+  checksum: 'sha256 06ff949a…e3acb3e1',
+} as const;
+
 export const PROFILE_LINKS: LinkRecord[] = [
   { label: 'github.com/globalanomalyindex', href: 'https://github.com/globalanomalyindex' },
   { label: 'artstation.com/chrisfiore', href: 'https://www.artstation.com/chrisfiore' },

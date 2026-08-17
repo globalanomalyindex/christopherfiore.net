@@ -17,10 +17,10 @@
  * exactly as it does on pages 01 and 03.
  */
 
-import { css, el, letters } from '../dom.ts';
+import { asset, css, el, letters } from '../dom.ts';
 import { COLOR, FONT, rgba } from '../design/tokens.ts';
 import { PAGE4 } from '../design/layout.ts';
-import { CONTACT_TABLE, PROFILE_LINKS, STUDIO } from '../data/studio.ts';
+import { CONTACT_TABLE, PROFILE_LINKS, RESUME, STUDIO } from '../data/studio.ts';
 import { ABOUT } from '../data/about.ts';
 import * as aboutPage from './about.ts';
 
@@ -396,6 +396,105 @@ export function build(): HTMLElement {
     el('span', { 'aria-hidden': 'true', style: css({ 'font-size': 19, 'line-height': '1' }) }, '→'),
   );
 
+  /**
+   * The resume, as a pair of doors and the file's own facts.
+   *
+   * "VIEW" AND "DOWNLOAD" ARE DIFFERENT VERBS and both are things somebody
+   * actually came here to do, so neither is buried behind the other. View is an
+   * ordinary anchor with `target=_blank`, which hands the file to whatever PDF
+   * reader the visitor already has; download carries the `download` attribute,
+   * which names the file on the way out so it does not land on a desktop as a
+   * slug.
+   *
+   * `download` only works same-origin, which this is — the file is served from
+   * this site's own `public/documents`, alongside the master publication.
+   *
+   * The manifest line underneath is the same treatment channel 03 gives its
+   * 424-page download, and for the same reason: a file this site hands somebody
+   * says how big it is and what it hashes to before they take it.
+   */
+  const doorBase = {
+    ...LINK,
+    position: 'absolute',
+    top: PAGE4.resume.y,
+    width: (PAGE4.resume.w - PAGE4.resume.gap) / 2,
+    height: PAGE4.resume.h,
+    display: 'flex',
+    'align-items': 'center',
+    'justify-content': 'space-between',
+    padding: '0 18px',
+    border: `1px solid ${RULE_MAJOR}`,
+    'font-size': 13,
+    'letter-spacing': '.16em',
+    'box-sizing': 'border-box',
+    transition: 'background 150ms linear,color 150ms linear',
+  } as const;
+
+  const resumeView = el(
+    'a',
+    {
+      href: asset(RESUME.href),
+      target: '_blank',
+      rel: 'noopener noreferrer',
+      'aria-label': `View the resume, ${RESUME.pages}, PDF, opens in a new tab`,
+      class: 'ps-hov-invert-dark',
+      'data-intro': 'wipeX',
+      'data-in-delay': 340,
+      'data-in-dur': 320,
+      style: css({ ...doorBase, 'clip-path': 'inset(0 100% 0 0)', left: PAGE4.resume.x }),
+    },
+    'view the resume',
+    el('span', { 'aria-hidden': 'true', style: css({ 'font-size': 17, 'line-height': '1' }) }, '↗'),
+  );
+
+  const resumeGet = el(
+    'a',
+    {
+      href: asset(RESUME.href),
+      download: RESUME.file,
+      'aria-label': `Download the resume as a PDF, ${RESUME.bytes}`,
+      class: 'ps-hov-invert-dark',
+      'data-intro': 'wipeX',
+      'data-in-delay': 380,
+      'data-in-dur': 320,
+      style: css({
+        ...doorBase,
+        'clip-path': 'inset(0 100% 0 0)',
+        left: PAGE4.resume.x + (PAGE4.resume.w + PAGE4.resume.gap) / 2,
+      }),
+    },
+    'download PDF',
+    el('span', { 'aria-hidden': 'true', style: css({ 'font-size': 17, 'line-height': '1' }) }, '↓'),
+  );
+
+  const resumeNote = el(
+    'div',
+    {
+      'data-intro': 'fade',
+      'data-in-delay': 420,
+      'data-in-dur': 340,
+      style: css({
+        opacity: '0',
+        position: 'absolute',
+        left: PAGE4.resume.x,
+        top: PAGE4.resumeNoteY,
+        width: PAGE4.resume.w,
+        'font-size': 11.5,
+        'letter-spacing': '.16em',
+        /*
+          A dimmed PAPER, not `COLOR.inkSoft`. inkSoft is the secondary tone for
+          the light screens: 6.4:1 on paper and about 1.4:1 on this page's
+          near-black, which is not there at all. `opacity` is already spoken for
+          here — the intro fades this line in from 0 — so the dimming has to be
+          in the color, which is what `RULE_MAJOR` on this page does too.
+        */
+        color: rgba(COLOR.paper, 0.62),
+        'white-space': 'nowrap',
+      }),
+    },
+    `${RESUME.pages} · ${RESUME.bytes} · ${RESUME.checksum}`,
+  );
+
   const email = el(
     'a',
     {
@@ -468,6 +567,9 @@ export function build(): HTMLElement {
     linkRow,
     lede,
     more,
+    resumeView,
+    resumeGet,
+    resumeNote,
     tableHeader(),
     ...CONTACT_TABLE.map((r, i) => tableRow(r.field, r.value, i)),
     footer(),

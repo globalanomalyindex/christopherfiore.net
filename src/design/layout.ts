@@ -522,6 +522,19 @@ export const PAGE4 = {
   lede: { x: 1090.9, y: 150, w: 727.27, size: 21, lh: 1.5, track: '-.01em' },
   /** the control into the about subpage, directly under the prose it extends */
   more: { x: 1090.9, y: 470 },
+  /**
+   * The resume: two doors side by side, then the file's own facts under them.
+   *
+   * TWO, because "view" and "download" are different verbs and a single control
+   * has to pick one. They take `doors`' shape from the case-study family — a
+   * 727.27 column split by a 12px gap into two 357.63 bars — so the pair reads
+   * as the same component those screens use rather than as a new one.
+   *
+   * 534 sits them one 10px gutter under `more`, and `resumeNoteY` leaves the
+   * manifest line clear of the field table's header at 620.
+   */
+  resume: { x: 1090.9, y: 534, w: 727.27, h: 54, gap: 12 },
+  resumeNoteY: 594,
   tableHeader: { y: 620, h: 44 },
   rowY: [664, 742, 820, 898],
   rowH: 78,
