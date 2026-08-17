@@ -32,7 +32,7 @@ import { MENU_FRAMES, STAGE } from '../design/layout.ts';
 import { CASES } from '../data/cases.ts';
 import { CZ_META } from '../data/competizione.ts';
 import { PAINTINGS_COUNT_LABEL } from '../data/paintings.ts';
-import { RESUME, STUDIO } from '../data/studio.ts';
+import { RESUME_LEAD, STUDIO } from '../data/studio.ts';
 
 /* ------------------------------------------------------------------ content */
 
@@ -52,7 +52,7 @@ const CHANNELS = [
   { n: 1, num: '01', label: 'product designs', hov: 'prod', meta: `${CASES.length} cases` },
   { n: 2, num: '02', label: 'paintings', hov: 'water', meta: PAINTINGS_COUNT_LABEL },
   { n: 3, num: '03', label: 'competizione', hov: 'sweep', meta: CZ_META.channelMeta },
-  { n: 4, num: '04', label: 'contact', hov: 'invert', meta: 'about, cv, links' },
+  { n: 4, num: '04', label: 'contact', hov: 'invert', meta: 'about, resumes, links' },
 ] as const;
 
 /* ------------------------------------------------------------------ helpers */
@@ -145,10 +145,10 @@ function resumeRail(): HTMLElement {
   return el(
     'a',
     {
-      href: asset(RESUME.href),
+      href: asset(RESUME_LEAD.href),
       target: '_blank',
       rel: 'noopener noreferrer',
-      'aria-label': `View the resume, ${RESUME.pages}, PDF, opens in a new tab`,
+      'aria-label': `View the ${RESUME_LEAD.track} resume, ${RESUME_LEAD.pages}, PDF, opens in a new tab. A commerce and operations resume is on channel 04`,
       class: 'ps-hov-invert',
       style: css({
         color: 'inherit',
@@ -177,7 +177,7 @@ function resumeRail(): HTMLElement {
         transition: 'background 150ms linear,color 150ms linear',
       }),
     },
-    RESUME.label,
+    'resume',
     el('span', { 'aria-hidden': 'true', style: css({ 'font-size': 15, 'line-height': '1' }) }, '↗'),
   );
 }

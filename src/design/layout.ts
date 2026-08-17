@@ -520,21 +520,36 @@ export const PAGE4 = {
   links: { x: 56, y: 530 },
   /** the standfirst, in page 01's right-hand panel column */
   lede: { x: 1090.9, y: 150, w: 727.27, size: 21, lh: 1.5, track: '-.01em' },
-  /** the control into the about subpage, directly under the prose it extends */
-  more: { x: 1090.9, y: 470 },
   /**
-   * The resume: two doors side by side, then the file's own facts under them.
+   * The control into the about subpage.
    *
-   * TWO, because "view" and "download" are different verbs and a single control
-   * has to pick one. They take `doors`' shape from the case-study family — a
-   * 727.27 column split by a 12px gap into two 357.63 bars — so the pair reads
-   * as the same component those screens use rather than as a new one.
-   *
-   * 534 sits them one 10px gutter under `more`, and `resumeNoteY` leaves the
-   * manifest line clear of the field table's header at 620.
+   * MOVED UP FROM 470. The standfirst above it runs seven lines of 21/1.5 from
+   * y 150 and ends at 371 — MEASURED, after the commerce sentence was added to
+   * it, not predicted from the old copy. 470 left a hundred pixels of nothing
+   * between the prose and the control that extends it, and there are two
+   * resumes to seat underneath now. At 392 it sits a 21px gutter under the
+   * prose, and the space it frees is what the resume rows needed.
    */
-  resume: { x: 1090.9, y: 534, w: 727.27, h: 54, gap: 12 },
-  resumeNoteY: 594,
+  more: { x: 1090.9, y: 392 },
+  /**
+   * The resumes: a labelled group of two rows, one per hiring track.
+   *
+   * EACH ROW IS TWO DOORS, because "view" and "download" are different verbs and
+   * one control has to pick one. The split is asymmetric rather than the
+   * case-study family's even halves: the left door carries the track name and
+   * the page count and needs the width, the right one says "download" and does
+   * not. 505 + 12 + 210 = 727.27.
+   *
+   * NO GROUP LABEL, because each door names itself: the left one reads
+   * "resume · product design" and the right one "download". A "resume" heading
+   * over the pair would be a third thing to read saying what the first two
+   * already say, and the 22px it wanted is the clearance the field table needs.
+   *
+   * The budget between `more` and the table's header at 620 is 174px and it is
+   * spent: rows at 470 and 532, byte counts at 592, table 12px clear.
+   */
+  resume: { x: 1090.9, y: 470, w: 727.27, h: 54, gap: 12, viewW: 505, rowGap: 8 },
+  resumeNoteY: 592,
   tableHeader: { y: 620, h: 44 },
   rowY: [664, 742, 820, 898],
   rowH: 78,

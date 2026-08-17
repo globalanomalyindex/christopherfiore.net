@@ -20,7 +20,7 @@
 import { asset, css, el, letters } from '../dom.ts';
 import { COLOR, FONT, rgba } from '../design/tokens.ts';
 import { PAGE4 } from '../design/layout.ts';
-import { CONTACT_TABLE, PROFILE_LINKS, RESUME, STUDIO } from '../data/studio.ts';
+import { CONTACT_TABLE, PROFILE_LINKS, RESUMES, STUDIO } from '../data/studio.ts';
 import { ABOUT } from '../data/about.ts';
 import * as aboutPage from './about.ts';
 
@@ -397,27 +397,26 @@ export function build(): HTMLElement {
   );
 
   /**
-   * The resume, as a pair of doors and the file's own facts.
+   * The resumes, one row per hiring track.
    *
-   * "VIEW" AND "DOWNLOAD" ARE DIFFERENT VERBS and both are things somebody
-   * actually came here to do, so neither is buried behind the other. View is an
-   * ordinary anchor with `target=_blank`, which hands the file to whatever PDF
-   * reader the visitor already has; download carries the `download` attribute,
-   * which names the file on the way out so it does not land on a desktop as a
-   * slug.
+   * TWO TAILORED RESUMES, NAMED BY WHO THEY ARE FOR. Two links both saying
+   * "resume" is a fork with no signpost: whoever is reading has to open both to
+   * learn which one was written for them. The track name is the label, and the
+   * line under the group says why there are two.
    *
-   * `download` only works same-origin, which this is — the file is served from
-   * this site's own `public/documents`, alongside the master publication.
+   * "VIEW" AND "DOWNLOAD" ARE DIFFERENT VERBS and both are things somebody came
+   * here to do, so neither is buried behind the other. View is an ordinary
+   * anchor with `target=_blank`, which hands the file to whatever PDF reader the
+   * visitor already has; download carries the `download` attribute, which names
+   * the file on the way out so it does not land on a desktop as a slug.
+   * `download` only works same-origin, which this is.
    *
-   * The manifest line underneath is the same treatment channel 03 gives its
-   * 424-page download, and for the same reason: a file this site hands somebody
-   * says how big it is and what it hashes to before they take it.
+   * The byte counts sit under both rows, the same treatment channel 03 gives
+   * its 424-page download: a file this site hands somebody says how big it is
+   * before they take it.
    */
   const doorBase = {
     ...LINK,
-    position: 'absolute',
-    top: PAGE4.resume.y,
-    width: (PAGE4.resume.w - PAGE4.resume.gap) / 2,
     height: PAGE4.resume.h,
     display: 'flex',
     'align-items': 'center',
@@ -427,51 +426,65 @@ export function build(): HTMLElement {
     'font-size': 13,
     'letter-spacing': '.16em',
     'box-sizing': 'border-box',
+    position: 'absolute',
+    'clip-path': 'inset(0 100% 0 0)',
     transition: 'background 150ms linear,color 150ms linear',
   } as const;
 
-  const resumeView = el(
-    'a',
-    {
-      href: asset(RESUME.href),
-      target: '_blank',
-      rel: 'noopener noreferrer',
-      'aria-label': `View the resume, ${RESUME.pages}, PDF, opens in a new tab`,
-      class: 'ps-hov-invert-dark',
-      'data-intro': 'wipeX',
-      'data-in-delay': 340,
-      'data-in-dur': 320,
-      style: css({ ...doorBase, 'clip-path': 'inset(0 100% 0 0)', left: PAGE4.resume.x }),
-    },
-    'view the resume',
-    el('span', { 'aria-hidden': 'true', style: css({ 'font-size': 17, 'line-height': '1' }) }, '↗'),
-  );
+  const arrow = (glyph: string) =>
+    el('span', { 'aria-hidden': 'true', style: css({ 'font-size': 17, 'line-height': '1' }) }, glyph);
 
-  const resumeGet = el(
-    'a',
-    {
-      href: asset(RESUME.href),
-      download: RESUME.file,
-      'aria-label': `Download the resume as a PDF, ${RESUME.bytes}`,
-      class: 'ps-hov-invert-dark',
-      'data-intro': 'wipeX',
-      'data-in-delay': 380,
-      'data-in-dur': 320,
-      style: css({
-        ...doorBase,
-        'clip-path': 'inset(0 100% 0 0)',
-        left: PAGE4.resume.x + (PAGE4.resume.w + PAGE4.resume.gap) / 2,
-      }),
-    },
-    'download PDF',
-    el('span', { 'aria-hidden': 'true', style: css({ 'font-size': 17, 'line-height': '1' }) }, '↓'),
-  );
+  const resumeRows = RESUMES.flatMap((r, i) => {
+    const top = PAGE4.resume.y + i * (PAGE4.resume.h + PAGE4.resume.rowGap);
+    const view = el(
+      'a',
+      {
+        href: asset(r.href),
+        target: '_blank',
+        rel: 'noopener noreferrer',
+        'aria-label': `View the ${r.track} resume, ${r.pages}, PDF, opens in a new tab`,
+        class: 'ps-hov-invert-dark',
+        'data-intro': 'wipeX',
+        'data-in-delay': 340 + i * 60,
+        'data-in-dur': 320,
+        style: css({ ...doorBase, left: PAGE4.resume.x, top, width: PAGE4.resume.viewW }),
+      },
+      `resume · ${r.track}`,
+      el(
+        'span',
+        { style: css({ display: 'flex', 'align-items': 'center', gap: 12, opacity: '.72' }) },
+        r.pages,
+        arrow('↗'),
+      ),
+    );
+    const get = el(
+      'a',
+      {
+        href: asset(r.href),
+        download: r.file,
+        'aria-label': `Download the ${r.track} resume as a PDF, ${r.bytes}`,
+        class: 'ps-hov-invert-dark',
+        'data-intro': 'wipeX',
+        'data-in-delay': 370 + i * 60,
+        'data-in-dur': 320,
+        style: css({
+          ...doorBase,
+          left: PAGE4.resume.x + PAGE4.resume.viewW + PAGE4.resume.gap,
+          top,
+          width: PAGE4.resume.w - PAGE4.resume.viewW - PAGE4.resume.gap,
+        }),
+      },
+      'download',
+      arrow('↓'),
+    );
+    return [view, get];
+  });
 
   const resumeNote = el(
     'div',
     {
       'data-intro': 'fade',
-      'data-in-delay': 420,
+      'data-in-delay': 480,
       'data-in-dur': 340,
       style: css({
         opacity: '0',
@@ -485,14 +498,14 @@ export function build(): HTMLElement {
           A dimmed PAPER, not `COLOR.inkSoft`. inkSoft is the secondary tone for
           the light screens: 6.4:1 on paper and about 1.4:1 on this page's
           near-black, which is not there at all. `opacity` is already spoken for
-          here — the intro fades this line in from 0 — so the dimming has to be
+          here (the intro fades this line in from 0), so the dimming has to be
           in the color, which is what `RULE_MAJOR` on this page does too.
         */
         color: rgba(COLOR.paper, 0.62),
         'white-space': 'nowrap',
       }),
     },
-    `${RESUME.pages} · ${RESUME.bytes} · ${RESUME.checksum}`,
+    RESUMES.map((r) => `${r.track} ${r.bytes}`).join(' · '),
   );
 
   const email = el(
@@ -567,8 +580,7 @@ export function build(): HTMLElement {
     linkRow,
     lede,
     more,
-    resumeView,
-    resumeGet,
+    ...resumeRows,
     resumeNote,
     tableHeader(),
     ...CONTACT_TABLE.map((r, i) => tableRow(r.field, r.value, i)),

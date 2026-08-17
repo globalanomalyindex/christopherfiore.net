@@ -360,7 +360,17 @@ function indexColumn(): HTMLElement {
         style: css({
           position: 'absolute',
           left: 0,
-          top: AP.indexFootY - AP.index.y,
+          /*
+            BELOW THE SECTION ROWS, WHICHEVER IS LOWER.
+            `READER_PAGE.indexFootY` is 800, which cleared the index while this
+            screen had six sections: 380 + 6 × 54 = 704. It has eight now, the
+            rows reach 812, and a fixed 800 put the address list through the
+            last row's rule. The other screen sharing this geometry (df2tm) has
+            six and is unaffected, because the floor only ever pushes down.
+          */
+          top:
+            Math.max(AP.indexFootY, AP.indexRowsY + ABOUT_SECTIONS.length * AP.indexRowH + 24) -
+            AP.index.y,
           width: '100%',
           'font-size': 12,
           'letter-spacing': '.1em',
