@@ -61,7 +61,7 @@ import {
   BLSP_PRODUCED,
   BLSP_STATEMENT,
 } from './data/blsp-case.ts';
-import { STUDIO, PROFILE_LINKS, CONTACT_TABLE, RESUMES } from './data/studio.ts';
+import { STUDIO, PROFILE_LINKS, CONTACT_TABLE, RESUME } from './data/studio.ts';
 import { ABOUT, ABOUT_SECTIONS, AT_A_GLANCE } from './data/about.ts';
 import { DF2TM, DF2TM_GLANCE, DF2TM_SECTIONS } from './data/df2tm.ts';
 import { MFNY, MFNY_GLANCE, MFNY_SECTIONS } from './data/mfny.ts';
@@ -983,17 +983,18 @@ function aboutContactSection(): HTMLElement {
     el('p', { class: 'm-stand' }, ABOUT.lede),
     el('a', { class: 'm-email', href: `mailto:${STUDIO.email}` }, STUDIO.email),
     /*
-      Two resumes, named by the track each is written for, and both verbs for
-      each. `download` is same-origin here, so it names the file properly rather
-      than letting a mobile browser save the slug.
+      Both verbs on the phone too. `download` is same-origin here, so it names
+      the file properly rather than letting a mobile browser save the slug; the
+      view link hands it to whatever reader the phone already has.
     */
-    label('resume · two tracks'),
-    ...RESUMES.map((r) =>
+    el(
+      'div',
+      { class: 'm-caselinks' },
+      link(asset(RESUME.href), `view the resume · ${RESUME.pages}`),
       el(
-        'div',
-        { class: 'm-caselinks' },
-        link(asset(r.href), `${r.track} · ${r.pages}`),
-        el('a', { class: 'm-link', href: asset(r.href), download: r.file }, 'download PDF'),
+        'a',
+        { class: 'm-link', href: asset(RESUME.href), download: RESUME.file },
+        'download PDF',
       ),
     ),
     el('div', { class: 'm-caselinks' }, ...PROFILE_LINKS.map((l) => link(l.href, l.label))),
