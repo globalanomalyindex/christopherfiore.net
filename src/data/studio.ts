@@ -37,9 +37,9 @@ export const RESUME = {
   /** What the file lands on disk as, rather than the slug it is served under. */
   file: 'christopher robin fiore resume 2026.pdf',
   label: 'resume',
-  pages: '2 pages',
-  bytes: '136,509 bytes',
-  checksum: 'sha256 06ff949a…e3acb3e1',
+  pages: '1 page',
+  bytes: '137,447 bytes',
+  checksum: 'sha256 8123501d…f861d3e9',
 } as const;
 
 export const PROFILE_LINKS: LinkRecord[] = [
