@@ -55,6 +55,27 @@ async function center(page, sel, nth = 0) {
   return { x: box.x + box.width / 2, y: box.y + box.height / 2, box };
 }
 
+/** Load home in `ctx` and watch the signature from before first paint. */
+async function cp2(ctx) {
+  const pg = await ctx.newPage();
+  await pg.addInitScript(() => {
+    window.__sigWatch = { everAnim: false, everWait: false };
+    new MutationObserver(() => {
+      if (document.documentElement.classList.contains('sig-wait')) window.__sigWatch.everWait = true;
+      if (document.querySelector('.sig-anim')) window.__sigWatch.everAnim = true;
+    }).observe(document, { subtree: true, childList: true, attributes: true, attributeFilter: ['class'] });
+  });
+  await pg.goto(`${BASE}/`, { waitUntil: 'networkidle' });
+  await pg.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  await sleep(2200);
+  const r = await pg.evaluate(() => {
+    const cs = getComputedStyle(document.querySelector('.sig-ink'));
+    return { visible: cs.display !== 'none' && cs.visibility !== 'hidden', ...window.__sigWatch };
+  });
+  await pg.close();
+  return r;
+}
+
 /** Every button's and every prose block's LAYOUT box: offsets ignore transform and translate. */
 const layout = () =>
   Array.from(document.querySelectorAll('[data-btn], [data-seams]')).map((e) => {
@@ -360,6 +381,252 @@ try {
   ok(bareErrors.length === 0, 'and throws nothing', bareErrors.join(' | '));
   await bare.close();
 
+  /* ------------------------------------------------------------ signature */
+  console.log('\n[signature]');
+  const SIG_MARKUP = /^<path class="sig-ink" fill="currentColor" fill-rule="evenodd" d="[^"]+"><\/path>$/;
+  /**
+   * Compare two screenshots of the signature per pixel: how many differ by more
+   * than 8/255 in any channel, and how many were ink in `a` and are not in `b`.
+   */
+  const pixelDiff = (pg, a, b) =>
+    pg.evaluate(
+      async ([a64, b64]) => {
+        const load = async (b64_) => {
+          const img = new Image();
+          img.src = `data:image/png;base64,${b64_}`;
+          await img.decode();
+          const c = new OffscreenCanvas(img.width, img.height);
+          const x = c.getContext('2d');
+          x.drawImage(img, 0, 0);
+          return x.getImageData(0, 0, img.width, img.height);
+        };
+        const [A, B] = await Promise.all([load(a64), load(b64)]);
+        if (A.width !== B.width || A.height !== B.height) return { differ: -1, lost: -1 };
+        let differ = 0;
+        let lost = 0;
+        for (let i = 0; i < A.data.length; i += 4) {
+          const d = Math.max(Math.abs(A.data[i] - B.data[i]), Math.abs(A.data[i + 1] - B.data[i + 1]), Math.abs(A.data[i + 2] - B.data[i + 2]));
+          if (d > 8) differ++;
+          if (A.data[i] < 110 && B.data[i] > 160) lost++;
+        }
+        return { differ, lost };
+      },
+      [a.toString('base64'), b.toString('base64')],
+    );
+  const inkPx = async (pg) => {
+    const png = await pg.locator('.sig').screenshot();
+    return pg.evaluate(async (b64) => {
+      const img = new Image();
+      img.src = `data:image/png;base64,${b64}`;
+      await img.decode();
+      const c = new OffscreenCanvas(img.width, img.height);
+      const x = c.getContext('2d');
+      x.drawImage(img, 0, 0);
+      const d = x.getImageData(0, 0, img.width, img.height).data;
+      let n = 0;
+      for (let i = 0; i < d.length; i += 4) if (d[i] < 128) n++;
+      return n;
+    }, png.toString('base64'));
+  };
+
+  // It writes itself in once it is in view, then hands back exactly the markup the server sent.
+  const sp = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  await sp.goto(`${BASE}/`, { waitUntil: 'networkidle' });
+  const armed = await sp.evaluate(() => ({
+    hidden: getComputedStyle(document.querySelector('.sig-ink')).display === 'none' || getComputedStyle(document.querySelector('.sig-ink')).visibility === 'hidden',
+    block: document.querySelector('[data-sig]').getAttribute('data-sig'),
+    anim: !!document.querySelector('.sig-anim'),
+  }));
+  ok(armed.hidden && !armed.anim, 'the signature waits, hidden, until it is scrolled into view', JSON.stringify(armed));
+  await sp.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  await sleep(700);
+  const writing = await sp.evaluate(() => !!document.querySelector('.sig-anim'));
+  ok(writing, 'scrolled into view, it writes itself in');
+  await sleep(1600);
+  const handed = await sp.evaluate(() => ({
+    kids: document.querySelector('.sig').children.length,
+    ink: document.querySelector('.sig-ink').outerHTML,
+    wait: document.documentElement.classList.contains('sig-wait'),
+  }));
+  const block = await sp.evaluate(() => document.querySelector('[data-sig]').outerHTML.replace(/<svg[\s\S]*$/, ''));
+  ok(block === '<div class="home-sig" data-sig="">', 'and its block is back to the served markup too', block);
+  ok(
+    handed.kids === 1 && SIG_MARKUP.test(handed.ink) && !handed.wait,
+    'afterwards the svg is exactly the served markup: one path, no display or style left on it',
+    handed.ink.replace(/ d="[^"]*"/, ' d="…"'),
+  );
+  await sp.close();
+
+  // Frames, per pixel, at 1x and 2x: ink only ever arrives (nothing inked in
+  // one frame is gone in the next), the last frame before the handoff is the
+  // finished signature, and the finished signature is the no-JS one exactly.
+  for (const dpr of [1, 2]) {
+    const noJs = await browser.newContext({ viewport: { width: 1440, height: 1100 }, deviceScaleFactor: dpr, javaScriptEnabled: false });
+    const np = await noJs.newPage();
+    await np.goto(`${BASE}/`, { waitUntil: 'networkidle' });
+    const still = await np.locator('.sig').screenshot();
+    await noJs.close();
+
+    const dctx = await browser.newContext({ viewport: { width: 1440, height: 1100 }, deviceScaleFactor: dpr });
+    const dp = await dctx.newPage();
+    await dp.goto(`${BASE}/?sig-debug`, { waitUntil: 'networkidle' });
+    await dp.waitForFunction(() => window.__sig);
+    let prev = null;
+    const lostAt = [];
+    for (let t = 0; t <= 1640; t += 20) {
+      await dp.evaluate((ms) => window.__sig.seek(ms), t);
+      const shot = await dp.locator('.sig').screenshot();
+      if (prev) {
+        const { lost } = await pixelDiff(dp, prev, shot);
+        if (lost > 3 * dpr * dpr) lostAt.push(`${t}ms:${lost}`);
+      }
+      prev = shot;
+    }
+    ok(lostAt.length === 0, `${dpr}x: written forward every 20ms, no inked pixel ever disappears`, lostAt.join(' '));
+    await dp.evaluate(() => window.__sig.seek(1649));
+    const last = await pixelDiff(dp, await dp.locator('.sig').screenshot(), still);
+    ok(last.differ <= 12 * dpr * dpr, `${dpr}x: the last frame before the handoff matches the finished signature`, `${last.differ} px differ`);
+    await dp.evaluate(() => window.__sig.seek(5000));
+    const fin = await pixelDiff(dp, await dp.locator('.sig').screenshot(), still);
+    ok(fin.differ === 0, `${dpr}x: the finished signature is the no-JS one, pixel for pixel`, `${fin.differ} px differ`);
+    await dctx.close();
+  }
+
+  // Played for real, it also ends exactly on the no-JS signature.
+  const noJsR = await browser.newContext({ viewport: { width: 1440, height: 900 }, javaScriptEnabled: false });
+  const nr = await noJsR.newPage();
+  await nr.goto(`${BASE}/`, { waitUntil: 'networkidle' });
+  await nr.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  const stillR = await nr.locator('.sig').screenshot();
+  ok((await inkPx(nr)) > 5000, 'with scripts off the signature is simply there');
+  await noJsR.close();
+  const pr = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  await pr.goto(`${BASE}/`, { waitUntil: 'networkidle' });
+  await pr.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  await sleep(2400);
+  const playedDiff = await pixelDiff(pr, await pr.locator('.sig').screenshot(), stillR);
+  ok(playedDiff.differ === 0, 'played for real, it ends identical to the no-JS render', `${playedDiff.differ} px differ`);
+  await pr.close();
+
+  // Nothing flashes: if the script is slow, the signature stays hidden until it
+  // is claimed, and if the script never comes, it is given back at 3s.
+  // Every script is held back by `delay`, and the signature needs two in a
+  // row (the bundle, then its chunk), so "slow" arrives around 1.2s and "late"
+  // well after the 3s failsafe.
+  for (const [delay, label] of [[600, 'slow'], [4500, 'late']]) {
+    const ctxD = await browser.newContext({ viewport: { width: 1440, height: 1100 } });
+    await ctxD.route(/\/assets\/.*\.js$/, async (route) => {
+      await sleep(delay);
+      await route.continue();
+    });
+    const pd = await ctxD.newPage();
+    await pd.addInitScript(() => {
+      window.__seen = [];
+      const tick = () => {
+        const ink = document.querySelector('.sig-ink');
+        if (ink) {
+          const cs = getComputedStyle(ink);
+          window.__seen.push({ t: Math.round(performance.now()), visible: cs.visibility !== 'hidden' && cs.display !== 'none', anim: !!document.querySelector('.sig-anim') });
+        }
+        requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    });
+    await pd.goto(`${BASE}/`, { waitUntil: 'domcontentloaded' });
+    await sleep(delay + 3200);
+    const seen = await pd.evaluate(() => window.__seen);
+    const firstAnim = seen.findIndex((f) => f.anim);
+    if (label === 'slow') {
+      const early = seen.slice(0, firstAnim < 0 ? seen.length : firstAnim).filter((f) => f.visible);
+      ok(firstAnim >= 0 && early.length === 0, 'slow script: the finished signature never shows before it is written', `${early.length} early visible frames, writes from ${firstAnim >= 0 ? seen[firstAnim].t : 'never'}ms`);
+    } else {
+      const shown = seen.find((f) => f.visible);
+      const after = shown ? seen.filter((f) => f.t >= shown.t) : [];
+      ok(shown && shown.t > 2800 && shown.t < 3600 && after.every((f) => f.visible && !f.anim), 'no script by 3s: the static signature is given back and stays', shown ? `shown at ${shown.t}ms` : 'never shown');
+    }
+    await ctxD.close();
+  }
+
+  // The chunk is fetched only on the page that has a signature, and no bundle carries the outline.
+  const chunkPage = await browser.newPage();
+  const jsOn = async (path) => {
+    const urls = [];
+    chunkPage.on('request', (r) => urls.push(r.url()));
+    await chunkPage.goto(BASE + path, { waitUntil: 'networkidle' });
+    chunkPage.removeAllListeners('request');
+    return urls.filter((u) => /\/assets\/.*\.js$/.test(u));
+  };
+  const homeJs = await jsOn('/');
+  const aboutJs = await jsOn('/about/');
+  const sigChunk = homeJs.find((u) => /signature/.test(u));
+  ok(!!sigChunk && !aboutJs.some((u) => /signature/.test(u)), 'its script loads on the home page only', JSON.stringify(aboutJs.map((u) => u.split('/').pop())));
+  const outlineHead = await chunkPage.evaluate(async () => (await (await fetch('/')).text()).match(/class="sig-ink"[^>]* d="(M[^C]{4,20})/)?.[1] ?? '');
+  let leaked = false;
+  for (const u of homeJs) if (outlineHead && (await (await chunkPage.request.get(u)).text()).includes(outlineHead)) leaked = true;
+  ok(outlineHead && !leaked, 'no script bundle carries the outline; it lives in the HTML only');
+  await chunkPage.close();
+
+  // Reduced motion switched on after the claim but before it is in view: it is
+  // handed back and never erased and written in afterwards.
+  const flipCtx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const fp = await flipCtx.newPage();
+  await fp.addInitScript(() => {
+    window.__everAnimAfterFlip = false;
+    window.__flipped = false;
+    new MutationObserver(() => {
+      if (window.__flipped && document.querySelector('.sig-anim')) window.__everAnimAfterFlip = true;
+    }).observe(document, { subtree: true, childList: true });
+  });
+  await fp.goto(`${BASE}/`, { waitUntil: 'networkidle' });
+  await fp.waitForFunction(() => window.__psSigClaim);
+  await fp.emulateMedia({ reducedMotion: 'reduce' });
+  await fp.evaluate(() => { window.__flipped = true; });
+  await sleep(100);
+  await fp.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  await sleep(1200);
+  const flip = await fp.evaluate(() => ({
+    shown: ((cs) => cs.display !== 'none' && cs.visibility !== 'hidden')(getComputedStyle(document.querySelector('.sig-ink'))),
+    animAfter: window.__everAnimAfterFlip,
+  }));
+  ok(flip.shown && !flip.animAfter, 'reduced motion switched on before it plays: handed back, never written in', JSON.stringify(flip));
+  await flipCtx.close();
+
+  // A viewport too short to ever show 60% of it still gets it written.
+  const shortCtx = await browser.newContext({ viewport: { width: 1440, height: 150 } });
+  const shp = await shortCtx.newPage();
+  await shp.goto(`${BASE}/`, { waitUntil: 'networkidle' });
+  await shp.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  await sleep(2400);
+  const short = await shp.evaluate(() => ({
+    shown: ((cs) => cs.display !== 'none' && cs.visibility !== 'hidden')(getComputedStyle(document.querySelector('.sig-ink'))),
+    kids: document.querySelector('.sig').children.length,
+  }));
+  ok(short.shown && short.kids === 1, 'a 150px-tall viewport still gets it written, and handed back', JSON.stringify(short));
+  await shortCtx.close();
+
+  // If its script fails to load, the signature comes back at once, not at 3s.
+  const failCtx = await browser.newContext({ viewport: { width: 1440, height: 1100 } });
+  await failCtx.route(/\/assets\/signature-.*\.js$/, (route) => route.abort());
+  const fl = await failCtx.newPage();
+  await fl.goto(`${BASE}/`, { waitUntil: 'networkidle' });
+  const failShown = await fl.evaluate(() => ({
+    at: Math.round(performance.now()),
+    visible: ((cs) => cs.display !== 'none' && cs.visibility !== 'hidden')(getComputedStyle(document.querySelector('.sig-ink'))),
+  }));
+  ok(failShown.visible, 'its script failing to load hands the signature back at once', JSON.stringify(failShown));
+  await failCtx.close();
+
+  // Dark forced colors (Windows high contrast): the ink follows the theme's text color.
+  const hc = await browser.newContext({ viewport: { width: 1440, height: 900 }, forcedColors: 'active', colorScheme: 'dark' });
+  const hp = await hc.newPage();
+  await hp.goto(`${BASE}/`, { waitUntil: 'networkidle' });
+  const hcColors = await hp.evaluate(() => ({
+    ink: getComputedStyle(document.querySelector('.sig-ink')).fill,
+    text: getComputedStyle(document.body).color,
+  }));
+  ok(hcColors.ink === hcColors.text, 'in dark forced colors the signature takes the text color', JSON.stringify(hcColors));
+  await hc.close();
+
   /* ------------------------------------------------------- reduced motion */
   console.log('\n[reduced motion]');
   const calm = await browser.newContext({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
@@ -383,6 +650,9 @@ try {
   ok(rm.instant, 'the alternate shows at once, with no glitch');
   ok(!rm.transform && rm.moved === 0, 'no magnet, no seam movement', JSON.stringify(rm));
   ok(rm.skel === 1, 'the measurements still appear');
+
+  const calmSig = await cp2(calm);
+  ok(calmSig.visible && !calmSig.everAnim && !calmSig.everWait, 'the signature is there at first paint, and never written in', JSON.stringify(calmSig));
   await calm.close();
 
   /* ------------------------------------------------------------- keyboard */
@@ -407,6 +677,36 @@ try {
   const f2 = await kp.evaluate(() => document.querySelectorAll('[data-hot]').length);
   ok(f2 === 1, 'moving focus moves the band', String(f2));
   await kb.close();
+
+  /* ------------------------------------------------------ back / forward */
+  console.log('\n[back and forward]');
+  // Playwright turns the back/forward cache off by default; real browsers
+  // have it on, so this runs a browser with it on. Leave home before the
+  // signature was written (it sits below the fold at 1440x900), then go back.
+  const bfBrowser = await chromium.launch({ executablePath: CHROME, ignoreDefaultArgs: ['--disable-back-forward-cache'] });
+  try {
+    const bf = await bfBrowser.newContext({ viewport: { width: 1440, height: 900 } });
+    const bp2 = await bf.newPage();
+    await bp2.goto(`${BASE}/`, { waitUntil: 'networkidle' });
+    await bp2.evaluate(() => {
+      window.__persisted = null;
+      addEventListener('pageshow', (e) => { window.__persisted = e.persisted; });
+    });
+    await bp2.goto(`${BASE}/about/`, { waitUntil: 'networkidle' });
+    await bp2.goBack({ waitUntil: 'commit' });
+    await sleep(400);
+    await bp2.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await sleep(800);
+    const back = await bp2.evaluate(() => ({
+      persisted: window.__persisted,
+      visible: ((cs) => cs.display !== 'none' && cs.visibility !== 'hidden')(getComputedStyle(document.querySelector('.sig-ink'))),
+      anim: !!document.querySelector('.sig-anim'),
+    }));
+    ok(back.visible && !back.anim, `coming back to home${back.persisted ? ' from the back/forward cache' : ''}, the signature is already written`, JSON.stringify(back));
+    await bf.close();
+  } finally {
+    await bfBrowser.close();
+  }
 
   /* ----------------------------------------------------------- the phone */
   console.log('\n[phone]');

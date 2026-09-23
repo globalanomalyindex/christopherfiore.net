@@ -12,6 +12,7 @@ import { h } from '../html.ts';
 import { PATH } from '../paths.ts';
 import { RESUME, STUDIO } from '../data/studio.ts';
 import { btn, glued, page, title } from '../prose.ts';
+import { outline, ink as inkBox } from '../data/signature.json';
 
 export const HOME = {
   title: 'hi, i’m christopher robin!',
@@ -20,6 +21,48 @@ export const HOME = {
     'on the side, i’m an actor and concept artist. i love storytelling, and i bring that unique approach to all my technical work.',
   ],
 } as const;
+
+/**
+ * The signature, set boldly across the bottom of the page.
+ *
+ * It arrives finished: the traced outline of his handwriting, filled in ink.
+ * That is the whole of it with scripts off. `runtime/signature.ts` writes it in
+ * when it scrolls into view, and hands this exact markup back when it is done.
+ * The viewBox is the ink's own bounds, so the first and last strokes sit on
+ * the text's gutters.
+ */
+function signature() {
+  const [x0, y0, x1, y1] = inkBox;
+  return h(
+    'div',
+    { class: 'home-sig', 'data-sig': true },
+    h(
+      'svg',
+      {
+        class: 'sig',
+        // No width or height: the viewBox gives the ratio, and with no CSS
+        // at all a sized svg would render 2053px wide.
+        viewBox: `${x0} ${y0} ${x1 - x0} ${y1 - y0}`,
+        role: 'img',
+        'aria-label': 'signature: christopher robin fiore',
+        focusable: 'false',
+      },
+      h('path', { class: 'sig-ink', fill: 'currentColor', 'fill-rule': 'evenodd', d: outline }),
+    ),
+  );
+}
+
+/**
+ * Runs in <head>, before anything paints, and only on this page. It hides the
+ * signature so the runtime can write it in without the finished one flashing
+ * first. It never hides it for reduced motion or a back/forward visit, and it
+ * gives it back after 3s if the runtime never arrives to claim it.
+ */
+export const SIGNATURE_GATE =
+  "try{var n=performance.getEntriesByType&&performance.getEntriesByType('navigation')[0];" +
+  "if(!matchMedia('(prefers-reduced-motion: reduce)').matches&&!(n&&n.type==='back_forward')){" +
+  "var d=document.documentElement;d.classList.add('sig-wait');" +
+  "setTimeout(function(){if(!window.__psSigClaim)d.classList.remove('sig-wait')},3000)}}catch(e){}";
 
 export function home() {
   const p = (...kids: Parameters<typeof h>[2][]) =>
@@ -62,5 +105,6 @@ export function home() {
         ),
       ),
     ),
+    signature(),
   );
 }

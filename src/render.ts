@@ -17,7 +17,7 @@ import { PATH, casePath } from './paths.ts';
 import { STUDIO } from './data/studio.ts';
 import { CASE_STUDIES } from './data/casestudies.ts';
 import { ABOUT } from './data/about.ts';
-import { HOME, home } from './pages/home.ts';
+import { HOME, SIGNATURE_GATE, home } from './pages/home.ts';
 import { DESIGNS, designs } from './pages/designs.ts';
 import { caseStudy } from './pages/casestudy.ts';
 import { PAINTINGS_PAGE, paintings } from './pages/paintings.ts';
@@ -30,6 +30,8 @@ export interface Route {
   name: string;
   description: string;
   body: () => Html;
+  /** An inline script for this page's <head>, run before first paint. */
+  headScript?: string;
 }
 
 /** Whole sentences, as many as fit in a search result's snippet. */
@@ -51,6 +53,7 @@ export const ROUTES: Route[] = [
     name: '',
     description: HOME.paras[0],
     body: home,
+    headScript: SIGNATURE_GATE,
   },
   {
     path: PATH.designs,
@@ -112,6 +115,7 @@ function head(r: Route, found: boolean): string {
   } else {
     tags.push('<meta name="robots" content="noindex" />');
   }
+  if (r.headScript) tags.push(`<script>${r.headScript}</script>`);
   return tags.join('\n    ');
 }
 

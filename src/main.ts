@@ -14,6 +14,13 @@ import { initSeams, relayoutAll } from './runtime/seams.ts';
 
 initButtons();
 
+// Its own chunk, fetched only on the page that has a signature.
+// If it fails to load, the signature is handed back at once rather than at
+// the gate's 3s failsafe.
+if (document.querySelector('[data-sig]')) {
+  import('./runtime/signature.ts').catch(() => document.documentElement.classList.remove('sig-wait'));
+}
+
 /**
  * Both faces in, or as in as they are going to get. A face that fails to load
  * (a font blocker, a network error) rejects its promise; that must not stop

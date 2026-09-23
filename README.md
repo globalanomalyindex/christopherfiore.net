@@ -76,6 +76,41 @@ before and during a hover to prove nothing moves.
 Each subtracts the other's offset (`runtime/offsets.ts`) to find where the
 button rests.
 
+## The signature
+
+The home page ends on his handwritten name, spanning the text measure. It
+arrives finished, as one traced path in the HTML, so with scripts off it is
+simply there. When it scrolls into view, it writes itself in over 1.65s, and
+then hands back exactly that markup.
+
+- **Source.** `_handoff/signature/scanned_handwriting_text.png`. It is traced
+  by `scripts/trace-signature.py` into `src/data/signature.json`: the ink
+  outline (potrace, within 1.41px of the source edge) and the pen paths
+  (skeleton centerlines, checked to cover every inked pixel). The script
+  refuses to write if either check fails.
+- **Motion.** `src/runtime/signature-schedule.ts` is pure and has no DOM. It
+  decides writing order, speed and nib width:
+  - speed slows through tight curves (a power-law slowdown)
+  - pen lifts scale with distance (Fitts's law), with a breath before each
+    word and before the eyes
+  - the nib is narrow at touchdown and swells to full weight behind the tip
+  - everything is clipped to the outline, so it can only ever uncover real ink
+
+  It was chosen by a design panel of three filmed prototypes and three judges.
+  `ORDER` is tied to this trace by a fingerprint (stroke count and total pen
+  length). A re-trace can renumber strokes, so the schedule refuses to build
+  until `ORDER` is reviewed. It also refuses any stroke written twice or left
+  out.
+- **No flash.** An inline script in the home page's head hides the signature
+  before first paint. The runtime claims it when it loads. If the runtime
+  hasn't arrived after 3s, the gate gives the static signature back.
+- **When it doesn't play.** Reduced motion (on at load or switched on
+  later), back/forward visits (including back/forward-cache restores) and a
+  script that fails to load all show the finished signature at once.
+  Once handed back, it is never erased and written in afterwards.
+- **Debugging.** `/?sig-debug` exposes `window.__sig.seek(ms)` and `play()` for
+  filming frames.
+
 ## Checks
 
 ```bash
@@ -99,6 +134,17 @@ runs it against the live site. It checks:
 - band, glitch, zero reflow, the magnet, seams, the skeleton, and a button claiming space
 - reduced motion, keyboard focus, and touch
 - that every page fits 375px wide with no punctuation orphaned from its button
+- the signature:
+  - it waits, writes, and hands back the served markup
+  - ink never disappears frame to frame, checked per pixel at 1x and 2x
+  - the last frame and the finished state match the no-JS render pixel for pixel
+  - nothing flashes when the script is slow, and the signature comes back at
+    3s if the script never arrives
+  - it doesn't play under reduced motion, whether on from the start or
+    switched on before it plays, or on a back/forward-cache return
+  - it still writes on a viewport too short to show 60% of it
+  - it stays visible in dark forced colors
+  - its script loads on the home page only
 
 ## Decisions the design didn't make
 

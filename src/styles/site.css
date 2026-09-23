@@ -74,10 +74,6 @@ body {
   flex-direction: column;
 }
 
-.page--home {
-  padding-bottom: 64px;
-}
-
 .page p,
 .page figure,
 .page h1,
@@ -309,6 +305,52 @@ code {
   white-space: nowrap;
 }
 
+/*
+  The signature. The last thing on the home page, pushed to the bottom of the
+  first screen when the prose is short enough to leave room, and spanning the
+  full text measure edge to edge. The page's bottom padding matches the
+  gutter, so it is inset by the same amount on three sides.
+*/
+.page--home {
+  padding-bottom: var(--pad-x);
+}
+
+.home-sig {
+  margin-top: auto;
+  padding-top: clamp(40px, 100vw * 64 / 1440, 64px);
+}
+
+/* The ink is inherited, not set here, so a forced-colors theme recolors it with the text. */
+.sig {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+/*
+  Hidden before first paint by the inline gate, then by the runtime until it
+  writes, so it can be written in. The whole block, not just its ink: a
+  visible block still scores as layout shift when the web font swaps in above
+  it and moves it.
+*/
+.sig-wait .home-sig,
+.home-sig[data-sig='waiting'] {
+  visibility: hidden;
+}
+
+/* A printout always gets the finished signature, whatever the page was doing. */
+@media print {
+  .home-sig,
+  .sig-ink {
+    display: inline !important;
+    visibility: visible !important;
+  }
+  .sig-anim {
+    display: none;
+  }
+}
+
 /* ---------------------------------------------------------------- buttons */
 
 /*
@@ -499,5 +541,8 @@ code {
   }
   .home-prose {
     gap: 28px;
+  }
+  .page--home {
+    padding-bottom: var(--pad-x);
   }
 }
