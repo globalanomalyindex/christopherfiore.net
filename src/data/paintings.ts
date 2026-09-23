@@ -1,25 +1,18 @@
 /**
- * Channel 02 · Paintings.
+ * Paintings. Twenty works, transcribed from the devkit's `data/artwork.json`
+ * and `SITE_LINKS.md`. `href` points at each work's ArtStation record.
  *
- * Twenty works transcribed from devkit `data/artwork.json` and
- * `SITE_LINKS.md`. `href` points at the ArtStation record, which is a
- * reference — no ArtStation content is bundled here.
+ * Images are WebP at 1200px on the long edge, which covers a 652px gallery
+ * column at 2x. The original JPEGs are byte-identical in
+ * `_source/christopher-fiore-portfolio-devkit-v31/assets/artstation/`, which
+ * is gitignored.
  *
- * IMAGES ARE WEBP AT 1200px ON THE LONG EDGE, not the devkit's JPEGs. The
- * gallery shows all twenty at once now, and 12MB of JPEG for one screen is not
- * a gallery, it is a download. The originals are byte-identical in
- * `_source/christopher-fiore-portfolio-devkit-v31/assets/artstation/`, which is
- * gitignored, exactly as the BLSP sheets are. 1200 covers a 536.7px column at
- * 2x on a 1920 stage; a larger display upscales by about 1.2, which on a
- * painting is invisible.
+ * `width` and `height` are the ORIGINAL dimensions and must stay that way.
+ * They become each image's width and height attributes, so every figure
+ * reserves its box before the file arrives.
  *
- * `width` and `height` are the ORIGINAL dimensions and must stay that way. The
- * gallery computes every column height from them before a single image loads,
- * so they are layout input, not metadata.
- *
- * `state` maps to the devkit's own sets: `hung`, `selected`, `archive`. It is
- * kept because it is a fact about the collection, but nothing renders it now
- * that the wall list is gone and every work is on the wall.
+ * `state` maps to the devkit's own sets: `hung`, `selected`, `archive`.
+ * Nothing renders it; it is a fact about the collection.
  */
 
 import type { PaintingRecord } from './types.ts';
