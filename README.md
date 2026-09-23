@@ -80,8 +80,19 @@ button rests.
 
 The home page ends on his handwritten name, spanning the text measure. It
 arrives finished, as one traced path in the HTML, so with scripts off it is
-simply there. When it scrolls into view, it writes itself in over 1.65s, and
+simply there. On every visit and reload it writes itself in over 1.65s, and
 then hands back exactly that markup.
+
+**Home is one screen, always.** Headline, prose and signature fit the
+viewport on any screen, with no scrolling, and the type scales down to make
+room. Every size on the page is the 1440 design's size times one number, `k`,
+and the measure is set in em. So at any `k` the lines break where the design
+breaks them, and the text block is exactly `k` times its measured height (744px
+at full size). `k` is the largest of full size, the width's limit and the
+height left over after the signature. Portrait phones scale the same way around
+a 390px reference layout, with a power-law fit measured on seventeen phone
+sizes. It is all CSS, in the home section of `site.css`, and the check script
+proves it fits on thirteen common screen sizes.
 
 - **Source.** `_handoff/signature/scanned_handwriting_text.png`. It is traced
   by `scripts/trace-signature.py` into `src/data/signature.json`: the ink
@@ -104,6 +115,10 @@ then hands back exactly that markup.
 - **No flash.** An inline script in the home page's head hides the signature
   before first paint. The runtime claims it when it loads. If the runtime
   hasn't arrived after 3s, the gate gives the static signature back.
+- **When it plays.** It starts about 100ms after first paint, once its
+  script arrives, and it is in view from the start because the page fits the
+  screen. On a window too short even for the type floors (under about 400px
+  tall), it waits until it is scrolled into view.
 - **When it doesn't play.** Reduced motion (on at load or switched on
   later), back/forward visits (including back/forward-cache restores) and a
   script that fails to load all show the finished signature at once.
@@ -135,7 +150,8 @@ runs it against the live site. It checks:
 - reduced motion, keyboard focus, and touch
 - that every page fits 375px wide with no punctuation orphaned from its button
 - the signature:
-  - it waits, writes, and hands back the served markup
+  - home fits one screen on thirteen common screen sizes, phones included
+  - on load it writes itself in with no scroll, and hands back the served markup
   - ink never disappears frame to frame, checked per pixel at 1x and 2x
   - the last frame and the finished state match the no-JS render pixel for pixel
   - nothing flashes when the script is slow, and the signature comes back at

@@ -34,7 +34,11 @@ declare global {
 }
 
 const NS = 'http://www.w3.org/2000/svg';
-/** Wait this long once it is in view, so it writes after the eye lands, not during the scroll. */
+/**
+ * Wait this long once it is in view, so it starts after the page has settled
+ * and the eye has landed. The home page always fits the screen, so on a normal
+ * visit it is in view from the first frame and this is the whole delay.
+ */
 const BEAT = 120;
 /** How much of it must be in view to start. */
 const IN_VIEW = 0.6;

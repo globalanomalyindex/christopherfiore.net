@@ -381,6 +381,31 @@ try {
   ok(bareErrors.length === 0, 'and throws nothing', bareErrors.join(' | '));
   await bare.close();
 
+  /* ----------------------------------------------------------- one screen */
+  console.log('\n[home fits one screen]');
+  // Browser-visible sizes of common screens: laptops and desktops with their
+  // tabs and toolbars, a portrait tablet, phones with Safari's bars showing,
+  // and a phone on its side.
+  const SCREENS = [
+    [1920, 970], [1536, 730], [1440, 789], [1366, 650], [1280, 690], [1024, 660],
+    [768, 930, true], [430, 832, true], [390, 664, true], [375, 553, true], [360, 640, true], [320, 480, true], [844, 390, true],
+  ];
+  const overflow = [];
+  for (const [w, h, touch] of SCREENS) {
+    const c = await browser.newContext({ viewport: { width: w, height: h }, isMobile: !!touch, hasTouch: !!touch });
+    const pg = await c.newPage();
+    await pg.goto(`${BASE}/`, { waitUntil: 'networkidle' });
+    await pg.evaluate(() => document.fonts.ready);
+    const m = await pg.evaluate(() => ({
+      over: document.documentElement.scrollHeight - innerHeight,
+      overX: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      sigBottom: document.querySelector('.sig').getBoundingClientRect().bottom,
+    }));
+    if (m.over > 0 || m.overX > 0 || m.sigBottom > h) overflow.push(`${w}x${h} over ${m.over}`);
+    await c.close();
+  }
+  ok(overflow.length === 0, `home fits one screen, signature and all, on all ${SCREENS.length} screen sizes`, overflow.join(' | '));
+
   /* ------------------------------------------------------------ signature */
   console.log('\n[signature]');
   const SIG_MARKUP = /^<path class="sig-ink" fill="currentColor" fill-rule="evenodd" d="[^"]+"><\/path>$/;
@@ -429,20 +454,36 @@ try {
     }, png.toString('base64'));
   };
 
-  // It writes itself in once it is in view, then hands back exactly the markup the server sent.
-  const sp = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-  await sp.goto(`${BASE}/`, { waitUntil: 'networkidle' });
-  const armed = await sp.evaluate(() => ({
-    hidden: getComputedStyle(document.querySelector('.sig-ink')).display === 'none' || getComputedStyle(document.querySelector('.sig-ink')).visibility === 'hidden',
-    block: document.querySelector('[data-sig]').getAttribute('data-sig'),
-    anim: !!document.querySelector('.sig-anim'),
-  }));
-  ok(armed.hidden && !armed.anim, 'the signature waits, hidden, until it is scrolled into view', JSON.stringify(armed));
-  await sp.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
-  await sleep(700);
-  const writing = await sp.evaluate(() => !!document.querySelector('.sig-anim'));
-  ok(writing, 'scrolled into view, it writes itself in');
-  await sleep(1600);
+  // On load, with no scroll at all, it writes itself in, and the finished
+  // signature never shows first. Then it hands back exactly the served markup.
+  const sp = await browser.newPage({ viewport: { width: 1440, height: 789 } });
+  await sp.addInitScript(() => {
+    window.__frames = [];
+    const tick = () => {
+      const ink = document.querySelector('.sig-ink');
+      if (ink) {
+        const cs = getComputedStyle(ink);
+        window.__frames.push({
+          t: Math.round(performance.now()),
+          shown: cs.display !== 'none' && cs.visibility !== 'hidden',
+          anim: !!document.querySelector('.sig-anim'),
+        });
+      }
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  });
+  await sp.goto(`${BASE}/`, { waitUntil: 'load' });
+  await sleep(2600);
+  const frames = await sp.evaluate(() => window.__frames);
+  const firstAnim = frames.findIndex((f) => f.anim);
+  const flashed = frames.slice(0, firstAnim < 0 ? frames.length : firstAnim).filter((f) => f.shown).length;
+  ok(firstAnim >= 0 && frames[firstAnim].t < 1500, 'on load, with no scroll, it writes itself in', firstAnim >= 0 ? `from ${frames[firstAnim].t}ms` : 'never');
+  ok(flashed === 0, 'and the finished signature never shows before it is written', `${flashed} frames`);
+  ok(
+    frames.length > 0 && frames[frames.length - 1].shown && !frames[frames.length - 1].anim,
+    'it ends written and at rest',
+  );
   const handed = await sp.evaluate(() => ({
     kids: document.querySelector('.sig').children.length,
     ink: document.querySelector('.sig-ink').outerHTML,
@@ -566,9 +607,11 @@ try {
   ok(outlineHead && !leaked, 'no script bundle carries the outline; it lives in the HTML only');
   await chunkPage.close();
 
-  // Reduced motion switched on after the claim but before it is in view: it is
-  // handed back and never erased and written in afterwards.
-  const flipCtx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  // Reduced motion switched on after the claim but before it plays: it is
+  // handed back and never erased and written in afterwards. The home page fits
+  // any real screen, so the one way to hold it claimed and waiting is a window
+  // too short for the page (150px), where it sits below the fold.
+  const flipCtx = await browser.newContext({ viewport: { width: 1440, height: 150 } });
   const fp = await flipCtx.newPage();
   await fp.addInitScript(() => {
     window.__everAnimAfterFlip = false;
@@ -681,29 +724,47 @@ try {
   /* ------------------------------------------------------ back / forward */
   console.log('\n[back and forward]');
   // Playwright turns the back/forward cache off by default; real browsers
-  // have it on, so this runs a browser with it on. Leave home before the
-  // signature was written (it sits below the fold at 1440x900), then go back.
+  // have it on, so this runs a browser with it on.
   const bfBrowser = await chromium.launch({ executablePath: CHROME, ignoreDefaultArgs: ['--disable-back-forward-cache'] });
-  try {
-    const bf = await bfBrowser.newContext({ viewport: { width: 1440, height: 900 } });
-    const bp2 = await bf.newPage();
-    await bp2.goto(`${BASE}/`, { waitUntil: 'networkidle' });
-    await bp2.evaluate(() => {
-      window.__persisted = null;
-      addEventListener('pageshow', (e) => { window.__persisted = e.persisted; });
-    });
-    await bp2.goto(`${BASE}/about/`, { waitUntil: 'networkidle' });
-    await bp2.goBack({ waitUntil: 'commit' });
-    await sleep(400);
-    await bp2.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
-    await sleep(800);
-    const back = await bp2.evaluate(() => ({
+  const sigState = (pg) =>
+    pg.evaluate(() => ({
       persisted: window.__persisted,
       visible: ((cs) => cs.display !== 'none' && cs.visibility !== 'hidden')(getComputedStyle(document.querySelector('.sig-ink'))),
       anim: !!document.querySelector('.sig-anim'),
     }));
-    ok(back.visible && !back.anim, `coming back to home${back.persisted ? ' from the back/forward cache' : ''}, the signature is already written`, JSON.stringify(back));
+  const leaveAndReturn = async (pg) => {
+    await pg.evaluate(() => {
+      window.__persisted = null;
+      addEventListener('pageshow', (e) => { window.__persisted = e.persisted; });
+    });
+    await pg.goto(`${BASE}/about/`, { waitUntil: 'networkidle' });
+    await pg.goBack({ waitUntil: 'commit' });
+    await sleep(400);
+  };
+  try {
+    // Written, then away and back: it is not written a second time.
+    const bf = await bfBrowser.newContext({ viewport: { width: 1440, height: 789 } });
+    const b1 = await bf.newPage();
+    await b1.goto(`${BASE}/`, { waitUntil: 'networkidle' });
+    await sleep(2400);
+    await leaveAndReturn(b1);
+    await sleep(600);
+    const back1 = await sigState(b1);
+    ok(back1.visible && !back1.anim, `back to home${back1.persisted ? ' from the back/forward cache' : ''} after it was written: it is not written again`, JSON.stringify(back1));
     await bf.close();
+
+    // Claimed but not yet written (a 150px window, below the fold), then away
+    // and back: it is shown written, and scrolling to it does not write it in.
+    const bf2 = await bfBrowser.newContext({ viewport: { width: 1440, height: 150 } });
+    const b2 = await bf2.newPage();
+    await b2.goto(`${BASE}/`, { waitUntil: 'networkidle' });
+    await b2.waitForFunction(() => window.__psSigClaim);
+    await leaveAndReturn(b2);
+    await b2.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await sleep(800);
+    const back2 = await sigState(b2);
+    ok(back2.visible && !back2.anim, `back to home${back2.persisted ? ' from the back/forward cache' : ''} before it was written: shown written, not written in`, JSON.stringify(back2));
+    await bf2.close();
   } finally {
     await bfBrowser.close();
   }

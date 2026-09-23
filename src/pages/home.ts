@@ -27,7 +27,8 @@ export const HOME = {
  *
  * It arrives finished: the traced outline of his handwriting, filled in ink.
  * That is the whole of it with scripts off. `runtime/signature.ts` writes it in
- * when it scrolls into view, and hands this exact markup back when it is done.
+ * on every visit (the page always fits one screen, so it is always in view),
+ * and hands this exact markup back when it is done.
  * The viewBox is the ink's own bounds, so the first and last strokes sit on
  * the text's gutters.
  */

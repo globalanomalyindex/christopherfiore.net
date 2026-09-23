@@ -279,25 +279,76 @@ code {
 
 /* ------------------------------------------------------------------- home */
 
+/*
+  THE HOME PAGE IS ONE SCREEN, ALWAYS. The headline, the prose and the
+  signature all fit the viewport, with no scrolling, on any screen.
+
+  It works by scaling one number. Every size here is the 1440 design's size
+  times --k, px per design px, and that includes the measure, which is set in
+  em. So at any k the lines break exactly where the design breaks them, and
+  the text block is exactly k times its design height, T. That makes the fit
+  exact rather than a guess:
+
+    --room   the height left for the text: the viewport, minus the padding,
+             the gap and the signature, which always spans the text measure
+    --k      the largest scale that fits: full size (1px), the width's own
+             limit (100vw / 1440), or room / T
+
+  Portrait phones get the same treatment around a 390px reference layout
+  instead (bigger type, more lines), below. Nothing here needs a script, so it
+  fits with scripts off too.
+
+  The floors keep a very short window (under ~400px tall) readable at the cost
+  of scrolling; no phone or computer screen reaches them.
+*/
+:root {
+  --vh: 100vh;
+}
+
+@supports (height: 100svh) {
+  :root {
+    /* the viewport with the browser's own bars showing, so nothing hides under them */
+    --vh: 100svh;
+  }
+}
+
+.page.page--home {
+  /* T: the text block's height at k = 1, measured, plus 2% for safety */
+  --text-h: 760;
+  --home-pt: clamp(16px, var(--vh) * 0.05, 40px);
+  --home-pb: min(var(--pad-x), var(--vh) * 0.05);
+  --sig-gap: clamp(16px, min(100vw * 64 / 1440, var(--vh) * 0.06), 64px);
+  /* the signature spans the measure, unless that would take over 28% of the height */
+  --sig-w: min(min(100vw, 1440px) - 2 * var(--pad-x), var(--vh) * 0.28 * 2053 / 308);
+  --room: calc(var(--vh) - var(--home-pt) - var(--sig-gap) - var(--sig-w) * 308 / 2053 - var(--home-pb));
+  --k: min(1px, 100vw / 1440, var(--room) / var(--text-h));
+  min-height: var(--vh);
+  padding-top: var(--home-pt);
+  padding-bottom: var(--home-pb);
+}
+
 .page--home .title {
   margin: 0;
+  font-size: max(20px, var(--k) * 88);
 }
 
 .home-prose {
-  margin-top: 32px;
+  margin-top: calc(var(--k) * 32);
   display: flex;
   flex-direction: column;
-  gap: 40px;
-  font-size: var(--fs-lede);
+  gap: calc(var(--k) * 40);
+  font-size: max(10px, var(--k) * 40);
   line-height: 1.5;
 }
 
+/* 1120px at 40px: the measure scales with the type, so the lines break where the design's do */
 .home-p {
-  max-width: var(--measure-wide);
+  max-width: 28em;
 }
 
+/* 1344px at 40px, the full column: wider than the others, as in the design, and still scaled */
 .home-p--wide {
-  max-width: none;
+  max-width: 33.6em;
 }
 
 /* "you can view my portfolio [product designs] and [paintings]," is one line */
@@ -306,24 +357,19 @@ code {
 }
 
 /*
-  The signature. The last thing on the home page, pushed to the bottom of the
-  first screen when the prose is short enough to leave room, and spanning the
-  full text measure edge to edge. The page's bottom padding matches the
-  gutter, so it is inset by the same amount on three sides.
+  The signature, pushed to the bottom of the screen and spanning the full
+  text measure edge to edge.
 */
-.page--home {
-  padding-bottom: var(--pad-x);
-}
-
 .home-sig {
   margin-top: auto;
-  padding-top: clamp(40px, 100vw * 64 / 1440, 64px);
+  padding-top: var(--sig-gap);
 }
 
 /* The ink is inherited, not set here, so a forced-colors theme recolors it with the text. */
 .sig {
   display: block;
-  width: 100%;
+  width: var(--sig-w, 100%);
+  max-width: 100%;
   height: auto;
   overflow: visible;
 }
@@ -481,12 +527,58 @@ code {
 /* -------------------------------------------------------------- smaller */
 
 /*
-  The home line stops being locked to one line once it can no longer fit.
-  The lede size bottoms out at 26px below a 936px viewport, and from there the
-  locked clause is wider than the measure, so it wraps like any sentence and
-  the forced break goes with it.
+  Portrait phones and narrow windows: the home page fits one screen around a
+  390px reference layout instead, with bigger type and more lines than the
+  1440 design scaled down would give. Everything is still one number: at k = 1
+  this is the phone layout at 390 wide, k follows the width up to 1.1 (where
+  the type stops growing and lines just get longer, which only makes the text
+  shorter than T, so the fit stays safe), and room / T caps it on short
+  screens. The locked first line wraps like any sentence here.
 */
-@media (max-width: 960px) {
+@media (max-width: 870px) and (orientation: portrait) {
+  .page.page--home {
+    --text-h: 733;
+    --pad-x: calc(100vw * 20 / 390);
+    --home-pt: clamp(16px, var(--vh) * 0.04, 28px);
+    --home-pb: var(--pad-x);
+    --sig-gap: clamp(16px, var(--vh) * 0.05, 40px);
+    /* the width's own scale, and the linear fit: always safe, sometimes small */
+    --kw: min(1.1px, 100vw / 390);
+    --k: min(var(--kw), var(--room) / var(--text-h));
+  }
+}
+
+/*
+  A closer fit for phones where the math is available (every current
+  browser). At a phone's fixed width, smaller type fits more words per line,
+  so the text block shrinks faster than the type does: roughly with the
+  square of it for the prose, linearly for the headline and the gaps. The
+  scale that fits is therefore a power of the room ratio between square root
+  and linear. Measured across seventeen phone viewports, the worst case needs
+  0.593; this uses 0.65. `tan(atan2(a, b))` is a / b as a plain number, which
+  plain calc() cannot divide lengths into.
+*/
+@supports (opacity: pow(tan(atan2(1px, 2px)), 0.5)) {
+  @media (max-width: 870px) and (orientation: portrait) {
+    .page.page--home {
+      --room-ratio: tan(atan2(max(var(--room), 1px), var(--kw) * var(--text-h)));
+      --k: calc(var(--kw) * min(1, pow(var(--room-ratio), 0.65)));
+    }
+  }
+}
+
+@media (max-width: 870px) and (orientation: portrait) {
+  .page--home .title {
+    font-size: max(20px, var(--k) * 48);
+  }
+  .home-prose {
+    margin-top: calc(var(--k) * 24);
+    gap: calc(var(--k) * 24);
+    font-size: max(10px, var(--k) * 22);
+  }
+  .home-p {
+    max-width: none;
+  }
   .home-lock {
     white-space: normal;
   }
@@ -538,11 +630,5 @@ code {
   }
   .index {
     gap: 24px;
-  }
-  .home-prose {
-    gap: 28px;
-  }
-  .page--home {
-    padding-bottom: var(--pad-x);
   }
 }
