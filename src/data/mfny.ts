@@ -151,7 +151,7 @@ export const MFNY_SECTIONS: MfnySection[] = [
     view: 1,
     name: 'the tri-code filter',
     paras: [
-      'the type filter wanted four states and i did not want four more grey pills competing with ' +
+      'the type filter wanted four states and i did not want four more gray pills competing with ' +
         'the type tags on the cards below. the type colors are the strongest signal on the page ' +
         'and spending them twice in one viewport weakens both.',
       'so it became one pill split on a thirteen degree diagonal, one segment per type, showing ' +
@@ -240,3 +240,27 @@ export const MFNY_GLANCE: { field: string; value: string }[] = [
   { field: 'taxonomy', value: 'extraction (resin / rosin) split from texture (badder / concentrate)' },
   { field: 'THC values', value: 'placeholders. the live PDPs render that field empty' },
 ];
+
+/**
+ * The two captures: the live page, then the redesign. `view` on a section
+ * above is an index into this list. The "before" is the evidence for every
+ * claim the case makes about the live page, so it stays a capture and never
+ * becomes a link to the storefront.
+ */
+export const MFNY_FIGURES = [
+  {
+    src: '/projects/mfny-before.webp',
+    alt:
+      'The live mfny concentrates page: two adjacent cards both titled Classics Chemdog Live ' +
+      'Rosin Concentrate and Classics Chemdog Live Resin Concentrate, tagged Indica and Sativa',
+    caption:
+      'the live page. chemdog is one of the split strains, here twice, tagged Indica on one card and Sativa on the other.',
+  },
+  {
+    src: '/projects/live/mfny.webp',
+    alt:
+      'The redesigned grid: eleven strain cards, each with its type tags and an in-card form ' +
+      'switcher, under a filter row carrying the tri-code type pill',
+    caption: 'the redesign. one card per strain, with the forms inside it.',
+  },
+].map((f) => ({ ...f, width: 1456, height: 874 }));

@@ -44,7 +44,7 @@ export const DF2TM = {
 
 export const DF2TM_SECTIONS: Df2tmSection[] = [
   {
-    id: 'behaviour',
+    id: 'behavior',
     name: 'what it does',
     paras: [
       'it teaches while claude works. when a load-bearing concept shows up in your task, df2tm ' +

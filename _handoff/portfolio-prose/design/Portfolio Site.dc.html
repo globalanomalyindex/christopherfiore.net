@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Averia+Serif+Libre:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&amp;display=swap" rel="stylesheet">
+<style>
+@font-face{font-family:'Dessign Maison';src:url('public/fonts/SLTFDessignMaison-Regular.otf') format('opentype');font-display:block}
+body{margin:0;background:#D9D2CB;font-family:'Averia Serif Libre',Georgia,serif;-webkit-font-smoothing:antialiased}
+a{color:#3F5195}a:hover{color:#2E3C73}a:visited{color:#6A4C86}
+</style>
+</helmet>
+<section id="site" style="padding:56px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;align-items:baseline;gap:12px;font:500 15px/1.3 ui-monospace,Menlo,monospace;color:#231C22">
+<span style="padding:3px 8px;background:#231C22;color:#F5E4D9">site</span>
+<span>every page on the 5a system. a quick pass parts the text slightly; hold 0.7s on one spot and it explodes into the full skeleton, which follows you until the cursor leaves the text.</span>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:56px;align-items:flex-start">
+<div id="p-home" style="display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;gap:10px;align-items:baseline;font:13px/1.3 ui-monospace,Menlo,monospace;color:#5a4d4a"><a href="#p-home" style="padding:3px 8px;background:#231C22;color:#F5E4D9;text-decoration:none;font-weight:700">home</a>home. 5a as set</div>
+<div data-paper data-screen-label="home" data-seams-root data-skel-mode="local" style="width:1440px;position:relative;min-height:1024px;background:#F5E4D9;color:#231C22;box-sizing:border-box;padding:40px 48px 64px;display:flex;flex-direction:column;box-shadow:0 1px 3px rgba(35,28,34,.12)">
+<h1 data-seams style="margin:0;font-weight:700;font-size:88px;line-height:1.05;letter-spacing:-.01em">hi, i’m christopher robin!</h1>
+<div style="margin-top:32px;display:flex;flex-direction:column;gap:40px;font-size:40px;line-height:1.5">
+<p data-seams style="margin:0;max-width:1120px;text-wrap:pretty">i’m a web designer &amp; product designer specializing in UI/UX and artificial intelligence, and founder of design studio perfection synthétique.</p>
+<p data-seams style="margin:0;max-width:1120px;text-wrap:pretty">on the side, i’m an actor and concept artist. i love storytelling, and i bring that unique approach to all my technical work.</p>
+<p data-seams style="margin:0;max-width:none"><span style="white-space:nowrap">you can view my portfolio <a data-btn href="#p-designs" style="position:relative;isolation:isolate;display:inline-flex;align-items:baseline;gap:.2em;padding:.02em .3em .06em;border:1px solid #231C22;line-height:1.2;color:#231C22;text-decoration:none;vertical-align:baseline"><span data-word>product designs</span><svg viewBox="0 0 12 12" aria-hidden="true" style="width:.42em;height:.42em;overflow:visible;align-self:center"><path d="M2.5 9.5L9.5 2.5M4 2.5h5.5V8" style="fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:square"></path></svg></a> and <a data-btn href="#p-paintings" style="position:relative;isolation:isolate;display:inline-flex;align-items:baseline;gap:.2em;padding:.02em .3em .06em;border:1px solid #231C22;line-height:1.2;color:#231C22;text-decoration:none;vertical-align:baseline"><span data-word>paintings</span><svg viewBox="0 0 12 12" aria-hidden="true" style="width:.42em;height:.42em;overflow:visible;align-self:center"><path d="M2.5 9.5L9.5 2.5M4 2.5h5.5V8" style="fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:square"></path></svg></a>,</span><br>or say hi <a data-btn href="#p-about" style="position:relative;isolation:isolate;display:inline-flex;align-items:baseline;gap:.2em;padding:.02em .3em .06em;border:1px solid #231C22;line-height:1.2;color:#231C22;text-decoration:none;vertical-align:baseline"><span data-word>chrisrobinfiore@gmail.com</span><svg viewBox="0 0 12 12" aria-hidden="true" style="width:.42em;height:.42em;overflow:visible;align-self:center"><path d="M2.5 9.5L9.5 2.5M4 2.5h5.5V8" style="fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:square"></path></svg></a>. you can also read my <a data-btn href="public/documents/christopher-robin-fiore-resume-2026.pdf" target="_blank" rel="noopener" style="position:relative;isolation:isolate;display:inline-flex;align-items:baseline;gap:.2em;padding:.02em .3em .06em;border:1px solid #231C22;line-height:1.2;color:#231C22;text-decoration:none;vertical-align:baseline"><span data-word>resume</span><svg viewBox="0 0 12 12" aria-hidden="true" style="width:.42em;height:.42em;overflow:visible;align-self:center"><path d="M2.5 9.5L9.5 2.5M4 2.5h5.5V8" style="fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:square"></path></svg></a>. i’d love to hear from you :)</p>
+</div>
+</div>
+</div>
+<div id="p-designs" style="display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;gap:10px;align-items:baseline;font:13px/1.3 ui-monospace,Menlo,monospace;color:#5a4d4a"><a href="#p-designs" style="padding:3px 8px;background:#231C22;color:#F5E4D9;text-decoration:none;font-weight:700">designs</a>product designs. every case is one sentence, its name the button</div>
+<div data-paper data-screen-label="product designs" data-seams-root data-skel-mode="local" style="width:1440px;position:relative;min-height:1024px;background:#F5E4D9;color:#231C22;box-sizing:border-box;padding:40px 48px 104px;display:flex;flex-direction:column;box-shadow:0 1px 3px rgba(35,28,34,.12)">
+<p data-seams style="margin:0;font-size:26px;line-height:1.5;max-width:1120px">back <a data-btn href="#p-home" style="position:relative;isolation:isolate;display:inline-flex;align-items:baseline;gap:.2em;padding:.02em .3em .06em;border:1px solid #231C22;line-height:1.2;color:#231C22;text-decoration:none;vertical-align:baseline"><span data-word>home</span><svg viewBox="0 0 12 12" aria-hidden="true" style="width:.42em;height:.42em;overflow:visible;align-self:center"><path d="M2.5 9.5L9.5 2.5M4 2.5h5.5V8" style="fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:square"></path></svg></a>, or over to <a data-btn href="#p-paintings" style="position:relative;isolation:isolate;display:inline-flex;align-items:baseline;gap:.2em;padding:.02em .3em .06em;border:1px solid #231C22;line-height:1.2;color:#231C22;text-decoration:none;vertical-align:baseline"><span data-word>paintings</span><svg viewBox="0 0 12 12" aria-hidden="true" style="width:.42em;height:.42em;overflow:visible;align-self:center"><path d="M2.5 9.5L9.5 2.5M4 2.5h5.5V8" style="fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:square"></path></svg></a> and <a data-btn href="#p-about" style="position:relative;isolation:isolate;display:inline-flex;align-items:baseline;gap:.2em;padding:.02em .3em .06em;border:1px solid #231C22;line-height:1.2;color:#231C22;text-decoration:none;vertical-align:baseline"><span data-word>about</span><svg viewBox="0 0 12 12" aria-hidden="true" style="width:.42em;height:.42em;overflow:visible;align-self:center"><path d="M2.5 9.5L9.5 2.5M4 2.5h5.5V8" style="fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:square"></path></svg></a>.</p>
+<h1 data-seams style="margin:56px 0 0;font-weight:700;font-size:88px;line-height:1.05;letter-spacing:-.01em">product designs</h1>
+<p data-seams style="margin:24px 0 0;font-size:40px;line-height:1.5;max-width:1120px;text-wrap:pretty">i design ambitious products, prototype the difficult parts, and test whether the ideas actually hold up.</p>
+<div style="margin-top:56px;display:flex;flex-direction:column;gap:30px">
+<p data-seams style="margin:0;font-size:32px;line-height:1.5;max-width:1120px;text-wrap:pretty"><a data-btn href="https://globalanomalyindex.github.io/after-tokens/" target="_blank" rel="noopener" style="position:relative;isolation:isolate;display:inline-flex;align-items:baseline;gap:.2em;padding:.02em .3em .06em;border:1px solid #231C22;line-height:1.2;color:#231C22;text-decoration:none;vertical-align:baseline"><span data-word>after tokens</span><svg viewBox="0 0 12 12" aria-hidden="true" style="width:.42em;height:.42em;overflow:visible;align-self:center"><path d="M2.5 9.5L9.5 2.5M4 2.5h5.5V8" style="fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:square"></path></svg></a>: parallel language that shows what is provisional and what has settled. <span style="color:#6E5B57">motion interaction study, w/ case study, 2026.</span></p>
+<p data-seams style="margin:0;font-size:32px;line-height:1.5;max-width:1120px;text-wrap:pretty"><a data-btn href="#" style="position:relative;isolation:isolate;display:inline-flex;align-items:baseline;gap:.2em;padding:.02em .3em .06em;border:1px solid #231C22;line-height:1.2;color:#231C22;text-decoration:none;vertical-align:baseline"><span data-word>apple wallet card sharing concept</span><svg viewBox="0 0 12 12" aria-hidden="true" style="width:.42em;height:.42em;overflow:visible;align-self:center"><path d="M2.5 9.5L9.5 2.5M4 2.5h5.5V8" style="fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:square"></path></svg></a>: a temporary single use version of your card, handed to someone over imessage. <span style="color:#6E5B57">design study, w/ case study, 2026.</span></p>
+<p data-seams style="margin:0;font-size:32px;line-height:1.5;max-width:1120px;text-wrap:pretty"><a data-btn href="#p-case" style="position:relative;isolation:isolate;display:inline-flex;align-items:baseline;gap:.2em;padding:.02em .3em .06em;border:1px solid #231C22;line-height:1.2;color:#231C22;text-decoration:none;vertical-align:baseline"><span data-word>chellbook</span><svg viewBox="0 0 12 12" aria-hidden="true" style="width:.42em;height:.42em;overflow:visible;align-self:center"><path d="M2.5 9.5L9.5 2.5M4 2.5h5.5V8" style="fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:square"></path></svg></a>: AI-based iOS app for celiac food safety, designed for a client living with celiac disease. <span style="color:#6E5B57">client work, w/ case study, 2026.</span></p>
+<p data-seams style="margin:0;font-size:32px;line-height:1.5;max-width:1120px;text-wrap:pretty"><a data-btn href="#" style="position:relative;isolation:isolate;display:inline-flex;align-items:baseline;gap:.2em;padding:.02em .3em .06em;border:1px solid #231C22;line-height:1.2;color:#231C22;text-decoration:none;vertical-align:baseline"><span data-word>lee</span><svg viewBox="0 0 12 12" aria-hidden="true" style="width:.42em;height:.42em;overflow:visible;align-self:center"><path d="M2.5 9.5L9.5 2.5M4 2.5h5.5V8" style="fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:square"></path></svg></a>: self-tape studio for actors: the notes become color you read while acting. <span style="color:#6E5B57">design study, 2026.</span></p>
+<p data-seams style="margin:0;font-size:32px;line-height:1.5;max-width:1120px;text-wrap:pretty"><a data-btn href="#" style="position:relative;isolation:isolate;display:inline-flex;align-items:baseline;gap:.2em;padding:.02em .3em .06em;border:1px solid #231C22;line-height:1.2;color:#231C22;text-decoration:none;vertical-align:baseline"><span data-word>mfny concentrates</span><svg viewBox="0 0 12 12" aria-hidden="true" style="width:.42em;height:.42em;overflow:visible;align-self:center"><path d="M2.5 9.5L9.5 2.5M4 2.5h5.5V8" style="fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:square"></path></svg></a>: product page redesign: one card per SKU becomes one card per strain. <span style="color:#6E5B57">built, w/ case study, 2026.</span></p>
+<p data-seams style="margin:0;font-size:32px;line-height:1.5;max-width:1120px;text-wrap:pretty"><a data-btn href="#" style="position:relative;isolation:isolate;display:inline-flex;align-items:baseline;gap:.2em;padding:.02em .3em .06em;border:1px solid #231C22;line-height:1.2;color:#231C22;text-decoration:none;vertical-align:baseline"><span data-word>chipotle app ui cleanup</span><svg viewBox="0 0 12 12" aria-hidden="true" style="width:.42em;height:.42em;overflow:visible;align-self:center"><path d="M2.5 9.5L9.5 2.5M4 2.5h5.5V8" style="fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:square"></path></svg></a>: pickup checkout redesign: nineteen findings, rebuilt to fit one screen. <span style="color:#6E5B57">design study, 2026.</span></p>
+<p data-seams style="margin:0;font-size:32px;line-height:1.5;max-width:1120px;text-wrap:pretty"><a data-btn href="https://globalanomalyindex.github.io/carplay-siri-contacts/" target="_blank" rel="noopener" style="position:relative;isolation:isolate;display:inline-flex;align-items:baseline;gap:.2em;padding:.02em .3em .06em;border:1px solid #231C22;line-height:1.2;color:#231C22;text-decoration:none;vertical-align:baseline"><span data-word>one master affordance</span><svg viewBox="0 0 12 12" aria-hidden="true" style="width:.42em;height:.42em;overflow:visible;align-self:center"><path d="M2.5 9.5L9.5 2.5M4 2.5h5.5V8" style="fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:square"></path></svg></a>: one persistent control does activation, targeting and a safe abort. <span style="color:#6E5B57">simulated, w/ case study, 2026.</span></p>
+<p data-seams style="margin:0;font-size:32px;line-height:1.5;max-width:1120px;text-wrap:pretty"><a data-btn href="https://globalanomalyindex.github.io/adhd-mode-linkedin/" target="_blank" rel="noopener" style="position:relative;isolation:isolate;display:inline-flex;align-items:baseline;gap:.2em;padding:.02em .3em .06em;border:1px solid #231C22;line-height:1.2;color:#231C22;text-decoration:none;vertical-align:baseline"><span data-word>adhd mode</span><svg viewBox="0 0 12 12" aria-hidden="true" style="width:.42em;height:.42em;overflow:visible;align-self:center"><path d="M2.5 9.5L9.5 2.5M4 2.5h5.5V8" style="fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:square"></path></svg></a>: a feed becomes a bounded session with a visible end and a return queue. <span style="color:#6E5B57">built, w/ case study, 2026.</span></p>
+<p data-seams style="margin:0;font-size:32px;line-height:1.5;max-width:1120px;text-wrap:pretty"><a data-btn href="#" style="position:relative;isolation:isolate;display:inline-flex;align-items:baseline;gap:.2em;padding:.02em .3em .06em;border:1px solid #231C22;line-height:1.2;color:#231C22;text-decoration:none;vertical-align:baseline"><span data-word>df2tm</span><svg viewBox="0 0 12 12" aria-hidden="true" style="width:.42em;height:.42em;overflow:visible;align-self:center"><path d="M2.5 9.5L9.5 2.5M4 2.5h5.5V8" style="fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:square"></path></svg></a>: a learning layer for claude code that teaches the concept behind the work. <span style="color:#6E5B57">built, w/ case study, 2026.</span></p>
+<p data-seams style="margin:0;font-size:32px;line-height:1.5;max-width:1120px;text-wrap:pretty"><a data-btn href="https://globalanomalyindex.github.io/campeon/" target="_blank" rel="noopener" style="position:relative;isolation:isolate;display:inline-flex;align-items:baseline;gap:.2em;padding:.02em .3em .06em;border:1px solid #231C22;line-height:1.2;color:#231C22;text-decoration:none;vertical-align:baseline"><span data-word>campeón</span><svg viewBox="0 0 12 12" aria-hidden="true" style="width:.42em;height:.42em;overflow:visible;align-self:center"><path d="M2.5 9.5L9.5 2.5M4 2.5h5.5V8" style="fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:square"></path></svg></a>: using natural predator behavior and environments to improve human computer interaction accuracy with a mouse input. <span style="color:#6E5B57">simulated, 2026.</span></p>
+<p data-seams style="margin:0;font-size:32px;line-height:1.5;max-width:1120px;text-wrap:pretty"><a data-btn href="https://globalanomalyindex.github.io/chickpea/" target="_blank" rel="noopener" style="position:relative;isolation:isolate;display:inline-flex;align-items:baseline;gap:.2em;padding:.02em .3em .06em;border:1px solid #231C22;line-height:1.2;color:#231C22;text-decoration:none;vertical-align:baseline"><span data-word>chickpea</span><svg viewBox="0 0 12 12" aria-hidden="true" style="width:.42em;height:.42em;overflow:visible;align-self:center"><path d="M2.5 9.5L9.5 2.5M4 2.5h5.5V8" style="fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:square"></path></svg></a>: a seeded color and grid generation studio. <span style="color:#6E5B57">built, w/ case study, 2026.</span></p>
+<p data-seams style="margin:0;font-size:32px;line-height:1.5;max-width:1120px;text-wrap:pretty"><a data-btn href="https://globalanomalyindex.github.io/wildcard/" target="_blank" rel="noopener" style="position:relative;isolation:isolate;display:inline-flex;align-items:baseline;gap:.2em;padding:.02em .3em .06em;border:1px solid #231C22;line-height:1.2;color:#231C22;text-decoration:none;vertical-align:baseline"><span data-word>wildcard</span><svg viewBox="0 0 12 12" aria-hidden="true" style="width:.42em;height:.42em;overflow:visible;align-self:center"><path d="M2.5 9.5L9.5 2.5M4 2.5h5.5V8" style="fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:square"></path></svg></a>: testing if default mode network emulation in LLMs leads to more creative outputs. <span style="color:#6E5B57">tested logic from a preregistered blind study, w/ case study, 2026.</span></p>
+<p data-seams style="margin:0;font-size:32px;line-height:1.5;max-width:1120px;text-wrap:pretty"><a data-btn href="https://globalanomalyindex.github.io/dither/" target="_blank" rel="noopener" style="position:relative;isolation:isolate;display:inline-flex;align-items:baseline;gap:.2em;padding:.02em .3em .06em;border:1px solid #231C22;line-height:1.2;color:#231C22;text-decoration:none;vertical-align:baseline"><span data-word>dither</span><svg viewBox="0 0 12 12" aria-hidden="true" style="width:.42em;height:.42em;overflow:visible;align-self:center"><path d="M2.5 9.5L9.5 2.5M4 2.5h5.5V8" style="fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:square"></path></svg></a>: an experiment testing what a painting engine looks like if it is intentionally trying to be physically impossible compared to real paint. <span style="color:#6E5B57">built, 2026.</span></p>
+<p data-seams style="margin:0;font-size:32px;line-height:1.5;max-width:1120px;text-wrap:pretty"><a data-btn href="#" style="position:relative;isolation:isolate;display:inline-flex;align-items:baseline;gap:.2em;padding:.02em .3em .06em;border:1px solid #231C22;line-height:1.2;color:#231C22;text-decoration:none;vertical-align:baseline"><span data-word>three zones: camera market ui fix</span><svg viewBox="0 0 12 12" aria-hidden="true" style="width:.42em;height:.42em;overflow:visible;align-self:center"><path d="M2.5 9.5L9.5 2.5M4 2.5h5.5V8" style="fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:square"></path></svg></a>. a two-zone gallery dead ends at the video, so give the middle a job. <span style="color:#6E5B57">design study, 2026.</span></p>
+</div>
+<p data-seams style="margin:56px 0 0;font-size:32px;line-height:1.5;max-width:1040px;text-wrap:pretty">i also keep a <a data-btn href="#" style="position:relative;isolation:isolate;display:inline-flex;align-items:baseline;gap:.2em;padding:.02em .3em .06em;border:1px solid #231C22;line-height:1.2;color:#231C22;text-decoration:none;vertical-align:baseline"><span data-word>motion archive</span><svg viewBox="0 0 12 12" aria-hidden="true" style="width:.42em;height:.42em;overflow:visible;align-self:center"><path d="M2.5 9.5L9.5 2.5M4 2.5h5.5V8" style="fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:square"></path></svg></a> of eight series, 58 studies.</p>
+</div>
+</div>
+<div id="p-case" style="display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;gap:10px;align-items:baseline;font:13px/1.3 ui-monospace,Menlo,monospace;color:#5a4d4a"><a href="#p-case" style="padding:3px 8px;background:#231C22;color:#F5E4D9;text-decoration:none;font-weight:700">case</a>case study. chellbook as an essay, boards full width, the prototypes in the last sentence</div>
+<div data-paper data-screen-label="case study chellbook" data-seams-root data-skel-mode="local" style="width:1440px;position:relative;min-height:1024px;background:#F5E4D9;color:#231C22;box-sizing:border-box;padding:40px 48px 104px;display:flex;flex-direction:column;box-shadow:0 1px 3px rgba(35,28,34,.12)">
+<p data-seams style="margin:0;font-size:26px;line-height:1.5;max-width:1120px">one of my <a data-btn href="#p-designs" style="position:relative;isolation:isolate;display:inline-flex;align-items:baseline;gap:.2em;padding:.02em .3em .06em;border:1px solid #231C22;line-height:1.2;color:#231C22;text-decoration:none;vertical-align:baseline"><span data-word>product designs</span><svg viewBox="0 0 12 12" aria-hidden="true" style="width:.42em;height:.42em;overflow:visible;align-self:center"><path d="M2.5 9.5L9.5 2.5M4 2.5h5.5V8" style="fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:square"></path></svg></a>. back <a data-btn href="#p-home" style="position:relative;isolation:isolate;display:inline-flex;align-items:baseline;gap:.2em;padding:.02em .3em .06em;border:1px solid #231C22;line-height:1.2;color:#231C22;text-decoration:none;vertical-align:baseline"><span data-word>home</span><svg viewBox="0 0 12 12" aria-hidden="true" style="width:.42em;height:.42em;overflow:visible;align-self:center"><path d="M2.5 9.5L9.5 2.5M4 2.5h5.5V8" style="fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:square"></path></svg></a>.</p>
+<h1 data-seams style="margin:56px 0 0;font-weight:700;font-size:88px;line-height:1.05;letter-spacing:-.01em">chellbook</h1>
+<p data-seams style="margin:18px 0 0;font-size:26px;line-height:1.4;color:#6E5B57">gluten-free recipe conversion and label safety, iPhone. client work for a client living with celiac disease, design spec, 2026.</p>
+<p data-seams style="margin:32px 0 0;font-size:40px;line-height:1.5;max-width:1120px;text-wrap:pretty">chellbook takes any recipe a person pastes in and returns a version they can safely eat, then follows that answer out of the kitchen and into the supermarket aisle.</p>
+<p data-seams style="margin:16px 0 0;font-size:32px;line-height:1.5;max-width:1040px;text-wrap:pretty"><i>a safety product that happens to be about food.</i></p>
+<figure style="margin:56px 0 0;display:flex;flex-direction:column;gap:14px"><img src="public/chellbook/boards/cover-and-foundation.webp" alt="The Chellbook cover board: palette, type, motion and voice" style="width:100%;display:block;border:1px solid #231C22"><figcaption data-seams style="font-size:22px;line-height:1.4;color:#6E5B57">foundation. palette, type, motion, voice.</figcaption></figure>
+<h2 data-seams style="margin:88px 0 0;font-weight:700;font-size:48px;line-height:1.2">the core loop</h2>
+<p data-seams style="margin:24px 0 0;font-size:32px;line-height:1.5;max-width:1040px;text-wrap:pretty"><span style="color:#6E5B57">1.</span> paste a recipe, by link or plain text.</p>
+<p data-seams style="margin:12px 0 0;font-size:32px;line-height:1.5;max-width:1040px;text-wrap:pretty"><span style="color:#6E5B57">2.</span> the app converts it, asking a question only where guessing would be unsafe.</p>
+<p data-seams style="margin:12px 0 0;font-size:32px;line-height:1.5;max-width:1040px;text-wrap:pretty"><span style="color:#6E5B57">3.</span> it returns a breakdown: what is fine, what had gluten and was swapped, what still needs a label read.</p>
+<p data-seams style="margin:12px 0 0;font-size:32px;line-height:1.5;max-width:1040px;text-wrap:pretty"><span style="color:#6E5B57">4.</span> unresolved label checks ride the shopping list to the store.</p>
+<p data-seams style="margin:12px 0 0;font-size:32px;line-height:1.5;max-width:1040px;text-wrap:pretty"><span style="color:#6E5B57">5.</span> cooking a result and rating the texture feeds a new version of the recipe.</p>
+<h2 data-seams style="margin:88px 0 0;font-weight:700;font-size:48px;line-height:1.2">four safety states, never a fifth</h2>
+<p data-seams style="margin:24px 0 0;font-size:32px;line-height:1.5;max-width:1040px;text-wrap:pretty"><b style="font-weight:700">verified</b>. supported by the recipe and by the ingredient's own published information. not a promise of absolute safety.</p>
+<p data-seams style="margin:12px 0 0;font-size:32px;line-height:1.5;max-width:1040px;text-wrap:pretty"><b style="font-weight:700">check the label</b>. depends on the package. needs a certified gluten-free mark or a shared-equipment statement.</p>
+<p data-seams style="margin:12px 0 0;font-size:32px;line-height:1.5;max-width:1040px;text-wrap:pretty"><b style="font-weight:700">blocking</b>. a known gluten source. this step cannot go ahead as written.</p>
+<p data-seams style="margin:12px 0 0;font-size:32px;line-height:1.5;max-width:1040px;text-wrap:pretty"><b style="font-weight:700">unknown</b>. information is missing. one question closes the gap.</p>
+<figure style="margin:56px 0 0;display:flex;flex-direction:column;gap:14px"><img src="public/chellbook/boards/safety-states.webp" alt="The four safety states side by side: verified, check the label, blocking, unknown" style="width:100%;display:block;border:1px solid #231C22"><figcaption data-seams style="font-size:22px;line-height:1.4;color:#6E5B57">the four states, side by side. unknown alone carries the dashed edge.</figcaption></figure>
+<h2 data-seams style="margin:88px 0 0;font-weight:700;font-size:48px;line-height:1.2">still undesigned</h2>
+<p data-seams style="margin:24px 0 0;font-size:32px;line-height:1.5;max-width:1040px;text-wrap:pretty">the trusted brands editor is referenced from profile and settings, but its editing UI is not designed.</p>
+<p data-seams style="margin:12px 0 0;font-size:32px;line-height:1.5;max-width:1040px;text-wrap:pretty">cross-contamination in a shared kitchen is out of scope, and it is the single most requested thing from celiac users.</p>
+<p data-seams style="margin:12px 0 0;font-size:32px;line-height:1.5;max-width:1040px;text-wrap:pretty">mid-cook discovery has no screen: what happens when a cook is already halfway through and finds the problem then.</p>
+<p data-seams style="margin:12px 0 0;font-size:32px;line-height:1.5;max-width:1040px;text-wrap:pretty">recipe imagery is emoji placeholders, which is a placeholder and not a decision.</p>
+<p data-seams style="margin:12px 0 0;font-size:32px;line-height:1.5;max-width:1040px;text-wrap:pretty">whether saved recipes open with no network is unspecified.</p>
+<p data-seams style="margin:12px 0 0;font-size:32px;line-height:1.5;max-width:1040px;text-wrap:pretty">there is no designed behavior for an evidence line whose read date has gone stale.</p>
+<h2 data-seams style="margin:88px 0 0;font-weight:700;font-size:48px;line-height:1.2">the prototypes</h2>
+<p data-seams style="margin:24px 0 0;font-size:32px;line-height:1.5;max-width:1040px;text-wrap:pretty">you can open the <a data-btn href="#" style="position:relative;isolation:isolate;display:inline-flex;align-items:baseline;gap:.2em;padding:.02em .3em .06em;border:1px solid #231C22;line-height:1.2;color:#231C22;text-decoration:none;vertical-align:baseline"><span data-word>product design showcase</span><svg viewBox="0 0 12 12" aria-hidden="true" style="width:.42em;height:.42em;overflow:visible;align-self:center"><path d="M2.5 9.5L9.5 2.5M4 2.5h5.5V8" style="fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:square"></path></svg></a>, which is the spec, or the <a data-btn href="#" style="position:relative;isolation:isolate;display:inline-flex;align-items:baseline;gap:.2em;padding:.02em .3em .06em;border:1px solid #231C22;line-height:1.2;color:#231C22;text-decoration:none;vertical-align:baseline"><span data-word>wireframe exploration</span><svg viewBox="0 0 12 12" aria-hidden="true" style="width:.42em;height:.42em;overflow:visible;align-self:center"><path d="M2.5 9.5L9.5 2.5M4 2.5h5.5V8" style="fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:square"></path></svg></a>, which is the same product before the device chrome and the final palette.</p>
+<p data-seams style="margin:56px 0 0;font-size:32px;line-height:1.5;max-width:1040px;text-wrap:pretty">next up is <a data-btn href="#" style="position:relative;isolation:isolate;display:inline-flex;align-items:baseline;gap:.2em;padding:.02em .3em .06em;border:1px solid #231C22;line-height:1.2;color:#231C22;text-decoration:none;vertical-align:baseline"><span data-word>mfny concentrates</span><svg viewBox="0 0 12 12" aria-hidden="true" style="width:.42em;height:.42em;overflow:visible;align-self:center"><path d="M2.5 9.5L9.5 2.5M4 2.5h5.5V8" style="fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:square"></path></svg></a>, or go back to <a data-btn href="#p-designs" style="position:relative;isolation:isolate;display:inline-flex;align-items:baseline;gap:.2em;padding:.02em .3em .06em;border:1px solid #231C22;line-height:1.2;color:#231C22;text-decoration:none;vertical-align:baseline"><span data-word>product designs</span><svg viewBox="0 0 12 12" aria-hidden="true" style="width:.42em;height:.42em;overflow:visible;align-self:center"><path d="M2.5 9.5L9.5 2.5M4 2.5h5.5V8" style="fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:square"></path></svg></a>.</p>
+</div>
+</div>
+<div id="p-paintings" style="display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;gap:10px;align-items:baseline;font:13px/1.3 ui-monospace,Menlo,monospace;color:#5a4d4a"><a href="#p-paintings" style="padding:3px 8px;background:#231C22;color:#F5E4D9;text-decoration:none;font-weight:700">paintings</a>paintings. two columns, every caption a sentence</div>
+<div data-paper data-screen-label="paintings" data-seams-root data-skel-mode="local" style="width:1440px;position:relative;min-height:1024px;background:#F5E4D9;color:#231C22;box-sizing:border-box;padding:40px 48px 104px;display:flex;flex-direction:column;box-shadow:0 1px 3px rgba(35,28,34,.12)">
+<p data-seams style="margin:0;font-size:26px;line-height:1.5;max-width:1120px">back <a data-btn href="#p-home" style="position:relative;isolation:isolate;display:inline-flex;align-items:baseline;gap:.2em;padding:.02em .3em .06em;border:1px solid #231C22;line-height:1.2;color:#231C22;text-decoration:none;vertical-align:baseline"><span data-word>home</span><svg viewBox="0 0 12 12" aria-hidden="true" style="width:.42em;height:.42em;overflow:visible;align-self:center"><path d="M2.5 9.5L9.5 2.5M4 2.5h5.5V8" style="fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:square"></path></svg></a>, or over to <a data-btn href="#p-designs" style="position:relative;isolation:isolate;display:inline-flex;align-items:baseline;gap:.2em;padding:.02em .3em .06em;border:1px solid #231C22;line-height:1.2;color:#231C22;text-decoration:none;vertical-align:baseline"><span data-word>product designs</span><svg viewBox="0 0 12 12" aria-hidden="true" style="width:.42em;height:.42em;overflow:visible;align-self:center"><path d="M2.5 9.5L9.5 2.5M4 2.5h5.5V8" style="fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:square"></path></svg></a> and <a data-btn href="#p-about" style="position:relative;isolation:isolate;display:inline-flex;align-items:baseline;gap:.2em;padding:.02em .3em .06em;border:1px solid #231C22;line-height:1.2;color:#231C22;text-decoration:none;vertical-align:baseline"><span data-word>about</span><svg viewBox="0 0 12 12" aria-hidden="true" style="width:.42em;height:.42em;overflow:visible;align-self:center"><path d="M2.5 9.5L9.5 2.5M4 2.5h5.5V8" style="fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:square"></path></svg></a>.</p>
+<h1 data-seams style="margin:56px 0 0;font-weight:700;font-size:88px;line-height:1.05;letter-spacing:-.01em">paintings</h1>
+<p data-seams style="margin:24px 0 0;font-size:40px;line-height:1.5;max-width:1120px;text-wrap:pretty">twenty works, 2023 to 2025. concept art and illustration: photobash, blender, substance.</p>
+<div style="margin-top:64px;columns:2;column-gap:40px">
+<figure style="margin:0 0 48px;break-inside:avoid;display:flex;flex-direction:column;gap:14px"><img src="public/artstation/the-steppe.webp" alt="A helicopter lifts two figures above an isolated stone peak rising from an amber plain" style="width:100%;display:block;border:1px solid #231C22"><figcaption data-seams style="font-size:26px;line-height:1.5;text-wrap:pretty"><a data-btn href="https://www.artstation.com/artwork/JrneqD" target="_blank" rel="noopener" style="position:relative;isolation:isolate;display:inline-flex;align-items:baseline;gap:.2em;padding:.02em .3em .06em;border:1px solid #231C22;line-height:1.2;color:#231C22;text-decoration:none;vertical-align:baseline"><span data-word>the steppe</span><svg viewBox="0 0 12 12" aria-hidden="true" style="width:.42em;height:.42em;overflow:visible;align-self:center"><path d="M2.5 9.5L9.5 2.5M4 2.5h5.5V8" style="fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:square"></path></svg></a> silhouette and distance, <span style="color:#6E5B57">2025</span>.</figcaption></figure>
+<figure style="margin:0 0 48px;break-inside:avoid;display:flex;flex-direction:column;gap:14px"><img src="public/artstation/shepherd.webp" alt="A shepherd guides a flock along the crest of a vivid green hillside beneath broad clouds" style="width:100%;display:block;border:1px solid #231C22"><figcaption data-seams style="font-size:26px;line-height:1.5;text-wrap:pretty"><a data-btn href="https://www.artstation.com/artwork/L4laW5" target="_blank" rel="noopener" style="position:relative;isolation:isolate;display:inline-flex;align-items:baseline;gap:.2em;padding:.02em .3em .06em;border:1px solid #231C22;line-height:1.2;color:#231C22;text-decoration:none;vertical-align:baseline"><span data-word>shepherd</span><svg viewBox="0 0 12 12" aria-hidden="true" style="width:.42em;height:.42em;overflow:visible;align-self:center"><path d="M2.5 9.5L9.5 2.5M4 2.5h5.5V8" style="fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:square"></path></svg></a> scale and atmosphere, <span style="color:#6E5B57">2025</span>.</figcaption></figure>
+<figure style="margin:0 0 48px;break-inside:avoid;display:flex;flex-direction:column;gap:14px"><img src="public/artstation/balance.webp" alt="A small orange-robed figure threads through pale, moss-covered stone ruins" style="width:100%;display:block;border:1px solid #231C22"><figcaption data-seams style="font-size:26px;line-height:1.5;text-wrap:pretty"><a data-btn href="https://www.artstation.com/artwork/04Kvy4" target="_blank" rel="noopener" style="position:relative;isolation:isolate;display:inline-flex;align-items:baseline;gap:.2em;padding:.02em .3em .06em;border:1px solid #231C22;line-height:1.2;color:#231C22;text-decoration:none;vertical-align:baseline"><span data-word>balance</span><svg viewBox="0 0 12 12" aria-hidden="true" style="width:.42em;height:.42em;overflow:visible;align-self:center"><path d="M2.5 9.5L9.5 2.5M4 2.5h5.5V8" style="fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:square"></path></svg></a> structure, moss, and one orange signal, <span style="color:#6E5B57">2024</span>.</figcaption></figure>
+<figure style="margin:0 0 48px;break-inside:avoid;display:flex;flex-direction:column;gap:14px"><img src="public/artstation/verticality.webp" alt="Two sword fighters cross blades on a flowered slope below a monumental rock face" style="width:100%;display:block;border:1px solid #231C22"><figcaption data-seams style="font-size:26px;line-height:1.5;text-wrap:pretty"><a data-btn href="https://www.artstation.com/artwork/vbDE4O" target="_blank" rel="noopener" style="position:relative;isolation:isolate;display:inline-flex;align-items:baseline;gap:.2em;padding:.02em .3em .06em;border:1px solid #231C22;line-height:1.2;color:#231C22;text-decoration:none;vertical-align:baseline"><span data-word>verticality</span><svg viewBox="0 0 12 12" aria-hidden="true" style="width:.42em;height:.42em;overflow:visible;align-self:center"><path d="M2.5 9.5L9.5 2.5M4 2.5h5.5V8" style="fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:square"></path></svg></a> negative space and focus, <span style="color:#6E5B57">2024</span>.</figcaption></figure>
+<figure style="margin:0 0 48px;break-inside:avoid;display:flex;flex-direction:column;gap:14px"><img src="public/artstation/four-year-progress.webp" alt="A lone figure watches a dragon circle between a distant castle and a luminous moon" style="width:100%;display:block;border:1px solid #231C22"><figcaption data-seams style="font-size:26px;line-height:1.5;text-wrap:pretty"><a data-btn href="https://www.artstation.com/artwork/XJ1AbR" target="_blank" rel="noopener" style="position:relative;isolation:isolate;display:inline-flex;align-items:baseline;gap:.2em;padding:.02em .3em .06em;border:1px solid #231C22;line-height:1.2;color:#231C22;text-decoration:none;vertical-align:baseline"><span data-word>four year painting progress</span><svg viewBox="0 0 12 12" aria-hidden="true" style="width:.42em;height:.42em;overflow:visible;align-self:center"><path d="M2.5 9.5L9.5 2.5M4 2.5h5.5V8" style="fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:square"></path></svg></a> practice made visible, <span style="color:#6E5B57">2024</span>.</figcaption></figure>
+<figure style="margin:0 0 48px;break-inside:avoid;display:flex;flex-direction:column;gap:14px"><img src="public/artstation/one-day.webp" alt="Crowds gather at the foot of a bright, densely stacked white megastructure" style="width:100%;display:block;border:1px solid #231C22"><figcaption data-seams style="font-size:26px;line-height:1.5;text-wrap:pretty"><a data-btn href="https://www.artstation.com/artwork/oJ6AZk" target="_blank" rel="noopener" style="position:relative;isolation:isolate;display:inline-flex;align-items:baseline;gap:.2em;padding:.02em .3em .06em;border:1px solid #231C22;line-height:1.2;color:#231C22;text-decoration:none;vertical-align:baseline"><span data-word>one day, i'll make it to the top</span><svg viewBox="0 0 12 12" aria-hidden="true" style="width:.42em;height:.42em;overflow:visible;align-self:center"><path d="M2.5 9.5L9.5 2.5M4 2.5h5.5V8" style="fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:square"></path></svg></a> recent painting, <span style="color:#6E5B57">2025</span>.</figcaption></figure>
+<figure style="margin:0 0 48px;break-inside:avoid;display:flex;flex-direction:column;gap:14px"><img src="public/artstation/nix.webp" alt="Two mounted riders pause in a snow-covered plain beneath a dark advancing storm" style="width:100%;display:block;border:1px solid #231C22"><figcaption data-seams style="font-size:26px;line-height:1.5;text-wrap:pretty"><a data-btn href="https://www.artstation.com/artwork/Bk3EyA" target="_blank" rel="noopener" style="position:relative;isolation:isolate;display:inline-flex;align-items:baseline;gap:.2em;padding:.02em .3em .06em;border:1px solid #231C22;line-height:1.2;color:#231C22;text-decoration:none;vertical-align:baseline"><span data-word>nix</span><svg viewBox="0 0 12 12" aria-hidden="true" style="width:.42em;height:.42em;overflow:visible;align-self:center"><path d="M2.5 9.5L9.5 2.5M4 2.5h5.5V8" style="fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:square"></path></svg></a> quiet scale under a storm field, <span style="color:#6E5B57">2024</span>.</figcaption></figure>
+<figure style="margin:0 0 48px;break-inside:avoid;display:flex;flex-direction:column;gap:14px"><img src="public/artstation/never-seen.webp" alt="Three horses and a humanoid figure stand in a forest clearing beneath a hovering craft" style="width:100%;display:block;border:1px solid #231C22"><figcaption data-seams style="font-size:26px;line-height:1.5;text-wrap:pretty"><a data-btn href="https://www.artstation.com/artwork/AZQ1Ko" target="_blank" rel="noopener" style="position:relative;isolation:isolate;display:inline-flex;align-items:baseline;gap:.2em;padding:.02em .3em .06em;border:1px solid #231C22;line-height:1.2;color:#231C22;text-decoration:none;vertical-align:baseline"><span data-word>i've never seen you before</span><svg viewBox="0 0 12 12" aria-hidden="true" style="width:.42em;height:.42em;overflow:visible;align-self:center"><path d="M2.5 9.5L9.5 2.5M4 2.5h5.5V8" style="fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:square"></path></svg></a> narrative distributed across one horizon, <span style="color:#6E5B57">2024</span>.</figcaption></figure>
+<figure style="margin:0 0 48px;break-inside:avoid;display:flex;flex-direction:column;gap:14px"><img src="public/artstation/not-strong-enough.webp" alt="Cloaked travelers approach a colossal grounded vessel through a misty field" style="width:100%;display:block;border:1px solid #231C22"><figcaption data-seams style="font-size:26px;line-height:1.5;text-wrap:pretty"><a data-btn href="https://www.artstation.com/artwork/DLNQXG" target="_blank" rel="noopener" style="position:relative;isolation:isolate;display:inline-flex;align-items:baseline;gap:.2em;padding:.02em .3em .06em;border:1px solid #231C22;line-height:1.2;color:#231C22;text-decoration:none;vertical-align:baseline"><span data-word>we aren't strong enough yet</span><svg viewBox="0 0 12 12" aria-hidden="true" style="width:.42em;height:.42em;overflow:visible;align-self:center"><path d="M2.5 9.5L9.5 2.5M4 2.5h5.5V8" style="fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:square"></path></svg></a> recent painting, <span style="color:#6E5B57">2024</span>.</figcaption></figure>
+<figure style="margin:0 0 48px;break-inside:avoid;display:flex;flex-direction:column;gap:14px"><img src="public/artstation/the-keeper.webp" alt="A red-robed keeper stands between immense white columns at the edge of darkness" style="width:100%;display:block;border:1px solid #231C22"><figcaption data-seams style="font-size:26px;line-height:1.5;text-wrap:pretty"><a data-btn href="https://www.artstation.com/artwork/kQkQgz" target="_blank" rel="noopener" style="position:relative;isolation:isolate;display:inline-flex;align-items:baseline;gap:.2em;padding:.02em .3em .06em;border:1px solid #231C22;line-height:1.2;color:#231C22;text-decoration:none;vertical-align:baseline"><span data-word>the keeper</span><svg viewBox="0 0 12 12" aria-hidden="true" style="width:.42em;height:.42em;overflow:visible;align-self:center"><path d="M2.5 9.5L9.5 2.5M4 2.5h5.5V8" style="fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:square"></path></svg></a> selected painting, <span style="color:#6E5B57">2024</span>.</figcaption></figure>
+<figure style="margin:0 0 48px;break-inside:avoid;display:flex;flex-direction:column;gap:14px"><img src="public/artstation/the-sky-was-on-fire.webp" alt="A solitary figure stands on a jagged mound before hazy ruins under a coral-lit sky" style="width:100%;display:block;border:1px solid #231C22"><figcaption data-seams style="font-size:26px;line-height:1.5;text-wrap:pretty"><a data-btn href="https://www.artstation.com/artwork/qeEBoN" target="_blank" rel="noopener" style="position:relative;isolation:isolate;display:inline-flex;align-items:baseline;gap:.2em;padding:.02em .3em .06em;border:1px solid #231C22;line-height:1.2;color:#231C22;text-decoration:none;vertical-align:baseline"><span data-word>the sky was on fire</span><svg viewBox="0 0 12 12" aria-hidden="true" style="width:.42em;height:.42em;overflow:visible;align-self:center"><path d="M2.5 9.5L9.5 2.5M4 2.5h5.5V8" style="fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:square"></path></svg></a> signal and intentional focus, <span style="color:#6E5B57">2023</span>.</figcaption></figure>
+<figure style="margin:0 0 48px;break-inside:avoid;display:flex;flex-direction:column;gap:14px"><img src="public/artstation/lets-take-a-walk.webp" alt="Two tiny red figures walk across a green field beneath a vast wall of sunlit clouds" style="width:100%;display:block;border:1px solid #231C22"><figcaption data-seams style="font-size:26px;line-height:1.5;text-wrap:pretty"><a data-btn href="https://chrisfiore.artstation.com/projects/YB9wvb" target="_blank" rel="noopener" style="position:relative;isolation:isolate;display:inline-flex;align-items:baseline;gap:.2em;padding:.02em .3em .06em;border:1px solid #231C22;line-height:1.2;color:#231C22;text-decoration:none;vertical-align:baseline"><span data-word>let's take a walk</span><svg viewBox="0 0 12 12" aria-hidden="true" style="width:.42em;height:.42em;overflow:visible;align-self:center"><path d="M2.5 9.5L9.5 2.5M4 2.5h5.5V8" style="fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:square"></path></svg></a></figcaption></figure>
+</div>
+<p data-seams style="margin:16px 0 0;font-size:32px;line-height:1.5;max-width:1040px;text-wrap:pretty">all twenty are on <a data-btn href="https://www.artstation.com/chrisfiore" target="_blank" rel="noopener" style="position:relative;isolation:isolate;display:inline-flex;align-items:baseline;gap:.2em;padding:.02em .3em .06em;border:1px solid #231C22;line-height:1.2;color:#231C22;text-decoration:none;vertical-align:baseline"><span data-word>artstation</span><svg viewBox="0 0 12 12" aria-hidden="true" style="width:.42em;height:.42em;overflow:visible;align-self:center"><path d="M2.5 9.5L9.5 2.5M4 2.5h5.5V8" style="fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:square"></path></svg></a>.</p>
+</div>
+</div>
+<div id="p-about" style="display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;gap:10px;align-items:baseline;font:13px/1.3 ui-monospace,Menlo,monospace;color:#5a4d4a"><a href="#p-about" style="padding:3px 8px;background:#231C22;color:#F5E4D9;text-decoration:none;font-weight:700">about</a>about + say hi. the long read, contact as the closing sentence</div>
+<div data-paper data-screen-label="about and say hi" data-seams-root data-skel-mode="local" style="width:1440px;position:relative;min-height:1024px;background:#F5E4D9;color:#231C22;box-sizing:border-box;padding:40px 48px 104px;display:flex;flex-direction:column;box-shadow:0 1px 3px rgba(35,28,34,.12)">
+<p data-seams style="margin:0;font-size:26px;line-height:1.5;max-width:1120px">back <a data-btn href="#p-home" style="position:relative;isolation:isolate;display:inline-flex;align-items:baseline;gap:.2em;padding:.02em .3em .06em;border:1px solid #231C22;line-height:1.2;color:#231C22;text-decoration:none;vertical-align:baseline"><span data-word>home</span><svg viewBox="0 0 12 12" aria-hidden="true" style="width:.42em;height:.42em;overflow:visible;align-self:center"><path d="M2.5 9.5L9.5 2.5M4 2.5h5.5V8" style="fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:square"></path></svg></a>, or over to <a data-btn href="#p-designs" style="position:relative;isolation:isolate;display:inline-flex;align-items:baseline;gap:.2em;padding:.02em .3em .06em;border:1px solid #231C22;line-height:1.2;color:#231C22;text-decoration:none;vertical-align:baseline"><span data-word>product designs</span><svg viewBox="0 0 12 12" aria-hidden="true" style="width:.42em;height:.42em;overflow:visible;align-self:center"><path d="M2.5 9.5L9.5 2.5M4 2.5h5.5V8" style="fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:square"></path></svg></a> and <a data-btn href="#p-paintings" style="position:relative;isolation:isolate;display:inline-flex;align-items:baseline;gap:.2em;padding:.02em .3em .06em;border:1px solid #231C22;line-height:1.2;color:#231C22;text-decoration:none;vertical-align:baseline"><span data-word>paintings</span><svg viewBox="0 0 12 12" aria-hidden="true" style="width:.42em;height:.42em;overflow:visible;align-self:center"><path d="M2.5 9.5L9.5 2.5M4 2.5h5.5V8" style="fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:square"></path></svg></a>.</p>
+<h1 data-seams style="margin:56px 0 0;font-weight:700;font-size:88px;line-height:1.05;letter-spacing:-.01em">about</h1>
+<p data-seams style="margin:24px 0 0;font-size:40px;line-height:1.5;max-width:1120px;text-wrap:pretty">my name is christopher robin fiore. i'm a product designer, and my ideas don't stay ideas. they get prototyped, tested, and scrutinized fast, with help from agentic AI workflows i deploy and manage myself. that puts research, stress tests, and counterarguments in front of me while the design can still change. what reaches you is not a pretty idea. it’s a working system with a usable prototype, a hypothesis an AI agent swarm attacked from every angle, a design that already knows where it breaks.</p>
+<p data-seams style="margin:32px 0 0;font-size:32px;line-height:1.5;max-width:1040px;text-wrap:pretty">i take ambiguous problems to interaction architecture, build the hard behavior as a working prototype in React and TypeScript, then run the test that could prove it wrong. two published open-source plugins and preregistered blind studies with published methodology and data. hands-on with language models since GPT-2 in 2019.</p>
+<h2 data-seams style="margin:88px 0 0;font-weight:700;font-size:48px;line-height:1.2">at a glance</h2>
+<p data-seams style="margin:24px 0 0;font-size:32px;line-height:1.5;max-width:1040px;text-wrap:pretty"><span style="color:#6E5B57">product design.</span> product strategy, UX/UI, interaction design, information architecture, user flows, wireframing, prototyping, design systems, state design, responsive design, motion, accessibility (WCAG).</p>
+<p data-seams style="margin:10px 0 0;font-size:32px;line-height:1.5;max-width:1040px;text-wrap:pretty"><span style="color:#6E5B57">design engineering.</span> React, Next.js, TypeScript, JavaScript, Vite, Tailwind CSS, Motion, XState, Three.js.</p>
+<p data-seams style="margin:10px 0 0;font-size:32px;line-height:1.5;max-width:1040px;text-wrap:pretty"><span style="color:#6E5B57">research and evaluation.</span> experiment design, preregistration, blind grading, simulation, comparative evaluation, research synthesis, Vitest, Playwright, axe-core, GitHub Actions.</p>
+<p data-seams style="margin:10px 0 0;font-size:32px;line-height:1.5;max-width:1040px;text-wrap:pretty"><span style="color:#6E5B57">tools and AI.</span> Figma, Claude Design, Adobe Photoshop, Blender, Claude Code, Codex, plugin architecture, agentic workflow direction, AI-native interaction design.</p>
+<p data-seams style="margin:10px 0 0;font-size:32px;line-height:1.5;max-width:1040px;text-wrap:pretty"><span style="color:#6E5B57">education.</span> Diploma in Concept Art, CG Spectrum College of Digital Art and Animation. BFA Studio Art coursework, Adelphi University, 2020 to 2021. 12 courses at Learn Squared with Jama Jurabaev, Greg Rutkowski, and Maciej Kuciara.</p>
+<p data-seams style="margin:10px 0 0;font-size:32px;line-height:1.5;max-width:1040px;text-wrap:pretty"><span style="color:#6E5B57">training.</span> Lee Strasberg Theatre and Film Institute, two years, Advanced Method.</p>
+<p data-seams style="margin:10px 0 0;font-size:32px;line-height:1.5;max-width:1040px;text-wrap:pretty"><span style="color:#6E5B57">certification.</span> AI Fluency: Framework &amp; Foundations, from Anthropic, June 2026. <a data-btn href="public/documents/anthropic-ai-fluency-certificate.pdf" target="_blank" rel="noopener" style="position:relative;isolation:isolate;display:inline-flex;align-items:baseline;gap:.2em;padding:.02em .3em .06em;border:1px solid #231C22;line-height:1.2;color:#231C22;text-decoration:none;vertical-align:baseline"><span data-word>certificate</span><svg viewBox="0 0 12 12" aria-hidden="true" style="width:.42em;height:.42em;overflow:visible;align-self:center"><path d="M2.5 9.5L9.5 2.5M4 2.5h5.5V8" style="fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:square"></path></svg></a></p>
+<p data-seams style="margin:10px 0 0;font-size:32px;line-height:1.5;max-width:1040px;text-wrap:pretty"><span style="color:#6E5B57">mentorship.</span> graphic design and Photoshop under Stephen Fiore, Senior Digital Designer at Marvel Studios, ongoing.</p>
+<p data-seams style="margin:10px 0 0;font-size:32px;line-height:1.5;max-width:1040px;text-wrap:pretty"><span style="color:#6E5B57">research.</span> college-level Capstone and Research, 2017 to 2019. paper submitted to the Regeneron Science Talent Search.</p>
+<p data-seams style="margin:10px 0 0;font-size:32px;line-height:1.5;max-width:1040px;text-wrap:pretty"><span style="color:#6E5B57">screen.</span> co-star, Marvel Studios' Daredevil: Born Again (2025). campaign lead, New York Blood Center.</p>
+<h2 data-seams style="margin:88px 0 0;font-weight:700;font-size:48px;line-height:1.2">practice</h2>
+<p data-seams style="margin:24px 0 0;font-size:32px;line-height:1.5;max-width:1040px;text-wrap:pretty">the loop is short on purpose. an idea gets built far enough to actually use, then attacked: agent swarms running research, edge cases, and counterarguments in parallel, on a timescale where the answers still change the design.</p>
+<p data-seams style="margin:20px 0 0;font-size:32px;line-height:1.5;max-width:1040px;text-wrap:pretty">most of what comes back is unglamorous and early, which is exactly when it is worth having. what survives ships with its evidence attached and labeled for what it is, whether that is built, tested, simulated, or a design study.</p>
+<h2 data-seams style="margin:88px 0 0;font-weight:700;font-size:48px;line-height:1.2">design and craft</h2>
+<p data-seams style="margin:24px 0 0;font-size:32px;line-height:1.5;max-width:1040px;text-wrap:pretty">i studied Concept Art and Illustration at CG Spectrum College of Digital Art and Animation, and finished with a Diploma in Concept Art. i was personally mentored in graphic design and Photoshop by Stephen Fiore, Senior Digital Designer at Marvel Studios.</p>
+<p data-seams style="margin:20px 0 0;font-size:32px;line-height:1.5;max-width:1040px;text-wrap:pretty">the training is 2D first: drawing, sketching, thumbnailing, and photobashing. it carries into 3D through Blender, texturing in Substance Sampler, and 3D paintovers. Figma is where the product work lands.</p>
+<h2 data-seams style="margin:88px 0 0;font-weight:700;font-size:48px;line-height:1.2">AI practice</h2>
+<p data-seams style="margin:24px 0 0;font-size:32px;line-height:1.5;max-width:1040px;text-wrap:pretty">i have been studying and using GPT since GPT-2 in 2019, which is long enough to have watched the tooling change shape several times over.</p>
+<p data-seams style="margin:20px 0 0;font-size:32px;line-height:1.5;max-width:1040px;text-wrap:pretty">in practice that means Claude Code on both CLI and desktop, Claude Design, and Codex, plus agentic workflows i build and run myself: Ultracode in Claude Code, subagents in ChatGPT Work.</p>
+<p data-seams style="margin:20px 0 0;font-size:32px;line-height:1.5;max-width:1040px;text-wrap:pretty">i deploy and manage these rather than consume them as a service. that is the difference between a tools list and actual leverage.</p>
+<h2 data-seams style="margin:88px 0 0;font-weight:700;font-size:48px;line-height:1.2">research</h2>
+<p data-seams style="margin:24px 0 0;font-size:32px;line-height:1.5;max-width:1040px;text-wrap:pretty">i studied college-level Capstone and Research from 2017 to 2019 and ran a months-long study on the effects of predatory food labeling on adolescents' nutritional choices and awareness, including real human surveying. the full paper was recommended for and submitted to the Regeneron Science Talent Search.</p>
+<p data-seams style="margin:20px 0 0;font-size:32px;line-height:1.5;max-width:1040px;text-wrap:pretty">chellbook, on the product design channel, is a label-reading product. that is not a coincidence. what a label is really telling you, and who it quietly fails, is a question i have been working on since 2017.</p>
+<h2 data-seams style="margin:88px 0 0;font-weight:700;font-size:48px;line-height:1.2">performance</h2>
+<p data-seams style="margin:24px 0 0;font-size:32px;line-height:1.5;max-width:1040px;text-wrap:pretty">i studied for two years at the Lee Strasberg Theatre and Film Institute in New York City, appeared in multiple school productions, and was accepted into the school's Advanced Method courses. i was invited to private workshops there, including one hosted by Vincent d'Onofrio.</p>
+<p data-seams style="margin:20px 0 0;font-size:32px;line-height:1.5;max-width:1040px;text-wrap:pretty">i was a co-star in Marvel Studios' Daredevil: Born Again (2025) and the lead in a New York Blood Center campaign that ran across network TV, social media, and streaming to tens of millions of views.</p>
+<p data-seams style="margin:20px 0 0;font-size:32px;line-height:1.5;max-width:1040px;text-wrap:pretty">the Method training is not a hobby sitting next to the design work. it is where i learned to research a person until their behavior makes sense from the inside, which is the same thing good user research asks for.</p>
+<h2 data-seams style="margin:88px 0 0;font-weight:700;font-size:48px;line-height:1.2">advocacy</h2>
+<p data-seams style="margin:24px 0 0;font-size:32px;line-height:1.5;max-width:1040px;text-wrap:pretty">i'm diagnosed with ADHD Type C and Cognitive Disengagement Syndrome.</p>
+<p data-seams style="margin:20px 0 0;font-size:32px;line-height:1.5;max-width:1040px;text-wrap:pretty">i advocate in my personal life for mental health treatment: helping people find providers, assembling the research and documentation that mental health insurance claims actually demand, and setting up AI tools that take executive-function load off the people carrying it.</p>
+<p data-seams style="margin:20px 0 0;font-size:32px;line-height:1.5;max-width:1040px;text-wrap:pretty">adhd mode, on the product design channel, comes directly from that.</p>
+<h2 data-seams style="margin:88px 0 0;font-weight:700;font-size:48px;line-height:1.2">references</h2>
+<p data-seams style="margin:24px 0 0;font-size:32px;line-height:1.5;max-width:1040px;text-wrap:pretty"><b style="font-weight:700">Jeff Lin</b>, lead product designer at Goldman Sachs, and <b style="font-weight:700">David Lajara</b>, product designer at The Walt Disney Company, have both reviewed my portfolio and are offered as references.</p>
+<p data-seams style="margin:20px 0 0;font-size:32px;line-height:1.5;max-width:1040px;text-wrap:pretty"><b style="font-weight:700">Stephen Fiore</b>, senior digital designer at Marvel Studios, mentors me on an ongoing basis and is offered as a reference too.</p>
+<h2 data-seams style="margin:88px 0 0;font-weight:700;font-size:48px;line-height:1.2">say hi</h2>
+<p data-seams style="margin:24px 0 0;font-size:40px;line-height:1.5;max-width:1120px;text-wrap:pretty">i’m open to roles in new york or remote. say hi at <a data-btn href="#" style="position:relative;isolation:isolate;display:inline-flex;align-items:baseline;gap:.2em;padding:.02em .3em .06em;border:1px solid #231C22;line-height:1.2;color:#231C22;text-decoration:none;vertical-align:baseline"><span data-word>chrisrobinfiore@gmail.com</span><svg viewBox="0 0 12 12" aria-hidden="true" style="width:.42em;height:.42em;overflow:visible;align-self:center"><path d="M2.5 9.5L9.5 2.5M4 2.5h5.5V8" style="fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:square"></path></svg></a>, or find me on <a data-btn href="https://github.com/globalanomalyindex" target="_blank" rel="noopener" style="position:relative;isolation:isolate;display:inline-flex;align-items:baseline;gap:.2em;padding:.02em .3em .06em;border:1px solid #231C22;line-height:1.2;color:#231C22;text-decoration:none;vertical-align:baseline"><span data-word>github</span><svg viewBox="0 0 12 12" aria-hidden="true" style="width:.42em;height:.42em;overflow:visible;align-self:center"><path d="M2.5 9.5L9.5 2.5M4 2.5h5.5V8" style="fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:square"></path></svg></a>, <a data-btn href="https://www.artstation.com/chrisfiore" target="_blank" rel="noopener" style="position:relative;isolation:isolate;display:inline-flex;align-items:baseline;gap:.2em;padding:.02em .3em .06em;border:1px solid #231C22;line-height:1.2;color:#231C22;text-decoration:none;vertical-align:baseline"><span data-word>artstation</span><svg viewBox="0 0 12 12" aria-hidden="true" style="width:.42em;height:.42em;overflow:visible;align-self:center"><path d="M2.5 9.5L9.5 2.5M4 2.5h5.5V8" style="fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:square"></path></svg></a> and <a data-btn href="https://www.linkedin.com/in/christopherrobinfiore" target="_blank" rel="noopener" style="position:relative;isolation:isolate;display:inline-flex;align-items:baseline;gap:.2em;padding:.02em .3em .06em;border:1px solid #231C22;line-height:1.2;color:#231C22;text-decoration:none;vertical-align:baseline"><span data-word>linkedin</span><svg viewBox="0 0 12 12" aria-hidden="true" style="width:.42em;height:.42em;overflow:visible;align-self:center"><path d="M2.5 9.5L9.5 2.5M4 2.5h5.5V8" style="fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:square"></path></svg></a>. you can also read my <a data-btn href="public/documents/christopher-robin-fiore-resume-2026.pdf" target="_blank" rel="noopener" style="position:relative;isolation:isolate;display:inline-flex;align-items:baseline;gap:.2em;padding:.02em .3em .06em;border:1px solid #231C22;line-height:1.2;color:#231C22;text-decoration:none;vertical-align:baseline"><span data-word>resume</span><svg viewBox="0 0 12 12" aria-hidden="true" style="width:.42em;height:.42em;overflow:visible;align-self:center"><path d="M2.5 9.5L9.5 2.5M4 2.5h5.5V8" style="fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:square"></path></svg></a>. i’d love to hear from you :)</p>
+</div>
+</div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;paper&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;blush&quot;,&quot;bone&quot;,&quot;white&quot;],&quot;default&quot;:&quot;blush&quot;,&quot;tsType&quot;:&quot;'blush'|'bone'|'white'&quot;,&quot;section&quot;:&quot;look&quot;},&quot;hover&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;band + font&quot;,&quot;band only&quot;,&quot;font only&quot;],&quot;default&quot;:&quot;band + font&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;hover&quot;}}">
+const HUES = ['#FF2D87','#F5D90A','#12D9E8','#FF6B1A','#C9F227','#35E5C8'];
+const SPARK_LIGHTS = ['#E2E7E9','#CBD2D5','#AEB6BA','#FF2D87','#F5D90A','#12D9E8','#FF6B1A','#C9F227','#35E5C8'];
+const SPARK_ACCENT = ['#3A3742','#56535E','#2B45F5','#7C858A','#FF2D87','#12D9E8'];
+const INK = '#1A1820';
+const ALT = "'Dessign Maison', Georgia, serif";
+const FEAT = "'salt' 1, 'ss01' 1";
+const FLASH = ['#c9246b','#796b05','#0a777f','#b44b12','#5f7313','#2B45F5','#1c7869'];
+const WIPE_IN = ['inset(0 100% 0 0)','inset(0 0 0 100%)','inset(100% 0 0 0)','inset(0 0 100% 0)','inset(0 62% 0 0)','inset(0 0 0 62%)'];
+const WIPE_OUT = ['inset(0 0 0 100%)','inset(0 100% 0 0)','inset(0 0 100% 0)','inset(100% 0 0 0)'];
+const PAPERS = { blush: '#F5E4D9', bone: '#F3EEE5', white: '#FBFAF7' };
+const rnd = (a) => a[(Math.random() * a.length) | 0];
+/** Hover text gets a trailing ellipsis to settle its spacing; never on an address. */
+const tail = (txt) => (txt.includes('@') ? '' : '...');
+
+const CASES = [
+  ['after-tokens','01','after tokens','parallel language that shows what is provisional and what has settled','2026','built'],
+  ['guestpass','02','apple wallet card sharing concept','a temporary single use version of your card, handed to someone over imessage','2026','concept'],
+  ['chellbook','03','chellbook','AI-based iOS app concept for celiac food safety','2026','concept'],
+  ['lee','04','lee','self-tape studio for actors: the notes become color you read while acting','2026','concept'],
+  ['mfny-concentrates','05','mfny concentrates','product page redesign: one card per SKU becomes one card per strain','2026','built'],
+  ['chipotle','06','chipotle app ui cleanup','pickup checkout redesign: nineteen findings, rebuilt to fit one screen','2026','concept'],
+  ['one-master-affordance','07','one master affordance','one persistent control does activation, targeting and a safe abort','2026','simulated'],
+  ['adhd-mode','08','adhd mode','a feed becomes a bounded session with a visible end and a return queue','2026','built'],
+  ['df2tm','09','df2tm','a learning layer for claude code that teaches the concept behind the work','2026','built'],
+  ['campeon','10','campeón','four aim drills converge on one range without hiding disagreement','2026','simulated'],
+  ['chickpea','11','chickpea','a seeded studio that exposes the grid, palette and math behind output','2026','built'],
+  ['wildcard','12','wildcard','freeze the problem, draw from outside, keep only what survives','2026','tested logic'],
+  ['dither','13','dither','a dependency-free studio for dithering, grain, palette and paint','2026','built'],
+  ['three-zones','14','three zones: camera market ui fix','a two-zone gallery dead ends at the video, so give the middle a job','2026','concept'],
+].map(([id, idx, name, line, year, ev]) => ({ idx, name, line, meta: year + ' · ' + ev, card: 'public/projects/card/' + id + '.webp', href: id === 'chellbook' ? '#1e' : '#' }));
+
+const PAINTINGS = [
+  ['the-steppe','The Steppe','2025','A helicopter lifts two figures above an isolated stone peak rising from an amber plain'],
+  ['shepherd','Shepherd','2025','A shepherd guides a flock along the crest of a vivid green hillside beneath broad clouds'],
+  ['balance','Balance','2024','A small orange-robed figure threads through pale, moss-covered stone ruins'],
+  ['verticality','Verticality','2024','Two sword fighters cross blades on a flowered slope below a monumental rock face'],
+  ['four-year-progress','Four Year Painting Progress','2024','A lone figure watches a dragon circle between a distant castle and a luminous moon'],
+  ['one-day',"One Day, I'll Make It to the Top",'2025','Crowds gather at the foot of a bright, densely stacked white megastructure'],
+  ['nix','Nix','2024','Two mounted riders pause in a snow-covered plain beneath a dark advancing storm'],
+  ['never-seen',"I've Never Seen You Before",'2024','Three horses and a humanoid figure stand in a forest clearing beneath a hovering craft'],
+  ['not-strong-enough',"We Aren't Strong Enough Yet",'2024','Cloaked travelers approach a colossal grounded vessel through a misty field'],
+  ['the-keeper','The Keeper','2024','A red-robed keeper stands between immense white columns at the edge of darkness'],
+  ['the-sky-was-on-fire','The Sky Was on Fire','2023','A solitary figure stands on a jagged mound before hazy ruins under a coral-lit sky'],
+  ['lets-take-a-walk',"Let's Take a Walk",'','Two tiny red figures walk across a green field beneath a vast wall of sunlit clouds'],
+].map(([s, title, year, alt]) => ({ img: 'public/artstation/' + s + '.webp', title: title.toLowerCase(), year, alt }));
+
+class Component extends DCLogic {
+  componentDidMount() {
+    this.rm = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };
+    this.cur = null;
+    this.onOver = (e) => {
+      const b = e.target.closest ? e.target.closest('[data-btn]') : null;
+      if (b === this.cur) return;
+      if (this.cur) { this.leave(this.cur); if (!b) this.hold = this.cur; }
+      if (b) { if (this.hold && this.hold !== b) this.release(this.hold); this.hold = null; }
+      this.cur = b;
+      if (b) this.enter(b);
+    };
+    this.onOut = (e) => { if (!e.relatedTarget) { if (this.cur) { this.leave(this.cur); this.release(this.cur); this.cur = null; } this.release(this.hold); } };
+    this.onMoveH = (e) => this.onMove(e);
+    document.addEventListener('pointermove', this.onMoveH, { passive: true });
+    this.hold = null;
+    const fit = () => { this.reserve(); this.initChickpea(); };
+    if (document.fonts) Promise.all([document.fonts.load("40px 'Dessign Maison'"), document.fonts.load("40px 'Averia Serif Libre'"), document.fonts.ready]).then(() => setTimeout(fit, 30));
+    else setTimeout(fit, 1500);
+    document.addEventListener('pointerover', this.onOver);
+    document.addEventListener('pointerout', this.onOut);
+    
+    this.applyPaper();
+  }
+  componentDidUpdate() { this.applyPaper(); }
+  componentWillUnmount() {
+    document.removeEventListener('pointerover', this.onOver);
+    document.removeEventListener('pointerout', this.onOut);
+    document.removeEventListener('pointermove', this.onMoveH);
+    document.querySelectorAll('[data-seams-root]').forEach((r) => { if (r.__S && r.__S.raf) cancelAnimationFrame(r.__S.raf); });
+    document.querySelectorAll('[data-skel-flash]').forEach((r) => { if (r.__F && r.__F.raf) cancelAnimationFrame(r.__F.raf); });
+  }
+  applyPaper() {
+    const c = PAPERS[this.props.paper] || PAPERS.blush;
+    document.querySelectorAll('[data-paper]').forEach((el) => { el.style.background = c; });
+  }
+
+  // Each word reserves the wider of its two widths (Averia at rest, Dessign
+  // Maison alternates on hover), so both states keep their own natural spacing
+  // and nothing around the word ever reflows.
+  reserve() {
+    document.querySelectorAll('[data-word]').forEach((w) => {
+      if (w.__rw) return;
+      const txt = w.textContent;
+      if (!txt.trim()) return;
+      const range = document.createRange();
+      range.selectNodeContents(w);
+      const lines = new Set(Array.from(range.getClientRects()).map((r) => Math.round(r.top))).size;
+      if (lines !== 1) return;
+      const probe = (alt) => {
+        const s = document.createElement('span');
+        s.textContent = alt ? txt + tail(txt) : txt;
+        s.style.cssText = 'position:absolute;visibility:hidden;white-space:pre;left:0;top:0' + (alt ? `;font-family:${ALT};font-feature-settings:${FEAT}` : '');
+        w.appendChild(s);
+        const wd = s.offsetWidth;
+        s.remove();
+        return wd;
+      };
+      const pos = w.style.position;
+      if (getComputedStyle(w).position === 'static') w.style.position = 'relative';
+      const restW = probe(false), altW = probe(true);
+      w.style.position = pos;
+      w.__rw = true;
+      if (altW <= restW + 0.5) return;
+      if (getComputedStyle(w).display === 'inline') w.style.display = 'inline-block';
+      w.style.minWidth = Math.ceil(altW) + 'px';
+      const pd = w.parentElement ? getComputedStyle(w.parentElement).display : '';
+      if (pd === 'inline-flex') w.style.textAlign = 'center';
+    });
+  }
+
+  // Hover: the resting word's ink goes transparent and an overlay of the same
+  // text glitches into the alternates on top, inside the reserved box.
+  altIn(b, st) {
+    st.words = [];
+    b.querySelectorAll('[data-word]').forEach((w) => {
+      const txt = w.textContent;
+      if (!txt.trim()) return;
+      const cs = getComputedStyle(w);
+      const prev = { pos: w.style.position, color: w.style.color };
+      if (cs.position === 'static') w.style.position = 'relative';
+      const pl = parseFloat(cs.paddingLeft) || 0, pr = parseFloat(cs.paddingRight) || 0;
+      const ov = document.createElement('span');
+      ov.setAttribute('aria-hidden', 'true');
+      ov.style.cssText = `position:absolute;left:${pl}px;top:${parseFloat(cs.paddingTop) || 0}px;width:${w.clientWidth - pl - pr}px;pointer-events:none;color:${cs.color};white-space:${w.__rw ? 'nowrap' : 'normal'};text-align:${cs.textAlign}`;
+      const spans = [];
+      for (const ch of txt + tail(txt)) { const s = document.createElement('span'); s.textContent = ch; ov.appendChild(s); spans.push(s); }
+      w.appendChild(ov);
+      w.style.color = 'transparent';
+      st.words.push({ w, ov, prev, spans });
+    });
+    if (!st.words.length) return;
+    const setAlt = (s) => { s.style.fontFamily = ALT; s.style.fontFeatureSettings = FEAT; };
+    const finish = () => {
+      if (st.done) return;
+      st.done = true;
+      clearInterval(st.tick);
+      st.words.forEach((x) => x.spans.forEach(setAlt));
+    };
+    if (this.rm.matches) { finish(); return; }
+    const offL = (s) => { s.style.fontFamily = ''; s.style.fontFeatureSettings = ''; };
+    const pending = st.words.flatMap((x) => x.spans.filter((s) => s.textContent.trim())).sort(() => Math.random() - 0.5);
+    const flipped = [];
+    st.tick = setInterval(() => {
+      if (flipped.length > 2 && Math.random() < 0.25) {
+        const s = flipped.splice((Math.random() * flipped.length) | 0, 1)[0];
+        offL(s); pending.push(s);
+      }
+      for (let i = 0; i < 2 && pending.length; i++) {
+        const s = pending.shift();
+        setAlt(s);
+        s.style.color = rnd(FLASH);
+        setTimeout(() => { s.style.color = ''; }, 70);
+        flipped.push(s);
+      }
+      if (!pending.length) { clearInterval(st.tick); setTimeout(finish, 80); }
+    }, 28);
+  }
+  altOut(b, st) {
+    clearInterval(st.tick);
+    st.done = true;
+    (st.words || []).forEach(({ w, ov, prev }) => {
+      ov.remove();
+      w.style.color = prev.color;
+      w.style.position = prev.pos;
+    });
+  }
+
+  // Magnetic pull: the box leans toward the cursor while inside, keeps
+  // stretching after it as the cursor leaves, then lets go with a spring.
+  pull(b, x, y, outside) {
+    const t = b.__t || [0, 0];
+    const r = b.getBoundingClientRect();
+    const k = r.width / (b.offsetWidth || 1) || 1;
+    const sc = b.__cur || 0;
+    const cx = r.left + r.width / 2 - (t[0] + sc) * k, cy = r.top + r.height / 2 - t[1] * k;
+    const w = r.width / k, hgt = r.height / k;
+    const dx = (x - cx) / k, dy = (y - cy) / k;
+    const capX = Math.min(outside ? 12 : 8, 4 + w * 0.02), capY = Math.min(outside ? 9 : 6, 3 + hgt * 0.03);
+    const f = outside ? 0.16 : 0.1;
+    const clamp = (v, c) => Math.max(-c, Math.min(c, v));
+    const tx = clamp(dx * f, capX), ty = clamp(dy * f, capY);
+    b.__t = [tx, ty];
+    b.style.transition = 'transform 140ms cubic-bezier(.2,.7,.3,1)';
+    b.style.transform = `translate(${tx.toFixed(2)}px,${ty.toFixed(2)}px)`;
+  }
+  release(b) {
+    if (!b) return;
+    b.__t = [0, 0];
+    b.style.transition = 'transform 560ms cubic-bezier(.34,1.56,.64,1)';
+    b.style.transform = '';
+    if (this.hold === b) this.hold = null;
+  }
+  onMove(e) {
+    if (this.rm.matches) return;
+    if (this.cur) { this.pull(this.cur, e.clientX, e.clientY, false); return; }
+    const b = this.hold;
+    if (!b) return;
+    const r = b.getBoundingClientRect();
+    const k = r.width / (b.offsetWidth || 1) || 1;
+    const t = b.__t || [0, 0];
+    const sc = b.__cur || 0;
+    const L = r.left - (t[0] + sc) * k, R = r.right - (t[0] + sc) * k, T = r.top - t[1] * k, B = r.bottom - t[1] * k;
+    const ox = Math.max(L - e.clientX, 0, e.clientX - R) / k, oy = Math.max(T - e.clientY, 0, e.clientY - B) / k;
+    if (Math.hypot(ox, oy) > 44) this.release(b);
+    else this.pull(b, e.clientX, e.clientY, true);
+  }
+
+  enter(b) {
+    const mode = this.props.hover || 'band + font';
+    const st = { pinned: [] };
+    b.__h = st;
+    const nb = b.hasAttribute('data-noband');
+    if (mode !== 'font only' && !nb) {
+      const host = document.createElement('span');
+      host.style.cssText = 'position:absolute;inset:0;z-index:-1;pointer-events:none;overflow:hidden';
+      const mk = (css, bg) => {
+        const l = document.createElement('span');
+        const jx = Math.round(Math.random() * 15 - 7.5);
+        l.style.cssText = `position:absolute;${css};background:${bg};clip-path:${rnd(WIPE_IN)};transform:translateX(${jx}px);transition:clip-path 200ms steps(5,end),transform 200ms steps(5,end)`;
+        host.appendChild(l);
+        return l;
+      };
+      const layers = [
+        mk('inset:0', rnd(HUES)),
+        mk(`left:0;right:0;top:0;height:${2 + Math.random() * 6}%`, rnd(SPARK_ACCENT)),
+        mk(`left:0;right:0;bottom:0;height:${2 + Math.random() * 6}%`, rnd(SPARK_LIGHTS)),
+      ];
+      const ol = document.createElement('span');
+      ol.style.cssText = 'position:absolute;inset:0;box-shadow:inset 0 0 0 1.5px ' + INK;
+      host.appendChild(ol);
+      b.appendChild(host);
+      void host.offsetWidth;
+      layers.forEach((l, i) => setTimeout(() => { l.style.clipPath = 'inset(0 0 0 0)'; l.style.transform = 'translateX(0)'; }, i * 45));
+      st.host = host; st.layers = layers; st.ol = ol;
+      [b, ...b.querySelectorAll('*')].forEach((el) => {
+        if (el.style && el.style.color) { st.pinned.push([el, el.style.color]); el.style.color = INK; }
+      });
+    }
+    if (nb) {
+      st.nb = b.style.color;
+      const sib = b.parentElement ? Array.from(b.parentElement.children).indexOf(b) : 0;
+      b.style.color = HUES[(sib + (b.hasAttribute('aria-current') ? 0 : 1)) % HUES.length];
+    }
+    if (mode !== 'band only') this.altIn(b, st);
+  }
+
+  leave(b) {
+    const st = b.__h;
+    if (!st) return;
+    b.__h = null;
+    this.altOut(b, st);
+    if (st.nb !== undefined) b.style.color = st.nb;
+    st.pinned.forEach(([el, c]) => { el.style.color = c; });
+    if (st.host) {
+      st.layers.forEach((l) => { l.style.clipPath = rnd(WIPE_OUT); });
+      st.ol.style.boxShadow = 'none';
+      const host = st.host;
+      setTimeout(() => host.remove(), 230);
+    }
+  }
+
+  // ---- chickpea, carried over ----
+  initChickpea() {
+    this.initMenus();
+    document.querySelectorAll('[data-seams-root]').forEach((r) => this.initSeams(r));
+    document.querySelectorAll('[data-skel-root]').forEach((r) => this.initSkeleton(r));
+    document.querySelectorAll('[data-skel-flash]').forEach((r) => this.initFlash(r));
+  }
+
+  // BrandMenu: current page is the anchor chip; the others drop DOWN on hover.
+  initMenus() {
+    document.querySelectorAll('[data-cp-menu]').forEach((nav) => {
+      if (nav.__cp) return;
+      nav.__cp = true;
+      const drop = nav.querySelector('[data-cp-drop]');
+      if (!drop) return;
+      const set = (open) => {
+        drop.style.opacity = open ? '1' : '0';
+        drop.style.transform = open ? 'translateY(0) scale(1)' : 'translateY(-6px) scale(0.98)';
+        drop.style.pointerEvents = open ? 'auto' : 'none';
+      };
+      nav.addEventListener('pointerenter', () => set(true));
+      nav.addEventListener('pointerleave', () => set(false));
+    });
+  }
+
+  // Hero seams: every prose word is a unit; the gap nearest the cursor opens by up
+  // to 24px (neighbors fall off 40% per step) and an arrow measures it.
+  // Seams, improved from chickpea's hero:
+  //  - words AND button boxes are units; hovering a box makes it claim space, so
+  //    both of its gaps open and both get measured
+  //  - dt-based springs instead of a per-frame lerp (same feel at 60 or 120Hz)
+  //  - hysteresis, so two near-equidistant seams never flicker
+  //  - a relax pass per line: pushes propagate and no gap ever closes below 3px
+  //  - reduced motion keeps the measurements and drops only the movement
+  initSeams(root) {
+    if (root.__S) return;
+    root.querySelectorAll('[data-seams]').forEach((el) => {
+      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+      const texts = [];
+      while (walker.nextNode()) { const n = walker.currentNode; if (!n.parentElement.closest('[data-btn]')) texts.push(n); }
+      texts.forEach((n) => {
+        const frag = document.createDocumentFragment();
+        n.nodeValue.split(/(\s+)/).forEach((p) => {
+          if (!p) return;
+          if (/^\s+$/.test(p)) { frag.appendChild(document.createTextNode(p)); return; }
+          const s = document.createElement('span');
+          s.textContent = p;
+          s.style.display = 'inline-block';
+          s.setAttribute('data-unit', '');
+          frag.appendChild(s);
+        });
+        n.parentNode.replaceChild(frag, n);
+      });
+    });
+    const mode = root.getAttribute('data-skel-mode') || '';
+    const S = { root, mode, units: [], seams: [], raf: 0, active: null, box: null, k: 1, str: 0, liveOn: false, last: 0, arrows: [this.mkArrow(root), this.mkArrow(root)] };
+    if (mode) {
+      const lv = document.createElement('div');
+      lv.setAttribute('aria-hidden', 'true');
+      lv.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:3;opacity:0;transition:opacity 180ms cubic-bezier(.23,1,.32,1)';
+      root.appendChild(lv);
+      S.live = lv;
+    }
+    root.__S = S;
+    const measure = () => {
+      const R0 = root.getBoundingClientRect();
+      const k = R0.width / (root.offsetWidth || 1) || 1;
+      S.k = k;
+      S.units = [];
+      root.querySelectorAll('[data-seams]').forEach((el, bi) => {
+        const cs = getComputedStyle(el);
+        const fs = parseFloat(cs.fontSize) || 16, lh = parseFloat(cs.lineHeight) || fs * 1.2;
+        el.querySelectorAll('[data-unit], [data-btn]').forEach((u) => {
+          if (u.hasAttribute('data-unit') && u.closest('[data-btn]')) return;
+          const cur = u.__cur || 0, t = u.__t || [0, 0];
+          const r = u.getBoundingClientRect();
+          S.units.push({ u, bi, fs, lh, box: u.hasAttribute('data-btn'), x: (r.left - R0.left) / k - cur - t[0], y: (r.top - R0.top) / k - t[1], w: r.width / k, h: r.height / k, cur, v: 0, tgt: 0 });
+        });
+      });
+      S.seams = [];
+      S.lines = [];
+      let line = [];
+      const flush = () => {
+        if (!line.length) return;
+        const L = line;
+        L.forEach((u, i) => { u.line = L; u.li = i; });
+        S.lines.push({ x0: L[0].x, x1: L[L.length - 1].x + L[L.length - 1].w, y0: Math.min.apply(null, L.map((u) => u.y)), y1: Math.max.apply(null, L.map((u) => u.y + u.h)) });
+        for (let i = 0; i < L.length - 1; i++) {
+          const a = L[i], b = L[i + 1];
+          S.seams.push({ a, b, line: L, i, cx: (a.x + a.w + b.x) / 2, cy: (a.y + a.h / 2 + b.y + b.h / 2) / 2 });
+        }
+        line = [];
+      };
+      S.units.forEach((u) => {
+        const prev = line[line.length - 1];
+        if (prev && (u.bi !== prev.bi || Math.abs((u.y + u.h / 2) - (prev.y + prev.h / 2)) > u.fs * 0.6)) flush();
+        line.push(u);
+      });
+      flush();
+    };
+    root.addEventListener('pointerenter', () => { if (!S.active && !S.box) measure(); });
+    root.addEventListener('pointermove', (e) => {
+      if (!S.units.length) measure();
+      const R0 = root.getBoundingClientRect();
+      S.px = (e.clientX - R0.left) / S.k;
+      S.py = (e.clientY - R0.top) / S.k;
+      const onBox = e.target.closest ? e.target.closest('[data-btn]') : null;
+      S.hoverBox = onBox && root.contains(onBox) ? (S.units.find((u) => u.u === onBox) || null) : null;
+      this.retarget(S);
+      const over = !!S.hoverBox || S.lines.some((l) => S.px >= l.x0 - 6 && S.px <= l.x1 + 6 && S.py >= l.y0 && S.py <= l.y1);
+      this.dwell(S, over);
+      this.seamLoop(S);
+    });
+    root.addEventListener('pointerleave', () => { S.units.forEach((u) => { u.tgt = 0; }); S.active = null; S.box = null; S.hoverBox = null; S.str = 0; this.dwell(S, false); this.seamLoop(S); });
+  }
+  // Two states. A quick pass parts the seams slightly (8px). Holding on the
+  // same seam or box for 700ms explodes into the full state: 24px seams plus the
+  // skeleton, which then follows the cursor from seam to seam and only collapses
+  // once the cursor is no longer over any text.
+  retarget(S) {
+    const motion = this.rm.matches ? 0 : 1;
+    const R = 150, D_BOX = 14, D = S.expanded ? 24 : 8;
+    S.units.forEach((u) => { u.tgt = 0; });
+    S.box = null;
+    const boxU = S.hoverBox;
+    if (boxU) {
+      S.active = null;
+      S.box = boxU;
+      S.str = 1;
+      boxU.line.forEach((u, idx) => {
+        if (idx === boxU.li) return;
+        const side = idx < boxU.li ? -1 : 1;
+        const dist = side < 0 ? boxU.li - 1 - idx : idx - boxU.li - 1;
+        u.tgt = side * D_BOX * Math.max(0, 1 - dist * 0.4) * motion;
+      });
+    } else if (S.px !== undefined) {
+      const dOf = (s) => Math.hypot(s.cx - S.px, (s.cy - S.py) * 1.6);
+      let best = null, bd = R;
+      S.seams.forEach((s) => { const d = dOf(s); if (d < bd) { bd = d; best = s; } });
+      if (S.active && best && best !== S.active) {
+        const cd = dOf(S.active);
+        if (cd < R && cd - bd < 10) { best = S.active; bd = cd; }
+      }
+      S.active = best;
+      S.str = 0;
+      if (best) {
+        const t = 1 - bd / R, ease = t * t * (3 - 2 * t), delta = D * ease * motion;
+        best.line.forEach((u, idx) => {
+          const side = idx <= best.i ? -1 : 1;
+          const dist = side < 0 ? best.i - idx : idx - (best.i + 1);
+          u.tgt = side * (delta / 2) * Math.max(0, 1 - dist * 0.4);
+        });
+        S.str = ease;
+      }
+    }
+    this.relax(S);
+  }
+  dwell(S, over) {
+    const key = S.box || S.active || null;
+    if (S.expanded) {
+      if (over && key) return;
+      S.expanded = false;
+      S.skelOn = false;
+      S.key = null;
+      clearTimeout(S.skelT);
+      this.retarget(S);
+      return;
+    }
+    if (!over || !key) { S.key = null; clearTimeout(S.skelT); return; }
+    // a hovered button is already measured; it never starts the text timer
+    if (S.box) { S.key = S.box; clearTimeout(S.skelT); return; }
+    if (key === S.key) return;
+    S.key = key;
+    clearTimeout(S.skelT);
+    S.skelT = setTimeout(() => {
+      if (S.key !== key || S.expanded) return;
+      S.expanded = true;
+      S.skelOn = true;
+      this.retarget(S);
+      this.seamLoop(S);
+    }, 700);
+  }
+  relax(S) {
+    const line = S.box ? S.box.line : S.active ? S.active.line : null;
+    if (!line) return;
+    const lastL = S.box ? S.box.li : S.active.i, firstR = S.box ? S.box.li : S.active.i + 1;
+    const minGap = (a, b) => Math.min(3, b.x - (a.x + a.w));
+    for (let i = lastL; i > 0; i--) {
+      const a = line[i - 1], b = line[i];
+      const over = (a.x + a.w + a.tgt + minGap(a, b)) - (b.x + b.tgt);
+      if (over > 0) a.tgt -= over;
+    }
+    for (let i = firstR; i < line.length - 1; i++) {
+      const a = line[i], b = line[i + 1];
+      const over = (a.x + a.w + a.tgt + minGap(a, b)) - (b.x + b.tgt);
+      if (over > 0) b.tgt += over;
+    }
+  }
+  seamLoop(S) {
+    if (S.raf) return;
+    S.last = performance.now();
+    const K = 420, C = 2 * Math.sqrt(K) * 0.82;
+    const step = (now) => {
+      const dt = Math.min(1 / 30, Math.max(0.001, (now - S.last) / 1000));
+      S.last = now;
+      let moving = false;
+      S.units.forEach((u) => {
+        const d = u.tgt - u.cur;
+        u.v += (K * d - C * u.v) * dt;
+        u.cur += u.v * dt;
+        if (Math.abs(d) < 0.04 && Math.abs(u.v) < 0.5) { u.cur = u.tgt; u.v = 0; } else moving = true;
+        u.u.__cur = u.cur;
+        u.u.style.translate = Math.abs(u.cur) > 0.01 ? u.cur.toFixed(2) + 'px 0' : '';
+      });
+      this.drawArrows(S);
+      if (S.live) this.drawLive(S);
+      // keep ticking while a box is hovered: its magnetic pull moves it outside our springs
+      S.raf = (moving || S.box) ? requestAnimationFrame(step) : 0;
+    };
+    S.raf = requestAnimationFrame(step);
+  }
+  /** Where a unit is right now: model position for words, the real rect for boxes (pull + seam). */
+  pos(S, u) {
+    if (!u.box) return { x: u.x + u.cur, y: u.y, w: u.w, h: u.h };
+    const R0 = S.root.getBoundingClientRect(), r = u.u.getBoundingClientRect();
+    return { x: (r.left - R0.left) / S.k, y: (r.top - R0.top) / S.k, w: r.width / S.k, h: r.height / S.k };
+  }
+  drawArrows(S) {
+    const A0 = S.arrows[0], A1 = S.arrows[1];
+    // buttons always measure instantly; text seams only once the full state is on
+    if (!S.skelOn && !S.box) { A0.el.style.opacity = '0'; A1.el.style.opacity = '0'; return; }
+    const gap = (A, a, b) => {
+      const pa = this.pos(S, a), pb = this.pos(S, b);
+      const x1 = pa.x + pa.w, x2 = pb.x;
+      this.setArrow(A, x1, x2, (pa.y + pa.h / 2 + pb.y + pb.h / 2) / 2, Math.round(x2 - x1));
+    };
+    const hide = (A) => { A.el.style.opacity = '0'; };
+    if (S.box) {
+      const L = S.box.line, i = S.box.li;
+      if (i > 0) gap(A0, L[i - 1], S.box); else hide(A0);
+      if (i < L.length - 1) gap(A1, S.box, L[i + 1]); else hide(A1);
+    } else if (S.active) { gap(A0, S.active.a, S.active.b); hide(A1); }
+    else { hide(A0); hide(A1); }
+  }
+  // The skeleton at the seam (or around a hovered box): outlines + widths, the
+  // box's size and padding, the line's baseline and line height.
+  drawLive(S) {
+    const s = S.active, bx = S.box;
+    const on = S.mode === 'local' || (S.mode === 'live' && S.liveOn);
+    if (!on || (!s && !bx) || (!S.skelOn && !bx)) { S.live.style.opacity = '0'; return; }
+    const C = '#3F5195', P = [];
+    const f = (n) => n.toFixed(1);
+    const ln = (x1, y1, x2, y2, op) => P.push('<line x1="' + f(x1) + '" y1="' + f(y1) + '" x2="' + f(x2) + '" y2="' + f(y2) + '" stroke="' + C + '" stroke-opacity="' + op + '" stroke-width="1"></line>');
+    const paper = getComputedStyle(S.root).backgroundColor || '#F5E4D9';
+    const tx = (x, y, str, anchor, size) => P.push('<text x="' + f(x) + '" y="' + f(y) + '" fill="' + C + '" stroke="' + paper + '" stroke-width="3" stroke-linejoin="round" paint-order="stroke" font-family="ui-monospace,Menlo,monospace" font-size="' + (size || 12) + '" text-anchor="' + (anchor || 'start') + '">' + str + '</text>');
+    const rect = (x, y, w, hh, dash, op) => P.push('<rect x="' + f(x) + '" y="' + f(y) + '" width="' + f(w) + '" height="' + f(hh) + '" fill="none" stroke="' + C + '" stroke-opacity="' + (op || 1) + '" stroke-width="1" stroke-dasharray="' + (dash || '2 3') + '"></rect>');
+    const line = bx ? bx.line : s.line;
+    const live = S.mode === 'live';
+    const units = live ? line : bx ? [line[bx.li - 1], bx, line[bx.li + 1]].filter(Boolean) : [s.a, s.b];
+    // live mode: one 10px row sitting in the ~14px between this line's descenders
+    // and the next line's ascenders; gap numbers only where they clear the widths
+    const taken = [];
+    const fits = (x, str) => { const w = str.length * 6.1 + 4, a = x - w / 2, b2 = x + w / 2; if (taken.some((t) => a < t[1] && b2 > t[0])) return false; taken.push([a, b2]); return true; };
+    units.forEach((u) => {
+      const p = this.pos(S, u);
+      rect(p.x, p.y, p.w, p.h);
+      let lab = String(Math.round(p.w));
+      if (u === bx) {
+        lab = Math.round(p.w) + ' × ' + Math.round(p.h);
+        const word = bx.u.querySelector('[data-word]');
+        if (word) {
+          const R0 = S.root.getBoundingClientRect(), r = word.getBoundingClientRect();
+          const wx = (r.left - R0.left) / S.k, wy = (r.top - R0.top) / S.k;
+          rect(wx, wy, r.width / S.k, r.height / S.k, '1 3', 0.6);
+          lab += '  ·  pad ' + Math.round(wx - p.x);
+        }
+      }
+      if (live) { fits(p.x + p.w / 2, lab); tx(p.x + p.w / 2, p.y + p.h + 4, lab, 'middle', 10); }
+      else tx(p.x + p.w / 2, p.y - 5, lab, 'middle');
+    });
+    if (live) {
+      for (let i = 0; i < line.length - 1; i++) {
+        if (s && i === s.i) continue;
+        if (bx && (i === bx.li - 1 || i === bx.li)) continue;
+        const pa = this.pos(S, line[i]), pb = this.pos(S, line[i + 1]);
+        const gx = (pa.x + pa.w + pb.x) / 2, gs = String(Math.round(pb.x - pa.x - pa.w));
+        if (fits(gx, gs)) tx(gx, pa.y + pa.h + 4, gs, 'middle', 10);
+      }
+    }
+    const ref = bx || (s.a.box ? s.b : s.a);
+    const rp = this.pos(S, ref);
+    const mid = rp.y + rp.h / 2, bl = mid + 0.33 * ref.fs;
+    const p0 = this.pos(S, line[0]), p1 = this.pos(S, line[line.length - 1]);
+    const xs = p0.x, xe = p1.x + p1.w;
+    ln(xs, bl, xe, bl, 0.8);
+    tx(xe + 10, bl + 4, Math.round(ref.fs) + ' / ' + Math.round(ref.lh));
+    if (!live) {
+      const top = mid - ref.lh / 2, bot = mid + ref.lh / 2, ax = xs - 14;
+      ln(ax, top, ax, bot, 0.9);
+      ln(ax - 4, top, ax + 4, top, 0.9);
+      ln(ax - 4, bot, ax + 4, bot, 0.9);
+      tx(ax - 6, mid + 4, String(Math.round(ref.lh)), 'end');
+    }
+    const W = S.root.offsetWidth, H = S.root.offsetHeight;
+    S.live.innerHTML = '<svg width="' + W + '" height="' + H + '" style="position:absolute;left:0;top:0;overflow:visible">' + P.join('') + '</svg>';
+    S.live.style.opacity = bx ? '1' : String(Math.min(1, S.str * 1.8).toFixed(3));
+  }
+
+  // Flashlight: the full static skeleton, masked to a spotlight that follows the
+  // cursor and blooms with pointer speed (MorphGrid's activity + spotlight).
+  initFlash(root) {
+    if (root.__F || this.rm.matches) return;
+    const F = root.__F = { ov: null, act: 0, bloom: 0, x: 0, y: 0, sx: 0, sy: 0, lx: null, ly: null, inside: false, raf: 0 };
+    const tick = () => {
+      F.act = Math.max(0, F.act - 0.02);
+      const target = F.inside ? Math.max(0.3, F.act) : 0;
+      F.bloom += (target - F.bloom) * 0.12;
+      F.sx += (F.x - F.sx) * 0.19;
+      F.sy += (F.y - F.sy) * 0.19;
+      F.ov.style.opacity = F.bloom.toFixed(3);
+      const m = 'radial-gradient(circle 260px at ' + F.sx.toFixed(0) + 'px ' + F.sy.toFixed(0) + 'px, #000 0%, rgba(0,0,0,.55) 45%, rgba(0,0,0,0) 100%)';
+      F.ov.style.maskImage = m;
+      F.ov.style.webkitMaskImage = m;
+      F.raf = (F.inside || F.bloom > 0.005) ? requestAnimationFrame(tick) : 0;
+    };
+    root.addEventListener('pointermove', (e) => {
+      if (!F.ov) { F.ov = this.drawSkeleton(root); F.ov.style.transition = 'none'; }
+      const R0 = root.getBoundingClientRect();
+      const k = R0.width / (root.offsetWidth || 1) || 1;
+      const x = (e.clientX - R0.left) / k, y = (e.clientY - R0.top) / k;
+      if (F.lx === null) { F.sx = x; F.sy = y; }
+      else F.act = Math.min(1, Math.max(F.act, Math.hypot(x - F.lx, y - F.ly) / 14));
+      F.lx = x; F.ly = y; F.x = x; F.y = y; F.inside = true;
+      if (!F.raf) F.raf = requestAnimationFrame(tick);
+    });
+    root.addEventListener('pointerleave', () => { F.inside = false; F.lx = null; if (F.ov && !F.raf) F.raf = requestAnimationFrame(tick); });
+  }
+  mkArrow(root) {
+    const el = document.createElement('div');
+    el.setAttribute('aria-hidden', 'true');
+    el.style.cssText = 'position:absolute;left:0;top:0;pointer-events:none;z-index:4;opacity:0;transition:opacity 150ms cubic-bezier(.23,1,.32,1)';
+    el.innerHTML = '<svg width="1" height="16" style="position:absolute;left:0;top:0;overflow:visible"><line x1="0" y1="8" x2="0" y2="8" stroke="#3F5195" stroke-width="1.5"></line><polyline fill="none" stroke="#3F5195" stroke-width="1.5"></polyline><polyline fill="none" stroke="#3F5195" stroke-width="1.5"></polyline></svg><span style="position:absolute;left:0;top:-16px;transform:translateX(-50%);font:12px/1 ui-monospace,Menlo,monospace;color:#3F5195;white-space:nowrap"></span>';
+    root.appendChild(el);
+    const svg = el.firstChild;
+    return { el, line: svg.children[0], h1: svg.children[1], h2: svg.children[2], lab: el.lastChild };
+  }
+  setArrow(A, x1, x2, y, n) {
+    const L = x2 - x1;
+    if (L < 10) { A.el.style.opacity = '0'; return; }
+    A.el.style.opacity = '1';
+    A.el.style.transform = 'translate(' + x1.toFixed(1) + 'px,' + (y - 8).toFixed(1) + 'px)';
+    const hd = Math.min(5, L / 3);
+    A.line.setAttribute('x2', L.toFixed(1));
+    A.h1.setAttribute('points', hd + ',' + (8 - hd) + ' 0,8 ' + hd + ',' + (8 + hd));
+    A.h2.setAttribute('points', (L - hd).toFixed(1) + ',' + (8 - hd) + ' ' + L.toFixed(1) + ',8 ' + (L - hd).toFixed(1) + ',' + (8 + hd));
+    A.lab.style.left = (L / 2).toFixed(1) + 'px';
+    A.lab.textContent = String(n);
+  }
+
+  // SkeletonReveal: one toggle overlays the page's own math in measure-ink.
+  initSkeleton(root) {
+    if (root.__skel) return;
+    root.__skel = true;
+    const btn = root.querySelector('[data-skel-toggle]');
+    const dot = root.querySelector('[data-skel-dot]');
+    if (!btn) return;
+    let ov = null, on = false;
+    btn.addEventListener('click', () => {
+      on = !on;
+      if (on) {
+        if (ov) ov.remove();
+        ov = this.drawSkeleton(root);
+        setTimeout(() => { if (ov) ov.style.opacity = '1'; }, 20);
+      } else if (ov) ov.style.opacity = '0';
+      if (dot) dot.style.background = on ? 'currentColor' : 'transparent';
+      if (root.__S) { root.__S.liveOn = on; if (root.__S.live) this.drawLive(root.__S); }
+    });
+  }
+  drawSkeleton(root) {
+    const R0 = root.getBoundingClientRect();
+    const k = R0.width / (root.offsetWidth || 1) || 1;
+    const W = root.offsetWidth, H = root.offsetHeight;
+    const loc = (r) => ({ x: (r.left - R0.left) / k, y: (r.top - R0.top) / k, w: r.width / k, h: r.height / k });
+    const C = '#3F5195';
+    const P = [];
+    const f = (n) => n.toFixed(1);
+    const ln = (x1, y1, x2, y2, op, dash) => P.push('<line x1="' + f(x1) + '" y1="' + f(y1) + '" x2="' + f(x2) + '" y2="' + f(y2) + '" stroke="' + C + '" stroke-opacity="' + op + '" stroke-width="1"' + (dash ? ' stroke-dasharray="3 3"' : '') + '></line>');
+    const paper = getComputedStyle(root).backgroundColor || '#F5E4D9';
+    const tx = (x, y, s, anchor) => P.push('<text x="' + f(x) + '" y="' + f(y) + '" fill="' + C + '" stroke="' + paper + '" stroke-width="3" stroke-linejoin="round" paint-order="stroke" font-family="ui-monospace,Menlo,monospace" font-size="12" text-anchor="' + (anchor || 'start') + '">' + s + '</text>');
+    const pl = (pts) => P.push('<polyline fill="none" stroke="' + C + '" stroke-width="1" points="' + pts + '"></polyline>');
+    const arrowH = (x1, x2, y, label) => {
+      ln(x1, y, x2, y, 0.9);
+      pl(f(x1 + 5) + ',' + f(y - 5) + ' ' + f(x1) + ',' + f(y) + ' ' + f(x1 + 5) + ',' + f(y + 5));
+      pl(f(x2 - 5) + ',' + f(y - 5) + ' ' + f(x2) + ',' + f(y) + ' ' + f(x2 - 5) + ',' + f(y + 5));
+      tx((x1 + x2) / 2, y - 6, label, 'middle');
+    };
+    const arrowV = (x, y1, y2, label, anchor) => {
+      ln(x, y1, x, y2, 0.9);
+      pl(f(x - 5) + ',' + f(y1 + 5) + ' ' + f(x) + ',' + f(y1) + ' ' + f(x + 5) + ',' + f(y1 + 5));
+      pl(f(x - 5) + ',' + f(y2 - 5) + ' ' + f(x) + ',' + f(y2) + ' ' + f(x + 5) + ',' + f(y2 - 5));
+      tx(anchor === 'end' ? x - 8 : x + 8, (y1 + y2) / 2 + 4, label, anchor);
+    };
+    const blocks = Array.from(root.querySelectorAll('h1, p')).map((el) => ({ el, r: loc(el.getBoundingClientRect()), cs: getComputedStyle(el) }));
+    const left = blocks.length ? Math.min.apply(null, blocks.map((b) => b.r.x)) : 48;
+    const measureR = left + 1120;
+    ln(left, 0, left, H, 0.45, true);
+    ln(measureR, 0, measureR, H, 0.45, true);
+    ln(W - left, 0, W - left, H, 0.25, true);
+    blocks.forEach((b) => { ln(0, b.r.y, W, b.r.y, 0.16, true); ln(0, b.r.y + b.r.h, W, b.r.y + b.r.h, 0.16, true); });
+    arrowH(0, left, 16, String(Math.round(left)));
+    arrowH(left, measureR, 16, 'measure ' + Math.round(measureR - left));
+    blocks.forEach((b, i) => {
+      const fs = parseFloat(b.cs.fontSize) || 16;
+      const lh = parseFloat(b.cs.lineHeight) || fs * 1.2;
+      const rg = document.createRange();
+      rg.selectNodeContents(b.el);
+      const lines = [];
+      Array.from(rg.getClientRects()).forEach((cr) => {
+        const r = loc(cr);
+        if (r.w < 1 || r.h > fs * 1.6) return;
+        const bl = r.y + r.h / 2 + fs * 0.33;
+        const L = lines.find((l) => Math.abs(l.bl - bl) < fs * 0.4);
+        if (L) { L.x0 = Math.min(L.x0, r.x); L.x1 = Math.max(L.x1, r.x + r.w); } else lines.push({ bl, x0: r.x, x1: r.x + r.w });
+      });
+      lines.forEach((l) => ln(l.x0, l.bl, l.x1, l.bl, 0.75));
+      tx(left, b.r.y - 7, Math.round(fs) + ' / ' + Math.round(lh) + '  ·  ' + (lh / fs).toFixed(2) + '  ·  averia serif libre ' + b.cs.fontWeight);
+      if (i === 1) arrowV(22, b.r.y, b.r.y + lh, String(Math.round(lh)), 'end');
+      const nb = blocks[i + 1];
+      if (nb) {
+        const g = nb.r.y - (b.r.y + b.r.h);
+        if (g > 4) arrowV(W - 22, b.r.y + b.r.h, nb.r.y, String(Math.round(g)), 'end');
+      }
+    });
+    root.querySelectorAll('[data-btn]').forEach((btn) => {
+      if (btn.hasAttribute('data-skel-toggle')) return;
+      const t = btn.__t || [0, 0];
+      const r = loc(btn.getBoundingClientRect());
+      const x = r.x - t[0] - (btn.__cur || 0), y = r.y - t[1];
+      P.push('<rect x="' + f(x) + '" y="' + f(y) + '" width="' + f(r.w) + '" height="' + f(r.h) + '" fill="none" stroke="' + C + '" stroke-width="1" stroke-dasharray="2 3"></rect>');
+      tx(x + 2, y - 5, Math.round(r.w) + ' × ' + Math.round(r.h));
+    });
+    const ov = document.createElement('div');
+    ov.setAttribute('aria-hidden', 'true');
+    ov.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:3;opacity:0;transition:opacity 280ms cubic-bezier(.22,1,.36,1)';
+    ov.innerHTML = '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" style="position:absolute;left:0;top:0;overflow:visible">' + P.join('') + '</svg>';
+    root.appendChild(ov);
+    return ov;
+  }
+
+  renderVals() {
+    return {
+      cases: CASES,
+      paintings: PAINTINGS,
+      loop: [
+        'paste a recipe, by link or plain text',
+        'the app converts it, asking a question only where guessing would be unsafe',
+        'it returns a breakdown: what is fine, what had gluten and was swapped, what still needs a label read',
+        'unresolved label checks ride the shopping list to the store',
+        'cooking a result and rating the texture feeds a new version of the recipe',
+      ],
+      states: [
+        { name: 'verified', meaning: "supported by the recipe and by the ingredient's own published information. not a promise of absolute safety." },
+        { name: 'check the label', meaning: 'depends on the package. needs a certified gluten-free mark or a shared-equipment statement.' },
+        { name: 'blocking', meaning: 'a known gluten source. this step cannot go ahead as written.' },
+        { name: 'unknown', meaning: 'information is missing. one question closes the gap.' },
+      ],
+      openQs: [
+        'the trusted brands editor is referenced from profile and settings, but its editing UI is not designed',
+        'cross-contamination in a shared kitchen is out of scope, and it is the single most requested thing from celiac users',
+        'mid-cook discovery has no screen: what happens when a cook is already halfway through and finds the problem then',
+        'recipe imagery is emoji placeholders, which is a placeholder and not a decision',
+        'whether saved recipes open with no network is unspecified',
+        'there is no designed behavior for an evidence line whose read date has gone stale',
+      ],
+      links: [
+        { label: 'code', value: 'github.com/globalanomalyindex', edge: '0' },
+        { label: 'paintings', value: 'artstation.com/chrisfiore', edge: '1px solid #231C22' },
+        { label: 'professional', value: 'linkedin.com/in/christopherrobinfiore', edge: '1px solid #231C22' },
+        { label: 'resume · 1 page', value: 'view or download', edge: '1px solid #231C22' },
+      ],
+      glance: [
+        { field: 'education', value: 'Diploma in Concept Art, CG Spectrum College of Digital Art and Animation' },
+        { field: 'mentorship', value: 'graphic design and Photoshop under Stephen Fiore, Senior Graphic Designer at Disney' },
+        { field: 'research', value: 'college-level Capstone and Research, 2017 to 2019. paper submitted to the Regeneron Science Talent Search' },
+        { field: 'training', value: 'Lee Strasberg Theatre and Film Institute, two years, Advanced Method' },
+        { field: 'screen', value: "co-star, Marvel Studios' Daredevil: Born Again (2025). campaign lead, New York Blood Center" },
+        { field: 'design tools', value: 'Figma, Photoshop, Blender, Substance Sampler' },
+        { field: 'AI tools', value: 'Claude Code, Claude Design, Codex, and agentic workflows i run myself' },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

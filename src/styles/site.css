@@ -1,0 +1,503 @@
+/*
+  perfection synthétique · the prose site.
+
+  An early-internet text post, made editorial: warm paper and ink at rest,
+  and bright color only on hover. At rest the page is ONLY paper, ink, ink-2
+  and link blue. Anything else on screen came from a pointer.
+
+  THE TYPE SCALE IS PIXEL-EXACT AT 1440. Every size is `clamp(floor, Nvw, max)`
+  where N is the design size divided by 1440, so the preferred value equals
+  the design value at the artboard width, the max holds it there on anything
+  wider, and the floor catches phones (README §8).
+*/
+
+@font-face {
+  font-family: 'Dessign Maison';
+  src: url('/fonts/SLTFDessignMaison-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  /* Only ever painted inside a hover. `block` means a glitch never flashes a fallback. */
+  font-display: block;
+}
+
+:root {
+  --paper: #f5e4d9;
+  --ink: #231c22;
+  --ink-2: #6e5b57;
+  --link: #3f5195;
+  --link-hover: #2e3c73;
+  --link-visited: #6a4c86;
+  --measure-ink: #3f5195;
+  --band-ink: #1a1820;
+
+  /* each preferred value is (design px / 1440) of the viewport, as an exact ratio */
+  --fs-h1: clamp(48px, 100vw * 88 / 1440, 88px);
+  --fs-h2: clamp(32px, 100vw * 48 / 1440, 48px);
+  --fs-lede: clamp(26px, 100vw * 40 / 1440, 40px);
+  --fs-body: clamp(20px, 100vw * 32 / 1440, 32px);
+  --fs-crumb: clamp(18px, 100vw * 26 / 1440, 26px);
+  --fs-cap: clamp(16px, 100vw * 22 / 1440, 22px);
+
+  --pad-x: clamp(20px, 100vw * 48 / 1440, 48px);
+  --measure-wide: 1120px;
+  --measure: 1040px;
+
+  --serif: 'Averia Serif Libre', Georgia, serif;
+  --mono: ui-monospace, Menlo, monospace;
+}
+
+html {
+  background: var(--paper);
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--serif);
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ------------------------------------------------------------------ page */
+
+.page {
+  position: relative; /* the skeleton and the arrows are placed in its box */
+  box-sizing: border-box;
+  max-width: 1440px;
+  min-height: 100vh;
+  padding: 40px var(--pad-x) 104px;
+  display: flex;
+  flex-direction: column;
+}
+
+.page--home {
+  padding-bottom: 64px;
+}
+
+.page p,
+.page figure,
+.page h1,
+.page h2 {
+  margin: 0;
+}
+
+.page p,
+.page figcaption,
+.page nav {
+  text-wrap: pretty;
+}
+
+.ink-2 {
+  color: var(--ink-2);
+}
+
+b {
+  font-weight: 700;
+}
+
+code {
+  font-family: var(--mono);
+  font-size: 0.72em;
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
+}
+
+/* ---------------------------------------------------------------- blocks */
+
+.title {
+  font-size: var(--fs-h1);
+  line-height: 1.05;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.crumb {
+  font-size: var(--fs-crumb);
+  line-height: 1.5;
+  max-width: var(--measure-wide);
+}
+
+.crumb + .title {
+  margin-top: 56px;
+}
+
+.meta {
+  font-size: var(--fs-crumb);
+  line-height: 1.4;
+  color: var(--ink-2);
+}
+
+.title + .meta {
+  margin-top: 18px;
+}
+
+.lede {
+  font-size: var(--fs-lede);
+  line-height: 1.5;
+  max-width: var(--measure-wide);
+}
+
+.page .title + .lede {
+  margin-top: 24px;
+}
+
+.page .meta + .lede {
+  margin-top: 32px;
+}
+
+.body {
+  font-size: var(--fs-body);
+  line-height: 1.5;
+  max-width: var(--measure);
+}
+
+.page .lede + .body {
+  margin-top: 32px;
+}
+
+.page .lede + .tagline {
+  margin-top: 16px;
+}
+
+.page .body + .tagline {
+  margin-top: 16px;
+}
+
+.page .closing {
+  margin-top: 56px;
+}
+
+/* the index: one sentence per case, 30px apart, on the wide measure */
+.index {
+  margin-top: 56px;
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.index .body {
+  max-width: var(--measure-wide);
+}
+
+/* sections: h2 88px down, first paragraph 24px under it */
+.sec {
+  margin-top: 88px;
+}
+
+.h2 {
+  font-size: var(--fs-h2);
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+.page .sec > .h2 + * {
+  margin-top: 24px;
+}
+
+.page .sec--prose > .body + .body {
+  margin-top: 20px;
+}
+
+.page .sec--list > .body + .body {
+  margin-top: 12px;
+}
+
+.page .sec--glance > .body + .body {
+  margin-top: 10px;
+}
+
+/* the say-hi sentence is set at lede size, on the wide measure */
+.page #say-hi > .lede {
+  margin-top: 24px;
+}
+
+/* a thought that has not been drawn, set off from the argument by a rule */
+.aside {
+  margin-top: 20px;
+  padding-left: 24px;
+  border-left: 1px solid var(--ink);
+  max-width: var(--measure);
+}
+
+.page .aside > .body + .body {
+  margin-top: 20px;
+}
+
+/* ---------------------------------------------------------------- figures */
+
+.figure {
+  margin-top: 56px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.page .figure {
+  margin-top: 56px;
+}
+
+.figure img,
+.work img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--ink);
+  box-sizing: border-box;
+  background: rgb(35 28 34 / 0.06);
+}
+
+.cap {
+  font-size: var(--fs-cap);
+  line-height: 1.4;
+  color: var(--ink-2);
+}
+
+/* paintings: two CSS columns, every caption a sentence */
+.gallery {
+  margin-top: 64px;
+  columns: 2;
+  column-gap: 40px;
+}
+
+.page .work {
+  margin: 0 0 48px;
+  break-inside: avoid;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.cap--work {
+  font-size: var(--fs-crumb);
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.page .gallery + .body {
+  margin-top: 16px;
+}
+
+/* ------------------------------------------------------------------- home */
+
+.page--home .title {
+  margin: 0;
+}
+
+.home-prose {
+  margin-top: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+  font-size: var(--fs-lede);
+  line-height: 1.5;
+}
+
+.home-p {
+  max-width: var(--measure-wide);
+}
+
+.home-p--wide {
+  max-width: none;
+}
+
+/* "you can view my portfolio [product designs] and [paintings]," is one line */
+.home-lock {
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------- buttons */
+
+/*
+  The framed inline button. Every link on the site is one. The box is em-based,
+  so it scales with the sentence it sits in; `isolation` is required, because
+  the hover band paints at z-index -1 INSIDE it, above its background and
+  under its label.
+*/
+.btn {
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  align-items: baseline;
+  vertical-align: baseline;
+  gap: 0.2em;
+  padding: 0.02em 0.3em 0.06em;
+  border: 1px solid var(--ink);
+  border-radius: 0;
+  line-height: 1.2;
+  color: var(--ink);
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn:visited {
+  color: var(--ink);
+}
+
+.btn-arrow {
+  flex: none;
+  width: 0.42em;
+  height: 0.42em;
+  overflow: visible;
+  align-self: center;
+}
+
+.btn-arrow path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: square;
+}
+
+/*
+  A button and the punctuation after it, as one unbreakable pair. The button
+  itself may still wrap its label, and it stops just short of the column so
+  the punctuation always has room beside it: the pair can never push the page
+  sideways.
+*/
+.glue {
+  white-space: nowrap;
+}
+
+.glue > .btn {
+  white-space: normal;
+  max-width: calc(100% - 0.5em);
+}
+
+/*
+  The glitch overlay is placed inside this box. `anywhere` only matters on a
+  phone, where the address is wider than the column: it breaks inside its box
+  instead of pushing the page sideways.
+*/
+[data-word] {
+  position: relative;
+  overflow-wrap: anywhere;
+}
+
+/*
+  A word the seam engine has split out. It has to be an atomic inline box,
+  because a plain inline box cannot be translated, and the seams move words
+  with `translate`.
+*/
+[data-unit] {
+  display: inline-block;
+}
+
+/*
+  The ink pin. While the band is up, the button and everything in it read in
+  band ink: a secondary-ink span would vanish on a bright band. The glitch sets
+  the resting word to transparent inline, which outranks this.
+*/
+.btn[data-hot],
+.btn[data-hot] * {
+  color: var(--band-ink);
+}
+
+/* Keyboard focus was not designed; this is README §8's recommendation. */
+.btn:focus {
+  outline: none;
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--link);
+  outline-offset: 3px;
+}
+
+/* plain links, for any future CMS content. None remain on the designed screens. */
+.page a:not(.btn) {
+  color: var(--link);
+  text-decoration-line: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 6px;
+}
+
+.page a:not(.btn):visited {
+  color: var(--link-visited);
+}
+
+/* after :visited, so a visited link still darkens on hover */
+.page a:not(.btn):hover {
+  color: var(--link-hover);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* -------------------------------------------------------------- smaller */
+
+/*
+  The home line stops being locked to one line once it can no longer fit.
+  The lede size bottoms out at 26px below a 936px viewport, and from there the
+  locked clause is wider than the measure, so it wraps like any sentence and
+  the forced break goes with it.
+*/
+@media (max-width: 960px) {
+  .home-lock {
+    white-space: normal;
+  }
+  .home-br {
+    display: none;
+  }
+}
+
+@media (max-width: 800px) {
+  .gallery {
+    columns: 1;
+  }
+}
+
+/*
+  Small phones get one more step down. Below this, the longest labels ("apple
+  wallet card sharing concept", the address) fill a whole line at the README's
+  floors, and the punctuation after them lands alone at the start of the next.
+*/
+@media (max-width: 480px) {
+  :root {
+    --fs-lede: 22px;
+    --fs-body: 18px;
+    --fs-crumb: 16px;
+    --fs-cap: 15px;
+  }
+}
+
+@media (max-width: 700px) {
+  .crumb + .title,
+  .index,
+  .page .closing,
+  .figure,
+  .page .figure {
+    margin-top: 40px;
+  }
+  .sec {
+    margin-top: 64px;
+  }
+  .gallery {
+    margin-top: 40px;
+  }
+  .page .work {
+    margin-bottom: 36px;
+  }
+  .page {
+    padding-top: 28px;
+    padding-bottom: 72px;
+  }
+  .index {
+    gap: 24px;
+  }
+  .home-prose {
+    gap: 28px;
+  }
+}

@@ -1,363 +1,223 @@
 /**
- * Channel 01 · Product designs.
+ * The product designs index: fourteen cases, one sentence each.
  *
- * Eight cases transcribed from devkit `data/projects.json`, plus df2tm, lee,
- * guestpass and chipotle, which postdate the devkit. The devkit's branchial lateral spine record
- * lives on channel 03 (Competizione) instead, because it is automotive work.
+ * `line` and `status` are the designer's final wording from the prose
+ * redesign handoff (CONTENT.md and LABELING.md §4 and §6), and they override
+ * the older devkit lines this file used to carry.
  *
- * `evidence` carries the devkit's `evidenceStatus` verbatim. "simulated" and
- * "tested logic" are not synonyms for "built"; keep them distinct.
+ * STATUS IS EVIDENCE, NOT DECORATION. The vocabulary is closed:
+ *
+ *   built                  something you can open and use
+ *   design study           designed, not built or commissioned
+ *   motion interaction study   after tokens only
+ *   client work            chellbook only
+ *   simulated              behavior proven in simulation, not shipped
+ *   tested logic from a preregistered blind study   wildcard only
+ *
+ * Never move a case to a stronger word than the one here. "simulated" is not
+ * "tested", and "design study" is not "built".
+ *
+ * `caseStudy` adds ", w/ case study" to the status. It is true wherever a case
+ * page or a case-study document exists, which is not the same as "has a page on
+ * this site": after tokens, one master affordance, adhd mode, chickpea and
+ * wildcard keep theirs on their own deployments, and the button goes there.
  */
 
-import type { CaseRecord, MotionStudy } from './types.ts';
+import { casePath } from '../paths.ts';
 
-export const CASES: CaseRecord[] = [
+export interface CaseEntry {
+  id: string;
+  name: string;
+  line: string;
+  status: string;
+  caseStudy: boolean;
+  year: string;
+  /** Where the name's button goes. */
+  href: string;
+  /** Outside this site, or a standalone prototype document: opens in a new tab. */
+  newTab: boolean;
+  /**
+   * The preview image from the lattice site's index. Nothing renders it now;
+   * the prose index has no thumbnails by design. Kept because a hover preview
+   * was named as a possible later addition.
+   */
+  card: string;
+}
+
+const card = (id: string) => `/projects/card/${id}.webp`;
+
+export const CASES: CaseEntry[] = [
   {
     id: 'after-tokens',
-    idx: '01',
     name: 'after tokens',
     line: 'parallel language that shows what is provisional and what has settled',
+    status: 'motion interaction study',
+    caseStudy: true,
     year: '2026',
-    discipline: 'product design, motion, prototyping',
-    evidence: 'built',
-    image: 'projects/live/after-tokens.webp',
-    imageAlt:
-      'The After Tokens playground running live: a resolved answer with its reveal controls and grammar selector',
-    caption: 'after tokens · working prototype · 2026',
-    card: 'projects/card/after-tokens.webp',
     href: 'https://globalanomalyindex.github.io/after-tokens/',
-    source: 'https://github.com/globalanomalyindex/after-tokens',
+    newTab: true,
+    card: card('after-tokens'),
   },
   {
     id: 'guestpass',
-    idx: '02',
     name: 'apple wallet card sharing concept',
-    // 75 characters. PAGE1's line column takes about 82 before it wraps and
-    // overflows the row; see the note on PAGE1 in `src/design/layout.ts`.
     line: 'a temporary single use version of your card, handed to someone over imessage',
+    status: 'design study',
+    caseStudy: true,
     year: '2026',
-    discipline: 'product design, iOS, research direction',
-    // A hosted case page with two working prototypes exists here, but nothing
-    // was built: no feature, no code, no user testing. It also has no
-    // relationship to Apple, which the source package never states and
-    // `src/data/guestpass.ts` therefore has to. That boundary is carried five
-    // times over.
-    evidence: 'concept',
-    image: 'projects/live/guestpass.webp',
-    imageAlt:
-      'A design render of the borrowed card: a card with a dashed edge reading "Alex\'s Apple Card" and "Expires 9:41 PM", shown beside a phone where the same card sits at the bottom of a Wallet stack under two solid-edged cards',
-    caption: 'apple wallet card sharing concept · design renders · 2026',
-    card: 'projects/card/guestpass.webp',
-    // The case is hosted in this site's own public/ directory, as chellbook's,
-    // lee's, mfny's and chipotle's are. The row opens the case study.
-    href: null,
-    source: null,
-    subpage: 'guestpass',
+    href: casePath('guestpass'),
+    newTab: false,
+    card: card('guestpass'),
   },
   {
     id: 'chellbook',
-    idx: '03',
     name: 'chellbook',
-    line: 'AI-based iOS app concept for celiac food safety',
+    line: 'AI-based iOS app for celiac food safety, designed for a client living with celiac disease',
+    status: 'client work',
+    caseStudy: true,
     year: '2026',
-    discipline: 'product design, iOS',
-    // Concept-stage: 30 designed screens and two prototypes, no shipped app.
-    // "built" would claim a product that does not exist.
-    evidence: 'concept',
-    image: 'projects/live/chellbook.webp',
-    imageAlt:
-      'The Chellbook product design showcase: the wordmark, the value line, and the spec table listing 13 sections and 30 screens',
-    caption: 'chellbook · design spec · 2026',
-    card: 'projects/card/chellbook.webp',
-    // No deployed app to link to — the row opens the case study in the stage,
-    // which is where both hosted prototypes are linked from.
-    href: null,
-    source: null,
-    subpage: 'chellbook',
+    href: casePath('chellbook'),
+    newTab: false,
+    card: card('chellbook'),
   },
   {
     id: 'lee',
-    idx: '04',
     name: 'lee',
-    // 76 characters. PAGE1's line column takes about 82 before it wraps and
-    // overflows the row; see the note on PAGE1 in `src/design/layout.ts`.
     line: 'self-tape studio for actors: the notes become color you read while acting',
+    status: 'design study',
+    caseStudy: false,
     year: '2026',
-    discipline: 'product design, macOS, prototyping',
-    // An interactive prototype exists and is hosted here, but there is no mac
-    // app: nothing was built, nobody commissioned it, and the prototype is
-    // html standing in for the program. `src/data/lee.ts` carries that
-    // boundary in full, four times over.
-    evidence: 'concept',
-    image: 'projects/live/lee.webp',
-    imageAlt:
-      'A design render of the Lee record screen: a teleprompter line under the lens, an eyeline guide across the camera feed, glyph controls and a centered record button, with the reader panel on the right',
-    caption: 'lee · design renders · 2026',
-    card: 'projects/card/lee.webp',
-    // The prototype is hosted in this site's own public/ directory, as
-    // chellbook's, mfny's and chipotle's are. The row opens the case study.
-    href: null,
-    source: null,
-    subpage: 'lee',
+    href: '/lee/studio.html',
+    newTab: true,
+    card: card('lee'),
   },
   {
     id: 'mfny-concentrates',
-    idx: '05',
     name: 'mfny concentrates',
     line: 'product page redesign: one card per SKU becomes one card per strain',
+    status: 'built',
+    caseStudy: true,
     year: '2026',
-    discipline: 'product design, IA, interaction',
-    // A working demo exists and is hosted here, so the row is "built" in this
-    // vocabulary's sense — something you can open and use. It is NOT shipped by
-    // MFNY, and `src/data/mfny.ts` carries that boundary in full.
-    evidence: 'built',
-    image: 'projects/live/mfny.webp',
-    imageAlt:
-      'The redesigned concentrates grid: eleven strain cards, each carrying its own type tags and an in-card form switcher',
-    caption: 'mfny concentrates · working demo · 2026',
-    card: 'projects/card/mfny-concentrates.webp',
-    // The demo is hosted in this site's own public/ directory rather than on a
-    // separate Pages repo, exactly as chellbook's two prototypes are.
-    href: null,
-    source: null,
-    subpage: 'mfny',
+    href: casePath('mfny-concentrates'),
+    newTab: false,
+    card: card('mfny-concentrates'),
   },
   {
     id: 'chipotle',
-    idx: '06',
     name: 'chipotle app ui cleanup',
-    // 78 characters. PAGE1's line column takes about 82 before it wraps and
-    // overflows the row; see the note on PAGE1 in `src/design/layout.ts`.
     line: 'pickup checkout redesign: nineteen findings, rebuilt to fit one screen',
+    status: 'design study',
+    caseStudy: false,
     year: '2026',
-    discipline: 'product design, audit, interaction',
-    // An interactive prototype exists and is hosted here, so the row is "built"
-    // in this vocabulary's sense: something you can open and use. It is a
-    // concept. Nothing shipped, nobody commissioned it, and there is no
-    // affiliation with the app or its owner. `src/data/chipotle.ts` carries
-    // that boundary in full, four times over.
-    evidence: 'concept',
-    image: 'projects/live/chipotle.webp',
-    imageAlt:
-      'Design renders of the two final screens: a checkout with one pickup time between a minus and a plus button, and a confirmation screen with a single ETA',
-    caption: 'chipotle app ui cleanup · design renders · 2026',
-    card: 'projects/card/chipotle.webp',
-    // The prototype is hosted in this site's own public/ directory, as
-    // chellbook's and mfny's are. The row opens the case study in the stage.
-    href: null,
-    source: null,
-    subpage: 'chipotle',
+    href: '/chipotle/checkout.html',
+    newTab: true,
+    card: card('chipotle'),
   },
   {
     id: 'one-master-affordance',
-    idx: '07',
     name: 'one master affordance',
     line: 'one persistent control does activation, targeting and a safe abort',
+    status: 'simulated',
+    caseStudy: true,
     year: '2026',
-    discipline: 'accessibility, interaction design',
-    evidence: 'simulated',
-    image: 'projects/live/one-master-affordance.webp',
-    imageAlt:
-      'The One Master Affordance prototype running live: the assisted-targeting surface with its measurement readouts',
-    caption: 'one master affordance · coded prototype · 2026',
-    card: 'projects/card/one-master-affordance.webp',
     href: 'https://globalanomalyindex.github.io/carplay-siri-contacts/',
-    source: 'https://github.com/globalanomalyindex/carplay-siri-contacts',
+    newTab: true,
+    card: card('one-master-affordance'),
   },
   {
     id: 'adhd-mode',
-    idx: '08',
     name: 'adhd mode',
     line: 'a feed becomes a bounded session with a visible end and a return queue',
+    status: 'built',
+    caseStudy: true,
     year: '2026',
-    discipline: 'product design, interaction',
-    evidence: 'built',
-    image: 'projects/live/adhd-mode.webp',
-    imageAlt:
-      'ADHD Mode running live: a bounded session with its post and time limits, action dock and return state',
-    caption: 'adhd mode · portfolio prototype · 2026',
-    card: 'projects/card/adhd-mode.webp',
     href: 'https://globalanomalyindex.github.io/adhd-mode-linkedin/',
-    source: 'https://github.com/globalanomalyindex/adhd-mode-linkedin',
+    newTab: true,
+    card: card('adhd-mode'),
   },
   {
     id: 'df2tm',
-    idx: '09',
     name: 'df2tm',
     line: 'a learning layer for claude code that teaches the concept behind the work',
+    status: 'built',
+    caseStudy: true,
     year: '2026',
-    discipline: 'product design, developer tools',
-    evidence: 'built',
-    image: 'projects/live/df2tm.webp',
-    imageAlt:
-      "The df2tm repository showing a teaching aside in context: a user's request, the fix Claude made, and the concept it taught",
-    caption: 'df2tm · shipped claude code plugin · 2026',
-    card: 'projects/card/df2tm.webp',
-    // No hosted demo — it is a plugin you install into your own Claude Code.
-    // The subpage carries the repository link as a real anchor.
-    href: null,
-    source: 'https://github.com/globalanomalyindex/df2tm',
-    subpage: 'df2tm',
+    href: casePath('df2tm'),
+    newTab: false,
+    card: card('df2tm'),
   },
   {
     id: 'campeon',
-    idx: '10',
     name: 'campeón',
-    line: 'four aim drills converge on one range without hiding disagreement',
+    line:
+      'using natural predator behavior and environments to improve human computer interaction accuracy with a mouse input',
+    status: 'simulated',
+    caseStudy: false,
     year: '2026',
-    discipline: 'product design, engineering',
-    evidence: 'simulated',
-    image: 'projects/live/campeon.webp',
-    imageAlt:
-      'campeón running live: the four aim drills and the entry into the sensitivity search',
-    caption: 'campeón · working instrument · 2026',
-    card: 'projects/card/campeon.webp',
     href: 'https://globalanomalyindex.github.io/campeon/',
-    source: 'https://github.com/globalanomalyindex/campeon',
+    newTab: true,
+    card: card('campeon'),
   },
   {
     id: 'chickpea',
-    idx: '11',
     name: 'chickpea',
-    line: 'a seeded studio that exposes the grid, palette and math behind output',
+    line: 'a seeded color and grid generation studio',
+    status: 'built',
+    caseStudy: true,
     year: '2026',
-    discipline: 'generative tool design, engineering',
-    evidence: 'built',
-    image: 'projects/live/chickpea.webp',
-    imageAlt:
-      'The Chickpea studio running live: the generative grid and color tool',
-    caption: 'chickpea · working browser studio · 2026',
-    card: 'projects/card/chickpea.webp',
     href: 'https://globalanomalyindex.github.io/chickpea/',
-    source: 'https://github.com/globalanomalyindex/chickpea',
-    /*
-      Renders correctly in a browser, but GitHub Pages answers this path with
-      HTTP 404 and lets 404.html boot the SPA, which then routes client-side.
-      Fine for people, invisible to crawlers and link checkers. Worth a
-      404.html→index redirect or a real /case/index.html on the chickpea repo.
-    */
-    caseHref: 'https://globalanomalyindex.github.io/chickpea/case',
+    newTab: true,
+    card: card('chickpea'),
   },
   {
     id: 'wildcard',
-    idx: '12',
     name: 'wildcard',
-    line: 'freeze the problem, draw from outside, keep only what survives',
+    line: 'testing if default mode network emulation in LLMs leads to more creative outputs',
+    status: 'tested logic from a preregistered blind study',
+    caseStudy: true,
     year: '2026',
-    discipline: 'AI workflow, experiment design',
-    evidence: 'tested logic',
-    image: 'projects/live/wildcard.webp',
-    imageAlt:
-      'Wildcard running live: the external-draw protocol with its freeze and retain rules',
-    caption: 'wildcard · installable plugin · 2026',
-    card: 'projects/card/wildcard.webp',
     href: 'https://globalanomalyindex.github.io/wildcard/',
-    source: 'https://github.com/globalanomalyindex/wildcard',
-    caseHref: 'https://globalanomalyindex.github.io/wildcard/case-study/',
+    newTab: true,
+    card: card('wildcard'),
   },
   {
     id: 'dither',
-    idx: '13',
     name: 'dither',
-    line: 'a dependency-free studio for dithering, grain, palette and paint',
+    line:
+      'an experiment testing what a painting engine looks like if it is intentionally trying to be physically impossible compared to real paint',
+    status: 'built',
+    caseStudy: false,
     year: '2026',
-    discipline: 'creative image tool',
-    evidence: 'built',
-    image: 'projects/live/dither.webp',
-    imageAlt:
-      'The DITHER studio running live: the dither, grain and paint modes over an empty canvas',
-    caption: 'dither · browser studio · 2026',
-    card: 'projects/card/dither.webp',
     href: 'https://globalanomalyindex.github.io/dither/',
-    source: null,
+    newTab: true,
+    card: card('dither'),
   },
   {
     id: 'three-zones',
-    idx: '14',
     name: 'three zones: camera market ui fix',
     line: 'a two-zone gallery dead ends at the video, so give the middle a job',
+    status: 'design study',
+    caseStudy: false,
     year: '2026',
-    discipline: 'product design, interaction, prototyping',
-    /*
-      `concept`, and it stays `concept`. This is an argued proposal with a
-      working prototype of the fix, not a change anybody shipped: the listing it
-      is about belongs to somebody else, and the clip inside it is a still frame
-      with a pan because no footage came with the handoff. The page says so
-      itself, in its own words, above the fold of section 3.
-    */
-    evidence: 'concept',
-    image: null,
-    imageAlt: '',
-    caption: 'three zones · interactive teardown · 2026',
-    card: 'projects/card/three-zones.webp',
-    // Self-hosted rather than a deployment of somebody else's site; the block
-    // control routes a relative href through `asset()`.
-    href: 'three-zones/index.html',
-    source: null,
+    href: '/three-zones/',
+    newTab: true,
+    card: card('three-zones'),
   },
 ];
 
-/**
- * The thesis block under the page title. `profile.thesis` from the devkit.
- */
-export const CASES_THESIS =
-  'i design ambitious products, prototype the difficult parts, and test whether the ideas actually hold up.';
+/** `design study, w/ case study, 2026.` */
+export const statusLine = (c: CaseEntry): string =>
+  `${c.status}${c.caseStudy ? ', w/ case study' : ''}, ${c.year}.`;
 
 /**
- * Eight motion studies, from devkit `data/motion-studies.json`. They are a
- * strip on this page; the full 58-study archive opens from it.
+ * What follows the button. A name that already carries a colon
+ * ("three zones: camera market ui fix") takes a period instead, so the
+ * sentence never has two colons in a row.
  */
-export const MOTION_STUDIES: MotionStudy[] = [
-  {
-    slug: 'swipe-row',
-    label: 'swipe row',
-    poster: 'motion/stills/swipe-row.png',
-    note: 'a shelf advances one item at a time and resolves exactly on its next state',
-  },
-  {
-    slug: 'vertical-feed',
-    label: 'vertical feed',
-    poster: 'motion/stills/vertical-feed.png',
-    note: 'a vertical sequence advances in measured states with a visible arrival cue',
-  },
-  {
-    slug: 'like-dislike',
-    label: 'like dislike',
-    poster: 'motion/stills/like-dislike.png',
-    note: 'feedback becomes a physical press, count change, and brief consequence',
-  },
-  {
-    slug: 'pause-play',
-    label: 'playback glyph',
-    poster: 'motion/stills/pause-play.png',
-    note: 'a play symbol separates into two bars while the timeline holds',
-  },
-  {
-    slug: 'next-up',
-    label: 'continue next up',
-    poster: 'motion/stills/next-up.png',
-    note: 'completion transfers attention into the next card',
-  },
-  {
-    slug: 'seek',
-    label: 'seek',
-    poster: 'motion/stills/seek.png',
-    note: 'a stepped timeline makes movement, preview, and position legible',
-  },
-  {
-    slug: 'flock',
-    label: 'flock',
-    poster: 'motion/stills/flock.png',
-    note: 'a loose field finds a shared structure and corrects its own overshoot',
-  },
-  {
-    slug: 'bloom',
-    label: 'bloom',
-    poster: 'motion/stills/bloom.png',
-    note: 'a compact origin opens into a larger ordered field',
-  },
-];
+export const separator = (c: CaseEntry): string => (c.name.includes(':') ? '.' : ':');
 
-/** The self-contained 58-study archive shipped in the devkit. */
-export const MOTION_ARCHIVE_HREF = 'motion/archive.html';
-export const MOTION_ARCHIVE_LABEL = 'eight series · 58 studies';
+export const MOTION_ARCHIVE = {
+  href: '/motion/archive.html',
+  series: 'eight series',
+  studies: '58 studies',
+} as const;

@@ -382,3 +382,56 @@ export const GUESTPASS_GLANCE: { field: string; value: string }[] = [
     value: 'no relationship to apple. invented data, and stand in card art',
   },
 ];
+
+/**
+ * The five renders, in walk order. NONE OF THESE IS A SCREENSHOT OF A PRODUCT:
+ * they are the handoff's own renders, every name and number in them is
+ * invented, and the captions keep saying so. `view` on a section above is an
+ * index into this list.
+ */
+export const GUESTPASS_FIGURES = [
+  {
+    src: '/projects/guestpass-object.webp',
+    alt:
+      'Two design renders. On the left, a card with a dashed edge reading "Alex\'s Apple Card" ' +
+      'and "Expires 9:41 PM", tucked under two solid-edged cards. On the right, a phone showing ' +
+      'the same card at the bottom of a Wallet stack',
+    caption:
+      'the borrowed card, as design renders. the dashed edge only reads as temporary next to solid ones, so it is never shown alone.',
+  },
+  {
+    src: '/projects/guestpass-send.webp',
+    alt:
+      'Three design renders of the sending flow: a sheet asking who it is for with contact ' +
+      'circles, a review screen with one sentence, a collapsed options row and a Continue ' +
+      'button, and the Face ID confirmation that follows it',
+    caption:
+      'sending, as design renders. a card, a person, continue, and Face ID, with every option collapsed behind one row.',
+  },
+  {
+    src: '/projects/guestpass-spend.webp',
+    alt:
+      'Four design renders: the sheet where the recipient reads what the owner will see and adds ' +
+      "the card to their Wallet, the payment sheet, the approved checkmark, and the owner's " +
+      'notification naming the store, the amount, the time, and a map of the store',
+    caption:
+      'accepting, paying, and the receipt, as design renders. every store and figure in them is invented.',
+  },
+  {
+    src: '/projects/guestpass-escalation.webp',
+    alt:
+      'Four design renders of the path when a purchase goes over a limit: the recipient sees the ' +
+      'reason without the amounts in large type, a finished state reading that the owner has been ' +
+      "notified, the owner's request sheet with Approve and Decline, and the approved retry",
+    caption:
+      'when a purchase does not fit, as design renders. the amounts sit in small text, because a stranger can read a headline.',
+  },
+  {
+    src: '/projects/guestpass-positioning.webp',
+    alt:
+      'Two diagrams. A quadrant of money sharing products plotted by who ends up owning the money ' +
+      'and whether it happens once or keeps going, with the concept in the one empty corner. And ' +
+      'a swimlane of the whole flow across the owner, the system and the recipient',
+    caption: 'the argument. three of the four corners already ship, and this is the empty one.',
+  },
+].map((f) => ({ ...f, width: 1456, height: 874 }));
