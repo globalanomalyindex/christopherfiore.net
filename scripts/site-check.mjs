@@ -14,7 +14,7 @@
  * button's and every prose block's layout box before and during a hover.
  */
 
-import { chromium } from 'playwright-core';
+import { chromium, webkit } from 'playwright-core';
 
 const BASE = (process.env.BASE ?? 'http://localhost:4173').replace(/\/$/, '');
 const CHROME =
@@ -405,6 +405,40 @@ try {
     await c.close();
   }
   ok(overflow.length === 0, `home fits one screen, signature and all, on all ${SCREENS.length} screen sizes`, overflow.join(' | '));
+
+  // The same on WebKit, the engine under every iPhone browser. Engines can
+  // disagree on CSS math, and a size that resolves to not-a-number renders as
+  // 0: the text vanishes and the framed buttons collapse to empty boxes. So
+  // this also checks the type is really there. Skipped if WebKit is not
+  // installed (npx playwright install webkit).
+  let wk = null;
+  try {
+    wk = await webkit.launch();
+  } catch {
+    console.log('  skip WebKit is not installed');
+  }
+  if (wk) {
+    try {
+      const wkBad = [];
+      for (const [w, h] of SCREENS.filter(([, , touch]) => touch)) {
+        const c = await wk.newContext({ viewport: { width: w, height: h }, isMobile: true, hasTouch: true });
+        const pg = await c.newPage();
+        await pg.goto(`${BASE}/`, { waitUntil: 'networkidle' });
+        await pg.evaluate(() => document.fonts.ready);
+        const m = await pg.evaluate(() => ({
+          over: document.documentElement.scrollHeight - innerHeight,
+          prose: parseFloat(getComputedStyle(document.querySelector('.home-prose')).fontSize),
+          h1: parseFloat(getComputedStyle(document.querySelector('.page--home .title')).fontSize),
+          btn: document.querySelector('.home-prose [data-btn]').getBoundingClientRect().width,
+        }));
+        if (m.over > 0 || !(m.prose >= 10) || !(m.h1 >= 20) || !(m.btn > 40)) wkBad.push(`${w}x${h} ${JSON.stringify(m)}`);
+        await c.close();
+      }
+      ok(wkBad.length === 0, 'WebKit: home fits one screen on every phone size, with its type really there', wkBad.join(' | '));
+    } finally {
+      await wk.close();
+    }
+  }
 
   /* ------------------------------------------------------------ signature */
   console.log('\n[signature]');

@@ -321,7 +321,7 @@ code {
   /* the signature spans the measure, unless that would take over 28% of the height */
   --sig-w: min(min(100vw, 1440px) - 2 * var(--pad-x), var(--vh) * 0.28 * 2053 / 308);
   --room: calc(var(--vh) - var(--home-pt) - var(--sig-gap) - var(--sig-w) * 308 / 2053 - var(--home-pb));
-  --k: min(1px, 100vw / 1440, var(--room) / var(--text-h));
+  --k: max(0px, min(1px, 100vw / 1440, var(--room) / var(--text-h)));
   min-height: var(--vh);
   padding-top: var(--home-pt);
   padding-bottom: var(--home-pb);
@@ -542,28 +542,19 @@ code {
     --home-pt: clamp(16px, var(--vh) * 0.04, 28px);
     --home-pb: var(--pad-x);
     --sig-gap: clamp(16px, var(--vh) * 0.05, 40px);
-    /* the width's own scale, and the linear fit: always safe, sometimes small */
+    /*
+      The fit. At a phone's fixed width, smaller type fits more words per
+      line, so the text block shrinks faster than the type: the scale that
+      fits rises like a power of the room ratio, r = room / T at full size.
+      Two straight lines sit under that curve at every one of seventeen
+      measured phone sizes (0.42 + 0.56r, and 1.25r for very short screens),
+      and multiplied through by the full scale they need nothing but a length
+      divided by a plain number. Deliberately no pow() or tan(atan2()): phone
+      browsers do not all resolve that math the same way, and a
+      not-a-number font size renders as 0.
+    */
     --kw: min(1.1px, 100vw / 390);
-    --k: min(var(--kw), var(--room) / var(--text-h));
-  }
-}
-
-/*
-  A closer fit for phones where the math is available (every current
-  browser). At a phone's fixed width, smaller type fits more words per line,
-  so the text block shrinks faster than the type does: roughly with the
-  square of it for the prose, linearly for the headline and the gaps. The
-  scale that fits is therefore a power of the room ratio between square root
-  and linear. Measured across seventeen phone viewports, the worst case needs
-  0.593; this uses 0.65. `tan(atan2(a, b))` is a / b as a plain number, which
-  plain calc() cannot divide lengths into.
-*/
-@supports (opacity: pow(tan(atan2(1px, 2px)), 0.5)) {
-  @media (max-width: 870px) and (orientation: portrait) {
-    .page.page--home {
-      --room-ratio: tan(atan2(max(var(--room), 1px), var(--kw) * var(--text-h)));
-      --k: calc(var(--kw) * min(1, pow(var(--room-ratio), 0.65)));
-    }
+    --k: max(0px, min(var(--kw), var(--kw) * 0.42 + var(--room) * 0.56 / var(--text-h), var(--room) * 1.25 / var(--text-h)));
   }
 }
 

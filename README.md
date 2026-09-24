@@ -90,8 +90,10 @@ and the measure is set in em. So at any `k` the lines break where the design
 breaks them, and the text block is exactly `k` times its measured height (744px
 at full size). `k` is the largest of full size, the width's limit and the
 height left over after the signature. Portrait phones scale the same way around
-a 390px reference layout, with a power-law fit measured on seventeen phone
-sizes. It is all CSS, in the home section of `site.css`, and the check script
+a 390px reference layout. Their fit uses two straight-line bounds, measured
+to sit under the true fit on seventeen phone sizes. It uses plain arithmetic
+only, never `pow()` or `atan2()`: phone browsers don't all resolve that math
+the same way, and a font size that comes out not-a-number renders as 0. It is all CSS, in the home section of `site.css`, and the check script
 proves it fits on thirteen common screen sizes.
 
 - **Source.** `_handoff/signature/scanned_handwriting_text.png`. It is traced
@@ -150,7 +152,9 @@ runs it against the live site. It checks:
 - reduced motion, keyboard focus, and touch
 - that every page fits 375px wide with no punctuation orphaned from its button
 - the signature:
-  - home fits one screen on thirteen common screen sizes, phones included
+  - home fits one screen on thirteen common screen sizes, phones included,
+    and in WebKit (the engine under every iPhone browser) with its type
+    really rendered
   - on load it writes itself in with no scroll, and hands back the served markup
   - ink never disappears frame to frame, checked per pixel at 1x and 2x
   - the last frame and the finished state match the no-JS render pixel for pixel
