@@ -1,26 +1,43 @@
 /**
  * The brutalist band (README §7.1), carried over from the lattice site's
- * hover.ts: three layers of color wiped in with a stepped clip, a 1.5px inset
- * outline, and the palettes exactly as that site had them.
+ * hover.ts: three layers of color wiped in with a stepped clip, and a 1.5px
+ * inset outline.
  *
  * The host is a span INSIDE the button at z-index -1. The button's
  * `isolation: isolate` is what keeps it above the button's own background and
  * under its label.
  */
 
-const HUES = ['#FF2D87', '#F5D90A', '#12D9E8', '#FF6B1A', '#C9F227', '#35E5C8'] as const;
-const SPARK_ACCENT = ['#3A3742', '#56535E', '#2B45F5', '#7C858A', '#FF2D87', '#12D9E8'] as const;
-const SPARK_LIGHTS = [
-  '#E2E7E9',
-  '#CBD2D5',
-  '#AEB6BA',
-  '#FF2D87',
-  '#F5D90A',
-  '#12D9E8',
-  '#FF6B1A',
-  '#C9F227',
-  '#35E5C8',
+/**
+ * The main band: flat, clashing brights in the spirit of Bungie's Marathon
+ * (2026). The lattice site's six come first, then seventeen more that fill in
+ * the wheel between them. Every one holds band ink (#1A1820) at 5:1 or better,
+ * the floor the original hot pink set, so the pinned label always reads.
+ */
+const HUES = [
+  '#FF2D87', '#F5D90A', '#12D9E8', '#FF6B1A', '#C9F227', '#35E5C8',
+  // reds, oranges, ambers
+  '#FF4A2E', '#FF8C1A', '#FFB800',
+  // lemon, acid and neon greens, mint
+  '#FFF23D', '#8CFF2E', '#3DFF6E', '#00FFA3',
+  // ice, sky, periwinkle
+  '#6FE3FF', '#3DB4FF', '#7A9CFF',
+  // violets, magentas, pinks
+  '#B580FF', '#D66BFF', '#F53DFF', '#FF5CE1', '#FF3DB8', '#FF6FA0', '#FF9EDB',
 ] as const;
+
+const GRAPHITE = ['#3A3742', '#56535E', '#7C858A', '#464B52'] as const;
+const ELECTRIC = ['#2B45F5', '#5B2BFF', '#0A6CFF', '#E0147A'] as const;
+const GREYS = ['#E2E7E9', '#CBD2D5', '#AEB6BA', '#F2F4F3'] as const;
+
+/**
+ * The accent rows pick a family first, then a color in it. Listing a family
+ * twice doubles its odds, which keeps the original mix (the top row half
+ * graphite, the bottom row a third grey) however many colors each family
+ * grows to.
+ */
+const SPARK_ACCENT = [GRAPHITE, GRAPHITE, GRAPHITE, ELECTRIC, HUES, HUES] as const;
+const SPARK_LIGHTS = [GREYS, HUES, HUES] as const;
 const INK = '#1A1820';
 
 const WIPE_IN = [
@@ -39,6 +56,16 @@ const STAGGER = 45;
 const TEARDOWN = 230;
 
 export const pick = <T>(a: readonly T[]): T => a[(Math.random() * a.length) | 0];
+
+/** A pick that is never `not`. Every list here has other colors, so it ends. */
+const pickNot = (a: readonly string[], not: string): string => {
+  let c = pick(a);
+  while (c === not) c = pick(a);
+  return c;
+};
+
+/** The last main band color, so two hovers in a row never match. */
+let last = '';
 
 export interface Band {
   host: HTMLSpanElement;
@@ -64,10 +91,12 @@ export function bandIn(b: HTMLElement): Band {
     return l;
   };
 
+  // The rows never match the band, or they would vanish into it.
+  const main = (last = pickNot(HUES, last));
   const layers = [
-    layer('inset:0', pick(HUES)),
-    layer(`left:0;right:0;top:0;height:${2 + Math.random() * 6}%`, pick(SPARK_ACCENT)),
-    layer(`left:0;right:0;bottom:0;height:${2 + Math.random() * 6}%`, pick(SPARK_LIGHTS)),
+    layer('inset:0', main),
+    layer(`left:0;right:0;top:0;height:${2 + Math.random() * 6}%`, pickNot(pick(SPARK_ACCENT), main)),
+    layer(`left:0;right:0;bottom:0;height:${2 + Math.random() * 6}%`, pickNot(pick(SPARK_LIGHTS), main)),
   ];
 
   const outline = document.createElement('span');

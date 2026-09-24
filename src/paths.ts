@@ -11,8 +11,6 @@ export const PATH = {
   designs: '/product-designs/',
   paintings: '/paintings/',
   about: '/about/',
-  /** The "say hi" section, which is what the home page's email button opens. */
-  sayHi: '/about/#say-hi',
   notFound: '/404',
 } as const;
 

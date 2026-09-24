@@ -2,15 +2,16 @@
  * home. The Figma letter the whole redesign grew from: a title and three
  * paragraphs, no nav, no footer.
  *
- * THE LAST PARAGRAPH IS TWO LINES BY CONSTRUCTION. Its first clause is locked
- * to one line (`nowrap`) and "or say hi" always starts the second (`<br>`).
- * Below the width where the clause can no longer fit, site.css lets it wrap
- * and hides the break, which is README §8's recommendation.
+ * THE LAST PARAGRAPH IS THREE LINES BY CONSTRUCTION. Its first clause is
+ * locked to one line (`nowrap`), "or read about me" always starts the second
+ * and the sign-off the third (`<br>`). Below the width where the clause can no
+ * longer fit, site.css lets it wrap and hides the breaks, which is README §8's
+ * recommendation.
  */
 
 import { h } from '../html.ts';
 import { PATH } from '../paths.ts';
-import { RESUME, STUDIO } from '../data/studio.ts';
+import { RESUME } from '../data/studio.ts';
 import { btn, glued, page, title } from '../prose.ts';
 import { outline, ink as inkBox } from '../data/signature.json';
 
@@ -96,13 +97,15 @@ export function home() {
         ' ',
         h('br', { class: 'home-br' }),
         ...glued(
-          'or say hi ',
-          // Designed as a jump to the contact page rather than a mailto:, and
-          // it lands on the "say hi" section itself.
-          btn(STUDIO.email, PATH.sayHi),
-          '. you can also read my ',
+          'or read ',
+          // The top of the about page. The address waits in its last section.
+          btn('about me', PATH.about),
+          ' and say hi. you can also see my ',
           btn(RESUME.label, RESUME.href, { newTab: true }),
-          '. i’d love to hear from you :)',
+          '. ',
+          // The sign-off gets a line of its own, where the break is shown.
+          h('br', { class: 'home-br' }),
+          'i’d love to hear from you :)',
         ),
       ),
     ),

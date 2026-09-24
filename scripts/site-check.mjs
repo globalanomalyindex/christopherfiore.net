@@ -255,17 +255,18 @@ try {
   const m = leaned.match(/translate\(([-\d.]+)px,\s*([-\d.]+)px\)/);
   ok(m && Math.abs(+m[1]) <= 8 && Math.abs(+m[2]) <= 6, 'magnet: inside the 8 × 6 cap', leaned);
 
-  const email = await page.evaluate(() => {
-    const w = Array.from(document.querySelectorAll('[data-word]')).find((x) => x.textContent.includes('@'));
-    return w.textContent;
+  const about = await page.evaluate(() => {
+    const b = document.querySelectorAll('.home-p--wide [data-btn]')[2];
+    return { href: b.getAttribute('href'), text: b.textContent.trim() };
   });
-  const cE = await center(page, '.home-p--wide [data-btn]', 2);
-  await page.mouse.move(cE.x, cE.y, { steps: 3 });
+  ok(about.href === '/about/' && about.text === 'about me', 'home offers "read about me", to the top of the about page', JSON.stringify(about));
+  const cA = await center(page, '.home-p--wide [data-btn]', 2);
+  await page.mouse.move(cA.x, cA.y, { steps: 3 });
   await sleep(80);
-  const emailOv = await page.evaluate(() =>
+  const aboutOv = await page.evaluate(() =>
     Array.from(document.querySelectorAll('[data-glitch]')).map((o) => o.textContent),
   );
-  ok(emailOv.length === 1 && emailOv[0] === email, 'the address gets no "..." tail, and only one button is hot', emailOv.join(' | '));
+  ok(aboutOv.length === 1 && aboutOv[0] === 'about me...', 'moving straight to the next button leaves only one hot', aboutOv.join(' | '));
 
   await page.mouse.move(1400, 980, { steps: 6 });
   await sleep(900);
@@ -278,6 +279,56 @@ try {
   }));
   ok(after.hot === 0 && after.bands === 0 && after.overlays === 0 && after.words === 0, 'leave: band, overlay and ink all restored', JSON.stringify(after));
   ok(after.pulled === 0, 'magnet: released once the cursor is out of reach');
+
+  // Forty hovers in a row: the band color changes every time, its label always
+  // reads, and neither accent row ever matches the band under it.
+  const lum = (c) => {
+    const [r, g, b] = c.match(/\d+/g).slice(0, 3).map((v) => {
+      const s = v / 255;
+      return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+  const inkL = lum('rgb(26, 24, 32)');
+  const draws = [];
+  for (let i = 0; i < 40; i++) {
+    const c = await center(page, btn, i % 3);
+    await page.mouse.move(c.x, c.y, { steps: 2 });
+    await sleep(20);
+    draws.push(
+      await page.evaluate(() =>
+        Array.from(document.querySelector('[data-band]')?.children ?? [])
+          .slice(0, 3)
+          .map((l) => l.style.backgroundColor),
+      ),
+    );
+    await page.mouse.move(1400, 980, { steps: 2 });
+    await sleep(260);
+  }
+  const mains = draws.map((d) => d[0]);
+  const floor = Math.min(...mains.map((m) => (lum(m) + 0.05) / (inkL + 0.05)));
+  ok(draws.every((d) => d.length === 3 && d.every(Boolean)), 'every hover paints a band and both rows');
+  ok(mains.every((m, i) => i === 0 || m !== mains[i - 1]), 'the band color never repeats back to back');
+  ok(new Set(mains).size >= 12, 'forty hovers show a wide spread of band colors', `${new Set(mains).size} distinct`);
+  ok(floor >= 5, 'band ink holds 5:1 on every band color', floor.toFixed(2));
+  ok(draws.every((d) => d[1] !== d[0] && d[2] !== d[0]), 'neither accent row matches its band');
+
+  // The address lives at the bottom of the about page now, and never gets a tail.
+  await page.goto(`${BASE}/about/`, { waitUntil: 'networkidle' });
+  await settle(page);
+  const email = await page.evaluate(() =>
+    Array.from(document.querySelectorAll('#say-hi [data-word]')).find((x) => x.textContent.includes('@'))?.textContent,
+  );
+  const mailto = await page.evaluate(() => document.querySelector('#say-hi a[href^="mailto:"]')?.getAttribute('href'));
+  ok(email === 'chrisrobinfiore@gmail.com' && mailto === `mailto:${email}`, 'the address waits in "say hi" on the about page', `${email} ${mailto}`);
+  await page.locator('#say-hi a[href^="mailto:"]').scrollIntoViewIfNeeded();
+  const cE = await center(page, '#say-hi a[href^="mailto:"]');
+  await page.mouse.move(cE.x, cE.y, { steps: 3 });
+  await sleep(80);
+  const emailOv = await page.evaluate(() =>
+    Array.from(document.querySelectorAll('[data-glitch]')).map((o) => o.textContent),
+  );
+  ok(emailOv.length === 1 && emailOv[0] === email, 'the address gets no "..." tail', emailOv.join(' | '));
 
   /* -------------------------------------------------- seams and skeleton */
   console.log('\n[seams]');

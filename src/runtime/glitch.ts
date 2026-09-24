@@ -18,7 +18,16 @@ import { pick } from './band.ts';
 
 const ALT = "'Dessign Maison', Georgia, serif";
 const FEAT = "'salt' 1, 'ss01' 1";
-const FLASH = ['#c9246b', '#796b05', '#0a777f', '#b44b12', '#5f7313', '#2B45F5', '#1c7869'] as const;
+/**
+ * Each flash is a band color's darker twin: the same hue, taken down to about
+ * 3.3:1 against band ink. The first seven are the lattice site's; the rest
+ * are twins of the colors band.ts added, less a few too close to tell apart.
+ */
+const FLASH = [
+  '#c9246b', '#796b05', '#0a777f', '#b44b12', '#5f7313', '#2B45F5', '#1c7869',
+  '#d12100', '#a55600', '#8d6400', '#3c7900', '#007b4c', '#0071aa', '#4865c3',
+  '#854ec9', '#a436ca', '#bc00c5', '#c210a9', '#cb008e', '#a44b86',
+] as const;
 
 /** 2 letters per 28ms tick, each with a 70ms flash; 25% chance a tick knocks one back. */
 const TICK = 28;
