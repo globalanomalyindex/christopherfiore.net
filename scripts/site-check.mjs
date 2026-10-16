@@ -23,6 +23,7 @@ const CHROME =
 const ROUTES = [
   '/',
   '/product-designs/',
+  '/product-designs/jellybox/',
   '/product-designs/guestpass/',
   '/product-designs/chellbook/',
   '/product-designs/mfny-concentrates/',
@@ -149,6 +150,7 @@ try {
     })),
   );
   const STATUS = {
+    jellybox: 'built, w/ case study, 2026.',
     'after tokens': 'motion interaction study, w/ case study, 2026.',
     'apple wallet card sharing concept': 'design study, w/ case study, 2026.',
     chellbook: 'client work, w/ case study, 2026.',
@@ -164,10 +166,10 @@ try {
     dither: 'built, 2026.',
     'three zones: camera market ui fix': 'design study, 2026.',
   };
-  ok(cases.length === 14, 'fourteen cases', String(cases.length));
+  ok(cases.length === 15, 'fifteen cases', String(cases.length));
   ok(
     cases.every((c) => STATUS[c.name] === c.status) && cases.map((c) => c.name).join() === Object.keys(STATUS).join(),
-    'every status line matches LABELING.md §4, in order',
+    'every project keeps its status and index order',
     cases.filter((c) => STATUS[c.name] !== c.status).map((c) => `${c.name}: ${c.status}`).join(' | '),
   );
 

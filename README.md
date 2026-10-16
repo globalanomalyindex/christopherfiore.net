@@ -146,7 +146,7 @@ The script uses system Chrome. `BASE=https://christopherfiore.net npm run check:
 runs it against the live site. It checks:
 
 - every page and link, and that the copy has no em or en dashes and uses American spelling
-- the fourteen status lines against `LABELING.md`
+- every project status line and the index order
 - the type scale at 1440
 - band, glitch, zero reflow, the magnet, seams, the skeleton, and a button claiming space
 - reduced motion, keyboard focus, and touch

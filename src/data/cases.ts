@@ -1,9 +1,10 @@
 /**
- * The product designs index: fourteen cases, one sentence each.
+ * The product designs index: one sentence per case.
  *
- * `line` and `status` are the designer's final wording from the prose
- * redesign handoff (CONTENT.md and LABELING.md §4 and §6), and they override
- * the older devkit lines this file used to carry.
+ * The original cases keep the designer's final `line` and `status` wording
+ * from the prose redesign handoff (CONTENT.md and LABELING.md §4 and §6).
+ * Later additions derive their wording from the project's own implementation
+ * and design story, with the same evidence boundaries.
  *
  * STATUS IS EVIDENCE, NOT DECORATION. The vocabulary is closed:
  *
@@ -47,6 +48,17 @@ export interface CaseEntry {
 const card = (id: string) => `/projects/card/${id}.webp`;
 
 export const CASES: CaseEntry[] = [
+  {
+    id: 'jellybox',
+    name: 'jellybox',
+    line: 'three buttons explore how density, motion, color and light can give an interface structure',
+    status: 'built',
+    caseStudy: true,
+    year: '2026',
+    href: casePath('jellybox'),
+    newTab: false,
+    card: '/jellybox/hero.jpg',
+  },
   {
     id: 'after-tokens',
     name: 'after tokens',

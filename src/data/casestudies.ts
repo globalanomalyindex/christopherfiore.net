@@ -5,12 +5,13 @@
  * "next up" sentence.
  *
  * Chellbook is the designed page and is transcribed from CONTENT.md word for
- * word. The other three were not drawn, so they are assembled here from their
- * own data files, which are the edited case text the lattice site shipped.
- * Nothing in them is restated. What changes is the shape: a plate that used to
+ * word. The other legacy cases were not drawn, so they are assembled here from
+ * their own data files, the edited case text the lattice site shipped.
+ * Nothing in those is restated. What changes is the shape: a plate that used to
  * follow the reading column becomes a figure at the end of the sections it
  * illustrates, and "concept" in a status becomes "design study", the
- * redesign's word.
+ * redesign's word. New cases use the same template and retain their own
+ * implementation and study boundaries.
  *
  * Paragraph markup: `**bold**` and `[[grey]]` (the secondary ink). Nothing
  * else is parsed.
@@ -20,6 +21,7 @@ import { CHELL, CHELL_LOOP, CHELL_STATES } from './chellbook.ts';
 import { DF2TM, DF2TM_GLANCE, DF2TM_SECTIONS } from './df2tm.ts';
 import { GUESTPASS, GUESTPASS_FIGURES, GUESTPASS_GLANCE, GUESTPASS_SECTIONS } from './guestpass.ts';
 import { MFNY, MFNY_FIGURES, MFNY_GLANCE, MFNY_SECTIONS } from './mfny.ts';
+import { JELLYBOX } from './jellybox.ts';
 
 export interface Figure {
   src: string;
@@ -243,7 +245,7 @@ const df2tm: CaseStudy = {
  * is why chellbook's points at mfny: lee sits between them in the index and has
  * no case study.
  */
-export const CASE_STUDIES: CaseStudy[] = [guestpass, chellbook, mfny, df2tm];
+export const CASE_STUDIES: CaseStudy[] = [JELLYBOX, guestpass, chellbook, mfny, df2tm];
 
 export const nextCase = (id: string): CaseStudy => {
   const i = CASE_STUDIES.findIndex((c) => c.id === id);
