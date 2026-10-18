@@ -55,8 +55,8 @@ export const CASES: CaseEntry[] = [
     status: 'built',
     caseStudy: true,
     year: '2026',
-    href: casePath('jellybox'),
-    newTab: false,
+    href: 'https://globalanomalyindex.github.io/jellybox/',
+    newTab: true,
     card: '/jellybox/hero.jpg',
   },
   {

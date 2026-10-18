@@ -55,7 +55,7 @@ export const JELLYBOX: CaseStudy = {
       name: 'color and light share the material',
       paras: [
         'spectral.js supplies the pigment-inspired mixing path. the controls and window follow the same precomputed color samples, including when a palette changes during a transition. a preview comes before applying a palette; labels, checks and focus indicators also communicate the choice.',
-        'dragging the bulb changes highlights, colored casts and transmitted light. its brightness, height, softness and warmth are adjustable. i keep those effects quieter across reading areas, and the interface still needs to make sense with the light off.',
+        'the movable bulb works like a lamp on a physical desk: place it, adjust it, and let it sit ambiently while you work. its position, brightness, height, softness and warmth change highlights, colored casts and transmitted light through the jelly. it stays independent of hover or task selection. reading areas keep those effects quieter, and controls retain their meaning with the light off.',
       ],
     },
     {
