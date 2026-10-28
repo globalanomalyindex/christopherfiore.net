@@ -20,8 +20,9 @@
  *
  * `caseStudy` adds ", w/ case study" to the status. It is true wherever a case
  * page or a case-study document exists, which is not the same as "has a page on
- * this site": after tokens, one master affordance, adhd mode, chickpea and
- * wildcard keep theirs on their own deployments, and the button goes there.
+ * this site": after tokens, scream canister controls, one master affordance,
+ * adhd mode, chickpea and wildcard keep theirs on their own deployments, and
+ * the button goes there.
  */
 
 import { casePath } from '../paths.ts';
@@ -48,6 +49,17 @@ export interface CaseEntry {
 const card = (id: string) => `/projects/card/${id}.webp`;
 
 export const CASES: CaseEntry[] = [
+  {
+    id: 'scream-canister-controls',
+    name: 'scream canister controls',
+    line: 'a button set where every state borrows a scream canister mechanic, timed with curves measured from the films',
+    status: 'built',
+    caseStudy: true,
+    year: '2026',
+    href: 'https://globalanomalyindex.github.io/scream-canister-controls/',
+    newTab: true,
+    card: card('scream-canister-controls'),
+  },
   {
     id: 'jellybox',
     name: 'jellybox',
