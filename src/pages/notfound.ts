@@ -1,11 +1,10 @@
 /**
- * The 404. Not in the design, which drew five pages, so it is the smallest
- * page the system can make: the breadcrumb sentence every subpage opens with,
- * a title, and one line saying what happened.
+ * The 404. The smallest page the system can make: the masthead, one line
+ * saying what happened, and the pages block every subpage ends on.
  */
 
-import { PATH } from '../paths.ts';
-import { btn, crumb, lede, page, title } from '../prose.ts';
+import { TALLY } from '../palette.ts';
+import { fig, lede, pagesBlock, subpage } from '../prose.ts';
 
 export const NOT_FOUND = {
   title: 'not found',
@@ -13,21 +12,5 @@ export const NOT_FOUND = {
 } as const;
 
 export function notFound() {
-  return page(
-    'not found',
-    null,
-    crumb(
-      'back ',
-      btn('home', PATH.home),
-      ', or over to ',
-      btn('product designs', PATH.designs),
-      ', ',
-      btn('paintings', PATH.paintings),
-      ' and ',
-      btn('about', PATH.about),
-      '.',
-    ),
-    title(NOT_FOUND.title),
-    lede(NOT_FOUND.lede),
-  );
+  return subpage('not found', NOT_FOUND.title, TALLY.grey, fig('404'), lede(NOT_FOUND.lede), pagesBlock(null));
 }

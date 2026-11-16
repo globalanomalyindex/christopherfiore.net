@@ -22,10 +22,10 @@ export interface Arrow {
   lab: HTMLSpanElement;
 }
 
-let paper = '#F5E4D9';
+let paper = '#F3F5F8';
 
 export function makeLayers(root: HTMLElement): { live: HTMLDivElement; arrows: [Arrow, Arrow] } {
-  paper = getComputedStyle(document.documentElement).getPropertyValue('--paper').trim() || paper;
+  paper = getComputedStyle(document.documentElement).getPropertyValue('--ground').trim() || paper;
   const live = document.createElement('div');
   live.setAttribute('aria-hidden', 'true');
   live.setAttribute('data-skeleton', '');

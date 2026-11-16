@@ -1,62 +1,61 @@
 /**
- * about + say hi. The long read, and contact as its closing sentence.
+ * about me/contact. His lede and summary, "at a glance" as tinted rows, his
+ * sections as chip headers over plain prose, then "say hi" as link rows.
  * The copy and its order live in `data/about.ts`; this only sets it.
  */
 
-import { h } from '../html.ts';
-import { PATH } from '../paths.ts';
+import { TALLY } from '../palette.ts';
 import { ABOUT, ABOUT_SECTIONS, GLANCE } from '../data/about.ts';
 import { CERTIFICATE, LINKS, RESUME, STUDIO } from '../data/studio.ts';
-import { body, btn, crumb, glanceRow, lede, page, rich, section, title } from '../prose.ts';
+import { cellBtn, fact, figLink, lede, pagesBlock, prose, rich, row, rows, section, subpage } from '../prose.ts';
+
+/** The section hues, in turn. */
+const CYCLE = [TALLY.pink, TALLY.lime, TALLY.violet, TALLY.peri, TALLY.cyan];
+
+const bare = (url: string) => url.replace(/^https:\/\/(www\.)?/, '');
 
 export function about() {
-  return page(
+  return subpage(
     'about and say hi',
-    'about',
-    crumb(
-      'back ',
-      btn('home', PATH.home),
-      ', or over to ',
-      btn('product designs', PATH.designs),
-      ' and ',
-      btn('paintings', PATH.paintings),
-      '.',
-    ),
-    title('about'),
+    'about me/contact',
+    TALLY.pink,
+    figLink('say hi', '#say-hi'),
     lede(ABOUT.lede),
-    body(ABOUT.summary),
+    lede(ABOUT.summary),
 
     section(
       'at a glance',
-      { rhythm: 'glance', id: 'at-a-glance' },
-      ...GLANCE.map((g) =>
-        glanceRow(
-          g.field,
-          g.value,
-          g.doc === 'certificate' ? [' ', btn(CERTIFICATE.label, CERTIFICATE.href, { newTab: true })] : null,
+      TALLY.cyan,
+      { id: 'at-a-glance', count: String(GLANCE.length), cls: 'glance' },
+      rows(
+        ...GLANCE.map((g) =>
+          fact(
+            g.field,
+            g.value,
+            g.doc === 'certificate' ? cellBtn(CERTIFICATE.label, CERTIFICATE.href, { newTab: true }) : null,
+          ),
         ),
       ),
     ),
 
-    ...ABOUT_SECTIONS.map((s) => section(s.name, { id: s.id }, ...s.paras.map((p) => body(rich(p))))),
+    ...ABOUT_SECTIONS.map((s, i) =>
+      section(s.name, CYCLE[i % CYCLE.length], { id: s.id }, ...s.paras.map((p) => prose(rich(p)))),
+    ),
 
-    h(
-      'section',
-      { class: 'sec sec--prose', id: 'say-hi' },
-      h('h2', { class: 'h2', 'data-seams': true }, 'say hi'),
-      lede(
-        'i’m open to roles in new york or remote. say hi at ',
-        btn(STUDIO.email, `mailto:${STUDIO.email}`),
-        ', or find me on ',
-        btn('github', LINKS.github, { newTab: true }),
-        ', ',
-        btn('artstation', LINKS.artstation, { newTab: true }),
-        ' and ',
-        btn('linkedin', LINKS.linkedin, { newTab: true }),
-        '. you can also read my ',
-        btn(RESUME.label, RESUME.href, { newTab: true }),
-        '. i’d love to hear from you :)',
+    section(
+      'say hi',
+      TALLY.yellow,
+      { id: 'say-hi' },
+      prose('i’m open to roles in new york or remote. i’d love to hear from you :)'),
+      rows(
+        row('+email', `mailto:${STUDIO.email}`, STUDIO.email),
+        row('+github', LINKS.github, bare(LINKS.github), { newTab: true }),
+        row('+artstation', LINKS.artstation, bare(LINKS.artstation), { newTab: true }),
+        row('+linkedin', LINKS.linkedin, bare(LINKS.linkedin), { newTab: true }),
+        row(`+${RESUME.label}`, RESUME.href, 'one page, pdf', { newTab: true }),
       ),
     ),
+
+    pagesBlock('about'),
   );
 }

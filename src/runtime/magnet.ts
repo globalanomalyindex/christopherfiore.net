@@ -1,5 +1,5 @@
 /**
- * Magnetic pull (README §7.3). While hovered, a button leans toward the
+ * Magnetic pull. While hovered, a button leans toward the
  * cursor. After the cursor leaves, it keeps stretching after it for a short
  * distance, then lets go with a spring.
  *
@@ -37,7 +37,8 @@ function pull(b: HTMLElement, x: number, y: number, outside: boolean): void {
   const r = restRect(b);
   const dx = x - (r.left + r.width / 2);
   const dy = y - (r.top + r.height / 2);
-  const capX = Math.min(outside ? 12 : 8, 4 + r.width * 0.02);
+  // A row runs the width of the page. It leans a little; a chip leans more.
+  const capX = r.width > 480 ? 3 : Math.min(outside ? 12 : 8, 4 + r.width * 0.02);
   const capY = Math.min(outside ? 9 : 6, 3 + r.height * 0.03);
   const f = outside ? 0.16 : 0.1;
   const tx = clamp(dx * f, capX);

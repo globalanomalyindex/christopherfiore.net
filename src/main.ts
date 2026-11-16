@@ -3,6 +3,7 @@
  * only adds behavior on top of it, so with scripts off the site is still
  * every word of itself and every link still works.
  *
+ *   morph     the film between pages: first, because a page may be waiting covered
  *   buttons   band, glitch, magnet: at once, on every device
  *   reserve   each label's hover width, once both faces have loaded
  *   seams     the parting words and the skeleton: pointers that hover only
@@ -11,14 +12,27 @@
 import { initButtons } from './runtime/buttons.ts';
 import { reserve } from './runtime/glitch.ts';
 import { initSeams, relayoutAll } from './runtime/seams.ts';
+import { initMorph } from './runtime/morph.ts';
+
+// First, because a page opened mid-film is waiting, covered, for this.
+let seen: Promise<void>;
+try {
+  seen = initMorph();
+} catch {
+  document.documentElement.classList.remove('morph-in');
+  seen = Promise.resolve();
+}
 
 initButtons();
 
-// Its own chunk, fetched only on the page that has a signature.
+// Its own chunk, fetched only on the page that has a signature, and only
+// once the page has been uncovered, so it is written where it can be seen.
 // If it fails to load, the signature is handed back at once rather than at
 // the gate's 3s failsafe.
 if (document.querySelector('[data-sig]')) {
-  import('./runtime/signature.ts').catch(() => document.documentElement.classList.remove('sig-wait'));
+  seen.then(() =>
+    import('./runtime/signature.ts').catch(() => document.documentElement.classList.remove('sig-wait')),
+  );
 }
 
 /**
@@ -32,7 +46,8 @@ const fontsReady = (): Promise<unknown> =>
     document.fonts
       ? Promise.allSettled([
           document.fonts.load("40px 'Dessign Maison'"),
-          document.fonts.load("40px 'Averia Serif Libre'"),
+          document.fonts.load("400 24px 'Iosevka Charon Mono'"),
+          document.fonts.load("700 24px 'Iosevka Charon Mono'"),
           document.fonts.ready,
         ])
       : Promise.resolve(),

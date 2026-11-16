@@ -1,58 +1,52 @@
 /**
- * home. The Figma letter the whole redesign grew from: a title and three
- * paragraphs, no nav, no footer.
+ * home. The Ledger: his Figma frame.
  *
- * THE LAST PARAGRAPH IS THREE LINES BY CONSTRUCTION. Its first clause is
- * locked to one line (`nowrap`), "or read about me" always starts the second
- * and the sign-off the third (`<br>`). Below the width where the clause can no
- * longer fit, site.css lets it wrap and hides the breaks, which is README §8's
- * recommendation.
+ *   the name
+ *   + ──────────▮▮▮ ┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈   the "+" and the first rule
+ *   │ designer / specialty / founder │  the sheet, between his two rules
+ *   │ ──────────▮▮▮ ┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈
+ *   │ +the four pages          count │
+ *     ──────────▮▮▮ ┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈
+ *   the signature
+ *
+ * Each ink rule ends in a ladder and carries on as a faint hairline to the
+ * right edge of the window, so the empty side of the page is ruled too.
  */
 
-import { h } from '../html.ts';
-import { PATH } from '../paths.ts';
-import { RESUME } from '../data/studio.ts';
-import { btn, glued, page, title } from '../prose.ts';
-import { outline, ink as inkBox } from '../data/signature.json';
+import { h, type Html } from '../html.ts';
+import { TALLY } from '../palette.ts';
+import { MAST_NAME, PAGES, lad, page, signatureSvg } from '../prose.ts';
 
 export const HOME = {
-  title: 'hi, i’m christopher robin!',
+  who: [
+    ['designer', 'web & product'],
+    ['specialty', 'UI/UX, artificial intelligence'],
+    ['founder', 'perfection synthétique, design studio'],
+  ],
+  /** Not set on the page. The first is the page's description for search results. */
   paras: [
     'i’m a web designer & product designer specializing in UI/UX and artificial intelligence, and founder of design studio perfection synthétique.',
     'on the side, i’m an actor and concept artist. i love storytelling, and i bring that unique approach to all my technical work.',
   ],
 } as const;
 
-/**
- * The signature, set boldly across the bottom of the page.
- *
- * It arrives finished: the traced outline of his handwriting, filled in ink.
- * That is the whole of it with scripts off. `runtime/signature.ts` writes it in
- * on every visit (the page always fits one screen, so it is always in view),
- * and hands this exact markup back when it is done.
- * The viewBox is the ink's own bounds, so the first and last strokes sit on
- * the text's gutters.
- */
-function signature() {
-  const [x0, y0, x1, y1] = inkBox;
-  return h(
-    'div',
-    { class: 'home-sig', 'data-sig': true },
-    h(
-      'svg',
-      {
-        class: 'sig',
-        // No width or height: the viewBox gives the ratio, and with no CSS
-        // at all a sized svg would render 2053px wide.
-        viewBox: `${x0} ${y0} ${x1 - x0} ${y1 - y0}`,
-        role: 'img',
-        'aria-label': 'signature: christopher robin fiore',
-        focusable: 'false',
-      },
-      h('path', { class: 'sig-ink', fill: 'currentColor', 'fill-rule': 'evenodd', d: outline }),
-    ),
+/** An ink rule, its ladder, and the hairline that runs on to the window's edge. */
+const rule = (c: string): Html =>
+  h(
+    'span',
+    { class: 'hr', 'aria-hidden': 'true' },
+    h('i', { class: 'hair' }),
+    h('i', { class: 'ink' }),
+    lad(c),
   );
-}
+
+/**
+ * The signature arrives finished: the traced outline of his handwriting,
+ * filled in ink. That is the whole of it with scripts off.
+ * `runtime/signature.ts` writes it in on every visit and hands this exact
+ * markup back when it is done.
+ */
+const signature = (): Html => h('div', { class: 'home-sig', 'data-sig': true }, signatureSvg('sig-ink'));
 
 /**
  * Runs in <head>, before anything paints, and only on this page. It hides the
@@ -67,48 +61,50 @@ export const SIGNATURE_GATE =
   "setTimeout(function(){if(!window.__psSigClaim)d.classList.remove('sig-wait')},3000)}}catch(e){}";
 
 export function home() {
-  const p = (...kids: Parameters<typeof h>[2][]) =>
-    h('p', { class: 'home-p', 'data-seams': true }, ...kids);
+  const menu = PAGES.filter((p) => p.id !== 'home');
 
   return page(
     'home',
     'home',
-    title(HOME.title),
+    h('h1', { class: 'name' }, MAST_NAME),
     h(
       'div',
-      { class: 'home-prose' },
-      ...HOME.paras.map((t) => p(t)),
+      { class: 'hd' },
+      // Not a link here: this is home. It is still where a page change starts.
+      h('span', { class: 'plus', 'data-anchor': true, 'aria-hidden': 'true' }, '+'),
+      rule(TALLY.cyan),
+    ),
+    h(
+      'main',
+      { class: 'ledger' },
       h(
-        'p',
-        { class: 'home-p home-p--wide', 'data-seams': true },
-        h(
-          'span',
-          { class: 'home-lock' },
-          ...glued(
-            'you can view my portfolio ',
-            btn('product designs', PATH.designs),
-            ' and ',
-            btn('paintings', PATH.paintings),
-            ',',
+        'div',
+        { class: 'who' },
+        ...HOME.who.map(([term, value]) => h('p', null, h('b', null, `${term}:`), ` ${value}`)),
+      ),
+      rule(TALLY.pink),
+      h(
+        'nav',
+        { class: 'menu', 'aria-label': 'pages' },
+        ...menu.map((p) =>
+          h(
+            'a',
+            {
+              'data-btn': true,
+              class: 'btn hrow',
+              href: p.href,
+              target: p.newTab ? '_blank' : null,
+              rel: p.newTab ? 'noopener' : null,
+              'data-hue': p.hue,
+            },
+            h('span', { class: 'nm' }, h('span', { 'data-word': true }, p.label)),
+            h('span', { class: 'n' }, p.tail),
+            p.newTab ? h('span', { class: 'sr-only' }, ', opens in a new tab') : null,
           ),
-        ),
-        // The space survives when the break is hidden on a narrow screen, and
-        // collapses into the line end when it is not.
-        ' ',
-        h('br', { class: 'home-br' }),
-        ...glued(
-          'or read ',
-          // The top of the about page. The address waits in its last section.
-          btn('about me', PATH.about),
-          ' and say hi. you can also see my ',
-          btn(RESUME.label, RESUME.href, { newTab: true }),
-          '. ',
-          // The sign-off gets a line of its own, where the break is shown.
-          h('br', { class: 'home-br' }),
-          'i’d love to hear from you :)',
         ),
       ),
     ),
+    rule(TALLY.lime),
     signature(),
   );
 }

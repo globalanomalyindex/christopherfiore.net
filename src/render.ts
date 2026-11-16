@@ -47,6 +47,25 @@ function describe(text: string, max = 160): string {
   return out;
 }
 
+/**
+ * Runs in every page's <head>, before anything paints. A page change is one
+ * film across two documents (`runtime/morph.ts`): the page being left covers
+ * itself, then leaves a note in sessionStorage. If that note is here, fresh,
+ * and addressed to this page, this page starts covered (`morph-in` hides
+ * everything under the masthead) and the runtime uncovers it.
+ *
+ * It never covers for reduced motion, a reload or a back/forward visit, and
+ * it uncovers by itself after 1.2s if the runtime never arrives to claim it.
+ * With scripts off it never runs, so the page is simply there.
+ */
+export const MORPH_GATE =
+  "try{var s=sessionStorage.getItem('ps-morph');if(s){sessionStorage.removeItem('ps-morph');" +
+  "var m=JSON.parse(s),g=performance.getEntriesByType&&performance.getEntriesByType('navigation')[0];" +
+  "if(m&&m.to===location.pathname&&Date.now()-m.t<4000&&(!g||g.type==='navigate')&&" +
+  "!matchMedia('(prefers-reduced-motion: reduce)').matches){" +
+  "var e=document.documentElement;e.classList.add('morph-in');window.__psMorphIn=m.dir;" +
+  "setTimeout(function(){if(!window.__psMorphClaim)e.classList.remove('morph-in')},1200)}}}catch(x){}";
+
 export const ROUTES: Route[] = [
   {
     path: PATH.home,
@@ -115,6 +134,7 @@ function head(r: Route, found: boolean): string {
   } else {
     tags.push('<meta name="robots" content="noindex" />');
   }
+  tags.push(`<script>${MORPH_GATE}</script>`);
   if (r.headScript) tags.push(`<script>${r.headScript}</script>`);
   return tags.join('\n    ');
 }

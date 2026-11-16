@@ -1,11 +1,13 @@
 /**
- * The glitch into Dessign Maison's alternates (README §7.2).
+ * The glitch into Dessign Maison's alternates.
  *
  * HOVER MUST NEVER CHANGE LAYOUT. Two things make that true:
  *
- * 1. Every label reserves the wider of its two widths up front: Averia at
- *    rest, and the alternate plus its "..." tail on hover. Both states then
- *    keep their own natural spacing and nothing around the word reflows.
+ * 1. A label in a row, a tile or the menu sits in a fixed cell inside a
+ *    button that clips its own overflow. A label in a sentence reserves the
+ *    wider of its two widths up front: Iosevka Charon Mono at rest, and the
+ *    alternate plus its "..." tail on hover. Either way nothing around the
+ *    word reflows.
  * 2. The glitch never touches the resting text. The resting word goes
  *    transparent and an aria-hidden overlay of the same text flips letter by
  *    letter on top of it, inside the reserved box.
@@ -18,6 +20,12 @@ import { pick } from './band.ts';
 
 const ALT = "'Dessign Maison', Georgia, serif";
 const FEAT = "'salt' 1, 'ss01' 1";
+/**
+ * The alternate is set a step larger than the mono it replaces. Dessign
+ * Maison is a narrow display serif with a low x-height; at 1.14em its
+ * lowercase stands as tall as Iosevka Charon Mono's.
+ */
+const ALT_SIZE = '1.14em';
 /**
  * Each flash is a band color's darker twin: the same hue, taken down to about
  * 3.3:1 against band ink. The first seven are the lattice site's; the rest
@@ -72,7 +80,7 @@ export function reserve(root: ParentNode = document): void {
       s.textContent = alt ? txt + tail(txt) : txt;
       s.style.cssText =
         'position:absolute;visibility:hidden;white-space:pre;left:0;top:0' +
-        (alt ? `;font-family:${ALT};font-feature-settings:${FEAT}` : '');
+        (alt ? `;font-family:${ALT};font-feature-settings:${FEAT};font-size:${ALT_SIZE};font-weight:400` : '');
       w.appendChild(s);
       const width = s.getBoundingClientRect().width;
       s.remove();
@@ -83,24 +91,25 @@ export function reserve(root: ParentNode = document): void {
     const altW = probe(true);
     if (altW <= restW + 0.5) return;
 
+    // A label in a row, a tile or the menu sits in a cell of fixed width,
+    // and its button clips its own overflow. Nothing around it can move, so
+    // there is nothing to reserve.
+    const btn = w.closest<HTMLElement>('[data-btn]');
+    if (!btn || !getComputedStyle(btn).display.startsWith('inline')) return;
+
     const fs = parseFloat(getComputedStyle(w).fontSize) || 16;
 
-    // Never reserve a box wider than the room it has. On a narrow screen that
-    // would push the page sideways or out of its frame; the overlay just
-    // overhangs instead. A button glued to its punctuation has 0.5em less
-    // (`.glue > .btn` in site.css).
+    // A link in a sentence is the one place a wider hover could push its
+    // neighbors. Never reserve a box wider than the room it has: on a narrow
+    // screen that would push the page sideways; the overlay just overhangs
+    // instead.
     const block = w.closest<HTMLElement>('[data-seams], p, nav, figcaption');
-    const btn = w.closest<HTMLElement>('[data-btn]');
-    if (block && btn) {
-      const room = block.clientWidth - (btn.parentElement?.classList.contains('glue') ? 0.5 * fs : 0);
+    if (block) {
+      const room = block.clientWidth - 2 * fs;
       if (btn.getBoundingClientRect().width + (altW - restW) > room) return;
     }
 
     w.style.minWidth = `${(Math.ceil(altW) / fs).toFixed(4)}em`;
-    // In an inline-flex button the extra width is split either side, so the
-    // resting label still looks centered in its box.
-    const parent = w.parentElement ? getComputedStyle(w.parentElement).display : '';
-    if (parent === 'inline-flex' || parent === 'flex') w.style.textAlign = 'center';
   });
 }
 
@@ -114,10 +123,14 @@ export interface Alt {
 const setAlt = (s: HTMLElement) => {
   s.style.fontFamily = ALT;
   s.style.fontFeatureSettings = FEAT;
+  s.style.fontSize = ALT_SIZE;
+  s.style.fontWeight = '400';
 };
 const setRest = (s: HTMLElement) => {
   s.style.fontFamily = '';
   s.style.fontFeatureSettings = '';
+  s.style.fontSize = '';
+  s.style.fontWeight = '';
 };
 
 /**

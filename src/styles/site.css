@@ -1,14 +1,23 @@
 /*
-  perfection synthétique · the prose site.
+  christopherfiore.net · Ledger home, Chips subpages.
 
-  An early-internet text post, made editorial: warm paper and ink at rest,
-  and bright color only on hover. At rest the page is ONLY paper, ink, ink-2
-  and link blue. Anything else on screen came from a pointer.
+  One typeface on one character grid. Iosevka Charon Mono is exactly half an
+  em wide, so a column is 0.5em and every horizontal size here is a whole or
+  half number of columns. A row is 32px at full size (31px on home, which is
+  his Figma frame).
 
-  THE TYPE SCALE IS PIXEL-EXACT AT 1440. Every size is `clamp(floor, Nvw, max)`
-  where N is the design size divided by 1440, so the preferred value equals
-  the design value at the artboard width, the max holds it there on anything
-  wider, and the floor catches phones (README §8).
+  EVERYTHING IS SET IN EM AROUND ONE NUMBER, --fs. At 1440 wide it is 24px and
+  every size equals the design's. From 1440 down to 960 it follows the width
+  (100vw / 60), so the page keeps its 120 columns and nothing rewraps. Under
+  960 it holds at 16px and the page loses columns instead: rows stack under
+  760, the gutters tighten under 640.
+
+  The math is clamp, min, max and plain arithmetic only. Never pow() or
+  atan2(): phone browsers do not all resolve those the same way, and a font
+  size that comes out not-a-number renders as 0.
+
+  At rest the page is ground, sheet, ink, one quiet grey and the tally
+  brights. No gradients, no shadows, no rounded corners.
 */
 
 @font-face {
@@ -21,74 +30,74 @@
 }
 
 :root {
-  --paper: #f5e4d9;
-  --ink: #231c22;
-  --ink-2: #6e5b57;
-  --link: #3f5195;
-  --link-hover: #2e3c73;
-  --link-visited: #6a4c86;
-  --measure-ink: #3f5195;
+  --ground: #f3f5f8;
+  --sheet: #fdfeff;
+  --ink: #12141b;
+  --mute: #5a6170;
+  --hair: #d5d9e0;
   --band-ink: #1a1820;
+  --figure: #f5d90a;
 
-  /* each preferred value is (design px / 1440) of the viewport, as an exact ratio */
-  --fs-h1: clamp(48px, 100vw * 88 / 1440, 88px);
-  --fs-h2: clamp(32px, 100vw * 48 / 1440, 48px);
-  --fs-lede: clamp(26px, 100vw * 40 / 1440, 40px);
-  --fs-body: clamp(20px, 100vw * 32 / 1440, 32px);
-  --fs-crumb: clamp(18px, 100vw * 26 / 1440, 26px);
-  --fs-cap: clamp(16px, 100vw * 22 / 1440, 22px);
-
-  --pad-x: clamp(20px, 100vw * 48 / 1440, 48px);
-  --measure-wide: 1120px;
-  --measure: 1040px;
-
-  --serif: 'Averia Serif Libre', Georgia, serif;
-  --mono: ui-monospace, Menlo, monospace;
+  --mono: 'Iosevka Charon Mono', ui-monospace, Menlo, monospace;
+  --fs: clamp(16px, 100vw / 60, 24px);
 }
 
 html {
-  background: var(--paper);
+  background: var(--ground);
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
 }
 
 body {
   margin: 0;
-  background: var(--paper);
+  background: var(--ground);
   color: var(--ink);
-  font-family: var(--serif);
+  font-family: var(--mono);
+  font-size: var(--fs);
+  line-height: 1.3333;
   font-weight: 400;
+  font-variant-ligatures: none;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
+::selection {
+  background: var(--ink);
+  color: var(--ground);
+}
+
 /* ------------------------------------------------------------------ page */
 
+/*
+  --x0 is the left edge of the "+" cell: 38px in his frame. The text starts
+  two columns right of it (62px). --pr is the right margin (46px).
+*/
 .page {
+  --x0: 1.5833em;
+  --pr: 1.9167em;
   position: relative; /* the skeleton and the arrows are placed in its box */
   box-sizing: border-box;
-  max-width: 1440px;
   min-height: 100vh;
-  padding: 40px var(--pad-x) 104px;
-  display: flex;
-  flex-direction: column;
+  padding: 0 var(--pr) 0 calc(var(--x0) + 1em);
 }
 
-.page p,
-.page figure,
-.page h1,
-.page h2 {
+@supports (min-height: 100svh) {
+  .page {
+    /* the viewport with the browser's own bars showing */
+    min-height: 100svh;
+  }
+}
+
+/* a reset with no weight of its own (:where), so any class below outranks it */
+:where(.page) :where(h1, h2, p, ul, figure) {
   margin: 0;
+  padding: 0;
+  font-size: inherit;
+  font-weight: inherit;
 }
 
-.page p,
-.page figcaption,
-.page nav {
-  text-wrap: pretty;
-}
-
-.ink-2 {
-  color: var(--ink-2);
+:where(.page) ul {
+  list-style: none;
 }
 
 b {
@@ -96,290 +105,205 @@ b {
 }
 
 code {
-  font-family: var(--mono);
-  font-size: 0.72em;
-  letter-spacing: 0;
+  font: inherit;
   overflow-wrap: anywhere;
 }
 
-/* ---------------------------------------------------------------- blocks */
-
-.title {
-  font-size: var(--fs-h1);
-  line-height: 1.05;
-  font-weight: 700;
-  letter-spacing: -0.01em;
+.mute {
+  color: var(--mute);
 }
 
-.crumb {
-  font-size: var(--fs-crumb);
-  line-height: 1.5;
-  max-width: var(--measure-wide);
-}
+/* -------------------------------------------------------------- masthead */
 
-.crumb + .title {
-  margin-top: 56px;
-}
-
-.meta {
-  font-size: var(--fs-crumb);
-  line-height: 1.4;
-  color: var(--ink-2);
-}
-
-.title + .meta {
-  margin-top: 18px;
-}
-
-.lede {
-  font-size: var(--fs-lede);
-  line-height: 1.5;
-  max-width: var(--measure-wide);
-}
-
-.page .title + .lede {
-  margin-top: 24px;
-}
-
-.page .meta + .lede {
-  margin-top: 32px;
-}
-
-.body {
-  font-size: var(--fs-body);
-  line-height: 1.5;
-  max-width: var(--measure);
-}
-
-.page .lede + .body {
-  margin-top: 32px;
-}
-
-.page .lede + .tagline {
-  margin-top: 16px;
-}
-
-.page .body + .tagline {
-  margin-top: 16px;
-}
-
-.page .closing {
-  margin-top: 56px;
-}
-
-/* the index: one sentence per case, 30px apart, on the wide measure */
-.index {
-  margin-top: 56px;
-  display: flex;
-  flex-direction: column;
-  gap: 30px;
-}
-
-.index .body {
-  max-width: var(--measure-wide);
-}
-
-/* sections: h2 88px down, first paragraph 24px under it */
-.sec {
-  margin-top: 88px;
-}
-
-.h2 {
-  font-size: var(--fs-h2);
-  line-height: 1.2;
-  font-weight: 700;
-}
-
-.page .sec > .h2 + * {
-  margin-top: 24px;
-}
-
-.page .sec--prose > .body + .body {
-  margin-top: 20px;
-}
-
-.page .sec--list > .body + .body {
-  margin-top: 12px;
-}
-
-.page .sec--glance > .body + .body {
-  margin-top: 10px;
-}
-
-/* the say-hi sentence is set at lede size, on the wide measure */
-.page #say-hi > .lede {
-  margin-top: 24px;
-}
-
-/* a thought that has not been drawn, set off from the argument by a rule */
-.aside {
-  margin-top: 20px;
-  padding-left: 24px;
-  border-left: 1px solid var(--ink);
-  max-width: var(--measure);
-}
-
-.page .aside > .body + .body {
-  margin-top: 20px;
-}
-
-/* ---------------------------------------------------------------- figures */
-
-.figure {
-  margin-top: 56px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.page .figure {
-  margin-top: 56px;
-}
-
-.figure img,
-.work img {
-  display: block;
-  width: 100%;
-  height: auto;
-  border: 1px solid var(--ink);
-  box-sizing: border-box;
-  background: rgb(35 28 34 / 0.06);
-}
-
-.cap {
-  font-size: var(--fs-cap);
-  line-height: 1.4;
-  color: var(--ink-2);
-}
-
-/* paintings: two CSS columns, every caption a sentence */
-.gallery {
-  margin-top: 64px;
-  columns: 2;
-  column-gap: 40px;
-}
-
-.page .work {
-  margin: 0 0 48px;
-  break-inside: avoid;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.cap--work {
-  font-size: var(--fs-crumb);
-  line-height: 1.5;
-  color: var(--ink);
-}
-
-.page .gallery + .body {
-  margin-top: 16px;
-}
-
-/* ------------------------------------------------------------------- home */
-
-/*
-  THE HOME PAGE IS ONE SCREEN, ALWAYS. The headline, the prose and the
-  signature all fit the viewport, with no scrolling, on any screen.
-
-  It works by scaling one number. Every size here is the 1440 design's size
-  times --k, px per design px, and that includes the measure, which is set in
-  em. So at any k the lines break exactly where the design breaks them, and
-  the text block is exactly k times its design height, T. That makes the fit
-  exact rather than a guess:
-
-    --room   the height left for the text: the viewport, minus the padding,
-             the gap and the signature, which always spans the text measure
-    --k      the largest scale that fits: full size (1px), the width's own
-             limit (100vw / 1440), or room / T
-
-  Portrait phones get the same treatment around a 390px reference layout
-  instead (bigger type, more lines), below. Nothing here needs a script, so it
-  fits with scripts off too.
-
-  The floors keep a very short window (under ~400px tall) readable at the cost
-  of scrolling; no phone or computer screen reaches them.
-*/
-:root {
-  --vh: 100vh;
-}
-
-@supports (height: 100svh) {
-  :root {
-    /* the viewport with the browser's own bars showing, so nothing hides under them */
-    --vh: 100svh;
-  }
-}
-
-.page.page--home {
-  /* T: the text block's height at k = 1, measured, plus 2% for safety */
-  --text-h: 760;
-  --home-pt: clamp(16px, var(--vh) * 0.05, 40px);
-  --home-pb: min(var(--pad-x), var(--vh) * 0.05);
-  --sig-gap: clamp(16px, min(100vw * 64 / 1440, var(--vh) * 0.06), 64px);
-  /* the signature spans the measure, unless that would take over 28% of the height */
-  --sig-w: min(min(100vw, 1440px) - 2 * var(--pad-x), var(--vh) * 0.28 * 2053 / 308);
-  --room: calc(var(--vh) - var(--home-pt) - var(--sig-gap) - var(--sig-w) * 308 / 2053 - var(--home-pb));
-  --k: max(0px, min(1px, 100vw / 1440, var(--room) / var(--text-h)));
-  min-height: var(--vh);
-  padding-top: var(--home-pt);
-  padding-bottom: var(--home-pb);
-}
-
-.page--home .title {
-  margin: 0;
-  font-size: max(20px, var(--k) * 88);
-}
-
-.home-prose {
-  margin-top: calc(var(--k) * 32);
-  display: flex;
-  flex-direction: column;
-  gap: calc(var(--k) * 40);
-  font-size: max(10px, var(--k) * 40);
-  line-height: 1.5;
-}
-
-/* 1120px at 40px: the measure scales with the type, so the lines break where the design's do */
-.home-p {
-  max-width: 28em;
-}
-
-/* 1344px at 40px, the full column: wider than the others, as in the design, and still scaled */
-.home-p--wide {
-  max-width: 33.6em;
-}
-
-/* "you can view my portfolio [product designs] and [paintings]," is one line */
-.home-lock {
+/* 48px, with its top 57px down the frame */
+.page .name {
+  padding-top: 1.1875em;
+  font-size: 2em;
+  line-height: 1.2708;
   white-space: nowrap;
 }
 
+/* the header row: the "+" in the gutter, then whatever the page puts beside it */
+.hd {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.plus,
+.btn.plus {
+  position: absolute;
+  width: 0.5em;
+  text-align: center;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.lad {
+  display: flex;
+  flex: none;
+}
+
+.lad i {
+  display: block;
+  width: 0.5em;
+  height: 1.3333em;
+}
+
+.chip {
+  padding: 0 0.5em;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------------ home */
+
 /*
-  The signature, pushed to the bottom of the screen and spanning the full
-  text measure edge to edge.
+  The Ledger. His frame, in flow: the name, the "+" row with the first rule,
+  the sheet between his two vertical rules, the third rule, and the signature
+  pushed to the bottom of the window.
+*/
+.home {
+  /* his rows are 31px */
+  line-height: 1.2917;
+  display: flex;
+  flex-direction: column;
+  /* the ink part of each rule, and the sheet from rule to rule */
+  --rule: min(18.5417em, 68vw);
+  --sheet-w: min(26.4583em, 100vw - 2 * var(--x0) - 2px);
+}
+
+.home .hd {
+  height: 1.2917em;
+  margin-top: 0.25em;
+}
+
+.home .hd .plus {
+  left: -1em;
+  top: 0;
+}
+
+.home .hd .hr {
+  flex: 1;
+  /* his rule is at y140, one pixel under the row's middle */
+  top: 1px;
+}
+
+.hr {
+  position: relative;
+  display: block;
+  height: 1px;
+}
+
+.hr .ink,
+.hr .hair {
+  position: absolute;
+  top: 0;
+  height: 1px;
+}
+
+.hr .ink {
+  left: 0;
+  width: var(--rule);
+  background: var(--ink);
+}
+
+/* from the end of the ink to the right edge of the window */
+.hr .hair {
+  left: var(--rule);
+  right: calc(-1 * var(--pr));
+  background: var(--hair);
+}
+
+.hr .lad {
+  position: absolute;
+  left: calc(var(--rule) - 1.5em);
+  top: -5px;
+}
+
+.hr .lad i {
+  height: 11px;
+}
+
+.ledger {
+  position: relative;
+  isolation: isolate;
+  margin-top: 0.2917em;
+}
+
+/* the sheet: a flat field bounded by his two vertical rules */
+.ledger::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  top: 0;
+  bottom: 0;
+  left: calc(1px - 1em);
+  box-sizing: border-box;
+  width: var(--sheet-w);
+  background: var(--sheet);
+  border-left: 1px solid var(--ink);
+  border-right: 1px solid var(--ink);
+}
+
+.who {
+  max-width: calc(var(--sheet-w) - 1.5em);
+}
+
+/* a line that has to wrap hangs under its own first word */
+.who p {
+  padding-left: 1em;
+  text-indent: -1em;
+}
+
+.ledger .hr {
+  margin: 1.125em 0 0.6667em;
+}
+
+/* the rows run from rule to rule, so the band floods the sheet's full width */
+.menu {
+  margin-left: calc(2px - 1em);
+  width: calc(var(--sheet-w) - 2px);
+}
+
+.hrow {
+  display: flex;
+  align-items: center;
+  min-height: 1.2917em;
+  padding: 0 0.5em 0 calc(1em - 2px);
+}
+
+.hrow .n {
+  margin-left: auto;
+  padding-left: 1em;
+  color: var(--mute);
+  white-space: nowrap;
+}
+
+.home > .hr {
+  margin-top: 1.0417em;
+}
+
+/*
+  The signature. Hidden before first paint by the inline gate, then by the
+  runtime until it writes, so it can be written in. The whole block, not just
+  its ink: a visible block still scores as layout shift when the web font
+  swaps in above it and moves it.
 */
 .home-sig {
   margin-top: auto;
-  padding-top: var(--sig-gap);
+  /* 63px under it in his frame; less on a short window, so it still fits */
+  padding: clamp(0.75em, 4vh, 2em) 0 clamp(0.75em, 6.2vh, 2.625em);
 }
 
 /* The ink is inherited, not set here, so a forced-colors theme recolors it with the text. */
 .sig {
   display: block;
-  width: var(--sig-w, 100%);
-  max-width: 100%;
+  width: min(38em, 100%);
   height: auto;
   overflow: visible;
 }
 
-/*
-  Hidden before first paint by the inline gate, then by the runtime until it
-  writes, so it can be written in. The whole block, not just its ink: a
-  visible block still scores as layout shift when the web font swaps in above
-  it and moves it.
-*/
 .sig-wait .home-sig,
 .home-sig[data-sig='waiting'] {
   visibility: hidden;
@@ -392,30 +316,281 @@ code {
     display: inline !important;
     visibility: visible !important;
   }
-  .sig-anim {
-    display: none;
+  .sig-anim,
+  .morph {
+    display: none !important;
   }
+}
+
+/* -------------------------------------------------------------- subpages */
+
+/*
+  The Chips header row. It sticks to the top of the window, so the "+" that
+  leads home is always on screen. It bleeds to both edges of the window so
+  nothing shows beside it while the page scrolls under.
+*/
+.sub .hd {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  min-height: 1.3333em;
+  margin: 0 calc(-1 * var(--pr)) 0 calc(-1em - var(--x0));
+  padding: 0.25em var(--pr) 0.25em calc(var(--x0) + 1em);
+  background: var(--ground);
+}
+
+.sub .hd .plus {
+  left: var(--x0);
+  bottom: 0.25em;
+}
+
+/* the back arrow: one character cell, sitting where the "+" sat */
+.btn.plus .arrow {
+  display: inline-block;
+  width: 0.5em;
+  height: 1em;
+  vertical-align: -0.2em;
+  overflow: visible;
+}
+
+.sub .hd .chip {
+  background: var(--pg);
+}
+
+.sub .hd .rule {
+  flex: 1;
+  min-width: 0.5em;
+  height: 2px;
+  margin: 0 1em;
+  background: var(--ink);
+}
+
+.fig {
+  flex: none;
+  padding: 0 0.5em;
+  font-weight: 700;
+  white-space: nowrap;
+  background: var(--figure);
+}
+
+.sub .hd .fig {
+  margin-right: 1em;
+}
+
+.body {
+  display: block;
+  padding-top: 1.0833em;
+}
+
+/* a jump down the page lands clear of the sticky row */
+.body [id] {
+  scroll-margin-top: 3.5em;
+}
+
+.lede,
+.sum,
+.prose {
+  padding: 0 0.5em;
+  max-width: 48.5em;
+}
+
+.page .lede + .lede,
+.page .sum,
+.page .lede {
+  margin-top: 0.6667em;
+}
+
+.page .body > :first-child {
+  margin-top: 0;
+}
+
+.sum {
+  color: var(--mute);
+}
+
+.page .prose {
+  margin-top: 0.6667em;
+}
+
+.page .sec + .prose {
+  margin-top: 0.5em;
+}
+
+.page .list .prose + .prose {
+  margin-top: 0.3333em;
+}
+
+/* a section header: chip, rule, count, ladder, all in the section's hue */
+.sec {
+  display: flex;
+  align-items: center;
+  min-height: 1.3333em;
+  margin-top: 1.6667em;
+}
+
+.sec .chip {
+  background: var(--c);
+}
+
+.sec .rule {
+  flex: 1;
+  min-width: 0.5em;
+  height: 2px;
+  margin: 0 1em;
+  background: var(--c);
+}
+
+.sec .ct {
+  margin-right: 1em;
+  color: var(--mute);
+  white-space: nowrap;
+}
+
+/* rows: tinted in the section's hue, 4px of ground between them */
+.page .rows {
+  margin-top: 0.3333em;
+}
+
+.rows > li {
+  margin-top: 0.1667em;
+}
+
+.row {
+  display: flex;
+  align-items: flex-start;
+  padding: 0 0.5em;
+  background: var(--t);
+}
+
+.row .nm {
+  flex: none;
+  width: 18.5em;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.glance .row .nm {
+  width: 13em;
+}
+
+.row .l {
+  flex: 1;
+  min-width: 0;
+  padding-right: 1em;
+  overflow-wrap: anywhere;
+}
+
+.row .cs {
+  flex: none;
+  white-space: nowrap;
+}
+
+/* an outlined tag: a 1px line in the section's hue, drawn inside the box */
+.row .cs span,
+.glance .cell {
+  background: var(--ground);
+  box-shadow: inset 0 0 0 1px var(--c);
+}
+
+.row .cs span {
+  padding: 0 0.25em;
+}
+
+.glance .cell {
+  flex: none;
+  display: block;
+  width: 8.5em;
+  margin-right: -0.5em;
+  padding: 0 0.5em;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* a thought that has not been drawn, set off from the argument by a rule */
+.aside {
+  margin: 0.6667em 0 0 0.5em;
+  border-left: 2px solid var(--c);
+}
+
+.page .aside > .prose:first-child {
+  margin-top: 0;
+}
+
+/* a plate: the image whole, on the section's tint, its caption under it */
+.page .plate {
+  margin-top: 0.6667em;
+  background: var(--t, var(--sheet));
+}
+
+.plate img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.cap {
+  padding: 0.1667em 0.5em 0.25em;
+  color: var(--mute);
+}
+
+.lead {
+  margin-top: 1em;
+}
+
+/* paintings: three tiles a row, each a tinted cell */
+.page .grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.8333em 1.5em;
+  margin-top: 0.5em;
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--t);
+}
+
+.tile img {
+  display: block;
+  width: 100%;
+  height: 8.3333em;
+  object-fit: contain;
+}
+
+.tile .cell {
+  display: block;
+  padding: 0 0.5em;
+  font-weight: 700;
+}
+
+.tile .note {
+  display: block;
+  padding: 0 0.5em;
+}
+
+/* how a subpage ends: the signature, small */
+.endsig {
+  margin-top: 2.3333em;
+  padding-bottom: 2.3333em;
+}
+
+.endsig .sig {
+  width: min(19em, 100%);
 }
 
 /* ---------------------------------------------------------------- buttons */
 
 /*
-  The framed inline button. Every link on the site is one. The box is em-based,
-  so it scales with the sentence it sits in; `isolation` is required, because
-  the hover band paints at z-index -1 INSIDE it, above its background and
-  under its label.
+  Every link is a button. `isolation` is required, because the hover band
+  paints at z-index -1 INSIDE it, above its background and under its label.
+  A block button clips its own overflow, so a hover label that runs long is
+  cut at the button's edge and can never widen the page.
 */
 .btn {
   position: relative;
   isolation: isolate;
-  display: inline-flex;
-  align-items: baseline;
-  vertical-align: baseline;
-  gap: 0.2em;
-  padding: 0.02em 0.3em 0.06em;
-  border: 1px solid var(--ink);
-  border-radius: 0;
-  line-height: 1.2;
   color: var(--ink);
   text-decoration: none;
   -webkit-tap-highlight-color: transparent;
@@ -425,44 +600,49 @@ code {
   color: var(--ink);
 }
 
-.btn-arrow {
-  flex: none;
-  width: 0.42em;
-  height: 0.42em;
-  overflow: visible;
-  align-self: center;
+/*
+  Rows clip sideways only. The hover glitch sets Dessign Maison at 1.14em, and
+  its descenders (g, p, y, commas) hang 1 to 2px below the row; a full
+  `overflow: hidden` cut them off. `overflow: clip` lets the two axes differ.
+  Browsers without it keep the old full clip.
+*/
+a.row,
+.hrow,
+.cell {
+  overflow: hidden;
 }
 
-.btn-arrow path {
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.7;
-  stroke-linecap: square;
+@supports (overflow: clip) {
+  a.row,
+  .hrow,
+  .cell {
+    overflow-x: clip;
+    overflow-y: visible;
+  }
+}
+
+/* a link inside a sentence: "+label" on the section's tint */
+.btn.in {
+  display: inline-block;
+  padding: 0 0.5em;
+  font-weight: 700;
+  white-space: nowrap;
+  background: var(--t, var(--sheet));
 }
 
 /*
-  A button and the punctuation after it, as one unbreakable pair. The button
-  itself may still wrap its label, and it stops just short of the column so
-  the punctuation always has room beside it: the pair can never push the page
-  sideways.
+  A button and the punctuation after it, as one unbreakable pair, so a period
+  is never left alone at the start of a line.
 */
 .glue {
   white-space: nowrap;
 }
 
-.glue > .btn {
-  white-space: normal;
-  max-width: calc(100% - 0.5em);
-}
-
-/*
-  The glitch overlay is placed inside this box. `anywhere` only matters on a
-  phone, where the address is wider than the column: it breaks inside its box
-  instead of pushing the page sideways.
-*/
+/* The glitch overlay is placed inside this box. */
 [data-word] {
   position: relative;
-  overflow-wrap: anywhere;
+  display: inline-block;
+  max-width: 100%;
 }
 
 /*
@@ -476,39 +656,31 @@ code {
 
 /*
   The ink pin. While the band is up, the button and everything in it read in
-  band ink: a secondary-ink span would vanish on a bright band. The glitch sets
-  the resting word to transparent inline, which outranks this.
+  band ink: a quiet grey would vanish on a bright band. The glitch sets the
+  resting word to transparent inline, which outranks this.
 */
 .btn[data-hot],
 .btn[data-hot] * {
   color: var(--band-ink);
 }
 
-/* Keyboard focus was not designed; this is README §8's recommendation. */
+/* the "+" home link floods ink, so its mark turns to ground */
+.btn.plus[data-hot] {
+  color: var(--ground);
+}
+
+.btn[data-hot] .cs span {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--band-ink);
+}
+
 .btn:focus {
   outline: none;
 }
 
 .btn:focus-visible {
-  outline: 2px solid var(--link);
-  outline-offset: 3px;
-}
-
-/* plain links, for any future CMS content. None remain on the designed screens. */
-.page a:not(.btn) {
-  color: var(--link);
-  text-decoration-line: underline;
-  text-decoration-thickness: 2px;
-  text-underline-offset: 6px;
-}
-
-.page a:not(.btn):visited {
-  color: var(--link-visited);
-}
-
-/* after :visited, so a visited link still darkens on hover */
-.page a:not(.btn):hover {
-  color: var(--link-hover);
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
 }
 
 .sr-only {
@@ -524,102 +696,180 @@ code {
   border: 0;
 }
 
-/* -------------------------------------------------------------- smaller */
+/* -------------------------------------------------------------- the morph */
 
 /*
-  Portrait phones and narrow windows: the home page fits one screen around a
-  390px reference layout instead, with bigger type and more lines than the
-  1440 design scaled down would give. Everything is still one number: at k = 1
-  this is the phone layout at 390 wide, k follows the width up to 1.1 (where
-  the type stops growing and lines just get longer, which only makes the text
-  shorter than T, so the fit stays safe), and room / T caps it on short
-  screens. The locked first line wraps like any sentence here.
+  A page change (runtime/morph.ts). The overlay is two stacks of text lines on
+  the page's own character grid. A line is as wide as its string, with the
+  ground behind it, so the string itself is the mask: characters cover the
+  page, and where the string ends the page shows.
 */
-@media (max-width: 870px) and (orientation: portrait) {
-  .page.page--home {
-    --text-h: 733;
-    --pad-x: calc(100vw * 20 / 390);
-    --home-pt: clamp(16px, var(--vh) * 0.04, 28px);
-    --home-pb: var(--pad-x);
-    --sig-gap: clamp(16px, var(--vh) * 0.05, 40px);
-    /*
-      The fit. At a phone's fixed width, smaller type fits more words per
-      line, so the text block shrinks faster than the type: the scale that
-      fits rises like a power of the room ratio, r = room / T at full size.
-      Two straight lines sit under that curve at every one of seventeen
-      measured phone sizes (0.42 + 0.56r, and 1.25r for very short screens),
-      and multiplied through by the full scale they need nothing but a length
-      divided by a plain number. Deliberately no pow() or tan(atan2()): phone
-      browsers do not all resolve that math the same way, and a
-      not-a-number font size renders as 0.
-    */
-    --kw: min(1.1px, 100vw / 390);
-    --k: max(0px, min(var(--kw), var(--kw) * 0.42 + var(--room) * 0.56 / var(--text-h), var(--room) * 1.25 / var(--text-h)));
+.morph {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  overflow: hidden;
+  pointer-events: none;
+  -webkit-user-select: none;
+  user-select: none;
+  white-space: pre;
+  color: var(--ink);
+}
+
+.morph .set {
+  position: absolute;
+}
+
+.morph .ln {
+  width: -webkit-fit-content;
+  width: fit-content;
+  background: var(--ground);
+}
+
+.morph .set.r .ln {
+  margin-left: auto;
+}
+
+/*
+  Arriving mid-film: the inline gate in <head> sets this before first paint,
+  and everything under the masthead waits unseen until the runtime uncovers
+  it. The name and the "+" stay, as they do through the whole film.
+*/
+.morph-in .page > :not(.name):not(.hd),
+.morph-in .hd > :not(.plus) {
+  visibility: hidden;
+}
+
+/* ---------------------------------------------------------------- smaller */
+
+/* two tiles a row */
+@media (max-width: 1000px) {
+  .page .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@media (max-width: 870px) and (orientation: portrait) {
-  .page--home .title {
-    font-size: max(20px, var(--k) * 48);
+/* rows stack: the name on its own line, the detail under it */
+@media (max-width: 760px) {
+  .row {
+    flex-direction: column;
+    align-items: stretch;
   }
-  .home-prose {
-    margin-top: calc(var(--k) * 24);
-    gap: calc(var(--k) * 24);
-    font-size: max(10px, var(--k) * 22);
-  }
-  .home-p {
-    max-width: none;
-  }
-  .home-lock {
+  .row .nm,
+  .glance .row .nm {
+    width: auto;
     white-space: normal;
   }
-  .home-br {
-    display: none;
+  .row .l {
+    padding-right: 0;
   }
-}
-
-@media (max-width: 800px) {
-  .gallery {
-    columns: 1;
+  .row .cs {
+    align-self: flex-start;
+    margin: 0.1667em 0 0.25em;
+  }
+  .glance .cell {
+    align-self: flex-start;
+    margin: 0.1667em 0 0.25em -0.5em;
   }
 }
 
 /*
-  Small phones get one more step down. Below this, the longest labels ("apple
-  wallet card sharing concept", the address) fill a whole line at the README's
-  floors, and the punctuation after them lands alone at the start of the next.
+  Phones. The "+" moves to one column from the edge and the right margin to
+  one column, which leaves 41 columns of text at 360 wide. In the header row
+  the figure chip takes a line of its own above the title, and only the title
+  line sticks. One tile a row, each painting at its own height.
 */
-@media (max-width: 480px) {
-  :root {
-    --fs-lede: 22px;
-    --fs-body: 18px;
-    --fs-crumb: 16px;
-    --fs-cap: 15px;
+@media (max-width: 640px) {
+  .page {
+    --x0: 0.5em;
+    --pr: 0.5em;
+  }
+  .page .name {
+    padding-top: 0.6em;
+  }
+  .sub .hd {
+    flex-wrap: wrap;
+    top: calc(-1.5833em);
+  }
+  .sub .hd .fig {
+    order: -2;
+    margin: 0 0 0.25em auto;
+  }
+  .sub .hd::before {
+    content: '';
+    order: -1;
+    flex-basis: 100%;
+    height: 0;
+  }
+  .sub .hd .chip {
+    flex: 0 1 auto;
+    white-space: normal;
+  }
+  .sub .hd .rule {
+    margin: 0 0.5em;
+  }
+  .sec .chip {
+    flex: 0 1 auto;
+    white-space: normal;
+  }
+  .sec .rule {
+    margin: 0 0.5em;
+  }
+  .sec .ct {
+    margin-right: 0.5em;
+  }
+  .page .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .tile img {
+    height: auto;
+  }
+  .home-sig {
+    padding: 1em 0;
   }
 }
 
-@media (max-width: 700px) {
-  .crumb + .title,
-  .index,
-  .page .closing,
-  .figure,
-  .page .figure {
-    margin-top: 40px;
+/*
+  Fingers. Every link is at least 44px tall to the touch. Rows and cells grow
+  to it; the small ones (the "+", a chip, a link in a sentence) keep their
+  size and get a 44px touch area around them instead.
+*/
+@media (max-width: 640px), (pointer: coarse) {
+  a.row,
+  .hrow {
+    min-height: 44px;
+    box-sizing: border-box;
   }
-  .sec {
-    margin-top: 64px;
+  a.row {
+    justify-content: center;
   }
-  .gallery {
-    margin-top: 40px;
+  .tile .cell,
+  .glance .cell {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    box-sizing: border-box;
   }
-  .page .work {
-    margin-bottom: 36px;
+  /* a link in a sentence becomes a 44px chip, and its line makes room */
+  .btn.in {
+    padding-top: calc(22px - 0.6667em);
+    padding-bottom: calc(22px - 0.6667em);
   }
-  .page {
-    padding-top: 28px;
-    padding-bottom: 72px;
+  .btn.fig::after,
+  .btn.plus::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: max(100%, 44px);
+    height: 44px;
+    transform: translate(-50%, -50%);
   }
-  .index {
-    gap: 24px;
+}
+
+@media (min-width: 761px) and (pointer: coarse) {
+  a.row {
+    align-items: center;
+    justify-content: flex-start;
   }
 }

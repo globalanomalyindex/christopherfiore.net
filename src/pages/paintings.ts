@@ -1,20 +1,18 @@
 /**
- * paintings. Two CSS columns, and every caption is a sentence:
- *
- *   [title ↗] note, (grey: year).
- *
- * All twenty works, in the data file's order. The prototype drew twelve of
- * them; the build shows the full set (README §6.4).
+ * paintings. Grouped by year, newest first, with the eight that carry no
+ * year under "undated". Inside a year the works keep the data file's order.
+ * Each tile is a tinted cell: the whole painting, uncropped, its name as the
+ * button, and its note under it.
  */
 
 import { h } from '../html.ts';
-import { PATH } from '../paths.ts';
+import { TALLY } from '../palette.ts';
 import { ARTSTATION_HREF, PAINTINGS } from '../data/paintings.ts';
 import type { PaintingRecord } from '../data/types.ts';
-import { body, btn, crumb, glued, grey, lede, page, title } from '../prose.ts';
+import { PAINTINGS_LABEL, cellBtn, fig, lede, pagesBlock, row, rows, section, subpage, sum } from '../prose.ts';
 
 /*
-  The lede and the closing line both say "twenty" in words. If the collection
+  The lede and the "also" row both say "twenty" in words. If the collection
   changes size they would quietly start lying, so the build refuses instead.
 */
 if (PAINTINGS.length !== 20) {
@@ -26,53 +24,53 @@ export const PAINTINGS_PAGE = {
   lede: 'twenty works, 2023 to 2025. concept art and illustration: photobash, blender, substance.',
 } as const;
 
-/** A work with no note and no year shows only its button. */
-function caption(p: PaintingRecord) {
-  const tail = [p.note, p.year ? grey(p.year) : null].filter(Boolean);
-  const parts = tail.flatMap((t, i) => (i === 0 ? [t] : [', ', t]));
-  return h(
-    'figcaption',
-    { class: 'cap cap--work', 'data-seams': true },
-    ...glued(btn(p.wall, p.href, { newTab: true }), parts.length ? [' ', ...parts, '.'] : null),
-  );
+const YEARS: [year: string | null, hue: string][] = [
+  ['2025', TALLY.cyan],
+  ['2024', TALLY.pink],
+  ['2023', TALLY.lime],
+  [null, TALLY.violet],
+];
+
+const placed = new Set(YEARS.map(([y]) => y));
+for (const p of PAINTINGS) {
+  if (!placed.has(p.year)) throw new Error(`paintings: no group for the year ${p.year}`);
 }
 
-const work = (p: PaintingRecord, i: number) =>
+const tile = (p: PaintingRecord, eager: boolean) =>
   h(
-    'figure',
-    { class: 'work' },
+    'li',
+    { class: 'tile' },
     h('img', {
       src: `/${p.image}`,
       alt: p.alt,
       width: p.width,
       height: p.height,
-      // The first row is on screen at load; everything after it can wait.
-      loading: i < 2 ? 'eager' : 'lazy',
+      loading: eager ? 'eager' : 'lazy',
       decoding: 'async',
     }),
-    caption(p),
+    cellBtn(p.wall, p.href, { newTab: true }),
+    p.note ? h('span', { class: 'note' }, p.note) : null,
   );
 
 export function paintings() {
-  return page(
+  return subpage(
     'paintings',
-    null,
-    crumb(
-      'back ',
-      btn('home', PATH.home),
-      ', or over to ',
-      btn('product designs', PATH.designs),
-      ' and ',
-      btn('about', PATH.about),
-      '.',
-    ),
-    title(PAINTINGS_PAGE.title),
+    PAINTINGS_PAGE.title,
+    TALLY.cyan,
+    fig(PAINTINGS_LABEL),
     lede(PAINTINGS_PAGE.lede),
-    h('div', { class: 'gallery' }, ...PAINTINGS.map(work)),
-    body(
-      'all twenty are on ',
-      btn('artstation', ARTSTATION_HREF, { newTab: true }),
-      '.',
-    ),
+    sum('grouped by year, newest first. a name with a + opens the work on artstation.'),
+    ...YEARS.map(([year, hue], gi) => {
+      const items = PAINTINGS.filter((p) => p.year === year);
+      return section(
+        year ?? 'undated',
+        hue,
+        { count: String(items.length), cls: 'group' },
+        // The first row of the first year is on screen at load; the rest can wait.
+        h('ul', { class: 'grid' }, ...items.map((p, i) => tile(p, gi === 0 && i < 3))),
+      );
+    }),
+    section('also', TALLY.grey, {}, rows(row('+artstation', ARTSTATION_HREF, 'all twenty are on artstation', { newTab: true }))),
+    pagesBlock('paintings'),
   );
 }

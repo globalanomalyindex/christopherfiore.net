@@ -1,5 +1,5 @@
 /**
- * The brutalist band (README §7.1), carried over from the lattice site's
+ * The brutalist band, carried over from the lattice site's
  * hover.ts: three layers of color wiped in with a stepped clip, and a 1.5px
  * inset outline.
  *
@@ -92,7 +92,9 @@ export function bandIn(b: HTMLElement): Band {
   };
 
   // The rows never match the band, or they would vanish into it.
-  const main = (last = pickNot(HUES, last));
+  // A button may name its own band color (`data-hue`): the home menu's four,
+  // and the ink "+". Everything else draws from the wheel.
+  const main = b.getAttribute('data-hue') ?? (last = pickNot(HUES, last));
   const layers = [
     layer('inset:0', main),
     layer(`left:0;right:0;top:0;height:${2 + Math.random() * 6}%`, pickNot(pick(SPARK_ACCENT), main)),
