@@ -17,12 +17,19 @@ export const STUDIO = {
 /**
  * Both open in a new tab and let the browser's own reader do the reading.
  *
- * The files live in `public/documents/` under kebab-case names, and those
- * names are the URLs, so a new revision of either replaces the file in place
- * rather than taking a new slug: links people already copied keep working.
+ * The files live in `public/documents/`, and their names are the URLs, so a
+ * new revision replaces the file in place rather than taking a new slug: links
+ * people already copied keep working.
+ *
+ * The resume is named the way recruiters and applicant tracking systems expect
+ * a saved resume to be: the full name, then "Resume", with no role or year.
+ * It moved to that name in November 2026. The old
+ * `christopher-robin-fiore-resume-2026.pdf` stays as an identical copy, so
+ * links shared before the move still open the current resume. Replace both
+ * files together.
  */
 export const RESUME = {
-  href: '/documents/christopher-robin-fiore-resume-2026.pdf',
+  href: '/documents/Christopher-Robin-Fiore-Resume.pdf',
   label: 'resume',
 } as const;
 
