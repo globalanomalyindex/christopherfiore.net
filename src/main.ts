@@ -25,6 +25,20 @@ try {
 
 initButtons();
 
+// The back button's entrance and JellyBox's skin are their own chunk, fetched
+// at once on a subpage (the cell holds the mono "+" until it lands) and never
+// on home. If it fails, the X is handed back at the gate's 3s failsafe.
+if (document.querySelector('a[data-jx]')) {
+  import('./runtime/jx.ts').then((m) => m.initJx(seen)).catch(() => document.documentElement.classList.remove('jx-wait'));
+} else document.documentElement.classList.remove('jx-wait');
+
+/** Seams and lineage need a cursor that can rest somewhere. A finger cannot. */
+const canHover = matchMedia('(hover: hover) and (pointer: fine)');
+
+// Lineage effects are their own chunk, fetched once the page has been seen,
+// and only where a pointer can rest. Until it lands, every hover is the glitch.
+if (canHover.matches) seen.then(() => import('./runtime/lineage.ts').catch(() => {}));
+
 // Its own chunk, fetched only on the page that has a signature, and only
 // once the page has been uncovered, so it is written where it can be seen.
 // If it fails to load, the signature is handed back at once rather than at
@@ -53,9 +67,6 @@ const fontsReady = (): Promise<unknown> =>
       : Promise.resolve(),
     new Promise((r) => setTimeout(r, 4000)),
   ]);
-
-/** Seams need a cursor that can rest somewhere. A finger cannot. */
-const canHover = matchMedia('(hover: hover) and (pointer: fine)');
 
 fontsReady().then(() => {
   reserve(document);

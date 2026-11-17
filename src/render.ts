@@ -63,8 +63,21 @@ export const MORPH_GATE =
   "var m=JSON.parse(s),g=performance.getEntriesByType&&performance.getEntriesByType('navigation')[0];" +
   "if(m&&m.to===location.pathname&&Date.now()-m.t<4000&&(!g||g.type==='navigate')&&" +
   "!matchMedia('(prefers-reduced-motion: reduce)').matches){" +
-  "var e=document.documentElement;e.classList.add('morph-in');window.__psMorphIn=m.dir;" +
+  "var e=document.documentElement;e.classList.add('morph-in');window.__psMorphIn=m.dir;window.__psMorphKind=m.kind||null;" +
   "setTimeout(function(){if(!window.__psMorphClaim)e.classList.remove('morph-in')},1200)}}}catch(x){}";
+
+/**
+ * Runs in every page's <head>, before anything paints. On a subpage the back
+ * button's cell holds the mono "+" until its entrance (`runtime/jx.ts`), so the
+ * X never shows first and then plays in. Not for reduced motion or a
+ * back/forward visit, and it gives the X back after 3s if the runtime never
+ * arrives to claim it. With scripts off it never runs: the X is simply there.
+ */
+export const JX_GATE =
+  "try{var n=performance.getEntriesByType&&performance.getEntriesByType('navigation')[0];" +
+  "if(!matchMedia('(prefers-reduced-motion: reduce)').matches&&!(n&&n.type==='back_forward')){" +
+  "var d=document.documentElement;d.classList.add('jx-wait');" +
+  "setTimeout(function(){if(!window.__psJxClaim)d.classList.remove('jx-wait')},3000)}}catch(e){}";
 
 export const ROUTES: Route[] = [
   {
@@ -135,6 +148,7 @@ function head(r: Route, found: boolean): string {
     tags.push('<meta name="robots" content="noindex" />');
   }
   tags.push(`<script>${MORPH_GATE}</script>`);
+  if (r.path !== PATH.home) tags.push(`<script>${JX_GATE}</script>`);
   if (r.headScript) tags.push(`<script>${r.headScript}</script>`);
   return tags.join('\n    ');
 }

@@ -16,7 +16,9 @@
  * scale instead of going stale on every resize.
  */
 
-import { pick } from './band.ts';
+import { tail, type Letter } from './ink.ts';
+
+export { tail };
 
 const ALT = "'Dessign Maison', Georgia, serif";
 const FEAT = "'salt' 1, 'ss01' 1";
@@ -26,26 +28,6 @@ const FEAT = "'salt' 1, 'ss01' 1";
  * lowercase stands as tall as Iosevka Charon Mono's.
  */
 const ALT_SIZE = '1.14em';
-/**
- * Each flash is a band color's darker twin: the same hue, taken down to about
- * 3.3:1 against band ink. The first seven are the lattice site's; the rest
- * are twins of the colors band.ts added, less a few too close to tell apart.
- */
-const FLASH = [
-  '#c9246b', '#796b05', '#0a777f', '#b44b12', '#5f7313', '#2B45F5', '#1c7869',
-  '#d12100', '#a55600', '#8d6400', '#3c7900', '#007b4c', '#0071aa', '#4865c3',
-  '#854ec9', '#a436ca', '#bc00c5', '#c210a9', '#cb008e', '#a44b86',
-] as const;
-
-/** 2 letters per 28ms tick, each with a 70ms flash; 25% chance a tick knocks one back. */
-const TICK = 28;
-const PER_TICK = 2;
-const FLASH_MS = 70;
-const KNOCK_BACK = 0.25;
-const SETTLE = 80;
-
-/** Hover text gets a trailing ellipsis to even out its spacing; never on an address. */
-export const tail = (label: string): string => (label.includes('@') ? '' : '...');
 
 /** Labels found to sit on one line when reserved. Their overlay never wraps. */
 const oneLine = new WeakSet<HTMLElement>();
@@ -94,8 +76,10 @@ export function reserve(root: ParentNode = document): void {
     // A label in a row, a tile or the menu sits in a cell of fixed width,
     // and its button clips its own overflow. Nothing around it can move, so
     // there is nothing to reserve.
+    // The header's figure chip is the exception: a jump link ("say hi") sized
+    // to its word, so like a link in a sentence it reserves the wider face.
     const btn = w.closest<HTMLElement>('[data-btn]');
-    if (!btn || !getComputedStyle(btn).display.startsWith('inline')) return;
+    if (!btn || (!getComputedStyle(btn).display.startsWith('inline') && !btn.classList.contains('fig'))) return;
 
     const fs = parseFloat(getComputedStyle(w).fontSize) || 16;
 
@@ -113,33 +97,21 @@ export function reserve(root: ParentNode = document): void {
   });
 }
 
-export interface Alt {
-  words: { w: HTMLElement; ov: HTMLSpanElement; spans: HTMLSpanElement[] }[];
-  tick: number;
-  timers: number[];
-  done: boolean;
+/** One label's overlay: the resting word, its aria-hidden twin, and one span per character. */
+export interface Face {
+  w: HTMLElement;
+  ov: HTMLSpanElement;
+  spans: HTMLSpanElement[];
+  label: string;
 }
 
-const setAlt = (s: HTMLElement) => {
-  s.style.fontFamily = ALT;
-  s.style.fontFeatureSettings = FEAT;
-  s.style.fontSize = ALT_SIZE;
-  s.style.fontWeight = '400';
-};
-const setRest = (s: HTMLElement) => {
-  s.style.fontFamily = '';
-  s.style.fontFeatureSettings = '';
-  s.style.fontSize = '';
-  s.style.fontWeight = '';
-};
-
 /**
- * Lay the overlay over every label in `b` and glitch it into the alternates.
- * `instant` skips the flip and shows the final state: reduced motion, touch.
+ * Lay an overlay over every label in `b`. The resting word goes clear and
+ * the overlay, the same text plus its tail, takes its place, inside the box
+ * `reserve()` kept for it. The clock paints the overlay; nothing here moves.
  */
-export function altIn(b: HTMLElement, instant: boolean): Alt {
-  const st: Alt = { words: [], tick: 0, timers: [], done: false };
-
+export function faces(b: HTMLElement): Face[] {
+  const out: Face[] = [];
   b.querySelectorAll<HTMLElement>('[data-word]').forEach((w) => {
     const txt = labelOf(w);
     if (!txt.trim() || isGlitching(w)) return;
@@ -147,7 +119,6 @@ export function altIn(b: HTMLElement, instant: boolean): Alt {
     const pl = parseFloat(cs.paddingLeft) || 0;
     const pr = parseFloat(cs.paddingRight) || 0;
     const pt = parseFloat(cs.paddingTop) || 0;
-
     const ov = document.createElement('span');
     ov.setAttribute('aria-hidden', 'true');
     ov.setAttribute('data-glitch', '');
@@ -162,56 +133,33 @@ export function altIn(b: HTMLElement, instant: boolean): Alt {
     });
     w.appendChild(ov);
     w.style.color = 'transparent';
-    st.words.push({ w, ov, spans });
+    out.push({ w, ov, spans, label: txt });
   });
+  return out;
+}
 
-  if (!st.words.length) return st;
+/** Paint one frame of letters onto a face. Writes only what changed. */
+export function paint(f: Face, ls: readonly Letter[], ovStyle: string | null): void {
+  f.spans.forEach((s, i) => {
+    const l = ls[i];
+    if (!l) return;
+    if (s.textContent !== l.c) s.textContent = l.c;
+    if ((s.getAttribute('style') ?? '') !== l.s) s.setAttribute('style', l.s);
+  });
+  const base = f.ov.dataset.base ?? (f.ov.dataset.base = f.ov.style.cssText);
+  const want = ovStyle ? `${base};${ovStyle}` : base;
+  if (f.ov.style.cssText !== want) f.ov.style.cssText = want;
+}
 
-  const finish = () => {
-    if (st.done) return;
-    st.done = true;
-    clearInterval(st.tick);
-    st.words.forEach((x) => x.spans.forEach(setAlt));
-  };
-  if (instant) {
-    finish();
-    return st;
-  }
-
-  // Non-space letters, in random order.
-  const pending = st.words
-    .flatMap((x) => x.spans.filter((s) => (s.textContent ?? '').trim()))
-    .sort(() => Math.random() - 0.5);
-  const flipped: HTMLSpanElement[] = [];
-
-  st.tick = window.setInterval(() => {
-    if (flipped.length > 2 && Math.random() < KNOCK_BACK) {
-      const s = flipped.splice((Math.random() * flipped.length) | 0, 1)[0];
-      setRest(s);
-      pending.push(s);
-    }
-    for (let i = 0; i < PER_TICK && pending.length; i++) {
-      const s = pending.shift()!;
-      setAlt(s);
-      s.style.color = pick(FLASH);
-      st.timers.push(window.setTimeout(() => (s.style.color = ''), FLASH_MS));
-      flipped.push(s);
-    }
-    if (!pending.length) {
-      clearInterval(st.tick);
-      st.timers.push(window.setTimeout(finish, SETTLE));
-    }
-  }, TICK);
-
-  return st;
+/** The resting word shows again (Mark lets the word rest in its own ink), or goes clear. Hide the overlay with `paint(..., 'visibility:hidden')`. */
+export function rest(f: Face, shown: boolean): void {
+  const c = shown ? '' : 'transparent';
+  if (f.w.style.color !== c) f.w.style.color = c;
 }
 
 /** Instant: drop the overlay and give the resting word its ink back. */
-export function altOut(st: Alt): void {
-  clearInterval(st.tick);
-  st.timers.forEach(clearTimeout);
-  st.done = true;
-  st.words.forEach(({ w, ov }) => {
+export function unface(fs: readonly Face[]): void {
+  fs.forEach(({ w, ov }) => {
     ov.remove();
     w.style.color = '';
   });

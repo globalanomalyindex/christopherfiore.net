@@ -9,7 +9,7 @@ import { h } from '../html.ts';
 import { TALLY } from '../palette.ts';
 import { ARTSTATION_HREF, PAINTINGS } from '../data/paintings.ts';
 import type { PaintingRecord } from '../data/types.ts';
-import { PAINTINGS_LABEL, cellBtn, fig, lede, pagesBlock, row, rows, section, subpage, sum } from '../prose.ts';
+import { PAINTINGS_TOTAL, cellBtn, lede, pagesBlock, row, rows, section, subpage, sum } from '../prose.ts';
 
 /*
   The lede and the "also" row both say "twenty" in words. If the collection
@@ -57,7 +57,7 @@ export function paintings() {
     'paintings',
     PAINTINGS_PAGE.title,
     TALLY.cyan,
-    fig(PAINTINGS_LABEL),
+    PAINTINGS_TOTAL,
     lede(PAINTINGS_PAGE.lede),
     sum('grouped by year, newest first. a name with a + opens the work on artstation.'),
     ...YEARS.map(([year, hue], gi) => {

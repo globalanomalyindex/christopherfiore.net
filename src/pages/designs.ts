@@ -12,7 +12,7 @@
 
 import { TALLY } from '../palette.ts';
 import { CASES, MOTION_ARCHIVE } from '../data/cases.ts';
-import { PROJECTS_LABEL, fig, lede, pagesBlock, row, rows, section, subpage, sum } from '../prose.ts';
+import { OWN_EFFECT, PROJECTS_TOTAL, lede, pagesBlock, row, rows, section, subpage, sum } from '../prose.ts';
 
 export const DESIGNS = {
   title: 'product designs & experiments',
@@ -42,7 +42,7 @@ export function designs() {
     'product designs',
     DESIGNS.title,
     TALLY.yellow,
-    fig(PROJECTS_LABEL),
+    PROJECTS_TOTAL,
     lede(DESIGNS.lede),
     sum(`grouped by how far each one got, all from ${CASES[0].year}. a row with a + opens the project.`),
     ...ORDER.map(([status, hue]) => {
@@ -53,7 +53,7 @@ export function designs() {
         { count: String(items.length), cls: 'group' },
         rows(
           ...items.map((c) =>
-            row(`+${c.name}`, c.href, c.line, { newTab: c.newTab, tag: c.caseStudy ? 'w/ case study' : undefined }),
+            row(`+${c.name}`, c.href, c.line, { newTab: c.newTab, tag: c.caseStudy ? 'w/ case study' : undefined, lin: OWN_EFFECT[c.id] }),
           ),
         ),
       );
@@ -65,6 +65,7 @@ export function designs() {
       rows(
         row('+motion archive', MOTION_ARCHIVE.href, `${MOTION_ARCHIVE.series}, ${MOTION_ARCHIVE.studies}`, {
           newTab: true,
+          lin: OWN_EFFECT['motion-archive'],
         }),
       ),
     ),

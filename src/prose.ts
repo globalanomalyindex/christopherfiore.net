@@ -118,13 +118,24 @@ export const sentence = (runs: Inline[]): Child[] =>
 
 /* --------------------------------------------------------------- pieces */
 
-/** Three cells of one hue, at 40%, 70% and full strength. */
-export const lad = (c: string): Html =>
-  h(
+/**
+ * The figure columns: hundreds, tens, units, in one flat hue, ruled in ink.
+ * A count is posted right aligned, one digit per column ("8" is [ ][ ][8]);
+ * with no count the columns stay empty. The digits are generated content in
+ * an aria-hidden box, so a reader hears the number once, from `count()`.
+ */
+export const led = (c: string | null, n = ''): Html => {
+  if (n.length > 3 || /\D/.test(n)) throw new Error(`led: "${n}" does not fit three figure columns`);
+  const digits = n.padStart(3, ' ').split('');
+  return h(
     'span',
-    { class: 'lad', 'aria-hidden': 'true' },
-    ...[0.4, 0.7, 1].map((k) => h('i', { style: `background:${tint(c, k)}` })),
+    { class: 'led', 'aria-hidden': 'true', style: c ? `--c:${c}` : null },
+    ...digits.map((d) => h('i', { 'data-d': d === ' ' ? null : d })),
   );
+};
+
+/** The number the figure columns show, for a screen reader. */
+const count = (n: string): Html | null => (n ? h('span', { class: 'sr-only' }, ` ${n}`) : null);
 
 const SIG_BOX = `${inkBox[0]} ${inkBox[1]} ${inkBox[2] - inkBox[0]} ${inkBox[3] - inkBox[1]}`;
 
@@ -154,15 +165,14 @@ export const sum = (...kids: Child[]): Html => h('p', { class: 'sum', 'data-seam
 
 export const prose = (...kids: Child[]): Html => h('p', { class: 'prose', 'data-seams': true }, ...glue(kids));
 
-/** A section header: chip, rule, an optional count, and the ladder, all in one hue. */
-export const sec = (label: string, c: string, count = ''): Html =>
+/** A section header: chip, rule, and the figure columns with its count posted, all in one hue. */
+export const sec = (label: string, c: string, n = ''): Html =>
   h(
     'div',
     { class: 'sec' },
-    h('h2', { class: 'chip' }, label),
+    h('h2', { class: 'chip' }, label, count(n)),
     h('span', { class: 'rule', 'aria-hidden': 'true' }),
-    count ? h('span', { class: 'ct' }, count) : null,
-    lad(c),
+    led(c, n),
   );
 
 /** The hue a section and its rows are set in. */
@@ -195,11 +205,27 @@ export const section = (label: string, c: string, opts: SectionOpts, ...kids: Ch
 export const rows = (...kids: Child[]): Html => h('ul', { class: 'rows' }, ...kids);
 
 export interface RowOpts extends BtnOpts {
-  /** An outlined tag at the row's end. */
+  /** An outlined tag under the name. */
   tag?: string;
+  /** The lineage effect this project's own row always plays (`runtime/lineage.ts`). */
+  lin?: string;
 }
 
-/** A row that is a link: the bold "+name", then the detail. The whole row is the button. */
+/**
+ * Each past project whose effect is in the lineage deck: its own row always
+ * plays it, so the effect is introduced by the project it came from.
+ */
+export const OWN_EFFECT: Record<string, string> = {
+  'scream-canister-controls': 'canister',
+  'after-tokens': 'decode',
+  lee: 'mark',
+  'mfny-concentrates': 'shear',
+  dither: 'bayer',
+  jellybox: 'jelly',
+  'motion-archive': 'knockout',
+};
+
+/** A row that is a link: the bold "+name" with any tag under it, then the detail. The whole row is the button. */
 export const row = (label: string, href: string, detail: Child, opts: RowOpts = {}): Html =>
   h(
     'li',
@@ -208,25 +234,30 @@ export const row = (label: string, href: string, detail: Child, opts: RowOpts = 
       'row',
       href,
       opts,
-      {},
-      h('span', { class: 'nm' }, word(label)),
+      { 'data-lin': opts.lin ?? null },
+      h('span', { class: 'nm' }, word(label), opts.tag ? h('span', { class: 'cs' }, h('span', null, opts.tag)) : null),
       h('span', { class: 'l' }, detail),
-      opts.tag ? h('span', { class: 'cs' }, h('span', null, opts.tag)) : null,
     ),
   );
 
-/** A row that only states something: the bold lead term, then the detail. */
+/** A row that only states something: the bold lead term with any cell under it, then the detail. */
 export const fact = (term: string, detail: Child, end: Child = null): Html =>
-  h('li', { class: 'row' }, h('span', { class: 'nm' }, term), h('span', { class: 'l' }, detail), end);
+  h('li', { class: 'row' }, h('span', { class: 'nm' }, term, end), h('span', { class: 'l' }, detail));
 
 /** A small outlined button at the end of a fact row. */
 export const cellBtn = (label: string, href: string, opts: BtnOpts = {}): Html =>
   link('cell', href, opts, {}, word(`+${label}`));
 
-/** The figure chip in a masthead, when it is a jump down the page. */
-export const figLink = (label: string, href: string): Html => link('fig', href, {}, {}, word(label));
+/**
+ * The page's total in the masthead: the yellow figure chip with its word,
+ * and its number posted in the figure columns over a double rule.
+ */
+export const fig = (label: string, n = ''): Html =>
+  h('span', { class: 'tot' }, h('span', { class: 'fig' }, label, count(n)), led(null, n));
 
-export const fig = (label: string): Html => h('span', { class: 'fig' }, label);
+/** The figure chip when it is a jump down the page: it keeps its chip, and its columns stay empty. */
+export const figLink = (label: string, href: string): Html =>
+  h('span', { class: 'tot' }, link('fig', href, {}, {}, word(label)), led(null));
 
 export function figure(f: Figure, opts: { eager?: boolean } = {}): Html {
   return h(
@@ -253,25 +284,52 @@ export interface Back {
 }
 export const BACK_HOME: Back = { href: PATH.home, label: 'back to home' };
 
+/** JellyBox's X: Phosphor's `X` (regular), the glyph on JellyBox's own close button. */
+const X_PATH =
+  'M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z';
+
 /**
- * The back arrow: one character cell wide, drawn in the type's stroke weight
- * so it sits on the grid like the "+" it replaced. It is a path, not the
- * font's own "←": that glyph lives in a 60 to 80 KB font slice, five times
- * the whole latin face, for one mark. During a page change the ASCII film
- * draws "<" in this cell (`data-glyph`), its echo.
+ * Beside a title chip of the same colour, a JellyBox pigment would vanish
+ * into it: those sit out of the colour bag on that page.
  */
-const backArrow = (): Html =>
+const SKIP: Record<string, string> = {
+  [TALLY.yellow]: '#ffd653 #ffb251',
+  [TALLY.cyan]: '#a9e4ed #39c9bd',
+  [TALLY.pink]: '#dd3c88',
+};
+
+/**
+ * The back button: JellyBox's own X in its own ledger box. One sheet cell,
+ * ruled in ink, in the gutter, with its centre where home's "+" is. With
+ * scripts off it is the box, JellyBox's CSS skin in glass blue, the X and a
+ * plain link. `runtime/jx.ts` gives it a colour from the visit's bag, its
+ * entrance and, on a desktop, JellyBox's real optics. During a page change
+ * the film draws a "+" in this cell (`data-glyph`): an X is a "+" turned 45
+ * degrees, and the page closes back into it.
+ */
+const backX = (back: Back, hue: string): Html =>
   h(
-    'svg',
-    { class: 'arrow', viewBox: '0 0 12 24', 'aria-hidden': 'true', focusable: 'false' },
-    h('path', { d: 'M11 13.5H2M6 9.5L2 13.5L6 17.5', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.7', 'stroke-linecap': 'square', 'stroke-linejoin': 'miter' }),
+    'a',
+    {
+      'data-btn': true,
+      'data-jx': true,
+      'data-anchor': true,
+      'data-glyph': '+',
+      'data-skip': SKIP[hue] ?? null,
+      class: 'btn plus jx',
+      href: back.href,
+      'aria-label': back.label,
+    },
+    h('span', { class: 'jx-skin', 'aria-hidden': 'true' }),
+    h('span', { class: 'jx-plus', 'aria-hidden': 'true' }, '+'),
+    h('svg', { class: 'jx-x', viewBox: '0 0 256 256', 'aria-hidden': 'true', focusable: 'false' }, h('path', { d: X_PATH })),
   );
 
 /**
- * The header row under the name. On a subpage the cell left of the title is a
- * back arrow, one level up (home, or product designs from a case study). The
- * row sticks to the top of the window, so the arrow is always on screen: it
- * is where every page change starts and ends (`runtime/morph.ts`).
+ * The header row under the name. On a subpage the cell left of the title is
+ * the back button, one level up (home, or product designs from a case study).
+ * The row sticks to the top of the window, so it is always on screen: it is
+ * where every page change starts and ends (`runtime/morph.ts`).
  */
 export const mast = (title: string, hue: string, figure_: Html | null, back: Back = BACK_HOME): Html =>
   frag(
@@ -279,11 +337,10 @@ export const mast = (title: string, hue: string, figure_: Html | null, back: Bac
     h(
       'header',
       { class: 'hd', style: `--pg:${hue}` },
-      link('plus back', back.href, { hue: P.ink }, { 'aria-label': back.label, 'data-anchor': true, 'data-glyph': '<' }, backArrow()),
+      backX(back, hue),
       h('h1', { class: 'chip' }, title),
       h('span', { class: 'rule', 'aria-hidden': 'true' }),
       figure_,
-      lad(hue),
     ),
   );
 
@@ -298,6 +355,9 @@ if (CASES.length !== COUNTS.projects || PAINTINGS.length !== COUNTS.paintings) {
 
 export const PROJECTS_LABEL = `${COUNTS.projects} projects`;
 export const PAINTINGS_LABEL = `${COUNTS.paintings} paintings`;
+/** The masthead totals: the word on the chip, the number in the figure columns. */
+export const PROJECTS_TOTAL = fig('projects', String(COUNTS.projects));
+export const PAINTINGS_TOTAL = fig('paintings', String(COUNTS.paintings));
 
 export type PageId = 'home' | 'designs' | 'paintings' | 'about' | 'resume';
 

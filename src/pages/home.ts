@@ -15,7 +15,7 @@
 
 import { h, type Html } from '../html.ts';
 import { TALLY } from '../palette.ts';
-import { MAST_NAME, PAGES, lad, page, signatureSvg } from '../prose.ts';
+import { MAST_NAME, PAGES, led, page, signatureSvg } from '../prose.ts';
 
 export const HOME = {
   who: [
@@ -37,7 +37,7 @@ const rule = (c: string): Html =>
     { class: 'hr', 'aria-hidden': 'true' },
     h('i', { class: 'hair' }),
     h('i', { class: 'ink' }),
-    lad(c),
+    led(c),
   );
 
 /**

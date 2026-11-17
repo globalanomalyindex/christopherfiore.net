@@ -7,15 +7,18 @@ off-white ground. There are two kinds of page.
 
 - **Home is the Ledger.** His Figma frame: the name, a "+", three ruled
   lines, and a white sheet column between two vertical rules that holds who
-  he is and the four menu rows. Each rule ends in a small color ladder and
-  runs on as a faint hairline to the right edge. His signature is at the bottom.
+  he is and the four menu rows. Each rule ends in three ledger cells in the
+  menu's colors, standing on the rule, and runs on as a faint hairline to the
+  right edge. His signature is at the bottom.
 - **Every other page is Chips.** A header row with the page title on a chip
-  in the page's color, a rule, one figure and a ladder. Under it, sections of
-  tinted rows. Each row starts with a bold lead term.
+  in the page's color, a rule, and a total set in ruled figure columns with a
+  double rule under it. Under it, sections of tinted rows, each with its count
+  in the same columns. Each row starts with a bold lead term. The back button
+  is a JellyBox X in its own ledger box.
 
 The "+" marks a link. Every link reads "+something", and a row with a "+" is
-a button from edge to edge. Bright color at rest is only chips, ladders and
-row tints. The loud color shows up on hover.
+a button from edge to edge. Bright color at rest is only chips, ledger cells
+and row tints. The loud color shows up on hover.
 
 Going from one page to another plays the ASCII morph: the page is covered
 and uncovered by a field of `+ = - : .` that spreads from the "+".
@@ -57,14 +60,19 @@ src/
   data/          the copy, and the case records it is set from
   main.ts        the browser entry: wires the runtime to the finished page
   runtime/
-    morph.ts     the ASCII morph between pages
-    buttons.ts   hover, focus and touch, and one delegated listener set
+    morph.ts     the ASCII morph between pages, and its lineage films
+    buttons.ts   hover, focus, press and touch, and one delegated listener set
+    ink.ts       the glitch as a plan of drawings: the band, the strips, the letters
     band.ts      the brutalist band that floods a button
-    glitch.ts    the alternate-letter glitch, and the width a sentence link reserves
+    glitch.ts    the alternate-letter faces, and the width a sentence link reserves
+    lineage.ts   effects from his past projects, dealt now and then (lazy, cursor only)
+    jx.ts        the JellyBox back button: entrance, colors, leaving (lazy)
+    jellyx.ts    JellyBox's own optics renderer, mounted on a canvas (lazy, desktop only)
     magnet.ts    the magnetic pull
     seams.ts     words that part under the cursor, in prose only
     skeleton.ts  the measurements drawn at the seam
     offsets.ts   how the magnet and the seams stay out of each other's way
+  vendor/jellybox/  JellyBox's renderer and color code, copied from its repo
   styles/site.css
 scripts/site-check.mjs   end-to-end checks in real Chrome and WebKit
 ```
@@ -89,20 +97,102 @@ widths once the fonts load, written in `em`. The check script compares every
 layout box before and during a hover to prove nothing moves, and measures
 every label in both faces to prove it fits its cell.
 
-**Two systems move a button, through two properties.** The magnet writes
-`transform` and the seams write `translate`, so neither overwrites the other.
-Each subtracts the other's offset (`runtime/offsets.ts`) to find where the
-button rests. The morph reads the same offsets, so it starts from where the
-"+" rests and not from where the magnet has leaned it.
+**Three things move a button, through three properties.** The magnet writes
+`transform`, the seams write `translate` and a press writes `scale`, so none
+overwrites another. The magnet and the seams each subtract the other's
+offset (`runtime/offsets.ts`) to find where the button rests. The morph reads
+the same offsets, so it starts from where the "+" rests and not from where
+the magnet has leaned it.
 
 What runs where:
 
 - **Band and glitch:** every link, on hover, keyboard focus and touch. The
-  four home menu rows flood in their own page colors, and a subpage's back
-  arrow floods ink. Every other button draws from the color wheel.
+  four home menu rows flood in their own page colors. Every other button
+  draws from the color wheel. The back button has its own behavior (below).
+- **Press:** every link. A button 480px wide or less goes to `scale: .97` in
+  80ms, and a wide row scales only its label, to .985. The outline thickens
+  to 3px and the strips double. Let go and it springs back in 220ms.
+- **Lineage:** now and then, for a cursor, after the glitch (below).
 - **Magnet:** every link, for a cursor. A full-width row leans 3px at most.
 - **Seams and the skeleton:** prose only (ledes, paragraphs, captions), for a
   cursor that can rest. Rows, chips and the masthead stay on the grid.
+
+## The glitch, on drawings
+
+Ink on this site moves in held drawings 50ms apart, like a flipbook, never as
+a smooth tween (`runtime/ink.ts`). One hover:
+
+- the band comes in from the edge the pointer crossed: half its width in the
+  first frame, then 80%, 94% and all of it at 150ms. The two strips arrive at
+  50ms and 100ms
+- the letters flip to Dessign Maison's alternates over four drawings,
+  spreading out from where the pointer came in, with one twin-color flash and
+  one slip. The "..." tail lands at 150ms, and every label has landed by 200ms
+- sweeping from one button straight to the next gets the glitch in two
+  drawings, because the eye is already moving
+- leaving takes one drawing: the letters at once, the band gone at 50ms
+
+Keyboard focus and touch get the end frame at once. So does reduced motion.
+
+## Lineage
+
+Some hovers play a native translation of an effect from one of his past
+projects (`runtime/lineage.ts`). It always starts from the settled glitch,
+after the pointer has rested 220ms, and it adds layers only: no layout box
+moves.
+
+| Effect | From | What it does |
+|---|---|---|
+| Mark | lee | the band shrinks into a quiet mark, then the label is underlined |
+| Decode | after tokens | the letters run through `+=-:.` and settle |
+| Knockout | the motion archive | ink spreads out from the pointer, then blinks |
+| Jelly | jellybox | the band closes into a JellyBox capsule, drawn by its real optics |
+| Shear | mfny concentrates | the band is cut by slanted wipes 50ms apart |
+| Bayer | dither | the band dithers through a 4 by 4 Bayer pattern under the pointer |
+| Canister | scream canister controls | the band squashes and pops, with a late letter |
+
+- **The deck.** Twelve cards: Mark 3, Decode 2, Knockout 2, Jelly 2, and one
+  each of Shear, Bayer and Canister. It is shuffled once a visit
+  (`sessionStorage` `ps-lin`) and only deals cards that fit the button: a row
+  takes any, a home menu row takes Decode, Jelly or Canister, a sentence link
+  Mark, Decode or Jelly, a chip Mark or Decode. Jelly needs the optics loaded
+  and a button at least 32px tall. Home has no X, so it never loads the
+  optics and never deals Jelly.
+- **The odds.** A project's own row always plays its own effect (`data-lin`).
+  Otherwise 1 hover in 4 deals a card, never within 1.5s of the last effect,
+  and a hover back on the same button within 4s replays what it played.
+- **The credit.** A dealt effect shows a small "from lee" in the bottom right
+  corner, which holds a moment after the pointer leaves. A project's own row
+  shows none, since the row already says where it came from.
+- **Where it runs.** A cursor that can hover. The chunk loads after the page
+  has been seen. Phones never fetch it. The keyboard and reduced motion never
+  deal an effect. Under reduced motion a project's own row shows its effect's
+  still end frame. `window.__lin.force(name)` forces the next effect, for the
+  checks and for stills.
+
+## The back button
+
+Every subpage's back link is an X from JellyBox, taken from JellyBox itself,
+in its own ledger box where the "+" sits on home.
+
+- **Real JellyBox.** On a desktop it is drawn by JellyBox's own renderer,
+  copied into `src/vendor/jellybox/` (three.js physical glass with its
+  spectral.js pigment mixing). It loads after the page is seen and is still
+  at rest. Phones, a missing WebGL, Save-Data and scripts off get JellyBox's
+  own CSS material skin instead. With scripts off it is glass blue.
+- **Color.** Each page draws the next of JellyBox's ten pigments from a bag
+  shuffled once a visit. It skips a pigment too close to the page's chip, so
+  there is never a yellow X beside a yellow title.
+- **Entrance.** Until it enters, the box holds the mono "+", the same as home.
+  It enters with the site's glitch as a curtain, then the X pops in at 45
+  degrees, a "+" turned, on JellyBox's own springs (from its `pocket.js`):
+  it overshoots to 1.044 and turns back past 0 by 8 degrees before settling.
+  Back and forward, and reduced motion, show the X at once. If the script
+  never arrives, the gate gives the X back at 3s.
+- **Leaving.** The X turns back to 45 degrees, then the mono "+" is back for
+  the film to close onto.
+- **Hover** is JellyBox's own highlight and pressed pigments, not the band.
+- On a phone the box is 44px and sits in the header row's flow.
 
 ## The morph
 
@@ -110,13 +200,18 @@ This is a multi-page site, so the film is cut across two documents
 (`src/runtime/morph.ts`).
 
 1. **Cover, on the page you are leaving.** A plain click on a link to another
-   page of this site is held for 400ms while the page covers itself. At full
-   cover the window is the ground, the name and the "+". The page leaves a
-   short note in `sessionStorage` and the browser navigates.
+   page of this site is held while the page covers itself, in 340ms. The "+"
+   glitches for one drawing at the click. At full cover the window is the
+   ground, the name and the "+". The page leaves a short note in
+   `sessionStorage` and the browser navigates.
 2. **Reveal, on the page you are opening.** An inline script in every page's
    head (`MORPH_GATE` in `render.ts`, like the signature gate) finds the note
    and starts the page covered, before first paint. The runtime then uncovers
-   it over 460ms.
+   it over 420ms.
+
+Each half has its own curve, since the network sits between them: the cover
+leaves the "+" fast and settles into full cover, and the reveal shows the top
+of the page first.
 
 - **The grid** is cut from the real window in the page's own type. The cell
   is measured, not assumed, and the grid is placed so the page's real "+" is
@@ -127,14 +222,27 @@ This is a multi-page site, so the film is cut across two documents
   from the far corner onto the anchor. Out of it means open. Into it means
   back.
 - **The anchor is always on screen.** Home's anchor is his "+". On a subpage
-  the same cell holds a back arrow, one level up: home, or product designs
-  from a case study. It is drawn as a path one character cell wide, because
-  the font's own "←" lives in a 60 to 80 KB font slice. During the film that
-  cell shows "<", its ASCII echo (`data-glyph`). The header row sticks to the
-  top of the window, so the film can start from the arrow however far down
-  the page you are.
+  the same cell holds the JellyBox X, one level up: home, or product designs
+  from a case study. During the film the cell shows a "+" (`data-glyph`), and
+  a ghost of the X's box sits on the film. The header row sticks to the top
+  of the window, so the film can start from the X however far down the page
+  you are.
 - **Glyphs.** Five marks, `+ = - : .`, then blank. "+" is the edge that
-  touches live page. Nothing is random.
+  touches live page.
+- **Lineage films.** Rolled at the click and written into the note, so both
+  pages play the same one:
+  - plain, 6 in 10, and always the first page change of a visit
+  - Bayer front, from dither: behind the front, his "+" dithered through a
+    4 by 4 Bayer pattern
+  - Figures, from the motion archive: each line carries its own running
+    count behind the front
+  - Coalesce, from one master affordance, 1 in 3 on top of any film when a
+    pointer clicks 160px or more from the "+": eight squares hop along the
+    grid to the "+" and the film opens from there
+
+  Going back up replays the kind that opened the page, and the same lineage
+  film never plays twice running. The same moment of the same kind always
+  gives the same frame.
 - **What it leaves alone.** Modifier clicks, new tabs, the PDFs, the address,
   and jumps inside a page.
 
@@ -148,8 +256,9 @@ A page can never be left covered:
 - Reduced motion: no film at all.
 
 The overlay is `aria-hidden`, takes no clicks and holds nothing that can be
-focused. `window.__morph.seek(part, dir, p)` holds the film at a moment, for
-the checks and for stills.
+focused. `window.__morph.seek(part, dir, p, kind)` holds the film at a
+moment, and `window.__morph.force(kind, coalesce)` sets the next film, for the
+checks and for stills.
 
 ## The signature
 
@@ -159,7 +268,7 @@ is simply there. On every visit and reload it writes itself in over 1.65s,
 and then hands back exactly that markup. Every subpage ends on the same
 signature, small and still.
 
-**Home is one screen.** At 1440 it is his Figma frame, px for px. The name,
+**Home is one screen.** At 1728 x 908 it is his screenshot, px for px. The name,
 the sheet and the signature fit the window with no scrolling on common laptop,
 desktop, tablet and phone sizes, down to 360 x 640. The signature is pushed to
 the bottom of the window. Two cases scroll: a phone on its side, and a
@@ -220,10 +329,24 @@ runs it against the live site. It checks:
   or en dashes and uses American spelling
 - every project under its own status word, in the index order, and the
   paintings by year
-- his frame at 1440, px for px: the name, the "+", his three lines, the
-  rules and hairlines, the sheet, the menu and the signature
+- his window at 1728 x 908, px for px: the name, the "+", his three lines,
+  the rules, the ledger cells and hairlines, the sheet, the menu and the
+  signature, and a subpage's X box, total and section counts
 - band, glitch, zero reflow on every page, every hover label fitting its
   cell, the magnet, seams, the skeleton, and a sentence link claiming space
+- the glitch on drawings, frame by frame: half the band in the first frame,
+  all of it and both strips by 150ms, letters spreading from the pointer's
+  side, landed by 200ms, two drawings on a sweep, one to leave
+- lineage: the chunk loads only for a cursor, the deck of twelve, each
+  project's own row playing its own effect, every effect's layers and credit,
+  zero reflow while it plays, nothing left behind after leaving, and the
+  cooldown
+- the back button: the "+" before its entrance, the glitch curtain, the X
+  popping in at 45 degrees and settling, JellyBox's three.js renderer on a
+  desktop and its CSS skin on a phone, the color bag and its skip list,
+  leaving, reduced motion and scripts off
+- the lineage films: Bayer and Figures frames, Coalesce, the variant carried
+  to the next page, and a plain film first
 - the morph:
   - the page being left covers itself fully, edge to edge, then goes
   - the page being opened starts covered before first paint, is never seen
@@ -235,7 +358,8 @@ runs it against the live site. It checks:
     stale note, a reload, back and forward, the back/forward cache
   - modifier clicks, new tabs, the PDF and in-page jumps are left alone
   - with scripts off every page is fully visible and links are plain links
-- reduced motion (no film, no glitch, no magnet), keyboard focus, and touch
+- reduced motion (no film, no glitch, no magnet, no lineage), keyboard
+  focus, and touch
 - every width from 360 to 2560: no sideways scroll, nothing off the window
 - phones at 360 and 390 wide, in Chrome and in WebKit: the type really
   rendered on 8px columns, every link at least 44px tall to the touch, how
@@ -258,13 +382,16 @@ runs it against the live site. It checks:
 Everything is set in `em` around one number, `--fs`, and a column is half an
 em.
 
+```css
+--fs: clamp(16px, min(100vw / 43.2, 26.667px + 100vw / 129.6), 48px);
+```
+
 | Window | Type | What changes |
 |---|---|---|
-| 1440 and wider | 24px | his frame, left-aligned. The hairlines keep running to the right edge. |
-| 960 to 1440 | follows the width | the page keeps its 120 columns, so nothing rewraps |
-| under 1000 | 16px under 960 | paintings go to two tiles a row |
-| under 760 | 16px | rows stack: the name, then the detail under it |
-| under 640 | 16px | the "+" moves to one column from the edge, which leaves 41 columns at 360. The figure chip takes its own line and only the title line sticks. One painting a row, each at its own shape. |
+| 1728 and wider | 40px at 1728, then a third as fast, to 48px at 2765 | his laptop, from his screenshot. The page stays left-aligned and the hairlines keep running to the right edge. |
+| 691 to 1728 | the width over 43.2: 33.3px at 1440, 22.2px at 960 | the window is always 86.4 columns, 80 of them content, so nothing rewraps |
+| 690 and under | 16px | rows stack: the name, then the detail under it. The "+" moves to one column from the edge. The total takes its own line and only the title line sticks. The back X is a 44px box in the header row. Paintings go two a row. |
+| 480 and under | 16px | one painting a row, each at its own shape |
 
 On touch, every link is at least 44px tall: rows and cells grow to it, and
 the small ones (the "+", a chip, a link in a sentence) get a 44px touch area.
@@ -286,11 +413,24 @@ These were left to the build, and each is marked in the code where it happens.
    and to lead home.
 3. **A link inside a sentence** (the case studies' closing sentence) is a
    small tinted chip that reads "+label". Its punctuation stays glued to it.
-4. **Keyboard focus** shows the band and the alternate state with a 2px ink ring.
+4. **Keyboard focus** shows the band and the alternate state at once, with a
+   2px ink ring.
 5. **Touch** gets the band and the alternate letters only while pressed, with
-   no glitch delay. Seams and the magnet need a cursor that can rest.
+   no glitch delay. Seams, the magnet and lineage need a cursor that can rest.
 6. **A 404 page**, made from the same pieces.
 7. **The favicon** is the "+", in ink on the ground.
+
+## His round 3 answers
+
+1. Type keeps growing past his laptop, slowly, to 48px.
+2. The ladders become figure-column ledgers.
+3. A project's own row always plays its own effect.
+4. A dealt effect shows a small credit, "from lee".
+5. On a desktop the X is JellyBox's real renderer, loaded after the page is
+   up. Phones get JellyBox's CSS skin.
+6. The jelly is still at rest. It doesn't breathe.
+7. Sweeping fast gets the glitch in two drawings.
+8. Jelly gets two cards in the deck of twelve.
 
 ## Evidence language
 
@@ -321,19 +461,44 @@ the mono's. Its own license field reads "All Rights Reserved, SilverStag Type
 Foundry 2026". **Web redistribution rights need confirming.** Karrik stays in
 `public/fonts/` because the hosted mfny demo loads it.
 
+## JellyBox
+
+`src/vendor/jellybox/` is JellyBox's own source, copied from its repo and
+not redrawn: the renderer (`renderer/`, everything but its `index.js`),
+`color.js`, `tokens.js` and `contrast.js`. JellyBox is MIT licensed, and its
+`LICENSE` and `THIRD_PARTY_NOTICES.md` are kept beside it. It brings two
+dependencies, `three` (MIT) and `spectral.js` (MIT), pinned in
+`package.json`. The `.d.ts` files next to it are ours, so TypeScript can
+check the calls.
+
 ## Payload
 
-Measured in Chrome at 1440 against the built site's preview server, first
-screen only:
+Measured in Chrome against the built site's preview server, cache off, first
+screen only, 2.5s after the network goes quiet:
 
-| Page | Transferred |
-|---|---:|
-| home | 132 kB |
-| product designs | 126 kB |
-| chellbook | 261 kB |
-| about | 127 kB |
-| paintings | 4,314 kB |
+| Page | Desktop, 1440 x 900 | Phone, 390 x 844 |
+|---|---:|---:|
+| home | 145 kB | 136 kB |
+| product designs | 315 kB | 135 kB |
+| chellbook | 403 kB | 271 kB |
+| about | 316 kB | 136 kB |
+| paintings | 3,809 kB | 1,858 kB |
 
-Paintings is the heavy page. The works are WebP at 1200px, shown 420px wide,
-and at three tiles a row most of them fall inside the distance where Chrome
-starts loading lazy images. Smaller copies for the tiles would cut this.
+On a desktop every subpage carries about 180 kB more than a phone: that is
+JellyBox's optics for the back X (three.js and spectral.js, 176 kB gzipped).
+It loads only after the page has been seen, so it never holds up the first
+paint, and phones never fetch it.
+
+The scripts, gzipped:
+
+| Chunk | Size | Loads |
+|---|---:|---|
+| main | 12.7 kB | every page |
+| signature | 7.6 kB | home only |
+| lineage | 3.5 kB | after the page is seen, for a cursor |
+| jx | 4.1 kB | subpages, and with lineage |
+| jellyx | 176 kB | subpages on a desktop, after the page is seen |
+
+Paintings is the heavy page. The works are WebP at 1200px, and at three tiles
+a row most of them fall inside the distance where Chrome starts loading lazy
+images. Smaller copies for the tiles would cut this.

@@ -9,8 +9,13 @@
 
 import { PULL, SEAM_X, reducedMotion } from './offsets.ts';
 
-const FOLLOW = 'transform 140ms cubic-bezier(.2,.7,.3,1)';
-const SPRING = 'transform 560ms cubic-bezier(.34,1.56,.64,1)';
+/*
+  The magnet writes `transition` inline on every move, which would drop the
+  press's own `scale` transition, so each string carries it: `--pt` is the
+  press timing, 80ms down and 220ms back up (site.css).
+*/
+const FOLLOW = 'transform 140ms cubic-bezier(.2,.7,.3,1), scale var(--pt)';
+const SPRING = 'transform 440ms cubic-bezier(.34,1.45,.64,1), scale var(--pt)';
 /** Past this far from the box edge, a held button lets go. */
 const REACH = 44;
 

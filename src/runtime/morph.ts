@@ -53,6 +53,27 @@
  *
  * The overlay is `aria-hidden`, takes no pointer events and holds nothing
  * that can be focused.
+ *
+ * ROUND 3. Each half is its own gesture, because the network sits between
+ * them: the cover leaves the "+" fast and settles into full cover (340ms,
+ * radius eased 1 - (1-p)^1.6), the reveal shows what you read first first
+ * (420ms, 1 - (1-p)^2). At the click the "+" glitches for one drawing, as every
+ * transition on the site starts with the glitch. Some films carry a lineage
+ * variant, rolled at the click and written into the note so both pages agree:
+ *
+ *   plain        6 in 10, and always the first change of a visit
+ *   Bayer front  from dither: behind the front, his "+" dithered through a 4 by 4
+ *                Bayer pattern anchored on the "+", dense at the edge, thinning out
+ *   Figures      from the motion archive, study 7d: each line carries its own
+ *                running count behind the front, counting up on the way out and
+ *                down to 000 at the "+" on the way home
+ *   Coalesce     from one master affordance, 1 in 3 on top of any film, for a
+ *                pointer click 160px or more from the "+": eight flat squares carry
+ *                the click along the grid to the "+", and the film opens from there
+ *
+ * Going back or up replays the kind that opened the page. Never the same
+ * lineage film twice running. Still deterministic: the same moment of the
+ * same kind always gives the same frame.
  */
 
 import { PULL, reducedMotion } from './offsets.ts';
@@ -60,8 +81,9 @@ import { PULL, reducedMotion } from './offsets.ts';
 declare global {
   interface Window {
     __psMorphIn?: Dir;
+    __psMorphKind?: Kind;
     __psMorphClaim?: number;
-    __morph?: { seek(part: Part, dir: Dir, p: number): void; clear(): void };
+    __morph?: { seek(part: Part, dir: Dir, p: number, kind?: Kind): void; clear(): void; force(kind: Kind | undefined, coal?: boolean): void };
   }
 }
 
@@ -69,10 +91,23 @@ type Dir = 'out' | 'home';
 type Part = 'cover' | 'reveal';
 /** Which cells are covered: inside the circle, or outside it. */
 type Shape = 'disc' | 'ring';
+/** A film's lineage variant; null is the plain film. */
+type Kind = 'bayer' | 'figures' | null;
 
 const KEY = 'ps-morph';
-const COVER_MS = 400;
-const REVEAL_MS = 460;
+const LIN = 'ps-lin';
+const COVER_MS = 340;
+const REVEAL_MS = 420;
+/** Coalesce: the squares' hop to the "+", and how long the cover waits for the first arrival. */
+const HOP_MS = 140;
+const COAL_LEAD = 80;
+const B4 = [
+  [0, 8, 2, 10],
+  [12, 4, 14, 6],
+  [3, 11, 1, 9],
+  [15, 7, 13, 5],
+];
+const ease = (part: Part, p: number) => (part === 'cover' ? 1 - (1 - p) ** 1.6 : 1 - (1 - p) ** 2);
 /** Past this, a film is cut short and the page is shown. */
 const SLACK_MS = 500;
 /** If the browser has not left by then, the page uncovers itself. */
@@ -104,6 +139,8 @@ interface Grid {
   reach: number;
   /** the character drawn in the anchor cell */
   glyph: string;
+  /** this film's lineage variant */
+  kind: Kind;
 }
 
 const html = document.documentElement;
@@ -190,10 +227,20 @@ function mount(): Grid | null {
   right = stack('r');
   shown = new Array(rows * 2).fill('');
   overlay = el;
-  // The film draws this page's own mark in the anchor cell: "+" on home, "<"
-  // under a subpage's back arrow.
+  // The back button's ledger box is wider than one cell: the film would paint
+  // its ground over the box's rules. A ghost of the box, its rules and its "+",
+  // sits on top of the film instead, so the cell is left to the real "+".
+  if (anchor.matches('.jx')) {
+    const ghost = document.createElement('span');
+    ghost.className = 'jx-ghost';
+    ghost.textContent = '+';
+    const br = anchor.getBoundingClientRect();
+    ghost.style.cssText = `left:${br.left - px}px;top:${br.top - py}px;width:${br.width}px;height:${br.height}px;line-height:${br.height - 2}px`;
+    el.appendChild(ghost);
+  }
+  // The film draws this page's own mark in the anchor cell: the "+".
   const glyph = (anchor.dataset.glyph ?? '+').charAt(0) || '+';
-  grid = { cols, rows, cw, ch, gx, gy, ac, ar, dist, reach, glyph };
+  grid = { cols, rows, cw, ch, gx, gy, ac, ar, dist, reach, glyph, kind: null };
   return grid;
 }
 
@@ -252,12 +299,25 @@ function draw(g: Grid, shape: Shape, R: number): void {
     }
     let str = '';
     if (!empty) {
+      // Figures: the line's own running count, how many cells it has covered
+      const count = String(Math.max(0, shape === 'disc' ? b - ac : a - ac)).padStart(3, '0');
       for (let x = a; x < b; x++) {
         if (y === ar && x === ac) str += g.glyph; // the anchor itself never leaves
         else if (x < ac) str += ' '; // the margin left of the "+" stays clean
-        else {
-          const i = stepOf(g, shape === 'disc' ? R - dist[o + x] : dist[o + x] - R, x, y);
-          str += i < RAMP.length ? RAMP[i] : ' ';
+        else if (g.kind === 'figures') {
+          // read from the front: "+", the three figures, then the usual = - : .
+          const k = shape === 'disc' ? b - 1 - x : x - a;
+          str += k === 0 ? '+' : k <= 3 ? count[shape === 'disc' ? 3 - k : k - 1] : k <= 7 ? '=-:.'[k - 4] : ' ';
+        } else {
+          const s = shape === 'disc' ? R - dist[o + x] : dist[o + x] - R;
+          if (g.kind === 'bayer') {
+            // his "+", dithered: dense at the front, thinning out over a tail twice as deep
+            const v = s / g.reach / (2 * TAIL);
+            str += v < 1 && v < (B4[(y - ar) & 3][(x - ac) & 3] + 0.5) / 16 ? '+' : ' ';
+          } else {
+            const i = stepOf(g, s, x, y);
+            str += i < RAMP.length ? RAMP[i] : ' ';
+          }
         }
       }
     }
@@ -268,12 +328,14 @@ function draw(g: Grid, shape: Shape, R: number): void {
   }
 }
 
-/** The film at progress `p` (0 to 1) of one of its two parts. */
+/** The film at progress `p` (0 to 1, already eased) of one of its two parts. */
 function frame(g: Grid, part: Part, dir: Dir, p: number): void {
-  const span = g.reach * (1 + TAIL);
+  // Bayer's tail is twice as deep, so the front travels that much further
+  const tail = g.kind === 'bayer' ? 2 * TAIL : TAIL;
+  const span = g.reach * (1 + tail);
   if (dir === 'out') {
     if (part === 'cover') draw(g, 'disc', p * span);
-    else draw(g, 'ring', p * span - g.reach * TAIL);
+    else draw(g, 'ring', p * span - g.reach * tail);
   } else if (part === 'cover') draw(g, 'ring', g.reach - p * span);
   else draw(g, 'disc', (1 - p) * span);
 }
@@ -304,7 +366,7 @@ function play(part: Part, dir: Dir, ms: number, done: () => void, fail: () => vo
     if (t0 < 0) t0 = now;
     const p = Math.min(1, (now - t0) / ms);
     try {
-      frame(g, part, dir, p);
+      frame(g, part, dir, ease(part, p));
     } catch {
       return end(false);
     }
@@ -333,14 +395,96 @@ function target(e: MouseEvent): URL | null {
   return url;
 }
 
-function leave(url: URL): void {
-  // Going up (home, or a case study's back arrow to product designs) closes
+/** The visit's film state, shared with the lineage deck in `ps-lin`. */
+function visit(): { changes: number; lastFilm: Kind; opened: Record<string, Kind> } {
+  try {
+    const s = JSON.parse(sessionStorage.getItem(LIN) ?? '{}') ?? {};
+    return { changes: s.changes | 0, lastFilm: s.lastFilm ?? null, opened: s.opened ?? {} };
+  } catch {
+    return { changes: 0, lastFilm: null, opened: {} };
+  }
+}
+
+/** For the checks: the next film's variant and Coalesce, instead of the dice. */
+let forcedKind: Kind | undefined;
+let forcedCoal: boolean | undefined;
+
+/** Roll this film's variant. The first change of a visit is plain; going up replays what opened this page. */
+function roll(url: URL, up: boolean): Kind {
+  const v = visit();
+  let kind: Kind = null;
+  if (forcedKind !== undefined) kind = forcedKind;
+  else if (up) kind = v.opened[location.pathname] ?? null;
+  else if (v.changes > 0) {
+    const r = Math.random();
+    kind = r < 0.6 ? null : r < 0.8 ? 'bayer' : 'figures';
+    if (kind && kind === v.lastFilm) kind = null;
+  }
+  try {
+    const s = JSON.parse(sessionStorage.getItem(LIN) ?? '{}') ?? {};
+    sessionStorage.setItem(
+      LIN,
+      JSON.stringify({ ...s, changes: v.changes + 1, lastFilm: kind ?? v.lastFilm, opened: { ...v.opened, [url.pathname]: kind } }),
+    );
+  } catch {
+    /* fine */
+  }
+  return kind;
+}
+
+/** Coalesce: eight flat squares in a ring around the click hop along the grid to the "+". */
+function coalesce(g: Grid, x: number, y: number, colour: string): void {
+  if (!overlay) return;
+  const ax = g.gx + g.ac * g.cw + g.cw / 2;
+  const ay = g.gy + g.ar * g.ch + g.ch / 2;
+  const size = Math.max(4, g.cw / 2);
+  const ring = [
+    [-1, -1], [0, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [0, 1], [1, 1],
+  ].map(([dx, dy], i) => {
+    const s = document.createElement('i');
+    s.className = 'coal';
+    s.style.cssText = `width:${size}px;height:${size}px;background:${colour}`;
+    overlay!.appendChild(s);
+    return { s, x0: x + dx * g.cw, y0: y + (dy * g.ch) / 2, delay: (i * 40) / 7 };
+  });
+  const t0 = performance.now();
+  const step = (now: number) => {
+    let live = false;
+    for (const q of ring) {
+      const k = Math.min(1, Math.max(0, (now - t0 - q.delay) / HOP_MS));
+      const e = 1 - (1 - k) ** 3;
+      if (k >= 1) {
+        q.s.remove();
+        continue;
+      }
+      live = true;
+      // on the character grid: the squares hop from cell to cell
+      const cx = Math.round((q.x0 + (ax - q.x0) * e - g.gx - g.cw / 2) / g.cw) * g.cw + g.gx + g.cw / 2;
+      const cy = Math.round((q.y0 + (ay - q.y0) * e - g.gy - g.ch / 2) / g.ch) * g.ch + g.gy + g.ch / 2;
+      q.s.style.transform = `translate(${(cx - size / 2).toFixed(1)}px,${(cy - size / 2).toFixed(1)}px)`;
+    }
+    if (live) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
+/** The "+" glitches for one drawing at the click: every transition starts with the glitch. */
+function glitchAnchor(): void {
+  const a = document.querySelector<HTMLElement>('[data-anchor]');
+  if (!a || a.matches('.jx')) return;
+  a.style.cssText = "font-family:'Dessign Maison',Georgia,serif;font-feature-settings:'salt' 1,'ss01' 1;font-size:1.14em;color:#3A3742";
+  setTimeout(() => (a.style.cssText = ''), 50);
+}
+
+function leave(url: URL, click: { x: number; y: number; colour: string } | null): void {
+  // Going up (home, or a case study's back button to product designs) closes
   // into the anchor; anything else opens out of it.
   const up = url.pathname !== location.pathname && location.pathname.startsWith(url.pathname);
   const dir: Dir = up ? 'home' : 'out';
+  const kind = roll(url, up);
   const go = () => {
     try {
-      sessionStorage.setItem(KEY, JSON.stringify({ t: Date.now(), dir, to: url.pathname }));
+      sessionStorage.setItem(KEY, JSON.stringify({ t: Date.now(), dir, to: url.pathname, kind }));
     } catch {
       /* private mode: the next page simply opens uncovered */
     }
@@ -349,11 +493,14 @@ function leave(url: URL): void {
     timer = window.setTimeout(clear, STUCK_MS);
     location.assign(url.href);
   };
-  if (!mount()) {
+  const g = mount();
+  if (!g) {
     location.assign(url.href);
     return;
   }
+  g.kind = kind;
   busy = true;
+  glitchAnchor();
   html.setAttribute('data-morph', 'cover');
   // Warm the cache while the cover plays, so the cut between pages is short.
   try {
@@ -361,14 +508,23 @@ function leave(url: URL): void {
   } catch {
     /* nothing to warm */
   }
-  play('cover', dir, COVER_MS, go, () => {
-    clear();
-    location.assign(url.href);
-  });
+  const cover = () =>
+    play('cover', dir, COVER_MS, go, () => {
+      clear();
+      location.assign(url.href);
+    });
+  // Coalesce: 1 in 3, a pointer click 160px or more from the "+". The cover
+  // waits for the first square to arrive, 80ms: 80 + 340 is the old 400.
+  const ax = g.gx + g.ac * g.cw + g.cw / 2;
+  const ay = g.gy + g.ar * g.ch + g.ch / 2;
+  if (click && Math.hypot(click.x - ax, click.y - ay) >= 160 && (forcedCoal ?? Math.random() < 1 / 3)) {
+    coalesce(g, click.x, click.y, click.colour);
+    timer = window.setTimeout(cover, COAL_LEAD);
+  } else cover();
 }
 
 /** The page was opened mid-film: it is covered, so uncover it. */
-function arrive(dir: Dir): Promise<void> {
+function arrive(dir: Dir, kind: Kind): Promise<void> {
   return new Promise((resolve) => {
     const finish = () => {
       clear();
@@ -391,6 +547,7 @@ function arrive(dir: Dir): Promise<void> {
       try {
         const g = mount();
         if (!g) return finish();
+        g.kind = kind;
         // Covered by the overlay now, in the same frame the gate's cover lifts.
         frame(g, 'reveal', dir, 0);
         html.classList.remove('morph-in');
@@ -415,7 +572,12 @@ export function initMorph(): Promise<void> {
     e.preventDefault();
     // One film at a time. A second click while it plays is swallowed.
     if (busy) return;
-    leave(url);
+    // A pointer click carries where it happened and the colour of the band it hit (Coalesce).
+    const a = e.target instanceof Element ? e.target.closest<HTMLElement>('a[href]') : null;
+    const bm = a?.querySelector<HTMLElement>('[data-band] .bm');
+    const click = e.detail > 0 ? { x: e.clientX, y: e.clientY, colour: bm?.style.background || '#12141B' } : null;
+    if (a) a.setAttribute('data-press', '');
+    leave(url, click);
   });
 
   // A page restored from the back/forward cache comes back as it was left: covered.
@@ -425,17 +587,24 @@ export function initMorph(): Promise<void> {
 
   // For the checks and for filming stills: hold the film at a moment.
   window.__morph = {
-    seek(part, dir, p) {
+    seek(part, dir, p, kind = null) {
       cancelAnimationFrame(raf);
       clearTimeout(timer);
       const g = grid ?? mount();
-      if (g) frame(g, part, dir, p);
+      if (g) {
+        g.kind = kind;
+        frame(g, part, dir, p);
+      }
     },
     clear,
+    force(kind, coal) {
+      forcedKind = kind;
+      forcedCoal = coal;
+    },
   };
 
   const dir = window.__psMorphIn;
-  if (html.classList.contains('morph-in') && dir && !reducedMotion()) return arrive(dir);
+  if (html.classList.contains('morph-in') && dir && !reducedMotion()) return arrive(dir, window.__psMorphKind ?? null);
   html.classList.remove('morph-in');
   return Promise.resolve();
 }

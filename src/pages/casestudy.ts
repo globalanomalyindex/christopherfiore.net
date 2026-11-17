@@ -18,7 +18,7 @@ import { TALLY } from '../palette.ts';
 import { PATH, casePath } from '../paths.ts';
 import { CASES } from '../data/cases.ts';
 import { nextCase, type CaseStudy } from '../data/casestudies.ts';
-import { fact, figLink, figure, lede, pagesBlock, prose, rich, row, rows, section, sentence,
+import { OWN_EFFECT, fact, figLink, figure, lede, pagesBlock, prose, rich, row, rows, section, sentence,
   subpageUnder, sum } from '../prose.ts';
 
 /**
@@ -81,7 +81,7 @@ export function caseStudy(c: CaseStudy) {
 
     section(c.links.name, TALLY.yellow, { id: 'the-work' }, prose(sentence(c.links.sentence))),
 
-    section('next up', TALLY.grey, { id: 'next-up' }, rows(row(`+${next.name}`, casePath(next.id), nextLine))),
+    section('next up', TALLY.grey, { id: 'next-up' }, rows(row(`+${next.name}`, casePath(next.id), nextLine, { lin: OWN_EFFECT[next.id] }))),
 
     pagesBlock(null),
   );

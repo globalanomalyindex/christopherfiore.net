@@ -1,11 +1,14 @@
 /**
- * The brutalist band, carried over from the lattice site's
- * hover.ts: three layers of color wiped in with a stepped clip, and a 1.5px
- * inset outline.
+ * The band's colours and its host.
  *
- * The host is a span INSIDE the button at z-index -1. The button's
- * `isolation: isolate` is what keeps it above the button's own background and
- * under its label.
+ * The brutalist band, carried over from the lattice site's hover.ts: a main
+ * layer and two thin accent strips of flat colour, and a 1.5px inset ink
+ * outline. How it moves lives in `ink.ts`; this file holds what it is made of.
+ *
+ * The host is a span INSIDE the button at z-index -1, and it is the button's
+ * FIRST child: the button's `isolation: isolate` keeps it above the button's
+ * own background and under its label, and anything a lineage effect lays
+ * inside the label at z-index -1 (Mark's tint) paints above it.
  */
 
 /**
@@ -14,7 +17,7 @@
  * the wheel between them. Every one holds band ink (#1A1820) at 5:1 or better,
  * the floor the original hot pink set, so the pinned label always reads.
  */
-const HUES = [
+export const HUES = [
   '#FF2D87', '#F5D90A', '#12D9E8', '#FF6B1A', '#C9F227', '#35E5C8',
   // reds, oranges, ambers
   '#FF4A2E', '#FF8C1A', '#FFB800',
@@ -31,99 +34,59 @@ const ELECTRIC = ['#2B45F5', '#5B2BFF', '#0A6CFF', '#E0147A'] as const;
 const GREYS = ['#E2E7E9', '#CBD2D5', '#AEB6BA', '#F2F4F3'] as const;
 
 /**
- * The accent rows pick a family first, then a color in it. Listing a family
- * twice doubles its odds, which keeps the original mix (the top row half
- * graphite, the bottom row a third grey) however many colors each family
- * grows to.
+ * The accent strips pick a family first, then a colour in it. Listing a family
+ * twice doubles its odds: the top strip half graphite, the bottom a third grey.
  */
-const SPARK_ACCENT = [GRAPHITE, GRAPHITE, GRAPHITE, ELECTRIC, HUES, HUES] as const;
-const SPARK_LIGHTS = [GREYS, HUES, HUES] as const;
-const INK = '#1A1820';
+export const SPARK_ACCENT: readonly (readonly string[])[] = [GRAPHITE, GRAPHITE, GRAPHITE, ELECTRIC, HUES, HUES];
+export const SPARK_LIGHTS: readonly (readonly string[])[] = [GREYS, HUES, HUES];
 
-const WIPE_IN = [
-  'inset(0 100% 0 0)',
-  'inset(0 0 0 100%)',
-  'inset(100% 0 0 0)',
-  'inset(0 0 100% 0)',
-  'inset(0 62% 0 0)',
-  'inset(0 0 0 62%)',
-] as const;
-const WIPE_OUT = ['inset(0 0 0 100%)', 'inset(0 100% 0 0)', 'inset(0 0 100% 0)', 'inset(100% 0 0 0)'] as const;
-
-/** Layers wipe in over 200ms in five steps, staggered 45ms apart. */
-const STAGGER = 45;
-/** The host outlives the wipe-out, then goes. */
-const TEARDOWN = 230;
+/** Band ink: the label's colour while the band is up. */
+export const DARK_INK = '#1A1820';
 
 export const pick = <T>(a: readonly T[]): T => a[(Math.random() * a.length) | 0];
 
-/** A pick that is never `not`. Every list here has other colors, so it ends. */
-const pickNot = (a: readonly string[], not: string): string => {
+/** A pick that is never `not`. Every list here has other colours, so it ends. */
+export const pickNot = (a: readonly string[], not: string): string => {
   let c = pick(a);
   while (c === not) c = pick(a);
   return c;
 };
 
-/** The last main band color, so two hovers in a row never match. */
-let last = '';
+const rgb = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
 
-export interface Band {
-  host: HTMLSpanElement;
-  layers: HTMLSpanElement[];
-  outline: HTMLSpanElement;
-  timers: number[];
-}
+/** `a` moved toward `b` by k, in sRGB, as hex. */
+export const mix = (a: string, b: string, k: number): string => {
+  const A = rgb(a);
+  const B = rgb(b);
+  return `#${A.map((v, i) => Math.round(v + (B[i] - v) * k).toString(16).padStart(2, '0')).join('')}`;
+};
 
-export function bandIn(b: HTMLElement): Band {
-  const host = document.createElement('span');
-  host.setAttribute('aria-hidden', 'true');
-  host.setAttribute('data-band', '');
-  host.style.cssText = 'position:absolute;inset:0;z-index:-1;pointer-events:none;overflow:hidden';
-
-  const layer = (geometry: string, color: string) => {
-    const l = document.createElement('span');
-    const jitter = Math.round(Math.random() * 15 - 7.5);
-    l.style.cssText =
-      `position:absolute;${geometry};background:${color};clip-path:${pick(WIPE_IN)};` +
-      `transform:translateX(${jitter}px);` +
-      'transition:clip-path 200ms steps(5,end),transform 200ms steps(5,end)';
-    host.appendChild(l);
-    return l;
-  };
-
-  // The rows never match the band, or they would vanish into it.
-  // A button may name its own band color (`data-hue`): the home menu's four,
-  // and the ink "+". Everything else draws from the wheel.
-  const main = b.getAttribute('data-hue') ?? (last = pickNot(HUES, last));
-  const layers = [
-    layer('inset:0', main),
-    layer(`left:0;right:0;top:0;height:${2 + Math.random() * 6}%`, pickNot(pick(SPARK_ACCENT), main)),
-    layer(`left:0;right:0;bottom:0;height:${2 + Math.random() * 6}%`, pickNot(pick(SPARK_LIGHTS), main)),
-  ];
-
+/** The band host: first child of the button, under its label. */
+export function host(b: HTMLElement): HTMLSpanElement {
+  const el = document.createElement('span');
+  el.setAttribute('aria-hidden', 'true');
+  el.setAttribute('data-band', '');
+  el.style.cssText = 'position:absolute;inset:0;z-index:-1;pointer-events:none;overflow:hidden';
   const outline = document.createElement('span');
-  outline.style.cssText = `position:absolute;inset:0;box-shadow:inset 0 0 0 1.5px ${INK}`;
-  host.appendChild(outline);
-  b.appendChild(host);
-
-  // Commit the starting clip before the transition target is set.
-  void host.offsetWidth;
-  const timers = layers.map((l, i) =>
-    window.setTimeout(() => {
-      l.style.clipPath = 'inset(0 0 0 0)';
-      l.style.transform = 'translateX(0)';
-    }, i * STAGGER),
-  );
-
-  return { host, layers, outline, timers };
+  outline.className = 'bo';
+  el.appendChild(outline);
+  b.insertBefore(el, b.firstChild);
+  return el;
 }
 
-export function bandOut(band: Band): void {
-  band.timers.forEach(clearTimeout);
-  band.layers.forEach((l) => {
-    l.style.clipPath = pick(WIPE_OUT);
+/** Make `parent` hold exactly `items.length` spans of `cls` before `before`, styled as given. Writes only what changed. */
+export function pool(parent: HTMLElement, key: string, items: readonly { c: string; s: string }[], before: Element | null = null): void {
+  const have = Array.from(parent.querySelectorAll<HTMLSpanElement>(`:scope > [data-k="${key}"]`));
+  while (have.length < items.length) {
+    const s = document.createElement('span');
+    s.setAttribute('data-k', key);
+    parent.insertBefore(s, before);
+    have.push(s);
+  }
+  while (have.length > items.length) have.pop()!.remove();
+  items.forEach((it, i) => {
+    const el = have[i];
+    if (el.className !== it.c) el.className = it.c;
+    if (el.getAttribute('style') !== it.s) el.setAttribute('style', it.s);
   });
-  band.outline.style.boxShadow = 'none';
-  const { host } = band;
-  window.setTimeout(() => host.remove(), TEARDOWN);
 }

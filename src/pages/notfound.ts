@@ -12,5 +12,5 @@ export const NOT_FOUND = {
 } as const;
 
 export function notFound() {
-  return subpage('not found', NOT_FOUND.title, TALLY.grey, fig('404'), lede(NOT_FOUND.lede), pagesBlock(null));
+  return subpage('not found', NOT_FOUND.title, TALLY.grey, fig('error', '404'), lede(NOT_FOUND.lede), pagesBlock(null));
 }
