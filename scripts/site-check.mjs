@@ -1774,10 +1774,11 @@ try {
     return at;
   });
   const mid = closing.find((f) => f.t > 20 && f.t < 90);
-  const cutF = closing.find((f) => f.t >= 105 && f.t < 145);
+  // the closing runs on frame timestamps, which can trail this clock by a frame
+  const cutF = closing.find((f) => f.band);
   const endF = closing[closing.length - 1];
   ok(mid && /rotate\((1|2|3|4)\d?\.\d+deg\)/.test(mid.x) && /scale\(0\.[3-9]/.test(mid.x) && !mid.band, 'going up, the X turns toward 45 degrees as the jelly collapses onto the pin', JSON.stringify(mid));
-  ok(cutF && cutF.band && /round 999px/.test(cutF.band) && /Dessign Maison/.test(cutF.plus) && /visibility:hidden/.test(cutF.x), 'at 100ms the band takes the dot and the "+" is there, in the glitch face', JSON.stringify(cutF));
+  ok(cutF && cutF.t >= 90 && cutF.t <= 150 && /round 999px/.test(cutF.band) && /Dessign Maison/.test(cutF.plus) && /visibility:hidden/.test(cutF.x), 'at 100ms the band takes the dot and the "+" is there, in the glitch face', JSON.stringify(cutF));
   ok(endF && /jx-gone/.test(endF.cls) && !endF.band && /visibility:visible/.test(endF.plus) && !/Dessign/.test(endF.plus), 'by 300ms it is the floor and the mono "+", exactly home’s, before the film covers the box', JSON.stringify(endF));
   const dx0 = xf[firstX] && /translateX\(([\d.-]+)px\)/.exec(xf[firstX].xs ?? '');
   ok(dx0 && +dx0[1] > 5 && +dx0[1] < 7, 'the X pops in on the pin, where home’s "+" was, and travels to the box’s centre', xf[firstX]?.xs);
