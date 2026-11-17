@@ -9,7 +9,10 @@
     "leave and see everything settle back with no layout moved",
     "click and get the press, then the page change",
     "use the keyboard or a finger and get a calm, instant end frame",
-    "with reduced motion, get the still end frame and no travel"
+    "with reduced motion, get the still end frame and no travel",
+    "see the skeleton: the box and an X joining its opposite corners, on the JellyBox X and on every wired hover",
+    "move the cursor and watch the band's shape morph after it, always holding the whole label",
+    "watch letters change face without shoving their neighbours: they glide and blur in, and leave as softly"
   ],
   "collected": {
     "chickpea_repo": [
@@ -34,72 +37,358 @@
   },
   "disciplines": {
     "interaction design": {
-      "principles": ["feedback within a frame", "the cursor is the subject: what follows it must track 1:1, what reacts to it may spring", "variety without loss of meaning: the menu colour keeps saying which page"],
-      "tricks": ["a seeded stream per visit makes randomness replayable and checkable", "never the same draw twice running on one button", "deal from a shuffled deck, not dice, so rare cards still come up"],
-      "tests": ["twelve hovers of one button: how many distinct?", "does the label read in the worst frame?"]
+      "principles": [
+        "feedback within a frame",
+        "the cursor is the subject: what follows it must track 1:1, what reacts to it may spring",
+        "variety without loss of meaning: the menu colour keeps saying which page"
+      ],
+      "tricks": [
+        "a seeded stream per visit makes randomness replayable and checkable",
+        "never the same draw twice running on one button",
+        "deal from a shuffled deck, not dice, so rare cards still come up"
+      ],
+      "tests": [
+        "twelve hovers of one button: how many distinct?",
+        "does the label read in the worst frame?"
+      ]
     },
     "motion (emil)": {
-      "principles": ["exits faster than entrances", "ease-out for entering, springs for things the cursor drives", "only transform and opacity on the hot path", "never animate keyboard actions", "interruptible: a spring keeps its velocity when the target moves"],
-      "tokens": {"enter": "150 to 250ms", "exit": "50 to 120ms", "spring": "stiffness 300 to 500, damping ratio .7 to .9", "ease": "cubic-bezier(.23,1,.32,1)"},
-      "tests": ["play at 0.25x: any frame where two states overlap?", "120Hz and 60Hz feel the same (dt-based)"]
+      "principles": [
+        "exits faster than entrances",
+        "ease-out for entering, springs for things the cursor drives",
+        "only transform and opacity on the hot path",
+        "never animate keyboard actions",
+        "interruptible: a spring keeps its velocity when the target moves"
+      ],
+      "tokens": {
+        "enter": "150 to 250ms",
+        "exit": "50 to 120ms",
+        "spring": "stiffness 300 to 500, damping ratio .7 to .9",
+        "ease": "cubic-bezier(.23,1,.32,1)"
+      },
+      "tests": [
+        "play at 0.25x: any frame where two states overlap?",
+        "120Hz and 60Hz feel the same (dt-based)"
+      ]
     },
     "colour and legibility": {
-      "principles": ["contrast is measured per frame, not per palette", "text on a translucent material reads against what shows through, so test the composite, not the pigment", "a scrim or an ink switch beats draining the colour"],
-      "tokens": {"WCAG text": "4.5:1 body, 3:1 for 24px+ or 18.66px bold", "APCA": "Lc 60 to 75 for 16 to 24px text", "OKLCH lightness gap": "0.4 to 0.6 between ink and ground"},
-      "tricks": ["pick ink per band (dark #1A1820 or ground #F3F5F8) by computed contrast, whichever wins", "for JellyBox glass, sample the rendered pixels under the label once, or bound the composite by floor and pigment", "Chickpea's enforceSpread: stretch lightness around the midpoint until the range clears the floor"],
-      "tests": ["every HUE, strip, Chickpea cell and JellyBox pigment against its ink: min ratio", "the label over the brightest and darkest Jelly highlight"]
+      "principles": [
+        "contrast is measured per frame, not per palette",
+        "text on a translucent material reads against what shows through, so test the composite, not the pigment",
+        "a scrim or an ink switch beats draining the colour"
+      ],
+      "tokens": {
+        "WCAG text": "4.5:1 body, 3:1 for 24px+ or 18.66px bold",
+        "APCA": "Lc 60 to 75 for 16 to 24px text",
+        "OKLCH lightness gap": "0.4 to 0.6 between ink and ground"
+      },
+      "tricks": [
+        "pick ink per band (dark #1A1820 or ground #F3F5F8) by computed contrast, whichever wins",
+        "for JellyBox glass, sample the rendered pixels under the label once, or bound the composite by floor and pigment",
+        "Chickpea's enforceSpread: stretch lightness around the midpoint until the range clears the floor"
+      ],
+      "tests": [
+        "every HUE, strip, Chickpea cell and JellyBox pigment against its ink: min ratio",
+        "the label over the brightest and darkest Jelly highlight"
+      ]
     },
     "front-end": {
-      "principles": ["hover never changes layout: size changes are transforms on layers, not on the box", "one rAF clock for all hot buttons", "no per-frame layout reads"],
-      "tricks": ["grow a layer past the button with negative inset on an unclipped host", "a wireframe drawn in the page root's box scrolls with what it measures"]
+      "principles": [
+        "hover never changes layout: size changes are transforms on layers, not on the box",
+        "one rAF clock for all hot buttons",
+        "no per-frame layout reads"
+      ],
+      "tricks": [
+        "grow a layer past the button with negative inset on an unclipped host",
+        "a wireframe drawn in the page root's box scrolls with what it measures"
+      ]
     },
     "generative design (chickpea)": {
-      "principles": ["structural correctness: a guillotine cut always crosses its cell", "truthful labels", "seeded, so a url or a visit replays"],
-      "tricks": ["composeGrid anchors cuts to live boxes: the label's box can be one of them", "ratioName turns a measured aspect into '1/φ', '2/3', '1/2'"]
+      "principles": [
+        "structural correctness: a guillotine cut always crosses its cell",
+        "truthful labels",
+        "seeded, so a url or a visit replays"
+      ],
+      "tricks": [
+        "composeGrid anchors cuts to live boxes: the label's box can be one of them",
+        "ratioName turns a measured aspect into '1/φ', '2/3', '1/2'"
+      ]
     }
   },
   "the_thing": {
-    "parts": ["the button's resting box (fixed)", "the band layer", "the label overlay", "a wireframe layer (new)", "dimension labels (new)", "the lineage effect layers", "the credit"],
-    "expectations": ["it reacts at once", "it reads", "it never shoves the page", "it is different next time"],
+    "parts": [
+      "the button's resting box (fixed)",
+      "the band layer",
+      "the label overlay",
+      "a wireframe layer (new)",
+      "dimension labels (new)",
+      "the lineage effect layers",
+      "the credit"
+    ],
+    "expectations": [
+      "it reacts at once",
+      "it reads",
+      "it never shoves the page",
+      "it is different next time"
+    ],
     "kinds": [
-      {"name": "the glitch band", "what": "today's hover: band, strips, letters on drawings"},
-      {"name": "size and aspect", "what": "the band's own box grows or shrinks to a new aspect around the label, springing, the button box unchanged"},
-      {"name": "wireframe follow", "what": "a hairline box wraps the button, leans toward the cursor and re-fits as it moves, with its live dimensions"},
-      {"name": "chickpea grid", "what": "the band cut by Chickpea's engine into a guillotine grid, cells in a Chickpea palette"},
-      {"name": "chickpea measure", "what": "the hero's move: the seam nearest the cursor parts and an arrow measures it, with a truthful ratio"},
-      {"name": "lineage", "what": "the seven effects from his past projects"}
+      {
+        "name": "the glitch band",
+        "what": "today's hover: band, strips, letters on drawings"
+      },
+      {
+        "name": "size and aspect",
+        "what": "the band's own box grows or shrinks to a new aspect around the label, springing, the button box unchanged"
+      },
+      {
+        "name": "wireframe follow",
+        "what": "a hairline box wraps the button, leans toward the cursor and re-fits as it moves, with its live dimensions"
+      },
+      {
+        "name": "chickpea grid",
+        "what": "the band cut by Chickpea's engine into a guillotine grid, cells in a Chickpea palette"
+      },
+      {
+        "name": "chickpea measure",
+        "what": "the hero's move: the seam nearest the cursor parts and an arrow measures it, with a truthful ratio"
+      },
+      {
+        "name": "lineage",
+        "what": "the seven effects from his past projects"
+      }
     ]
   },
   "specifics": {
     "size and aspect": {
-      "keywords": {"1": ["size change", "aspect ratio", "random", "smooth"], "2": ["band box", "spring", "inset"], "3": ["golden aspect", "module", "overshoot"]},
-      "tokens": {"grow": "0 to 0.5em past each edge", "shrink": "to the label plus 0.25 to 0.5em", "aspects": "1/φ, 1/2, 2/3, the row's own", "settle": "220 to 380ms on a spring"},
-      "behaviors": ["the button box and every neighbour stay put", "the label never scales or squashes", "a menu row may grow taller and narrower, or hug its label"]
+      "keywords": {
+        "1": [
+          "size change",
+          "aspect ratio",
+          "random",
+          "smooth"
+        ],
+        "2": [
+          "band box",
+          "spring",
+          "inset"
+        ],
+        "3": [
+          "golden aspect",
+          "module",
+          "overshoot"
+        ]
+      },
+      "tokens": {
+        "grow": "0 to 0.5em past each edge",
+        "shrink": "to the label plus 0.25 to 0.5em",
+        "aspects": "1/φ, 1/2, 2/3, the row's own",
+        "settle": "220 to 380ms on a spring"
+      },
+      "behaviors": [
+        "the button box and every neighbour stay put",
+        "the label never scales or squashes",
+        "a menu row may grow taller and narrower, or hug its label"
+      ]
     },
     "wireframe": {
-      "keywords": {"1": ["wireframe", "encapsulated", "follows your cursor", "automatically adjusts"], "2": ["hairline", "measure ink", "dimension label"], "3": ["bounding box", "ticks", "dashed guide", "truthful ratio"]},
-      "tokens": {"stroke": "1 to 1.5px", "ink": "#3F5195 or band ink", "lean": "4 to 12px toward the cursor, springing", "label": "W × H in px or the ratio name"},
-      "behaviors": ["it wraps the band, not the box, so it re-fits when the size changes", "its corners lean toward the cursor and spring back", "labels never cross the label text"]
+      "keywords": {
+        "1": [
+          "wireframe",
+          "encapsulated",
+          "follows your cursor",
+          "automatically adjusts"
+        ],
+        "2": [
+          "hairline",
+          "measure ink",
+          "dimension label"
+        ],
+        "3": [
+          "bounding box",
+          "ticks",
+          "dashed guide",
+          "truthful ratio"
+        ]
+      },
+      "tokens": {
+        "stroke": "1 to 1.5px",
+        "ink": "#3F5195 or band ink",
+        "lean": "4 to 12px toward the cursor, springing",
+        "label": "W × H in px or the ratio name"
+      },
+      "behaviors": [
+        "it wraps the band, not the box, so it re-fits when the size changes",
+        "its corners lean toward the cursor and spring back",
+        "labels never cross the label text"
+      ]
     },
     "randomness": {
-      "tokens": {"draws per hover": "size/aspect, wireframe on or off, Chickpea move, lineage card", "no repeat": "the same button never gets the same draw twice running"},
-      "behaviors": ["every hover is random, menu rows too", "the glitch always comes first", "keyboard and touch never draw"]
+      "tokens": {
+        "draws per hover": "size/aspect, wireframe on or off, Chickpea move, lineage card",
+        "no repeat": "the same button never gets the same draw twice running"
+      },
+      "behaviors": [
+        "every hover is random, menu rows too",
+        "the glitch always comes first",
+        "keyboard and touch never draw"
+      ]
+    },
+    "skeleton": {
+      "keywords": {
+        "1": [
+          "wireframe",
+          "the x connecting the opposite corners",
+          "skeleton visible"
+        ],
+        "2": [
+          "construction lines",
+          "diagonals",
+          "bounding box",
+          "crossing at the centre"
+        ],
+        "3": [
+          "Chickpea's reveal-the-math",
+          "draughting diagonals that find a rectangle's centre",
+          "the X glyph as the box's own diagonals"
+        ]
+      },
+      "descriptions": [
+        "a box's two diagonals meet at its centre: the oldest draughting trick for finding it",
+        "the JellyBox X box is near square (72 x 73), so its diagonals run within a degree of the X glyph's strokes: the skeleton shows the X is the box's own construction",
+        "on a long row the diagonals are shallow (52/1056 is about 2.8 degrees), so they read as a crossing of two near-horizontal hairlines, a stretched X",
+        "map lettering's halo: each glyph carries a thin outline in the colour behind it, so a line passing under the type stops a hair from each letter's own shape, never at a box",
+        "a mask cut at a rectangle reads as something laid on top of the line; a halo reads as the line passing behind"
+      ],
+      "tokens": {
+        "stroke": "1px",
+        "ink": "#3F5195 at 0.55 to 1",
+        "diagonals": "corner to corner of the wire's own box, re-fitting with it",
+        "segments": "dashes 6 to 9px, gaps 4 to 6px",
+        "halo": "0.06 to 0.12em, in the colour under the glyph (the band, its Cut cell, or the glass)"
+      },
+      "behaviors": [
+        "the skeleton re-fits with the shape on the wire's spring, so the X's crossing travels as the shape morphs",
+        "under the label, never over it"
+      ]
+    },
+    "cursor morph": {
+      "keywords": {
+        "1": [
+          "morph to follow the cursor",
+          "accommodate the text always",
+          "glitchy structured"
+        ],
+        "2": [
+          "free edge",
+          "snap to the mono cell",
+          "spring"
+        ],
+        "3": [
+          "rubber band anchored on the label",
+          "quantized target, continuous travel"
+        ]
+      },
+      "tokens": {
+        "snap": "the mono cell, 0.5em",
+        "spring": "stiffness 300 to 420, damping 0.75 to 0.85",
+        "floor": "the label box plus 0.5em each side"
+      },
+      "behaviors": [
+        "the shape's edge nearest the cursor reaches for it, snapping to the cell grid, so it moves in cells but never jumps",
+        "the label is always inside: the target is clamped to the label box plus its margin before the spring"
+      ]
+    },
+    "smooth text": {
+      "keywords": {
+        "1": [
+          "text transitions are all smooth",
+          "reshuffle smoothly",
+          "no jumps",
+          "all glitches"
+        ],
+        "2": [
+          "FLIP",
+          "blur bridge",
+          "crossfade"
+        ],
+        "3": [
+          "per-letter glide on a face change",
+          "a 2px blur hides two glyphs swapping (Emil)"
+        ]
+      },
+      "descriptions": [
+        "the jump: Dessign Maison's alternates are wider or narrower than the mono, so each letter that flips shoves the rest of the word",
+        "FLIP: measure each letter before and after a face change, offset it by the difference, and let it settle to zero"
+      ],
+      "tokens": {
+        "glide": "90 to 140ms, ease-out (.23, 1, .32, 1)",
+        "blur in": "2 to 3px to 0 over 80 to 120ms",
+        "exit": "the overlay fades over 90ms as the resting word fades in"
+      }
     }
   },
   "anti_keywords": [
-    {"not": "scaling the whole button so the text stretches", "instead": "change the band layer's box; the label stays crisp at its size"},
-    {"not": "a wireframe that lags the cursor on a CSS transition", "instead": "track 1:1 by transform for what is the cursor's, spring only what reacts"},
-    {"not": "random hues on menu rows", "instead": "the page hue holds; vary shape, strips, wireframe and effect"},
-    {"not": "trusting a pigment's contrast for translucent glass", "instead": "bound or sample the composite under the label"},
-    {"not": "a size change that moves a neighbour", "instead": "layers only; the checks compare every layout box before and during"},
-    {"not": "decorative grid noise over the label", "instead": "Chickpea's restraint: hairlines, at most three labels, nothing crosses the text"}
+    {
+      "not": "scaling the whole button so the text stretches",
+      "instead": "change the band layer's box; the label stays crisp at its size"
+    },
+    {
+      "not": "a wireframe that lags the cursor on a CSS transition",
+      "instead": "track 1:1 by transform for what is the cursor's, spring only what reacts"
+    },
+    {
+      "not": "random hues on menu rows",
+      "instead": "the page hue holds; vary shape, strips, wireframe and effect"
+    },
+    {
+      "not": "trusting a pigment's contrast for translucent glass",
+      "instead": "bound or sample the composite under the label"
+    },
+    {
+      "not": "a size change that moves a neighbour",
+      "instead": "layers only; the checks compare every layout box before and during"
+    },
+    {
+      "not": "decorative grid noise over the label",
+      "instead": "Chickpea's restraint: hairlines, at most three labels, nothing crosses the text"
+    },
+    {
+      "not": "letters that jump sideways as their neighbours change face",
+      "instead": "every letter glides from where it was to where it lands"
+    },
+    {
+      "not": "a skeleton laid over the label",
+      "instead": "hairlines under the type, the label always on top"
+    },
+    {
+      "not": "a shape that snaps to the cursor instantly",
+      "instead": "a cell-snapped target with a spring between"
+    },
+    {
+      "not": "an X masked off at a rectangle around the label",
+      "instead": "the whole X behind the type, the glyphs haloed in the colour under them, the line in segments"
+    }
   ],
   "checks": [
     "twelve seeded hovers of one menu row: at least eight distinct, none twice running",
     "every layout box identical before and during each new effect",
     "label contrast at least 4.5:1 in every frame of every effect, Jelly included",
     "the wireframe tracks the cursor in the same frame and re-fits after a size change",
-    "keyboard, touch and reduced motion: an instant still end frame, no draw"
+    "keyboard, touch and reduced motion: an instant still end frame, no draw",
+    "no letter of the overlay moves more than a few px between two frames while the glitch lands",
+    "the shape always contains the label's box at every sampled frame",
+    "the skeleton's diagonals join opposite corners of the wire box"
   ],
-  "built": []
+  "built": [
+    "the glitch band, dressed: shape decks (Full, Golden, Half, Tall, Highlighter; small: Full, Outset, Inset, Tab), the wire with guide and ratio chip, and Chickpea's Cut, all from per-button decks (2026-11-17)",
+    "solid X behind the type on white plates, one per line, wiping in from each line's left edge 40ms apart over 180ms, a measure-ink + on each plate corner; the halo and the masked and segmented X were tried and dropped at his word (2026-11-17)"
+  ],
+  "tricks_learned": [
+    "measure the label as the word plus its tag's ruled box, not the column it sits in, or every free run comes out negative",
+    "a band shape on its own box (per-frame inset) keeps strips and outline on the shape's edges; a scale and counter-scale drifts them off on Tall and Highlighter",
+    "a lower z-index on the hot row lets a Tall overhang lie under the neighbours' words"
+  ],
+  "request_2": "i mean like, for jellybox for example, i want to see a wireframe with the x connecting the opposite corners - like a skeleton visible. and the resizes would do something similar, but morph to follow the cursor, and accommodate the text always as well, so it looks like a glitchy structured type of thing. /antialgorithm /metadump:metadump and make sure the text transitions are all smooth, things reshuffle smoothly, no jumps, all glitches",
+  "request_3": "can it just be an x that sits behind or something so there isn't just an abrupt cut-off? or segmented? /metadump:metadump",
+  "request_4": "i think it'll be best to keep it solid, no halo on text, and put solid white bars under the text that animate in and out when the X appears. and the bars can have crosshairs on the corners. /antialgorithm"
 }

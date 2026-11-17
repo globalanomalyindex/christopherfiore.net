@@ -51,6 +51,7 @@ import { pool } from './band.ts';
 import { ALT, band, plan, type Plan } from './ink.ts';
 import { reducedMotion } from './offsets.ts';
 import type { Hot } from './buttons.ts';
+import { plates } from './plates.ts';
 
 type Optics = typeof import('./jellyx.ts');
 
@@ -77,7 +78,7 @@ export const PIGMENTS = Object.keys(STATES);
 const triple = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(' ');
 
 /** JellyBox's exact underdamped spring (pocket.js): refresh-rate independent, and it keeps its velocity. */
-function spring(value: number, velocity: number, target: number, seconds: number, frequency: number, damping: number): [number, number] {
+export function spring(value: number, velocity: number, target: number, seconds: number, frequency: number, damping: number): [number, number] {
   const decay = damping * frequency;
   const wd = frequency * Math.sqrt(1 - damping * damping);
   const offset = value - target;
@@ -123,14 +124,17 @@ function write(patch: Record<string, unknown>): void {
   }
 }
 
-/** A bag, not dice: shuffled once per visit, the next one each page, never the same twice running. */
+/**
+ * A bag, not dice: shuffled once per visit, the next one each page, never the
+ * same twice running. Only the pigments the X's ink reads on (`READS`).
+ */
 function nextPigment(skip: readonly string[]): string {
   const s = read();
-  let bag = Array.isArray(s.bag) ? (s.bag as string[]).filter((p) => p in STATES) : [];
+  let bag = Array.isArray(s.bag) ? (s.bag as string[]).filter((p) => READS.includes(p)) : [];
   let pos = typeof s.bagPos === 'number' ? s.bagPos : 0;
   const last = typeof s.bagLast === 'string' ? s.bagLast : '';
   const shuffle = () => {
-    bag = PIGMENTS.slice();
+    bag = READS.slice();
     for (let i = bag.length - 1; i > 0; i--) {
       const j = (Math.random() * (i + 1)) | 0;
       [bag[i], bag[j]] = [bag[j], bag[i]];
@@ -671,6 +675,30 @@ export function initJx(seen: Promise<void>): void {
 
 let jc: HTMLCanvasElement | null = null;
 let jh: Hot | null = null;
+/** The Jelly card's skeleton: the slab's box and an X joining its opposite corners. */
+let jsk: SVGSVGElement | null = null;
+const NS = 'http://www.w3.org/2000/svg';
+let jskFor: Hot | null = null;
+let jplates: HTMLSpanElement | null = null;
+function skeletonFor(h: Hot, cap: Cap): void {
+  if (!jsk) {
+    jsk = document.createElementNS(NS, 'svg');
+    jsk.setAttribute('class', 'jx-sk jx-row-sk');
+    jsk.setAttribute('viewBox', '0 0 100 100');
+    jsk.setAttribute('preserveAspectRatio', 'none');
+    jsk.setAttribute('aria-hidden', 'true');
+  }
+  if (jskFor !== h) {
+    // the whole X, corner to corner, solid, behind the row's text, which sits on its own white plates
+    jskFor = h;
+    jsk.innerHTML = '<rect x="0" y="0" width="100" height="100"/><path class="d" d="M0 0L100 100M100 0L0 100"/>';
+  }
+  const want = `position:absolute;left:${cap.x.toFixed(1)}px;top:${cap.y.toFixed(1)}px;width:${cap.w.toFixed(1)}px;height:${cap.h.toFixed(1)}px;overflow:visible;pointer-events:none;transition:opacity 150ms cubic-bezier(.23,1,.32,1)`;
+  if (jsk.getAttribute('style') !== want) jsk.setAttribute('style', want);
+  if (jsk.parentNode !== h.b) h.b.insertBefore(jsk, (jc && jc.parentNode === h.b ? jc : h.host).nextSibling);
+  if (!jsk.classList.contains('on')) requestAnimationFrame(() => jsk?.classList.add('on'));
+  jplates = plates(h.b, jsk, jplates);
+}
 type Cap = { x: number; y: number; w: number; h: number; r: number };
 let jcap: Cap = { x: 0, y: 0, w: 0, h: 0, r: 0 };
 let jpig = '#5baff3';
@@ -691,8 +719,13 @@ const lum = (hex: string): number => {
   const c = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
   return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
 };
-/** The pigments whose highlighted state holds band ink at 4.5:1: the label on the slab always reads. */
-const READS = PIGMENTS.filter((p) => (lum(STATES[p][1]) + 0.05) / (lum('#1A1820') + 0.05) >= 4.5);
+/**
+ * The pigments that hold band ink at 4.5:1 in all three of JellyBox's states,
+ * rest, highlighted and pressed, taking the pigment itself as the glass (the
+ * glass over the light floor only ever reads lighter): the label on the slab,
+ * and the X on its disc, always read.
+ */
+const READS = PIGMENTS.filter((p) => STATES[p].every((c) => (lum(c) + 0.05) / (lum('#1A1820') + 0.05) >= 4.5));
 /** The readable JellyBox pigment nearest in hue to the band that was just up, so the colour carries over. */
 const nearest = (hex: string) => {
   const h = hueOf(hex);
@@ -732,6 +765,15 @@ export function jellyFor(h: Hot, cap: Cap, open: number): void {
     if (jh === h) {
       jc?.remove();
       jh = null;
+    }
+    if (jsk?.parentNode === h.b) {
+      jsk.classList.remove('on');
+      jsk.remove();
+    }
+    if (jskFor === h) jskFor = null;
+    if (jplates?.parentNode === h.b) {
+      jplates.remove();
+      jplates = null;
     }
     h.b.querySelectorAll(':scope > [data-k="jc"]').forEach((n) => n.remove());
     return;
@@ -776,4 +818,6 @@ export function jellyFor(h: Hot, cap: Cap, open: number): void {
   }
   const want = clipFor(h, cap, open);
   if (jc!.getAttribute('style') !== want) jc!.setAttribute('style', want);
+  // once the floor has opened, the slab shows its skeleton
+  if (open >= 1) skeletonFor(h, cap);
 }

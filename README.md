@@ -66,6 +66,8 @@ src/
     band.ts      the brutalist band that floods a button
     glitch.ts    the alternate-letter faces, and the width a sentence link reserves
     lineage.ts   effects from his past projects, dealt now and then (lazy, cursor only)
+    dress.ts     every pointer hover's shape, wire and Chickpea's Cut (lazy, with lineage)
+    plates.ts    white plates under the text while a skeleton's X runs behind it
     jx.ts        the JellyBox back button: entrance, colors, leaving (lazy)
     jellyx.ts    JellyBox's own optics renderer, mounted on a canvas (lazy, desktop only)
     magnet.ts    the magnetic pull
@@ -73,6 +75,7 @@ src/
     skeleton.ts  the measurements drawn at the seam
     offsets.ts   how the magnet and the seams stay out of each other's way
   vendor/jellybox/  JellyBox's renderer and color code, copied from its repo
+  vendor/chickpea/  Chickpea's grid and palette engines, copied from its repo
   styles/site.css
 scripts/site-check.mjs   end-to-end checks in real Chrome and WebKit
 ```
@@ -143,12 +146,83 @@ other part of the hover changes, drawn from the visit's own seeded stream:
   bottom strip from there to the right rule, both snapped to the mono cell.
   Coming in from a side, or by the keyboard, both run the full width
 - each strip is 4, 6 or 8px, and the top one is missing one hover in four
-- one hover in three, never twice running, the figure's own cell (17, 20,
-  say hi, pdf) fills in a paler step of the page color, at 100ms
+- one hover in three, dealt from the row's own deck of three so it is never
+  twice running, the figure's own cell (17, 20, say hi, pdf) fills in a
+  paler step of the page color, at 100ms
 - the strips never take another page's color
 - the same row never draws the same hover twice running
 
 `window.__ink.seed(n)` replays the stream, for the checks.
+
+## The dress
+
+Every pointer hover is random, the home menu included (`runtime/dress.ts`).
+The glitch still comes first. When the band has landed (150ms, or 50ms on a
+sweep), each button deals from two decks of its own, shuffled from the
+visit's seed and the button's address and dealt without replacement. A fresh
+shuffle never starts with the card just played, so no button gets the same
+hover twice running.
+
+- **Shape.** The band's own box morphs after the cursor and always holds the
+  whole label. Every target snaps to a structure, the mono cell or Chickpea's
+  ratio canon, and a spring (stiffness 380, damping 0.78) carries the band
+  between, so it moves in steps but never jumps. The button's box, the label
+  and every neighbor stay exactly where they are. Rows get Full; Reach, whose
+  free edge follows the cursor a cell at a time; Ratio, whose free edge sits
+  on the canon ratio nearest the cursor (½, 1/φ, ⅔); and Tall, which grows
+  over the next row on the cursor's side, 6px on home, under that row's words,
+  and 3px into a page's gaps. Small buttons get Full, Outset 3px, Inset 3px,
+  and Lean, 3px out on the cursor's side.
+- **Dress.** The deck has six cards: plain 2, wire 2, Cut 1, Cut and wire 1.
+- **The wire.** A skeleton in Chickpea's measure ink wraps the shape: its box
+  and an X joining opposite corners, crossing at the centre. It re-fits ahead
+  of the band as the shape morphs. The X is solid and runs behind the type,
+  which sits on white plates, one per line, with a "+" in measure ink on each
+  plate's corners (`runtime/plates.ts`). Each plate wipes in from its own left
+  edge, the way the line reads, 40ms after the one before, over 180ms, and
+  wipes back in 90ms. They follow the text's own box every frame and never
+  reach past the row.
+- **The true size.** Whenever the band is not the button's own size, a third
+  deck keeps the true box in view, quietly, in band ink at half strength:
+  Plus (the site's "+" at each true corner), Rule (ledger rules on the true
+  top and bottom), Ticks (a ruler of mono cells under the true bottom edge),
+  Wash (the true box in a pale step of the band's color, under a band that
+  shrinks), and Dots (a dotted outline, the plain one). None of them touches
+  the label. The side nearest the
+  cursor leans out up to 8px, and a dashed guide sits on the cursor in the
+  same frame. A chip beside the guide gives the shape's size, and the canon
+  ratio's name (Chickpea's `ratioName`, such as ½ or 1/φ) when the cursor is
+  within 1px of one. The chip only sits where there is no text.
+- **The Cut.** Chickpea's own `composeGrid` tiles the shape around the label
+  and the figure, so the label keeps one whole cell and no cut crosses any
+  text. The cells fill on drawings from the cursor's cell outward. Their
+  colors come from Chickpea's palette engine, or from steps of the page color
+  on a menu row. Its credit reads "from chickpea".
+- **Legibility.** The label is always band ink, and every surface it can
+  touch holds band ink at 4.5:1 or better. Every band color does already. A
+  Cut cell that touches text is lifted to OKLCH lightness 0.74. A strip deep
+  enough to reach the label's letters only takes a color that holds band ink
+  at 4.5:1, on every button. A strip or outline that would run through the
+  label is dropped. JellyBox's pigments
+  must hold 4.5:1 in all three of their states, rest, highlighted and pressed.
+  That rules out candy pink and lagoon blue, for both the Jelly slab and the X.
+- **Smooth text.** Dessign Maison's alternates are not as wide as the mono,
+  so each letter that changed face used to shove the ones after it. Now each
+  letter is measured before and after a change and glides the difference away
+  in 220ms, easing in and out, and a letter that changes face comes in from a 2px blur over
+  100ms, so it reads as one letter turning. Leaving, the overlay fades out over
+  90ms as the resting word's ink comes back. The keyboard gets none of it.
+- **JellyBox's skeleton.** Hovered, the back X's box shows its own skeleton,
+  4px inside the rules: the box and its two diagonals. The box is all but
+  square, so the diagonals run along the X's own strokes, and the disc,
+  swelling to fill the box, is a circle drawn in a square. The Jelly card on a
+  row shows the same skeleton over its slab once the floor has opened, the
+  whole X solid behind the row's text, every line of it on its own plate.
+- **Where it runs.** It rides in the lineage chunk, after the page is seen,
+  for a cursor. A hover dealt a lineage card stays Full and plain, so the
+  effect starts from the settled glitch. Keyboard, touch and reduced motion
+  are never dressed. The checks use `window.__dress.force()` and
+  `__ink.seed(n)`.
 
 ## Lineage
 
@@ -373,6 +447,18 @@ measure the film rather than the battery. It checks:
 - the glitch on drawings, frame by frame: half the band in the first frame,
   all of it and both strips by 150ms, letters spreading from the pointer's
   side, landed by 200ms, two drawings on a sweep, one to leave
+- the dress: twelve seeded hovers of one menu row are at least ten different
+  and never the same twice running, with all four shapes in each round of
+  four. Each shape lands where the cursor puts it, always holds the whole
+  label, and moves no layout box, and Reach follows the cursor on the cell
+  grid. The wire is a skeleton whose solid X joins its corners behind the
+  type, which sits on white plates inside the row, a "+" on every corner. Every resizing hover shows a true-size mark on the button's
+  own box, all five in each round of five, and a Full band shows none. While
+  the glitch lands no letter moves more than 9px between two frames. Every
+  surface the label touches holds band ink at 4.5:1. The wire's guide sits on
+  the cursor and its chip names ½ in Chickpea's words without touching the
+  label. The Cut is legible and credited. Leaving is fast, the keyboard is
+  never dressed, and Tall stays inside a page's gaps
 - lineage: the chunk loads only for a cursor, the deck of twelve, each
   project's own row playing its own effect, every effect's layers and credit,
   zero reflow while it plays, nothing left behind after leaving, and the
@@ -515,6 +601,16 @@ dependencies, `three` (MIT) and `spectral.js` (MIT), pinned in
 `package.json`. The `.d.ts` files next to it are ours, so TypeScript can
 check the calls.
 
+## Chickpea
+
+`src/vendor/chickpea/` is Chickpea's own pure seeded core, copied as it is
+from globalanomalyindex/chickpea at c55533e, with no React. It holds the grid
+engine (`composeGrid` and its tree, the ratio canon with `snapToRatio` and
+`ratioName`, `mulberry32` and `hashSeed`) and the OKLCH palette engine
+(`generatePaletteOklch`, with its harmonizing and lightness-spread floor).
+It is his own project, so take a fresh copy from it rather than editing the
+copy here.
+
 ## Payload
 
 Measured in Chrome against the built site's preview server, cache off, first
@@ -539,7 +635,7 @@ The scripts, gzipped:
 |---|---:|---|
 | main | 12.7 kB | every page |
 | signature | 7.6 kB | home only |
-| lineage | 3.5 kB | after the page is seen, for a cursor |
+| lineage, with the dress and Chickpea | 14.3 kB | after the page is seen, for a cursor |
 | jx | 4.1 kB | subpages, and with lineage |
 | jellyx | 176 kB | subpages on a desktop, after the page is seen |
 

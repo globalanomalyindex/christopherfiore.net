@@ -138,17 +138,112 @@ export function faces(b: HTMLElement): Face[] {
   return out;
 }
 
-/** Paint one frame of letters onto a face. Writes only what changed. */
-export function paint(f: Face, ls: readonly Letter[], ovStyle: string | null): void {
+/*
+ * SMOOTH TEXT (round 4, his note: "make sure the text transitions are all
+ * smooth, things reshuffle smoothly, no jumps"). Dessign Maison's alternates
+ * are not as wide as the mono, so each letter that changes face used to shove
+ * every letter after it. Now each letter is measured before and after a
+ * change and glides the difference away (FLIP), 220ms, easing in and
+ * out as anything moving on screen should, by a relative offset that never touches the line's layout. A
+ * letter that changes face also comes in from a 2px blur over 100ms, which
+ * bridges the two glyphs so the eye reads one letter turning, not two
+ * swapping. The keyboard gets none of it.
+ */
+const GLIDE_MS = 220;
+const BLUR_MS = 100;
+interface Glide {
+  /** the offset applied now, px */
+  ax: number;
+  ay: number;
+  /** the offset the glide started from */
+  gx: number;
+  gy: number;
+  t0: number;
+  /** when the blur-in started, or -1 */
+  b0: number;
+}
+const glides = new WeakMap<HTMLSpanElement, Glide>();
+const easeOut = (t: number) => 1 - (1 - Math.max(0, Math.min(1, t))) ** 3;
+/** A letter moving on screen eases in and out (Emil): its first and last frames barely move. */
+const easeInOut = (t: number) => {
+  const x = Math.max(0, Math.min(1, t));
+  return x < 0.5 ? 4 * x * x * x : 1 - (-2 * x + 2) ** 3 / 2;
+};
+const altFace = (st: string) => st.includes('Dessign');
+
+/** Paint one frame of letters onto a face. Writes only what changed. `smooth`: glide and blur the changes. */
+export function paint(f: Face, ls: readonly Letter[], ovStyle: string | null, now = performance.now(), smooth = false): void {
+  const changed: [HTMLSpanElement, Letter][] = [];
   f.spans.forEach((s, i) => {
     const l = ls[i];
-    if (!l) return;
+    if (l && (s.textContent !== l.c || (s.dataset.s ?? '') !== l.s)) changed.push([s, l]);
+  });
+  // where every letter sits in the line now, without its glide
+  const before = smooth && changed.length ? f.spans.map((s) => { const g = glides.get(s); return [s.offsetLeft - (g?.ax ?? 0), s.offsetTop - (g?.ay ?? 0)]; }) : null;
+  for (const [s, l] of changed) {
+    const turned = smooth && !!l.c.trim() && altFace(s.dataset.s ?? '') !== altFace(l.s);
     if (s.textContent !== l.c) s.textContent = l.c;
-    if ((s.getAttribute('style') ?? '') !== l.s) s.setAttribute('style', l.s);
+    s.dataset.s = l.s;
+    s.setAttribute('style', l.s);
+    if (turned) {
+      const g = glides.get(s) ?? { ax: 0, ay: 0, gx: 0, gy: 0, t0: now, b0: -1 };
+      g.b0 = now;
+      glides.set(s, g);
+    }
+  }
+  if (before) {
+    // a letter some neighbour moved starts its glide from where it was seen
+    f.spans.forEach((s, i) => {
+      const g0 = glides.get(s);
+      const dx = before[i][0] - (s.offsetLeft - (s.style.left ? g0?.ax ?? 0 : 0));
+      const dy = before[i][1] - (s.offsetTop - (s.style.top ? g0?.ay ?? 0 : 0));
+      if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) return;
+      const g = g0 ?? { ax: 0, ay: 0, gx: 0, gy: 0, t0: now, b0: -1 };
+      g.gx = g.ax + dx;
+      g.gy = g.ay + dy;
+      g.t0 = now;
+      glides.set(s, g);
+    });
+  }
+  // every letter's style: its own, plus any glide or blur still running
+  f.spans.forEach((s) => {
+    const g = glides.get(s);
+    let extra = '';
+    if (g) {
+      const k = 1 - easeInOut((now - g.t0) / GLIDE_MS);
+      g.ax = g.gx * k;
+      g.ay = g.gy * k;
+      const blur = g.b0 >= 0 ? 2 * (1 - easeOut((now - g.b0) / BLUR_MS)) : 0;
+      if (Math.abs(g.ax) < 0.05 && Math.abs(g.ay) < 0.05 && blur < 0.05) glides.delete(s);
+      else extra = `position:relative;left:${g.ax.toFixed(2)}px;top:${g.ay.toFixed(2)}px;${blur > 0.05 ? `filter:blur(${blur.toFixed(2)}px);` : ''}`;
+    }
+    const own = s.dataset.s ?? s.getAttribute('style') ?? '';
+    const want = own + extra;
+    if ((s.getAttribute('style') ?? '') !== want) s.setAttribute('style', want);
   });
   const base = f.ov.dataset.base ?? (f.ov.dataset.base = f.ov.style.cssText);
   const want = ovStyle ? `${base};${ovStyle}` : base;
   if (f.ov.style.cssText !== want) f.ov.style.cssText = want;
+}
+
+/** Still gliding or blurring: the clock keeps painting. */
+export function settling(fs: readonly Face[]): boolean {
+  return fs.some((f) => f.spans.some((s) => glides.has(s)));
+}
+
+/**
+ * Leaving by the pointer: the overlay fades out over 90ms, a little blurred,
+ * as the resting word's own ink comes back, so the word is never two words
+ * at once and never jumps. `unface` then takes it away.
+ */
+export function fade(fs: readonly Face[]): void {
+  fs.forEach(({ w, ov }) => {
+    ov.style.transition = 'opacity 90ms cubic-bezier(.23,1,.32,1), filter 90ms cubic-bezier(.23,1,.32,1)';
+    ov.style.opacity = '0';
+    ov.style.filter = 'blur(2px)';
+    w.style.transition = 'color 90ms cubic-bezier(.23,1,.32,1)';
+    w.style.color = '';
+  });
 }
 
 /** The resting word shows again (Mark lets the word rest in its own ink), or goes clear. Hide the overlay with `paint(..., 'visibility:hidden')`. */
@@ -161,6 +256,7 @@ export function rest(f: Face, shown: boolean): void {
 export function unface(fs: readonly Face[]): void {
   fs.forEach(({ w, ov }) => {
     ov.remove();
+    w.style.transition = '';
     w.style.color = '';
   });
 }

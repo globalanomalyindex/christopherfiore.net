@@ -507,6 +507,69 @@ code {
   transition: transform 65ms cubic-bezier(0.32, 0, 0.62, 1);
 }
 
+/*
+  The skeleton, on hover: the box, 4px inside the rules, and an X joining its
+  opposite corners in Chickpea's measure ink. The box is all but square, so
+  the diagonals run along the X's own strokes, and the disc, swelling to fill
+  the box, is a circle drawn in a square. Under the X, over the jelly.
+*/
+.jx .jx-sk {
+  position: absolute;
+  z-index: 3;
+  left: 4px;
+  top: 4px;
+  width: calc(100% - 8px);
+  height: calc(100% - 8px);
+  overflow: visible;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 90ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.jx:hover .jx-sk {
+  opacity: 1;
+  transition-duration: 150ms;
+}
+
+.jx:focus-visible .jx-sk {
+  opacity: 1;
+  transition: none;
+}
+
+.jx-sk > rect,
+.jx-sk > path {
+  fill: none;
+  stroke: #3f5195;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.jx-sk .d {
+  stroke-opacity: 0.6;
+}
+
+/* on a row, the X solid, behind the type */
+.jx-row-sk .d {
+  stroke-opacity: 0.75;
+  vector-effect: non-scaling-stroke;
+}
+
+.jx.jx-close .jx-sk,
+.jx.jx-leave .jx-sk,
+.jx-wait .jx .jx-sk {
+  opacity: 0;
+}
+
+/* on a row, the Jelly card's skeleton sits over the slab, under the label */
+.jx-row-sk {
+  opacity: 0;
+  z-index: -1;
+}
+
+.jx-row-sk.on {
+  opacity: 1;
+}
+
 /* the mono "+", on the pin: the cell before the entrance, and after the leaving cut */
 .jx .jx-plus {
   position: absolute;
@@ -629,6 +692,169 @@ code {
 .bay4 {
   -webkit-mask-image: none;
   mask-image: none;
+}
+
+/*
+  The dress (runtime/dress.ts). A hovered row sits one step under its
+  neighbours, so a Tall band that reaches over the next row on home lies under
+  that row's words, never over them.
+*/
+.hrow,
+a.row {
+  z-index: 1;
+}
+
+.hrow[data-hot],
+a.row[data-hot] {
+  z-index: 0;
+}
+
+/*
+  The wire: a hairline frame in Chickpea's measure ink around the band's shape,
+  under the label. In over 150ms, out over 90ms, opacity only. The guide sits on
+  the cursor; the chip gives the shape's size.
+*/
+[data-wire] {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 90ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+[data-wire].on {
+  opacity: 1;
+  transition-duration: 150ms;
+}
+
+[data-wire] .wf {
+  position: absolute;
+  overflow: visible;
+}
+
+/* the drawn lines only: a mask's own rects keep their fills */
+[data-wire] .wf .wb,
+[data-wire] .wf .wt,
+[data-wire] .wf .wd,
+[data-wire] .wf .wx {
+  fill: none;
+  stroke: #3f5195;
+  stroke-width: 1;
+}
+
+/* the X, solid, behind the type */
+[data-wire] .wf .wx {
+  stroke-opacity: 0.75;
+}
+
+/*
+  Plates (runtime/plates.ts): solid white bars under the text while the X is
+  up, one per line. Each wipes in from its own left edge, the way it reads,
+  40ms after the one before, over 180ms; a "+" lands on each corner as it
+  arrives. Leaving, they wipe back in 90ms. Over the X, under the type.
+*/
+[data-plates] {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+[data-plates] .pl {
+  position: absolute;
+  background: #fff;
+  clip-path: inset(0 100% 0 0);
+  transition: clip-path 90ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+[data-plates].on .pl {
+  clip-path: inset(0 0 0 0);
+  transition-duration: 180ms;
+  transition-delay: var(--d, 0ms);
+}
+
+[data-plates] .px {
+  position: absolute;
+  overflow: visible;
+  opacity: 0;
+  transition: opacity 60ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+[data-plates].on .px {
+  opacity: 1;
+  transition-duration: 100ms;
+  transition-delay: calc(var(--d, 0ms) + 140ms);
+}
+
+[data-plates] .px path {
+  fill: none;
+  stroke: #3f5195;
+  stroke-width: 1;
+}
+
+@media (forced-colors: active) {
+  [data-plates] {
+    display: none;
+  }
+}
+
+[data-wire] .wf .wg {
+  stroke: #3f5195;
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+/*
+  The true size: whenever the band is not the button's own size, a quiet mark
+  of the button's own box. Ambient: band ink at half strength, in over 150ms,
+  out over 90ms, opacity only.
+*/
+[data-true] {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 90ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+[data-true].on {
+  opacity: 0.55;
+  transition-duration: 150ms;
+}
+
+[data-true='wash'].on {
+  opacity: 1;
+}
+
+[data-true] svg {
+  display: block;
+  overflow: visible;
+}
+
+@media (forced-colors: active) {
+  [data-true] {
+    display: none;
+  }
+}
+
+[data-wire] .wc {
+  position: absolute;
+  left: 0;
+  top: 0;
+  padding: 0 0.35em;
+  font: 400 max(11px, 0.35em) / 1.5 var(--mono);
+  color: #3f5195;
+  background: #f3f5f8;
+  white-space: nowrap;
+}
+
+@media (forced-colors: active) {
+  [data-wire] {
+    display: none;
+  }
 }
 
 /* Jelly: JellyBox's optics under a hovered row, clipped to the row's own rules; or its skin, as a capsule */

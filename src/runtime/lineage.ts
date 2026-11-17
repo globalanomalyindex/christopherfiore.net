@@ -29,11 +29,15 @@ import { HUES, mix, pickNot } from './band.ts';
 import { ALT, mulberry, step2, step4, type Edge, type Letter } from './ink.ts';
 import { setLineage, type Hot, type Lineage, type Look } from './buttons.ts';
 import { jellyFor, jellyOptics } from './jx.ts';
+// the dress rides in this chunk: every pointer hover's shape, wire and Chickpea's Cut
+import './dress.ts';
 
 declare global {
   interface Window {
     __lin?: { force(name: string | null): void; seed(n: number): void; state(): unknown; fits(kind: string): string[] };
     __linQuiet?: boolean;
+    /** the checks: hold the deck still but let the dress deal */
+    __linHold?: boolean;
   }
 }
 
@@ -121,13 +125,14 @@ function kindOf(b: HTMLElement): string {
 
 const jellyFits = (h: Hot) => cap(h).h >= 28 && !!jellyOptics();
 
+/** At entry: the card this hover will play at the dwell (the hover is dressed instead when it is null). */
 function deal(h: Hot): string | null {
   const now = performance.now();
   const b = h.b;
   const own = b.getAttribute('data-lin');
   let fx: string | null = null;
   // the checks hold the deck still while they measure the glitch itself
-  if (window.__linQuiet && !forced) return null;
+  if ((window.__linQuiet || window.__linHold) && !forced) return null;
   if (forced) fx = forced;
   else if (own) fx = own;
   else if (lastLin || now - linEnd < 1500) fx = null;
@@ -156,10 +161,16 @@ function deal(h: Hot): string | null {
       }
     }
   }
-  if (!own) lastLin = !!fx;
-  byBtn.set(b, { t: now, fx });
-  if (fx && !own) showCredit(CREDIT[fx], now);
   return fx;
+}
+
+/** The card is played: the cooldown, the repeat and the credit count from now. */
+function show(h: Hot): void {
+  const now = performance.now();
+  const own = h.b.hasAttribute('data-lin');
+  if (!own) lastLin = !!h.fx;
+  byBtn.set(h.b, { t: now, fx: h.fx });
+  if (h.fx && !own) showCredit(CREDIT[h.fx], now);
 }
 
 /* ------------------------------------------------------------ the credit */
@@ -413,7 +424,15 @@ function cut(h: Hot): void {
   if (h.fx === 'jelly') jellyFor(h, cap(h), -2);
 }
 
-const api: Lineage = { deal, look, tick, leave, cut };
+const api: Lineage = { deal, show, look, tick, leave, cut };
+
+/** The dress's Cut shows its own credit, through the same element. */
+export function creditFor(text: string, now: number): void {
+  showCredit(text, now);
+}
+export function creditOff(now: number, t0: number): void {
+  creditUntil = Math.max(now + 900, t0 + 220 + 1600);
+}
 setLineage(api);
 
 window.__lin = {

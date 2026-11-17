@@ -202,6 +202,8 @@ try {
   /* ------------------------------------------------------------ every page */
   console.log('\n[pages]');
   const desk = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+  // the dress held at Full and plain: these judge the glitch, lineage and the X themselves
+  await desk.addInitScript(() => (window.__dressQuiet = true));
   // The glitch checks hold the lineage deck still; [lineage] checks the deck itself.
   await desk.addInitScript(() => (window.__linQuiet = true));
   const page = await desk.newPage();
@@ -540,8 +542,9 @@ try {
   const cA = await center(page, btn, 2);
   await page.mouse.move(cA.x, cA.y, { steps: 3 });
   await sleep(80);
+  // a row just left may still be fading its overlay out; only a live one counts
   const aboutOv = await page.evaluate(() =>
-    Array.from(document.querySelectorAll('[data-glitch]')).map((o) => o.textContent),
+    Array.from(document.querySelectorAll('[data-glitch]')).filter((o) => o.style.opacity !== '0').map((o) => o.textContent),
   );
   ok(aboutOv.length === 1 && aboutOv[0] === '+about me/contact...', 'moving straight to another row leaves only one hot', aboutOv.join(' | '));
 
@@ -1454,7 +1457,7 @@ try {
   ok(lit.filter((f) => f.t >= 170).every((f) => FULL.test(f.clip ?? '') && f.st === 2), 'all of it, both strips too, by 150ms', JSON.stringify(lit.find((f) => f.t >= 170 && !(FULL.test(f.clip ?? '') && f.st === 2))));
   ok(lit[0] && lit[0].alt.length > 0 && Math.max(...lit[0].alt) < lit[0].n / 2, 'the letters flip spreading from where the pointer came in', JSON.stringify(lit[0]?.alt));
   ok(lit.filter((f) => f.t >= 210).every((f) => f.alt.length === f.n), 'the glitch has landed by 200ms, whatever the label’s length', JSON.stringify(lit.find((f) => f.t >= 210)));
-  ok(after.length > 0 && !after[0].ov && after.filter((f) => f.t - after[0].t >= 120).every((f) => !f.band), 'leaving: the overlay goes in the same frame, the band in one drawing', JSON.stringify(after.slice(0, 3)));
+  ok(after.length > 0 && after.filter((f) => f.t - after[0].t >= 150).every((f) => !f.band && !f.ov), 'leaving: the overlay crossfades back to the resting word and the band takes its one drawing, both gone within 150ms', JSON.stringify(after.filter((f) => f.t - after[0].t >= 150).slice(0, 2)));
   // A sweep: straight from one row to the next within 150ms gets the glitch in two drawings.
   await gp.evaluate(() => document.querySelectorAll('a.row')[3].scrollIntoView({ block: 'center' }));
   await sleep(150);
@@ -1475,6 +1478,8 @@ try {
   {
   console.log('\n[lineage]');
   const lctx = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+  // the dress held at Full and plain: these judge the glitch, lineage and the X themselves
+  await lctx.addInitScript(() => (window.__dressQuiet = true));
   const lp = await lctx.newPage();
   const chunks = [];
   lp.on('request', (q) => {
@@ -1539,6 +1544,13 @@ try {
     return { j, bw: a.offsetWidth, bh: a.offsetHeight, fs: parseFloat(getComputedStyle(a).fontSize), canvas: !!a.querySelector('canvas.jx-row'), tag: inside(box(a.querySelector('.cs span'))), detail: inside(box(a.querySelector('.l'))), reads: window.__jx.reads() };
   }, jrow);
   const jduring = await lp.evaluate(layout);
+  const jsk = await lp.evaluate((s) => {
+    const a = document.querySelector(s);
+    const k = a.querySelector('.jx-row-sk');
+    if (!k) return null;
+    return { d: k.querySelector('.d')?.getAttribute('d'), plates: a.querySelectorAll('[data-plates] .pl').length };
+  }, jrow);
+  ok(jsk && jsk.d === 'M0 0L100 100M100 0L0 100' && jsk.plates >= 3, 'the slab shows its skeleton too, the whole X solid behind the row’s text, every line of it on its own white plate', JSON.stringify(jsk));
   ok(slab.j && slab.canvas && slab.j.x === 3 && slab.j.y === 3 && Math.abs(slab.j.w - (slab.bw - 6)) < 0.5 && Math.abs(slab.j.h - (slab.bh - 6)) < 0.5 && Math.abs(slab.j.r - slab.j.h / 2) < 0.05, 'the +jellybox row plays Jelly as one of JellyBox’s round-ended controls, the row minus 3px on every side, in JellyBox’s own optics', JSON.stringify(slab.j));
   ok(slab.tag && slab.detail && JSON.stringify(jb4) === JSON.stringify(jduring), 'the tag box and the detail lie on the slab, and nothing moves', JSON.stringify([slab.tag, slab.detail]));
   ok(slab.reads.includes(slab.j.pig) && !slab.reads.includes('#136aee') && !slab.reads.includes('#dd3c88'), 'its colour is a JellyBox pigment that holds band ink at 4.5:1 (never lagoon blue or candy pink)', `${slab.j.pig} of ${slab.reads.join(' ')}`);
@@ -1626,6 +1638,232 @@ try {
   await tctx.close();
 
   }
+  /* ------------------------------------------------------- round 4: the dress */
+  {
+  console.log('\n[dress]');
+  const dctx = await browser.newContext({ viewport: { width: 1728, height: 908 } });
+  // the lineage deck held still; the dress deals
+  await dctx.addInitScript(() => (window.__linHold = true));
+  const dp = await dctx.newPage();
+  const dErr = [];
+  dp.on('pageerror', (e) => dErr.push(String(e)));
+  await dp.goto(`${BASE}/`, { waitUntil: 'networkidle' });
+  await settle(dp);
+  await dp.waitForFunction(() => !!window.__dress, null, { timeout: 8000 });
+  const rows = await dp.evaluate(() => [...document.querySelectorAll('.menu a')].map((a) => { const r = a.getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; }));
+  const enter = async (r, x, wait = 420) => {
+    await dp.mouse.move(1600, 880);
+    await sleep(260);
+    await dp.mouse.move(r[0] + x, r[1] - 3);
+    await sleep(260);
+    await dp.mouse.move(r[0] + x, r[1] + r[3] / 2, { steps: 2 });
+    await sleep(wait);
+  };
+  const view = () =>
+    dp.evaluate(() => {
+      const a = document.querySelector('.menu a[data-hot], a.row[data-hot]');
+      if (!a) return null;
+      const st = window.__dress.state(a);
+      const band = a.querySelector('[data-band]');
+      const b = band.getBoundingClientRect();
+      const r = a.getBoundingClientRect();
+      const ov = a.querySelector('[data-glitch]')?.getBoundingClientRect();
+      const rgb = (c) => c.match(/\d+(\.\d+)?/g).slice(0, 3).map(Number);
+      const lum = ([R, G, B]) => [R, G, B].map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }).reduce((s, v, i) => s + v * [0.2126, 0.7152, 0.0722][i], 0);
+      const ink = lum([26, 24, 32]);
+      // every band layer the label's glyphs can touch, against band ink
+      const worst = ov ? Math.min(99, ...[...band.querySelectorAll('[data-k="band"]')].filter((l) => {
+        const q = l.getBoundingClientRect();
+        return q.width > 0 && q.left < ov.right && q.right > ov.left && q.top < ov.bottom && q.bottom > ov.top && getComputedStyle(l).backgroundColor !== 'rgba(0, 0, 0, 0)';
+      }).map((l) => (lum(rgb(getComputedStyle(l).backgroundColor)) + 0.05) / (ink + 0.05))) : null;
+      const chip = a.querySelector('[data-wire] .wc');
+      const cr = chip && getComputedStyle(chip).visibility !== 'hidden' ? chip.getBoundingClientRect() : null;
+      const word = a.querySelector('[data-glitch]')?.getBoundingClientRect();
+      return {
+        st,
+        host: [b.left - r.left, b.top - r.top, b.right - r.right, b.bottom - r.bottom].map((v) => Math.round(v * 10) / 10),
+        strips: [...band.querySelectorAll('.st')].map((s) => s.className).join(' '),
+        ol: band.dataset.ol,
+        worst,
+        chip: cr ? chip.textContent : null,
+        chipHitsLabel: !!(cr && word && cr.left < word.right && cr.right > word.left && cr.top < word.bottom && cr.bottom > word.top),
+        guide: a.querySelector('[data-wire] .wg')?.getAttribute('data-x') ?? null,
+        rowLeft: r.left,
+      };
+    });
+  // Every hover random, the home menu too: twelve seeded hovers of one row.
+  await dp.evaluate(() => window.__ink.seed(11));
+  const seen = [];
+  for (let i = 0; i < 12; i++) {
+    await enter(rows[1], 300);
+    seen.push(await view());
+  }
+  const tuple = (v) => v && v.st && `${v.st.shape}|${v.st.wire}|${v.st.cut}|${v.strips}`;
+  const ts = seen.map(tuple);
+  ok(seen.every((v) => v && v.st), 'every pointer hover of a menu row is dressed', String(ts.filter((t) => !t).length));
+  ok(new Set(ts).size >= 10 && ts.every((t, i) => i === 0 || t !== ts[i - 1]), 'twelve hovers of one menu row: at least ten different, never the same twice running', ts.join(' / '));
+  const sh = seen.map((v) => v.st.shape);
+  ok(new Set(sh.slice(0, 4)).size === 4 && new Set(sh.slice(4, 8)).size === 4, 'its shapes come from a deck: all four in each round of four', sh.join(' '));
+  ok(seen.every((v) => v.worst == null || v.worst >= 4.5), 'every surface the label touches holds band ink at 4.5:1, whatever the shape and the Cut', seen.map((v) => v.worst?.toFixed(2)).join(' '));
+  // Each shape: it always holds the whole label, it follows the cursor, and nothing moves.
+  const holds = () =>
+    dp.evaluate(() => {
+      const a = document.querySelector('.menu a[data-hot]');
+      const b = a.querySelector('[data-band]').getBoundingClientRect();
+      const w = a.querySelector('[data-word]').getBoundingClientRect();
+      return b.left <= w.left + 0.5 && b.right >= w.right - 0.5 && b.top <= w.top + 0.5 && b.bottom >= w.bottom - 0.5;
+    });
+  for (const shape of ['full', 'reach', 'ratio', 'tall']) {
+    await dp.evaluate((s) => window.__dress.force({ shape: s, dress: 'wire' }), shape);
+    await dp.mouse.move(1600, 880);
+    await sleep(300);
+    const b4 = await dp.evaluate(layout);
+    await enter(rows[2], 528, 120);
+    const mid = await dp.evaluate(layout);
+    const heldMid = await holds();
+    await sleep(400);
+    const v = await view();
+    const heldEnd = await holds();
+    const after = await dp.evaluate(layout);
+    const same = JSON.stringify(b4) === JSON.stringify(mid) && JSON.stringify(b4) === JSON.stringify(after);
+    const W = rows[2][2];
+    const R = W + v.host[2];
+    const land =
+      shape === 'full' ? JSON.stringify(v.host) === '[0,0,0,0]' :
+      shape === 'reach' ? Math.abs(R - 560) <= 1 :
+      shape === 'ratio' ? Math.abs(R - W / 2) <= 1 :
+      v.host[1] < 0 && v.host[3] > 0;
+    ok(land && same && heldMid && heldEnd, `${shape}: it lands where the cursor puts it, holds the whole label, and no layout box moves`, JSON.stringify([v.host, same, heldMid, heldEnd]));
+  }
+  // Reach follows the cursor, a cell at a time.
+  await dp.evaluate(() => window.__dress.force({ shape: 'reach', dress: 'plain' }));
+  await enter(rows[1], 500);
+  const r0 = (await view()).host[2];
+  await dp.mouse.move(rows[1][0] + 760, rows[1][1] + rows[1][3] / 2, { steps: 4 });
+  await sleep(450);
+  const r1 = (await view()).host[2];
+  ok(Math.abs(r1 - r0 - 260) <= 20 && Math.abs((rows[1][2] + r1) / 20 - Math.round((rows[1][2] + r1) / 20)) * 20 < 0.6, 'Reach follows the cursor: 260px further, its edge moves 260px, on the cell grid', JSON.stringify([r0, r1]));
+  // The wire: the guide on the cursor, a chip clear of the label, and Chickpea's names for the canon ratios.
+  await dp.evaluate(() => window.__dress.force({ shape: 'full', dress: 'wire' }));
+  await enter(rows[1], 528);
+  const w1 = await view();
+  const gx = w1.guide != null ? +w1.guide : null;
+  ok(gx != null && Math.abs(gx - 528) <= 1, 'the guide sits on the cursor', String(gx));
+  const skel = await dp.evaluate(() => {
+    const a = document.querySelector('.menu a[data-hot]');
+    const r = a.querySelector('[data-wire] .wf rect');
+    const d = a.querySelector('[data-wire] .wf .wx').getAttribute('d');
+    const x0 = +r.getAttribute('x');
+    const y0 = +r.getAttribute('y');
+    const x1 = x0 + +r.getAttribute('width');
+    const y1 = y0 + +r.getAttribute('height');
+    const n = (d.match(/-?[\d.]+/g) ?? []).map(Number);
+    const near = (p, q) => Math.abs(p - q) < 1.01;
+    return n.length === 8 && near(n[0], x0) && near(n[1], y0) && near(n[2], x1) && near(n[3], y1) && near(n[4], x1) && near(n[5], y0) && near(n[6], x0) && near(n[7], y1);
+  });
+  ok(skel, 'the wire is a skeleton: its box, and an X joining its opposite corners');
+  const behind = await dp.evaluate(() => {
+    const a = document.querySelector('.menu a[data-hot]');
+    const r = a.getBoundingClientRect();
+    const bars = [...a.querySelectorAll('[data-plates] .pl')];
+    const ov = a.querySelector('[data-glitch]').getBoundingClientRect();
+    const covers = bars.some((b) => { const q = b.getBoundingClientRect(); return q.left <= ov.left + 1 && q.right >= ov.left + 40 && getComputedStyle(b).backgroundColor === 'rgb(255, 255, 255)'; });
+    const inside = bars.every((b) => { const q = b.getBoundingClientRect(); return q.top >= r.top - 0.5 && q.bottom <= r.bottom + 0.5; });
+    const crosses = [...a.querySelectorAll('[data-plates] .px path')].every((p) => (p.getAttribute('d').match(/M/g) ?? []).length === 8);
+    const dash = getComputedStyle(a.querySelector('[data-wire] .wx')).strokeDasharray;
+    return { bars: bars.length, covers, inside, crosses, dash, on: a.querySelector('[data-plates]').classList.contains('on'), halo: a.hasAttribute('data-halo') };
+  });
+  ok(behind.bars >= 2 && behind.covers && behind.inside && behind.crosses && behind.dash === 'none' && behind.on && !behind.halo, 'the X runs solid behind the type, which sits on white plates inside the row, a "+" on every corner', JSON.stringify(behind));
+  ok(w1.chip && /^1056 × 52 · ½$/.test(w1.chip) && !w1.chipHitsLabel, 'at the middle the chip names it ½, in Chickpea’s words, and never touches the label', JSON.stringify([w1.chip, w1.chipHitsLabel]));
+  await dp.mouse.move(rows[1][0] + 600, rows[1][1] + rows[1][3] / 2);
+  await sleep(60);
+  const w2 = await view();
+  ok(w2.chip === '1056 × 52', 'off a canon ratio, the size alone', String(w2.chip));
+  // The Cut: Chickpea's grid in steps of the page colour, the label in a whole cell.
+  await dp.evaluate(() => window.__dress.force({ shape: 'full', dress: 'cut' }));
+  await enter(rows[1], 520, 500);
+  const c1 = await view();
+  const credit = await dp.evaluate(() => document.querySelector('.lin-credit')?.textContent ?? null);
+  ok(c1.st.cut && c1.st.cells.length >= 2 && c1.worst >= 4.5 && credit === 'from chickpea', 'the Cut tiles the row with Chickpea’s composeGrid, the label’s cell legible, credited "from chickpea"', JSON.stringify([c1.st.cells, c1.worst, credit]));
+  // Leaving: the band and the wire gone fast.
+  await dp.evaluate(() => window.__dress.force({ shape: 'golden', dress: 'wire' }));
+  await enter(rows[1], 300);
+  await dp.mouse.move(1600, 880);
+  await sleep(130);
+  const gone = await dp.evaluate(() => { const a = document.querySelectorAll('.menu a')[1]; return { band: !!a.querySelector('[data-band]'), wire: !!a.querySelector('[data-wire]'), plates: !!a.querySelector('[data-plates]') }; });
+  ok(!gone.band && !gone.wire && !gone.plates, 'leaving, the band, the wire and the plates are gone within a drawing or two', JSON.stringify(gone));
+  // Smooth text: while the glitch lands, no letter jumps; each glides to its place.
+  await dp.evaluate(() => window.__dress.force({ shape: 'full', dress: 'plain' }));
+  await dp.mouse.move(1600, 880);
+  await sleep(300);
+  await dp.evaluate(() => {
+    window.__lx = [];
+    const a = document.querySelectorAll('.menu a')[0];
+    const t0 = performance.now();
+    const tick = () => {
+      const ov = a.querySelector('[data-glitch]');
+      if (ov) window.__lx.push([...ov.children].map((s) => s.getBoundingClientRect().left));
+      if (performance.now() - t0 < 900) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  });
+  await dp.mouse.move(rows[0][0] + 200, rows[0][1] - 3);
+  await dp.mouse.move(rows[0][0] + 200, rows[0][1] + rows[0][3] / 2, { steps: 2 });
+  await sleep(950);
+  const lx = await dp.evaluate(() => window.__lx);
+  let jump = 0;
+  for (let i = 1; i < lx.length; i++) for (let k = 0; k < lx[i].length; k++) if (lx[i - 1][k] != null) jump = Math.max(jump, Math.abs(lx[i][k] - lx[i - 1][k]));
+  const settledX = lx.length > 2 && lx[lx.length - 1].every((x, k) => Math.abs(x - lx[lx.length - 2][k]) < 0.1);
+  ok(lx.length > 10 && jump <= 9 && settledX, 'as letters change face they glide to their places: no letter moves more than 9px between two frames, and all settle', `largest step ${jump.toFixed(1)}px over ${lx.length} frames`);
+  // The true size: whenever the band is not the button's own size, a quiet mark of the true box.
+  const trueView = () =>
+    dp.evaluate(() => {
+      const a = document.querySelector('.menu a[data-hot]');
+      const t = a?.querySelector('[data-true]');
+      if (!t) return null;
+      const r = a.getBoundingClientRect();
+      const s = t.querySelector('svg').getBoundingClientRect();
+      return { mark: t.dataset.true, box: [s.left - r.left, s.top - r.top, s.width - r.width, s.height - r.height].map((v) => Math.round(v)), op: getComputedStyle(t).opacity };
+    });
+  await dp.evaluate(() => window.__ink.seed(23));
+  const trues = [];
+  for (let i = 0; i < 10; i++) {
+    await dp.evaluate(() => window.__dress.force({ shape: 'reach', dress: 'plain' }));
+    await enter(rows[3], 300, 380);
+    trues.push(await trueView());
+  }
+  const marks = trues.map((t) => t?.mark);
+  ok(trues.every((t) => t && JSON.stringify(t.box) === '[0,0,0,0]' && +t.op > 0.4), 'every resizing hover keeps the true size in view, drawn on the button’s own box', JSON.stringify(trues[0]));
+  ok(new Set(marks.slice(0, 5)).size === 5 && new Set(marks.slice(5, 10)).size === 5, 'its marks come from a deck: plus, rule, ticks, wash and dots in each round of five', marks.join(' '));
+  await dp.evaluate(() => window.__dress.force({ shape: 'full', dress: 'plain' }));
+  await enter(rows[3], 300, 380);
+  ok((await trueView()) === null, 'a band at the button’s own size needs no true-size mark');
+  // The keyboard never dresses.
+  await dp.evaluate(() => window.__dress.force(null));
+  await dp.mouse.move(1600, 880);
+  await sleep(300);
+  await dp.keyboard.press('Tab');
+  let kd = null;
+  for (let i = 0; i < 6 && !(kd && kd.menu); i++) {
+    kd = await dp.evaluate(() => { const a = document.activeElement; return { menu: !!a?.closest('.menu'), st: a ? window.__dress.state(a) : 'x' }; });
+    if (!kd.menu) await dp.keyboard.press('Tab');
+  }
+  ok(kd && kd.menu && kd.st === null, 'a row reached by the keyboard is never dressed', JSON.stringify(kd));
+  // A page's rows: Tall only 3px into the gap; the Cut keeps text whole.
+  await dp.goto(`${BASE}/product-designs/`, { waitUntil: 'networkidle' });
+  await settle(dp);
+  await dp.waitForFunction(() => !!window.__dress, null, { timeout: 8000 });
+  await dp.evaluate(() => window.__dress.force({ shape: 'tall', dress: 'cutwire' }));
+  const sr = await dp.evaluate(() => { const a = document.querySelectorAll('a.row:not([data-lin])')[3]; a.scrollIntoView({ block: 'center' }); const q = a.getBoundingClientRect(); return [q.left, q.top, q.width, q.height]; });
+  await sleep(300);
+  await enter(sr, 700, 600);
+  const s1 = await view();
+  const ovs = [-s1.host[1], s1.host[3]];
+  ok(Math.max(...ovs) === 3 && Math.min(...ovs) >= 0.9 && s1.worst >= 4.5 && s1.chip && !s1.chipHitsLabel, 'on a page, Tall reaches 3px into the gap on the cursor’s side, the Cut stays legible, and the chip finds clear space', JSON.stringify([s1.host, s1.worst, s1.chip]));
+  await dp.evaluate(() => window.__dress.force(null));
+  ok(dErr.length === 0, 'the dress throws nothing', dErr.join(' | '));
+  await dctx.close();
+  }
   /* ------------------------------------------------------- round 3: menu hovers */
   {
   console.log('\n[menu hovers]');
@@ -1676,7 +1914,7 @@ try {
   ok(seen.every((v) => [0, 4, 6, 8].includes(v.h1) && [4, 6, 8].includes(v.h2)) && seen.some((v) => v.h1 === 0), 'strips are 4, 6 or 8px, the top one now and then left out', seen.map((v) => `${v.h1}/${v.h2}`).join(' '));
   ok(seen.every((v) => (!v.t || (v.t[0] === 0 && Math.abs(v.t[1] / v.cell - Math.round(v.t[1] / v.cell)) < 0.01)) && Math.abs(v.b[0] / v.cell - Math.round(v.b[0] / v.cell)) < 0.01 && Math.abs(v.b[1] - v.bw) < 0.5 && v.t?.[1] !== v.bw), 'coming in from above, the top strip runs from the left rule to the entry and the bottom one on to the right rule, on the mono cell', JSON.stringify(seen.map((v) => [v.t, v.b])));
   const figs = seen.map((v) => v.fig);
-  ok(figs.filter(Boolean).length >= 2 && figs.filter(Boolean).length <= 6 && figs.every((f, i) => !(f && figs[i - 1])), 'the figure’s cell fills now and then, never twice running', figs.map((f) => (f ? 'F' : '.')).join(''));
+  ok(figs.filter(Boolean).length === 4 && figs.every((f, i) => !(f && figs[i - 1])), 'the figure’s cell fills one hover in three, dealt from a deck, never twice running', figs.map((f) => (f ? 'F' : '.')).join(''));
   ok(seen.every((v) => !v.foreign), 'no strip ever takes another page’s colour');
   // The keyboard: the end frame at once, strips the full width.
   await np.keyboard.press('Tab');
@@ -1710,6 +1948,8 @@ try {
     requestAnimationFrame(tick);
   };
   const xctx = await browser.newContext({ viewport: { width: 1728, height: 908 } });
+  // the dress held at Full and plain: these judge the glitch, lineage and the X themselves
+  await xctx.addInitScript(() => (window.__dressQuiet = true));
   const xp = await xctx.newPage();
   const xchunks = [];
   xp.on('request', (q) => {
@@ -1802,6 +2042,11 @@ try {
   const fill = Math.min(size.cw, size.ch) - 7;
   ok(hov.body && Math.abs(hov.body.w - fill) < 0.5 && Math.abs(hov.body.h - fill) < 0.5 && Math.abs(hov.body.r - fill / 2) < 0.5, 'hovered, the disc swells to fill the box, still a disc, 3.5px inside the rules', JSON.stringify([hov.body, fill]));
   ok(hov.chip === size.chip, 'and nothing outside the box moves');
+  const sk = await xp.evaluate(() => {
+    const s = document.querySelector('a.jx .jx-sk');
+    return s ? { op: getComputedStyle(s).opacity, d: s.querySelector('.d')?.getAttribute('d') } : null;
+  });
+  ok(sk && +sk.op === 1 && sk.d === 'M0 0L100 100M100 0L0 100', 'hovered, the box shows its skeleton: its box and an X joining opposite corners, along the X’s own strokes', JSON.stringify(sk));
   await xp.mouse.move(900, 700);
   await sleep(700);
   const back = await xp.evaluate(() => window.__jx.body());

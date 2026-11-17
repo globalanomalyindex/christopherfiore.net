@@ -26,9 +26,11 @@
  *   span     the top strip runs from the left rule to where the pointer came
  *            in, the bottom strip from there to the right rule, snapped to the
  *            mono cell; coming in from a side, both run the full width
- *   weight   each strip 4, 6 or 8px; the top strip missing one hover in four
- *   figure   one hover in three, never twice running, the figure's own cell
- *            fills in a paler step of the page colour, at 100ms
+ *   weight   each strip 4, 6 or 8px; the top strip missing one hover in four,
+ *            dealt from the row's own deck of four
+ *   figure   one hover in three, dealt from a deck of three so it is never
+ *            twice running, the figure's own cell fills in a paler step of
+ *            the page colour, at 100ms
  *   colour   the strips never take another page's colour
  * and the same row never draws the same hover twice running.
  */
@@ -61,8 +63,12 @@ function inkSeed(): number {
     return (Math.random() * 2 ** 31) | 0;
   }
 }
-let mrng = mulberry(inkSeed() ^ (location.pathname.length * 40503));
-const lastMenu = new Map<string, { key: string; fig: boolean }>();
+const visitSeed = inkSeed();
+let mrng = mulberry(visitSeed ^ (location.pathname.length * 40503));
+const lastMenu = new Map<string, { key: string; fig: boolean; figs: boolean[]; fp: number; tops: boolean[]; tp: number }>();
+/** The visit's seed for every button's own decks (`dress.ts`); `v` moves when a check reseeds. */
+let base = { seed: visitSeed, v: 0 };
+export const inkBase = (): { seed: number; v: number } => base;
 
 declare global {
   interface Window {
@@ -73,6 +79,7 @@ window.__ink = {
   seed(n) {
     mrng = mulberry(n);
     lastMenu.clear();
+    base = { seed: n, v: base.v + 1 };
   },
 };
 
@@ -126,14 +133,38 @@ export interface Plan {
   m: MenuDraw | null;
 }
 
-const strip = (pools: readonly (readonly string[])[], main: string): string => {
-  for (let n = 0; n < 40; n++) {
+const lumOf = (hex: string): number =>
+  [1, 3, 5]
+    .map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+    .map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4))
+    .reduce((s, v, i) => s + v * [0.2126, 0.7152, 0.0722][i], 0);
+/** Does this colour hold band ink at 4.5:1? A strip the label's letters can reach must. */
+export const holdsInk = (hex: string): boolean => (lumOf(hex) + 0.05) / (lumOf(DARK_INK) + 0.05) >= 4.5;
+
+const strip = (pools: readonly (readonly string[])[], main: string, legible: boolean): string => {
+  for (let n = 0; n < 60; n++) {
     const pool = pools[(mrng() * pools.length) | 0];
     const c = pool[(mrng() * pool.length) | 0];
-    if (c !== main && !PAGE_HUES.includes(c)) return c;
+    if (c !== main && !PAGE_HUES.includes(c) && (!legible || holdsInk(c))) return c;
   }
-  return '#3A3742';
+  return '#E2E7E9';
 };
+
+/** A strip colour from the usual pools, held to band ink when the label can reach it. */
+const plainStrip = (pools: readonly (readonly string[])[], main: string, legible: boolean): string => {
+  for (let n = 0; n < 60; n++) {
+    const c = pickNot(pick(pools), main);
+    if (!legible || holdsInk(c)) return c;
+  }
+  return '#E2E7E9';
+};
+
+/** The label's line box in the button, px: a strip reaching into it must hold band ink. */
+export interface LabelBox {
+  bh: number;
+  top: number;
+  bottom: number;
+}
 
 /** A menu row's hover, from the visit's stream. Never the same as this row's last one. */
 function menuDraw(label: string, main: string, edge: Edge, g: MenuGeo, instant: boolean): MenuDraw {
@@ -141,12 +172,37 @@ function menuDraw(label: string, main: string, edge: Edge, g: MenuGeo, instant: 
   const side = instant || edge === 'l' || edge === 'r';
   const at = Math.max(0, Math.min(g.bw, Math.round(g.px / g.cell) * g.cell));
   const W = [4, 6, 8];
+  // the figure cell from the row's own deck of three: one in three, never twice running
+  let figs = prev?.figs ?? [];
+  let fp = prev?.fp ?? 0;
+  if (fp >= figs.length) {
+    figs = [true, false, false];
+    for (let i = 2; i > 0; i--) {
+      const j = (mrng() * (i + 1)) | 0;
+      [figs[i], figs[j]] = [figs[j], figs[i]];
+    }
+    if (figs[0] && prev?.fig) [figs[0], figs[1]] = [figs[1], figs[0]];
+    fp = 0;
+  }
+  const card = figs[fp++];
+  // the top strip from a deck of four: missing one hover in four
+  let tops = prev?.tops ?? [];
+  let tp = prev?.tp ?? 0;
+  if (tp >= tops.length) {
+    tops = [false, true, true, true];
+    for (let i = 3; i > 0; i--) {
+      const j = (mrng() * (i + 1)) | 0;
+      [tops[i], tops[j]] = [tops[j], tops[i]];
+    }
+    tp = 0;
+  }
+  const topOn = tops[tp++];
   let d: MenuDraw | null = null;
   let key = '';
   for (let n = 0; n < 12; n++) {
-    const top = mrng() < 0.25 ? 0 : W[(mrng() * 3) | 0];
+    const top = topOn ? W[(mrng() * 3) | 0] : 0;
     const bot = W[(mrng() * 3) | 0];
-    const fig = !!g.fig && !prev?.fig && mrng() < 1 / 3;
+    const fig = !!g.fig && card;
     key = `${top}|${bot}|${fig ? 1 : 0}|${side ? 's' : at}`;
     d = {
       s1: top ? (side ? [0, g.bw] : [0, at]) : null,
@@ -158,7 +214,7 @@ function menuDraw(label: string, main: string, edge: Edge, g: MenuGeo, instant: 
     };
     if (key !== prev?.key) break;
   }
-  lastMenu.set(label, { key, fig: !!d!.fig });
+  lastMenu.set(label, { key, fig: !!d!.fig, figs, fp, tops, tp });
   return d!;
 }
 
@@ -172,9 +228,16 @@ let lastHue = '';
  * came in, 0 to 1. `menu` is a menu row's geometry: its hover keeps its page
  * colour and draws the rest from the visit's stream.
  */
-export function plan(label: string, hue: string | null, edge: Edge, entry: number, warm: boolean, menu: MenuGeo | null = null, instant = false): Plan {
+export function plan(label: string, hue: string | null, edge: Edge, entry: number, warm: boolean, menu: MenuGeo | null = null, instant = false, lab: LabelBox | null = null): Plan {
   const main = hue ?? (lastHue = pickNot(HUES, lastHue));
   const m = menu && hue ? menuDraw(label, main, edge, menu, instant) : null;
+  const h1 = 2 + Math.random() * 6;
+  const h2 = 2 + Math.random() * 6;
+  // would the top or bottom strip reach the label's letters?
+  const t1 = m ? m.h1 : (h1 / 100) * (lab?.bh ?? 0);
+  const t2 = m ? m.h2 : (h2 / 100) * (lab?.bh ?? 0);
+  const reachTop = !!lab && t1 > lab.top;
+  const reachBottom = !!lab && lab.bh - t2 < lab.bottom;
   const chars = Array.from(label + tail(label));
   const n = Array.from(label).length;
   const letters: number[] = [];
@@ -188,10 +251,10 @@ export function plan(label: string, hue: string | null, edge: Edge, entry: numbe
   return {
     label,
     main,
-    acc: m ? strip(SPARK_ACCENT, main) : pickNot(pick(SPARK_ACCENT), main),
-    lit: m ? strip(SPARK_LIGHTS, main) : pickNot(pick(SPARK_LIGHTS), main),
-    h1: 2 + Math.random() * 6,
-    h2: 2 + Math.random() * 6,
+    acc: m ? strip(SPARK_ACCENT, main, reachTop) : plainStrip(SPARK_ACCENT, main, reachTop),
+    lit: m ? strip(SPARK_LIGHTS, main, reachBottom) : plainStrip(SPARK_LIGHTS, main, reachBottom),
+    h1,
+    h2,
     twin: mix(main, DARK_INK, 0.42),
     chars,
     n,

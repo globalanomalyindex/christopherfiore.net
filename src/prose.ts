@@ -324,6 +324,9 @@ const backX = (back: Back, hue: string): Html =>
     // the pin: where home's "+" is, which the box's centre is not; the mono "+" sits on it
     h('span', { class: 'jx-pin', 'aria-hidden': 'true' }, h('span', { class: 'jx-plus' }, '+')),
     h('svg', { class: 'jx-x', viewBox: '0 0 256 256', 'aria-hidden': 'true', focusable: 'false' }, h('path', { d: X_PATH })),
+    // the skeleton, shown on hover: the box and an X joining its opposite corners,
+    // which run along the X's own strokes, since the box is all but square
+    h('svg', { class: 'jx-sk', viewBox: '0 0 100 100', preserveAspectRatio: 'none', 'aria-hidden': 'true', focusable: 'false' }, h('rect', { x: '0', y: '0', width: '100', height: '100' }), h('path', { class: 'd', d: 'M0 0L100 100M100 0L0 100' })),
   );
 
 /**
