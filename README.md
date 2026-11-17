@@ -107,8 +107,9 @@ the magnet has leaned it.
 What runs where:
 
 - **Band and glitch:** every link, on hover, keyboard focus and touch. The
-  four home menu rows flood in their own page colors. Every other button
-  draws from the color wheel. The back button has its own behavior (below).
+  home menu rows and the pages block flood in their own page colors and vary
+  everything else (below). Every other button draws from the color wheel. The
+  back button has its own behavior (below).
 - **Press:** every link. A button 480px wide or less goes to `scale: .97` in
   80ms, and a wide row scales only its label, to .985. The outline thickens
   to 3px and the strips double. Let go and it springs back in 220ms.
@@ -134,6 +135,21 @@ a smooth tween (`runtime/ink.ts`). One hover:
 
 Keyboard focus and touch get the end frame at once. So does reduced motion.
 
+**Menu rows** (the home menu and every page's pages block) always flood in
+their page's color, since that color says which page the row opens. So every
+other part of the hover changes, drawn from the visit's own seeded stream:
+
+- the top strip runs from the left rule to where the pointer came in, and the
+  bottom strip from there to the right rule, both snapped to the mono cell.
+  Coming in from a side, or by the keyboard, both run the full width
+- each strip is 4, 6 or 8px, and the top one is missing one hover in four
+- one hover in three, never twice running, the figure's own cell (17, 20,
+  say hi, pdf) fills in a paler step of the page color, at 100ms
+- the strips never take another page's color
+- the same row never draws the same hover twice running
+
+`window.__ink.seed(n)` replays the stream, for the checks.
+
 ## Lineage
 
 Some hovers play a native translation of an effect from one of his past
@@ -146,7 +162,7 @@ moves.
 | Mark | lee | the band shrinks into a quiet mark, then the label is underlined |
 | Decode | after tokens | the letters run through `+=-:.` and settle |
 | Knockout | the motion archive | ink spreads out from the pointer, then blinks |
-| Jelly | jellybox | the band closes into a JellyBox capsule, drawn by its real optics |
+| Jelly | jellybox | the band closes into one of JellyBox's round-ended controls, the whole row 3px in, drawn by its real optics |
 | Shear | mfny concentrates | the band is cut by slanted wipes 50ms apart |
 | Bayer | dither | the band dithers through a 4 by 4 Bayer pattern under the pointer |
 | Canister | scream canister controls | the band squashes and pops, with a late letter |
@@ -154,10 +170,12 @@ moves.
 - **The deck.** Twelve cards: Mark 3, Decode 2, Knockout 2, Jelly 2, and one
   each of Shear, Bayer and Canister. It is shuffled once a visit
   (`sessionStorage` `ps-lin`) and only deals cards that fit the button: a row
-  takes any, a home menu row takes Decode, Jelly or Canister, a sentence link
-  Mark, Decode or Jelly, a chip Mark or Decode. Jelly needs the optics loaded
-  and a button at least 32px tall. Home has no X, so it never loads the
-  optics and never deals Jelly.
+  takes any, a menu row Decode or Canister, a sentence link Mark, Decode or
+  Jelly, a chip Mark or Decode. A menu row never gets Jelly, because Jelly
+  trades the row's color for the nearest JellyBox pigment. Jelly needs the
+  optics loaded and a row at least 34px tall. Its pigment is always one that
+  holds band ink at 4.5:1. Home has no X, so it never loads the optics and
+  never deals Jelly.
 - **The odds.** A project's own row always plays its own effect (`data-lin`).
   Otherwise 1 hover in 4 deals a card, never within 1.5s of the last effect,
   and a hover back on the same button within 4s replays what it played.
@@ -173,7 +191,9 @@ moves.
 ## The back button
 
 Every subpage's back link is an X from JellyBox, taken from JellyBox itself,
-in its own ledger box where the "+" sits on home.
+in its own ledger box: the whole gutter, 72 by 73 at his laptop, ruled above,
+below and on the right. The box's centre is 0.15em left of home's "+", so a
+pin (`.jx-pin`) marks where the "+" is, and the film anchors there.
 
 - **Real JellyBox.** On a desktop it is drawn by JellyBox's own renderer,
   copied into `src/vendor/jellybox/` (three.js physical glass with its
@@ -183,16 +203,28 @@ in its own ledger box where the "+" sits on home.
 - **Color.** Each page draws the next of JellyBox's ten pigments from a bag
   shuffled once a visit. It skips a pigment too close to the page's chip, so
   there is never a yellow X beside a yellow title.
-- **Entrance.** Until it enters, the box holds the mono "+", the same as home.
-  It enters with the site's glitch as a curtain, then the X pops in at 45
-  degrees, a "+" turned, on JellyBox's own springs (from its `pocket.js`):
-  it overshoots to 1.044 and turns back past 0 by 8 degrees before settling.
+- **Size.** A 1.5em disc (60px at his laptop) and a 0.7em X (28px).
+- **Entrance.** Until it enters, the box holds the mono "+" on the pin, the
+  same as home. It enters with the site's glitch as a curtain, which closes to
+  a dot on the pin, then the X pops in at 45 degrees, a "+" turned, on
+  JellyBox's own springs (from its `pocket.js`): it travels to the box's centre,
+  overshoots to 1.044 and turns back past 0 by 8 degrees before settling.
   Back and forward, and reduced motion, show the X at once. If the script
   never arrives, the gate gives the X back at 3s.
-- **Leaving.** The X turns back to 45 degrees, then the mono "+" is back for
-  the film to close onto.
 - **Hover** is JellyBox's own highlight and pressed pigments, not the band.
-- On a phone the box is 44px and sits in the header row's flow.
+  The disc swells to fill the box, still a disc, 3.5px inside the rules, on
+  JellyBox's shape spring, and its lean eases off so it never touches a rule.
+- **Closing, going back up** (home, or a case study to product designs). The
+  film holds its cover 100ms and then closes in from the far corner, so the
+  box is the last thing it covers. Until then the entrance plays backwards,
+  faster: the jelly collapses onto the pin as the X turns to 45 degrees
+  (100ms), the band takes the dot, opens over the box in drawings while the
+  "+" lands in the mono, and leaves in one drawing. At 300ms the box is the
+  floor and the mono "+", exactly home's, and the film's last cells close
+  over it.
+- **Leaving any other way** (the film opens out of the "+" and covers the box
+  at once): the X goes back to the pin at 45 degrees, then the mono "+".
+- On a phone the box is 48px square and sits in the header row's flow.
 
 ## The morph
 
@@ -223,8 +255,9 @@ of the page first.
   back.
 - **The anchor is always on screen.** Home's anchor is his "+". On a subpage
   the same cell holds the JellyBox X, one level up: home, or product designs
-  from a case study. During the film the cell shows a "+" (`data-glyph`), and
-  a ghost of the X's box sits on the film. The header row sticks to the top
+  from a case study. During the film the cell shows a "+" (`data-glyph`) on
+  the box's pin, and a ghost of the X's box sits on the film. Going up, the
+  ghost waits until the front reaches the box, so the X's closing shows. The header row sticks to the top
   of the window, so the film can start from the X however far down the page
   you are.
 - **Glyphs.** Five marks, `+ = - : .`, then blank. "+" is the edge that
@@ -323,7 +356,10 @@ npm run check:site
 The script uses system Chrome, and Playwright's WebKit if it is installed
 (`npx playwright install webkit`). WebKit is the engine under every iPhone
 browser, and it runs the phone checks, the film and the frame. `BASE=https://christopherfiore.net npm run check:site`
-runs it against the live site. It checks:
+runs it against the live site. `CHROME_ARGS` passes extra switches to Chrome:
+on a laptop at 20% battery or less, Chrome caps every page at 30fps, and
+`CHROME_ARGS=--disable-frame-rate-limit` lifts the cap so the 60fps checks
+measure the film rather than the battery. It checks:
 
 - every page and link, the sitemap and the 404, and that the copy has no em
   or en dashes and uses American spelling
@@ -341,10 +377,18 @@ runs it against the live site. It checks:
   project's own row playing its own effect, every effect's layers and credit,
   zero reflow while it plays, nothing left behind after leaving, and the
   cooldown
-- the back button: the "+" before its entrance, the glitch curtain, the X
-  popping in at 45 degrees and settling, JellyBox's three.js renderer on a
-  desktop and its CSS skin on a phone, the color bag and its skip list,
-  leaving, reduced motion and scripts off
+- the back button: the box filling the gutter, the pin on home's "+", the
+  60px disc and 28px X, the "+" before its entrance, the glitch curtain, the
+  X popping in on the pin at 45 degrees and settling, the hover swelling to
+  fill the box as a disc, the closing into the "+" going up, JellyBox's
+  three.js renderer on a desktop and its CSS skin in a 48px box on a phone,
+  the color bag and its skip list, leaving, reduced motion and scripts off
+- menu hovers: twelve seeded hovers of one row are at least eight different
+  and never the same twice running, in the page's own color, with strips of
+  4, 6 or 8px from the entry point, the figure cell now and then, no other
+  page's color, and full-width strips for the keyboard
+- Jelly on a row: the whole row 3px in with round ends, the tag and detail on
+  it, a readable pigment, gone at once on leaving, never on a menu row
 - the lineage films: Bayer and Figures frames, Coalesce, the variant carried
   to the next page, and a plain film first
 - the morph:
@@ -390,7 +434,7 @@ em.
 |---|---|---|
 | 1728 and wider | 40px at 1728, then a third as fast, to 48px at 2765 | his laptop, from his screenshot. The page stays left-aligned and the hairlines keep running to the right edge. |
 | 691 to 1728 | the width over 43.2: 33.3px at 1440, 22.2px at 960 | the window is always 86.4 columns, 80 of them content, so nothing rewraps |
-| 690 and under | 16px | rows stack: the name, then the detail under it. The "+" moves to one column from the edge. The total takes its own line and only the title line sticks. The back X is a 44px box in the header row. Paintings go two a row. |
+| 690 and under | 16px | rows stack: the name, then the detail under it. The "+" moves to one column from the edge. The total takes its own line and only the title line sticks. The back X is a 48px box in the header row. Paintings go two a row. |
 | 480 and under | 16px | one painting a row, each at its own shape |
 
 On touch, every link is at least 44px tall: rows and cells grow to it, and

@@ -26,13 +26,13 @@
  */
 
 import { HUES, mix, pickNot } from './band.ts';
-import { ALT, step2, step4, type Letter } from './ink.ts';
+import { ALT, mulberry, step2, step4, type Edge, type Letter } from './ink.ts';
 import { setLineage, type Hot, type Lineage, type Look } from './buttons.ts';
 import { jellyFor, jellyOptics } from './jx.ts';
 
 declare global {
   interface Window {
-    __lin?: { force(name: string | null): void; seed(n: number): void; state(): unknown };
+    __lin?: { force(name: string | null): void; seed(n: number): void; state(): unknown; fits(kind: string): string[] };
     __linQuiet?: boolean;
   }
 }
@@ -54,8 +54,10 @@ export const CREDIT: Record<string, string> = {
 const DECK = ['mark', 'mark', 'mark', 'decode', 'decode', 'knockout', 'knockout', 'jelly', 'jelly', 'shear', 'bayer', 'canister'];
 const FITS: Record<string, string[]> = {
   row: ['mark', 'decode', 'knockout', 'jelly', 'shear', 'bayer', 'canister'],
-  // a button with its own fixed colour: the home menu, the pages rows
-  menu: ['decode', 'jelly', 'canister'],
+  // a button with its own page colour: the home menu, the pages rows. Never
+  // Jelly: it trades the row's colour for JellyBox's nearest pigment, and a
+  // menu row's colour has to say which page it opens.
+  menu: ['decode', 'canister'],
   inline: ['mark', 'decode', 'jelly'],
   chip: ['mark', 'decode'],
 };
@@ -67,16 +69,6 @@ interface Visit {
   seed: number;
   round: number;
   pos: number;
-}
-
-function mulberry(a: number): () => number {
-  return () => {
-    a |= 0;
-    a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
 }
 
 function load(): Visit {
@@ -127,7 +119,7 @@ function kindOf(b: HTMLElement): string {
   return 'row';
 }
 
-const jellyFits = (h: Hot) => h.geo.bh - 4 >= 28 && !!jellyOptics();
+const jellyFits = (h: Hot) => cap(h).h >= 28 && !!jellyOptics();
 
 function deal(h: Hot): string | null {
   const now = performance.now();
@@ -254,20 +246,44 @@ function copyOf(h: Hot, clip: string): void {
   if (kc.getAttribute('style') !== want) kc.setAttribute('style', want);
 }
 
-function capsule(h: Hot) {
+/**
+ * Where Jelly lies. On a row it is the row's own surface: one of JellyBox's
+ * round-ended controls, 3px inside all four edges, under the name, the tag and
+ * the detail. A link in a sentence is only its word, so there it is the word's.
+ */
+function cap(h: Hot): { x: number; y: number; w: number; h: number; r: number } {
   const g = h.geo;
-  const l = g.wl - 0.375 * g.fs;
-  const r = g.wl + g.ww + 0.375 * g.fs;
-  return { x: l, y: 2, w: r - l, h: g.bh - 4 };
+  if (h.b.classList.contains('in')) {
+    const l = g.wl - 0.375 * g.fs;
+    const r = g.wl + g.ww + 0.375 * g.fs;
+    return { x: l, y: 2, w: r - l, h: g.bh - 4, r: (g.bh - 4) / 2 };
+  }
+  return { x: 3, y: 3, w: g.bw - 6, h: g.bh - 6, r: (g.bh - 6) / 2 };
+}
+
+/** The slab's rect as a clip, shrunk to `v` of itself toward `edge`: the band's one drawing exit, from the slab. */
+function slabClip(h: Hot, c: ReturnType<typeof cap>, v: number, edge: Edge): string {
+  const g = h.geo;
+  let [t, r, b, l] = [c.y, g.bw - c.x - c.w, g.bh - c.y - c.h, c.x];
+  const cutW = c.w * (1 - v);
+  const cutH = c.h * (1 - v);
+  if (edge === 'l') r += cutW;
+  else if (edge === 'r') l += cutW;
+  else if (edge === 't') b += cutH;
+  else t += cutH;
+  return `inset(${t.toFixed(1)}px ${r.toFixed(1)}px ${b.toFixed(1)}px ${l.toFixed(1)}px round ${c.r.toFixed(1)}px)`;
 }
 
 function look(h: Hot, tau: number): Look {
   const fx = h.fx;
   const g = h.geo;
-  // leaving: Mark's tint stays one drawing; Jelly is handled by `leave`
+  // leaving: Mark's tint stays one drawing; Jelly's slab and cast are cut at
+  // once (`leave`) and the flat band takes the slab's rect for one drawing,
+  // leaving toward the edge the pointer left by
   if (h.out != null) {
-    if (fx === 'mark') return { band: performance.now() - h.t0 - h.out < 50 ? [markBand(h, 1)] : [] };
-    if (fx === 'jelly') return { band: [] };
+    const gone = performance.now() - h.t0 - h.out >= 50;
+    if (fx === 'mark') return { band: gone ? [] : [markBand(h, 1)] };
+    if (fx === 'jelly') return { band: gone ? [] : [{ c: 'bm', s: `position:absolute;inset:0;background:${h.P.main};clip-path:${slabClip(h, cap(h), 0.3, h.exit ?? h.P.edge)}` }] };
     return {};
   }
   switch (fx) {
@@ -363,14 +379,17 @@ function look(h: Hot, tau: number): Look {
       return { extra };
     }
     case 'jelly': {
-      const c = capsule(h);
+      // 0: strips and outline cut, the band 70% of the way in; 50: the band is
+      // the slab's rect; 100: the cut, the slab takes it; then its floor and
+      // cast open in thirds
+      const c = cap(h);
       if (tau < 100) {
         const q = step2(tau);
         const r = g.bw - c.x - c.w;
         const bot = g.bh - c.y - c.h;
         return {
           outline: false,
-          band: [{ c: 'bm', s: `position:absolute;inset:0;background:${h.P.main};clip-path:inset(${(2 * q).toFixed(1)}px ${(r * q).toFixed(1)}px ${(bot * q).toFixed(1)}px ${(c.x * q).toFixed(1)}px round ${((c.h / 2) * q).toFixed(1)}px)` }],
+          band: [{ c: 'bm', s: `position:absolute;inset:0;background:${h.P.main};clip-path:inset(${(c.y * q).toFixed(1)}px ${(r * q).toFixed(1)}px ${(bot * q).toFixed(1)}px ${(c.x * q).toFixed(1)}px round ${(c.r * q).toFixed(1)}px)` }],
         };
       }
       const open = tau < 150 ? 0 : tau < 200 ? 1 / 3 : tau < 250 ? 2 / 3 : 1;
@@ -384,14 +403,14 @@ function leave(h: Hot, now: number): void {
   if (h.fx) {
     linEnd = now;
     if (!h.b.hasAttribute('data-lin')) creditUntil = Math.max(now + 900, h.t0 + 220 + 1600);
-    if (h.fx === 'jelly') jellyFor(h, capsule(h), -1);
+    if (h.fx === 'jelly') jellyFor(h, cap(h), -2);
   }
   h.b.querySelectorAll(':scope > [data-k="kc"]').forEach((n) => n.remove());
 }
 
 function cut(h: Hot): void {
   h.b.querySelectorAll(':scope > [data-k="kc"]').forEach((n) => n.remove());
-  if (h.fx === 'jelly') jellyFor(h, capsule(h), -2);
+  if (h.fx === 'jelly') jellyFor(h, cap(h), -2);
 }
 
 const api: Lineage = { deal, look, tick, leave, cut };
@@ -409,4 +428,5 @@ window.__lin = {
     save();
   },
   state: () => ({ seed: visit.seed, round: visit.round, pos: visit.pos, deck: deck.slice(), lastLin, sinceLin: performance.now() - linEnd }),
+  fits: (kind: string) => (FITS[kind] ?? []).slice(),
 };

@@ -398,22 +398,32 @@ code {
 
 /*
   The back button: JellyBox's own X in its own ledger box. One sheet cell,
-  1.5em by the header's height, ruled in ink, in the gutter: its right rule
-  is the content's left edge and its centre is where home's "+" is. Inside
-  the rule JellyBox owns every pixel; the box is JellyBox's floor colour on
-  every path, so nothing shifts when its optics land. It is left out of the
-  magnet: JellyBox has its own lean.
+  the whole gutter by the header's height, ruled in ink above, below and on
+  the right, which is the content's left edge; the window's edge is its
+  left. Its pin is where home's "+" is, 0.15em right of its centre, and the
+  page change anchors there. Inside the rules JellyBox owns every pixel; the
+  box is JellyBox's floor colour on every path, so nothing shifts when its
+  optics land. It is left out of the magnet: JellyBox has its own lean.
 */
 .sub .hd .jx {
   position: absolute;
-  left: 0.3em;
+  left: 0;
   top: 0;
   bottom: 0;
-  width: 1.5em;
+  width: 1.8em;
   box-sizing: border-box;
   background: #f6f7f8;
   border: 1px solid var(--ink);
+  border-left: 0;
   line-height: 1;
+}
+
+.jx .jx-pin {
+  position: absolute;
+  left: calc(var(--x0) + 0.25em);
+  top: 50%;
+  width: 0;
+  height: 0;
 }
 
 /* JellyBox's state pigments, rest, highlighted, pressed (scripts off: glass blue) */
@@ -462,14 +472,15 @@ code {
   z-index: 1;
   left: 50%;
   top: 50%;
-  width: 1.125em;
-  height: 1.125em;
-  margin: -0.5625em 0 0 -0.5625em;
+  width: 1.5em;
+  height: 1.5em;
+  margin: -0.75em 0 0 -0.75em;
   transition: transform 480ms cubic-bezier(0.18, 1.48, 0.32, 1);
 }
 
+/* hovered, the skin swells to fill the box too, still a disc */
 .jx:hover .jx-skin {
-  transform: scale(1.016);
+  transform: scale(1.067);
   transition: transform 420ms cubic-bezier(0.22, 1.12, 0.36, 1);
 }
 
@@ -484,9 +495,9 @@ code {
   z-index: 4;
   left: 50%;
   top: 50%;
-  width: 0.5em;
-  height: 0.5em;
-  margin: -0.25em 0 0 -0.25em;
+  width: 0.7em;
+  height: 0.7em;
+  margin: -0.35em 0 0 -0.35em;
   fill: #000;
   transition: transform 480ms cubic-bezier(0.18, 1.48, 0.32, 1);
 }
@@ -496,15 +507,14 @@ code {
   transition: transform 65ms cubic-bezier(0.32, 0, 0.62, 1);
 }
 
-/* the mono "+": the cell before the entrance, and after the leaving cut */
+/* the mono "+", on the pin: the cell before the entrance, and after the leaving cut */
 .jx .jx-plus {
   position: absolute;
   z-index: 3;
-  left: 0;
-  right: 0;
-  top: 50%;
+  left: -0.5em;
+  top: -0.5em;
+  width: 1em;
   height: 1em;
-  margin-top: -0.5em;
   text-align: center;
   visibility: hidden;
 }
@@ -539,15 +549,25 @@ code {
   visibility: visible;
 }
 
-/* leaving: the X turns back into a "+" and the jelly goes, then the mono "+" is back */
+/* leaving: the X goes back to the pin and turns back into a "+", the jelly goes, then the mono "+" is back */
 .jx.jx-leave .jx-x {
-  transform: rotate(45deg) !important;
+  transform: translateX(var(--jx-dx, 0px)) rotate(45deg) !important;
   transition: none;
 }
 
 .jx.jx-leave .jx-skin,
-.jx.jx-leave .jx-c {
+.jx.jx-leave .jx-c,
+.jx.jx-gone .jx-skin,
+.jx.jx-gone .jx-c {
   visibility: hidden !important;
+}
+
+/* while the entrance or the closing drives them frame by frame, nothing smooths them */
+.jx-run .jx .jx-x,
+.jx-run .jx .jx-skin,
+.jx.jx-close .jx-x,
+.jx.jx-close .jx-skin {
+  transition: none;
 }
 
 .jx.jx-gone .jx-x {
@@ -1099,13 +1119,15 @@ a.row,
   margin-left: auto;
 }
 
-/* the back button's box, drawn on top of the film so its rules are never covered */
+/* the back button's box, drawn on top of the film so its rules are never covered; its "+" on the pin */
 .morph .jx-ghost {
   position: absolute;
   box-sizing: border-box;
   border: 1px solid var(--ink);
+  border-left: 0;
   background: #f6f7f8;
-  text-align: center;
+  text-align: left;
+  white-space: pre;
 }
 
 /* Coalesce: eight flat squares carrying the click to the "+" */
@@ -1167,22 +1189,21 @@ a.row,
     order: -2;
     margin: 0 0 0.5em auto;
   }
-  /* the box is in flow, flush to the window's left edge, 44px square, 0.5em before the title */
+  /* the box is in flow, flush to the window's left edge, 48px square, 0.5em before the title */
   .sub .hd .jx {
     position: relative;
     left: auto;
     top: auto;
     bottom: auto;
     flex: none;
-    width: 2.75em;
-    height: 2.75em;
+    width: 3em;
+    height: 3em;
     margin: 0 0.5em 0 calc(-1em - var(--x0));
-    border-left: 0;
   }
+  /* the jelly and the X grow with the box; the mono "+" stays home's own size */
   .sub .hd .jx .jx-skin,
-  .sub .hd .jx .jx-x,
-  .sub .hd .jx .jx-plus {
-    font-size: 1.5556em;
+  .sub .hd .jx .jx-x {
+    font-size: 1.6667em;
   }
   .sub .hd::before {
     content: '';

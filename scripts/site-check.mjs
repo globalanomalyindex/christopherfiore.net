@@ -189,7 +189,9 @@ async function film(pg, href, wait = 2300) {
   return { src, arrive, dir, end, total, gated };
 }
 
-const browser = await chromium.launch({ executablePath: CHROME });
+// CHROME_ARGS: extra switches, e.g. --disable-frame-rate-limit on a laptop whose
+// battery is low enough for Chrome to cap every page at 30fps
+const browser = await chromium.launch({ executablePath: CHROME, args: (process.env.CHROME_ARGS ?? '').split(' ').filter(Boolean) });
 let wk = null;
 try {
   wk = await webkit.launch();
@@ -443,7 +445,7 @@ try {
       lede: Math.round(document.querySelector('.lede').getBoundingClientRect().left + parseFloat(cs('.lede').paddingLeft)),
     };
   });
-  ok(JSON.stringify(chips.jx) === '[12,122,72,195]' && JSON.stringify(chips.name) === '[72,20]', 'subpage masthead: name where home’s is; the back button’s box in the gutter, its right rule on the content edge', JSON.stringify([chips.jx, chips.name]));
+  ok(JSON.stringify(chips.jx) === '[0,122,72,195]' && JSON.stringify(chips.name) === '[72,20]', 'subpage masthead: name where home’s is; the back button’s box is the whole gutter, its right rule on the content edge', JSON.stringify([chips.jx, chips.name]));
   ok(chips.chip[0] === 72 && chips.chip[1] === 132 && chips.chip[4] === 'rgb(245, 217, 10)', 'the title chip: x72, in the page’s yellow', JSON.stringify(chips.chip));
   ok(chips.tot[2] === 1672 && chips.tot[4] === 'projects' && chips.tot[5] === ' 17' && chips.tot[6] === '3px', 'the total: "projects" on the chip, 17 posted in the figure columns over a double rule, ending the 80 columns at x1672', JSON.stringify(chips.tot));
   ok(chips.secs.join('|') === '  8|  4|  1|  1|  2|  1|   |   ', 'each section posts its count in its figure columns; housekeeping sections keep them empty', chips.secs.join('|'));
@@ -500,7 +502,7 @@ try {
     };
   }, btn);
   ok(early.hot, 'the row goes hot');
-  ok(early.first && early.layers === 'bm st t st b bo' && /1\.5px/.test(early.outline) && early.z === '-1', 'the band, both strips by 100ms, and a 1.5px outline, at z -1 under the label', `${early.layers} ${early.outline} ${early.z}`);
+  ok(early.first && /^bm( fc)?( st t)? st b bo$/.test(early.layers) && /1\.5px/.test(early.outline) && early.z === '-1', 'the band, its strips by 100ms (the top one now and then left out, the figure cell now and then filled), and a 1.5px outline, at z -1 under the label', `${early.layers} ${early.outline} ${early.z}`);
   ok(early.main === 'rgb(245, 217, 10)', 'the home menu floods each row in its own page color', early.main);
   ok(JSON.stringify(early.span) === JSON.stringify(early.menu), 'the band floods from one vertical rule to the other', JSON.stringify(early));
   ok(early.word === 'rgba(0, 0, 0, 0)', 'the resting word goes transparent', early.word);
@@ -655,18 +657,23 @@ try {
     await page.mouse.move(c.x, c.y);
     await sleep(130);
     draws.push(
-      await page.evaluate(() =>
-        Array.from(document.querySelectorAll('a.row[data-hot] [data-band] > :is(.bm, .st)'))
+      await page.evaluate(() => {
+        const a = document.querySelector('a.row[data-hot]');
+        const d = Array.from(a?.querySelectorAll('[data-band] > :is(.bm, .st)') ?? [])
           .slice(0, 3)
-          .map((l) => l.style.backgroundColor),
-      ),
+          .map((l) => l.style.backgroundColor);
+        // a menu row's top strip is left out one hover in four
+        d.menu = !!a?.hasAttribute('data-hue');
+        return { d, menu: d.menu };
+      }),
     );
+    draws[draws.length - 1] = Object.assign(draws[draws.length - 1].d, { menu: draws[draws.length - 1].menu });
     await page.mouse.move(1430, 980);
     await sleep(260);
   }
   const mains = draws.map((d) => d[0]);
   const floor = Math.min(...mains.map((m) => (lum(m) + 0.05) / (inkL + 0.05)));
-  ok(draws.every((d) => d.length === 3 && d.every(Boolean)), 'every hover paints a band and both rows');
+  ok(draws.every((d) => (d.length === 3 || (d.menu && d.length === 2)) && d.every(Boolean)), 'every hover paints a band and both rows (a menu row now and then only the lower one)', JSON.stringify(draws.filter((d) => !((d.length === 3 || (d.menu && d.length === 2)) && d.every(Boolean)))));
   ok(mains.every((m, i) => i === 0 || m !== mains[i - 1]), 'the band color never repeats back to back');
   ok(new Set(mains).size >= 12, 'forty hovers show a wide spread of band colors', `${new Set(mains).size} distinct`);
   ok(floor >= 5, 'band ink holds 5:1 on every band color', floor.toFixed(2));
@@ -1228,7 +1235,9 @@ try {
   const geo = async () =>
     mp.evaluate(() => {
       window.__morph.seek('cover', 'out', 0.35);
-      const plus = document.querySelector('[data-anchor]').getBoundingClientRect();
+      // the back button's box is the whole gutter; its pin is where home's "+" is
+      const box = document.querySelector('[data-anchor]').getBoundingClientRect();
+      const plus = (document.querySelector('[data-anchor] .jx-pin') ?? document.querySelector('[data-anchor]')).getBoundingClientRect();
       const o = document.querySelector('.morph');
       const set = o.querySelector('.set.l');
       const sr = set.getBoundingClientRect();
@@ -1249,12 +1258,22 @@ try {
       if (mark !== '+') glyphs.delete(mark);
       const body = getComputedStyle(document.body);
       const lnTop = ln.getBoundingClientRect().top;
+      // the ghost's own "+" on the pin, read before the film is cleared
+      const ghostPlus = (() => {
+        const g = o.querySelector('.jx-ghost');
+        if (!g) return null;
+        const r = document.createRange();
+        r.selectNodeContents(g);
+        const b = r.getBoundingClientRect();
+        return b.left + b.width / 2 - cx;
+      })();
       window.__morph.clear();
       return {
         // the anchor cell's centre on the anchor's centre (the back button's box is wider than one cell)
         dx: sr.left + col * cw + cw / 2 - cx,
         dy: lnTop + ch / 2 - cy,
-        ghost: ghost ? [Math.round(ghost.left - plus.left), Math.round(ghost.top - plus.top), Math.round(ghost.width - plus.width), Math.round(ghost.height - plus.height)] : null,
+        ghost: ghost ? [Math.round(ghost.left - box.left), Math.round(ghost.top - box.top), Math.round(ghost.width - box.width), Math.round(ghost.height - box.height)] : null,
+        ghostPlus,
         cw,
         half: parseFloat(body.fontSize) / 2,
         ch,
@@ -1274,6 +1293,7 @@ try {
   ok(g0.glyphs === '+-.:=', 'the film is five ASCII marks: + = - : .', g0.glyphs);
   ok(g0.mark === '+', 'in the back button’s box the film draws a "+": an X is a "+" turned 45 degrees', g0.mark);
   ok(JSON.stringify(g0.ghost) === '[0,0,0,0]', 'a ghost of the box sits on the film exactly over the real one, so its rules are never covered', JSON.stringify(g0.ghost));
+  ok(g0.ghostPlus != null && Math.abs(g0.ghostPlus) <= 1, 'and the ghost’s "+" sits on the pin, where home’s "+" is', String(g0.ghostPlus));
   ok(!g0.left, 'clearing the film leaves nothing behind');
   await mp.evaluate(() => window.scrollTo(0, 1800));
   await sleep(150);
@@ -1502,6 +1522,36 @@ try {
   ok(leeV.rested && leeV.line === 1 && leeV.band === 1 && !leeV.credit, 'the +lee row plays Mark: the band shrinks into a quiet mark, then it is underlined, with no credit', JSON.stringify(leeV));
   await lp.mouse.move(1430, 980);
   await sleep(1700);
+  // Jelly on a row is the row's own surface: a slab 3px inside every edge, under the name, the tag and the detail.
+  await lp.waitForFunction(() => !!document.querySelector('a.jx canvas'), null, { timeout: 8000 });
+  const jrow = 'a.row[data-lin="jelly"]';
+  const jc = await center(lp, jrow);
+  const jb4 = await lp.evaluate(layout);
+  await lp.mouse.move(jc.x, jc.y, { steps: 2 });
+  await sleep(900);
+  const slab = await lp.evaluate((s) => {
+    const a = document.querySelector(s);
+    const r = a.getBoundingClientRect();
+    const j = window.__jx.jelly();
+    const box = (el) => { const b = el.getBoundingClientRect(); return [b.left - r.left, b.top - r.top, b.right - r.left, b.bottom - r.top]; };
+    // its centre on the slab (the tag's rule may sit a pixel into the slab's 3px margin)
+    const inside = (b) => j && (b[0] + b[2]) / 2 > j.x && (b[0] + b[2]) / 2 < j.x + j.w && (b[1] + b[3]) / 2 > j.y && (b[1] + b[3]) / 2 < j.y + j.h;
+    return { j, bw: a.offsetWidth, bh: a.offsetHeight, fs: parseFloat(getComputedStyle(a).fontSize), canvas: !!a.querySelector('canvas.jx-row'), tag: inside(box(a.querySelector('.cs span'))), detail: inside(box(a.querySelector('.l'))), reads: window.__jx.reads() };
+  }, jrow);
+  const jduring = await lp.evaluate(layout);
+  ok(slab.j && slab.canvas && slab.j.x === 3 && slab.j.y === 3 && Math.abs(slab.j.w - (slab.bw - 6)) < 0.5 && Math.abs(slab.j.h - (slab.bh - 6)) < 0.5 && Math.abs(slab.j.r - slab.j.h / 2) < 0.05, 'the +jellybox row plays Jelly as one of JellyBox’s round-ended controls, the row minus 3px on every side, in JellyBox’s own optics', JSON.stringify(slab.j));
+  ok(slab.tag && slab.detail && JSON.stringify(jb4) === JSON.stringify(jduring), 'the tag box and the detail lie on the slab, and nothing moves', JSON.stringify([slab.tag, slab.detail]));
+  ok(slab.reads.includes(slab.j.pig) && !slab.reads.includes('#136aee') && !slab.reads.includes('#dd3c88'), 'its colour is a JellyBox pigment that holds band ink at 4.5:1 (never lagoon blue or candy pink)', `${slab.j.pig} of ${slab.reads.join(' ')}`);
+  await lp.mouse.move(jc.x, jc.y - 400, { steps: 1 });
+  await sleep(25);
+  const jleave = await lp.evaluate((s) => { const a = document.querySelector(s); return { cast: !!a.querySelector('.jx-row, [data-k="jc"]'), band: a.querySelectorAll('[data-band] [data-k="band"]').length, clip: a.querySelector('[data-band] .bm')?.style.clipPath ?? '' }; }, jrow);
+  await sleep(140);
+  const jgone = await lp.evaluate((s) => !!document.querySelector(s).querySelector('[data-band], .jx-row, [data-k="jc"]'), jrow);
+  ok(!jleave.cast && jleave.band === 1 && jleave.clip.endsWith(`round ${(slab.j.h / 2).toFixed(1).replace(/\.0$/, '')}px)`) && !jgone, 'leaving, the jelly and its cast go at once; the flat band holds its shape one drawing, then it is gone', JSON.stringify([jleave, jgone]));
+  const menuFits = await lp.evaluate(() => window.__lin.fits('menu').join(' '));
+  ok(menuFits === 'decode canister', 'a menu row is never dealt Jelly: its colour has to say which page it opens', menuFits);
+  await lp.mouse.move(1430, 980);
+  await sleep(1700);
   // Every effect, forced on a plain row: what it adds, that it moves nothing, and that leaving takes it all away.
   const plain = 'a.row:not([data-lin])';
   const expect = {
@@ -1576,6 +1626,73 @@ try {
   await tctx.close();
 
   }
+  /* ------------------------------------------------------- round 3: menu hovers */
+  {
+  console.log('\n[menu hovers]');
+  const nctx = await browser.newContext({ viewport: { width: 1728, height: 908 } });
+  await nctx.addInitScript(() => (window.__linQuiet = true));
+  const np = await nctx.newPage();
+  await np.goto(`${BASE}/`, { waitUntil: 'networkidle' });
+  await settle(np);
+  await np.evaluate(() => window.__ink.seed(7));
+  const rows = await np.evaluate(() => [...document.querySelectorAll('.menu a')].map((a) => { const r = a.getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; }));
+  const read = () =>
+    np.evaluate(() => {
+      const a = document.querySelectorAll('.menu a')[1];
+      const band = a.querySelector('[data-band]');
+      if (!band) return null;
+      const st = (c) => band.querySelector(c);
+      const px = (el, k) => (el ? parseFloat(el.style[k]) : null);
+      const t = st('.st.t');
+      const b = st('.st.b');
+      const hues = [...document.querySelectorAll('.menu a')].map((x) => x.dataset.hue);
+      const rgb = (hex) => `rgb(${[1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(', ')})`;
+      const others = hues.filter((h) => h !== a.dataset.hue).map(rgb);
+      return {
+        main: band.querySelector('.bm').style.backgroundColor === rgb(a.dataset.hue),
+        h1: t ? px(t, 'height') : 0,
+        h2: px(b, 'height'),
+        t: t ? [px(t, 'left'), px(t, 'left') + px(t, 'width')] : null,
+        b: [px(b, 'left'), px(b, 'left') + px(b, 'width')],
+        fig: !!st('.fc'),
+        bw: a.offsetWidth,
+        cell: parseFloat(getComputedStyle(a).fontSize) / 2,
+        foreign: [t, b].filter(Boolean).some((e) => others.includes(e.style.backgroundColor)),
+      };
+    });
+  const seen = [];
+  for (let i = 0; i < 12; i++) {
+    await np.mouse.move(rows[1][0] + 410, rows[1][1] - 3);
+    await sleep(320);
+    await np.mouse.move(rows[1][0] + 410, rows[1][1] + rows[1][3] / 2, { steps: 2 });
+    await sleep(230);
+    seen.push(await read());
+  }
+  await np.mouse.move(1700, 880);
+  const tuple = (v) => v && `${v.h1}|${v.h2}|${v.fig}|${v.b[0]}`;
+  const tuples = seen.map(tuple);
+  ok(seen.every((v) => v && v.main), 'every hover of a menu row floods in its own page colour', String(seen.map((v) => v?.main)));
+  ok(new Set(tuples).size >= 8 && tuples.every((t, i) => i === 0 || t !== tuples[i - 1]), 'twelve hovers of one row: at least eight different, never the same twice running', tuples.join(' '));
+  ok(seen.every((v) => [0, 4, 6, 8].includes(v.h1) && [4, 6, 8].includes(v.h2)) && seen.some((v) => v.h1 === 0), 'strips are 4, 6 or 8px, the top one now and then left out', seen.map((v) => `${v.h1}/${v.h2}`).join(' '));
+  ok(seen.every((v) => (!v.t || (v.t[0] === 0 && Math.abs(v.t[1] / v.cell - Math.round(v.t[1] / v.cell)) < 0.01)) && Math.abs(v.b[0] / v.cell - Math.round(v.b[0] / v.cell)) < 0.01 && Math.abs(v.b[1] - v.bw) < 0.5 && v.t?.[1] !== v.bw), 'coming in from above, the top strip runs from the left rule to the entry and the bottom one on to the right rule, on the mono cell', JSON.stringify(seen.map((v) => [v.t, v.b])));
+  const figs = seen.map((v) => v.fig);
+  ok(figs.filter(Boolean).length >= 2 && figs.filter(Boolean).length <= 6 && figs.every((f, i) => !(f && figs[i - 1])), 'the figure’s cell fills now and then, never twice running', figs.map((f) => (f ? 'F' : '.')).join(''));
+  ok(seen.every((v) => !v.foreign), 'no strip ever takes another page’s colour');
+  // The keyboard: the end frame at once, strips the full width.
+  await np.keyboard.press('Tab');
+  let kb = null;
+  for (let i = 0; i < 6 && !(kb && kb.menu); i++) {
+    kb = await np.evaluate(() => {
+      const a = document.activeElement;
+      const band = a?.querySelector('[data-band]');
+      const b = band?.querySelector('.st.b');
+      return { menu: !!a?.closest('.menu'), full: b ? parseFloat(b.style.left) === 0 && Math.abs(parseFloat(b.style.width) - a.offsetWidth) < 0.5 : false };
+    });
+    if (!kb.menu) await np.keyboard.press('Tab');
+  }
+  ok(kb && kb.menu && kb.full, 'a menu row reached by the keyboard gets its strips the full width, at once', JSON.stringify(kb));
+  await nctx.close();
+  }
   /* ------------------------------------------------------- round 3: the back button */
   {
   console.log('\n[the back button]');
@@ -1633,6 +1750,61 @@ try {
     return { s1, s2 };
   });
   ok(leaving.s1.leave && /matrix\(0\.70/.test(leaving.s1.turn) && leaving.s2.gone && leaving.s2.plus === 'visible' && leaving.s2.x === 'hidden', 'leaving: the X turns back to 45 degrees, then the mono "+" is back for the film', JSON.stringify(leaving));
+  // Going back up the X closes into the "+": the entrance backwards, faster.
+  await xp.reload({ waitUntil: 'networkidle' });
+  await sleep(2600);
+  const closing = await xp.evaluate(async () => {
+    const a = document.querySelector('a.jx');
+    const at = [];
+    const snap = (t) => ({ t, cls: a.className, x: a.querySelector('.jx-x').getAttribute('style') ?? '', plus: a.querySelector('.jx-plus').getAttribute('style') ?? '', band: a.querySelector('.jx-band .bm')?.style.clipPath ?? null });
+    const t0 = performance.now();
+    document.documentElement.setAttribute('data-morph-dir', 'home');
+    document.documentElement.setAttribute('data-morph', 'cover');
+    await new Promise((r) => {
+      const tick = () => {
+        const t = performance.now() - t0;
+        at.push(snap(Math.round(t)));
+        if (t < 360) requestAnimationFrame(tick);
+        else r();
+      };
+      requestAnimationFrame(tick);
+    });
+    document.documentElement.removeAttribute('data-morph');
+    document.documentElement.removeAttribute('data-morph-dir');
+    return at;
+  });
+  const mid = closing.find((f) => f.t > 20 && f.t < 90);
+  const cutF = closing.find((f) => f.t >= 105 && f.t < 145);
+  const endF = closing[closing.length - 1];
+  ok(mid && /rotate\((1|2|3|4)\d?\.\d+deg\)/.test(mid.x) && /scale\(0\.[3-9]/.test(mid.x) && !mid.band, 'going up, the X turns toward 45 degrees as the jelly collapses onto the pin', JSON.stringify(mid));
+  ok(cutF && cutF.band && /round 999px/.test(cutF.band) && /Dessign Maison/.test(cutF.plus) && /visibility:hidden/.test(cutF.x), 'at 100ms the band takes the dot and the "+" is there, in the glitch face', JSON.stringify(cutF));
+  ok(endF && /jx-gone/.test(endF.cls) && !endF.band && /visibility:visible/.test(endF.plus) && !/Dessign/.test(endF.plus), 'by 300ms it is the floor and the mono "+", exactly home’s, before the film covers the box', JSON.stringify(endF));
+  const dx0 = xf[firstX] && /translateX\(([\d.-]+)px\)/.exec(xf[firstX].xs ?? '');
+  ok(dx0 && +dx0[1] > 5 && +dx0[1] < 7, 'the X pops in on the pin, where home’s "+" was, and travels to the box’s centre', xf[firstX]?.xs);
+  // Bigger: the whole gutter, a 1.5em disc and a 0.7em X; hovered, the jelly takes the box's own shape.
+  await xp.goto(`${BASE}/`, { waitUntil: 'networkidle' });
+  const homePlus = await xp.evaluate(() => { const r = document.querySelector('[data-anchor]').getBoundingClientRect(); return r.left + r.width / 2; });
+  await xp.goto(`${BASE}/about/`, { waitUntil: 'networkidle' });
+  await sleep(2500);
+  const size = await xp.evaluate(() => {
+    const a = document.querySelector('a.jx');
+    const r = a.getBoundingClientRect();
+    const pin = a.querySelector('.jx-pin').getBoundingClientRect();
+    return { box: [r.left, r.width, r.height], pin: pin.left, disc: parseFloat(getComputedStyle(a.querySelector('.jx-skin')).width), x: a.querySelector('.jx-x').getBoundingClientRect().width, body: window.__jx.body(), chip: JSON.stringify(document.querySelector('.hd .chip').getBoundingClientRect()), cw: a.clientWidth, ch: a.clientHeight };
+  });
+  ok(size.box[0] === 0 && size.box[1] === 72 && Math.round(size.box[2]) === 73, 'at his 1728 the box is the whole gutter, 72 by 73', JSON.stringify(size.box));
+  ok(Math.abs(size.pin - homePlus) <= 0.5, 'its pin is exactly where home’s "+" is', `${size.pin} ${homePlus}`);
+  ok(size.disc === 60 && Math.round(size.x) === 28 && size.body && Math.round(size.body.w) === 60 && Math.round(size.body.r) === 30, 'a 60px disc and a 28px X at rest (were 45 and 20)', JSON.stringify([size.disc, size.x, size.body]));
+  await xp.mouse.move(36, size.box[2] / 2 + 122, { steps: 3 });
+  await sleep(800);
+  const hov = await xp.evaluate(() => ({ body: window.__jx.body(), chip: JSON.stringify(document.querySelector('.hd .chip').getBoundingClientRect()) }));
+  const fill = Math.min(size.cw, size.ch) - 7;
+  ok(hov.body && Math.abs(hov.body.w - fill) < 0.5 && Math.abs(hov.body.h - fill) < 0.5 && Math.abs(hov.body.r - fill / 2) < 0.5, 'hovered, the disc swells to fill the box, still a disc, 3.5px inside the rules', JSON.stringify([hov.body, fill]));
+  ok(hov.chip === size.chip, 'and nothing outside the box moves');
+  await xp.mouse.move(900, 700);
+  await sleep(700);
+  const back = await xp.evaluate(() => window.__jx.body());
+  ok(back && Math.abs(back.w - 60) < 1 && Math.abs(back.r - 30) < 1, 'let go, it springs back to its disc', JSON.stringify(back));
   await xctx.close();
   // Phones: JellyBox's own CSS skin, never the optics; the box is 44px.
   const xph = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
@@ -1650,6 +1822,7 @@ try {
     return { canvas: !!a.querySelector('canvas'), skin: getComputedStyle(a.querySelector('.jx-skin')).visibility, bg: getComputedStyle(a.querySelector('.jx-skin')).backgroundImage.startsWith('linear-gradient'), x: getComputedStyle(a.querySelector('.jx-x')).visibility, box: [Math.round(b.left), Math.round(b.width), Math.round(b.height)] };
   });
   ok(phChunks.length === 0 && !phX.canvas && phX.skin === 'visible' && phX.bg && phX.x === 'visible', 'on a phone it is JellyBox’s own CSS skin, never the optics', JSON.stringify([phChunks, phX]));
+  ok(phX.box[0] === 0 && phX.box[1] === 48 && phX.box[2] === 48, 'on a phone the box is 48px square, flush to the window’s edge', JSON.stringify(phX.box));
   await xph.close();
   // Reduced motion: no entrance, the X is there from the first frame.
   const xrm = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
@@ -1881,7 +2054,7 @@ try {
         });
         ok(o.overflow === 0 && o.units === 0, `${w} ${r} fits with no sideways scroll and no seams`, JSON.stringify(o));
         ok(o.fs === 16 && o.name === 32 && o.nameW > 200 && o.mono, `${w} ${r} its type is really there: 16px mono, the name at 32px`, JSON.stringify(o));
-        if (o.jx) ok(o.plusX === 0 && o.cell === 44 && o.tall === 44 && o.textX === 24, `${w} ${r} the back button is a 44px ledger box flush to the window’s edge, the text two columns in`, JSON.stringify([o.plusX, o.cell, o.tall, o.textX]));
+        if (o.jx) ok(o.plusX === 0 && o.cell === 48 && o.tall === 48 && o.textX === 24, `${w} ${r} the back button is a 48px ledger box flush to the window’s edge, the text two columns in`, JSON.stringify([o.plusX, o.cell, o.tall, o.textX]));
         else ok(o.plusX === 8 && o.cell === 8 && o.textX === 24, `${w} ${r} the "+" is one 8px column in, the text two columns right of it`, JSON.stringify([o.plusX, o.cell, o.textX]));
         // Every link, where it lies: 44px tall to a finger.
         const small = await pp.evaluate(async () => {
@@ -1960,7 +2133,7 @@ try {
         const c = document.querySelector('.hd .chip').getBoundingClientRect();
         return { plus: p.top, fig: f.bottom, chip: c.top, hd: document.querySelector('.hd').getBoundingClientRect().bottom };
       });
-      ok(bar.plus >= 0 && bar.plus < 30 && bar.fig <= 1 && bar.chip >= 0 && bar.hd <= 56, `${w} scrolled: only the title line sticks, the back button and all, 56px tall at most`, JSON.stringify(bar));
+      ok(bar.plus >= 0 && bar.plus < 30 && bar.fig <= 1 && bar.chip >= 0 && bar.hd <= 60, `${w} scrolled: only the title line sticks, the back button and all, 60px tall at most`, JSON.stringify(bar));
 
       await pp.goto(`${BASE}/paintings/`, { waitUntil: 'networkidle' });
       const one = await pp.evaluate(() => {
@@ -1994,6 +2167,8 @@ try {
       const pg = await pp.evaluate(() => {
         window.__morph.seek('cover', 'out', 1);
         const plus = document.querySelector('[data-anchor]').getBoundingClientRect();
+        const pinR = (document.querySelector('[data-anchor] .jx-pin') ?? document.querySelector('[data-anchor]')).getBoundingClientRect();
+        const pinX = pinR.left + pinR.width / 2;
         const lines = Array.from(document.querySelectorAll('.morph .set.l .ln'));
         const first = lines[0].getBoundingClientRect();
         const last = lines[lines.length - 1].getBoundingClientRect();
@@ -2007,8 +2182,8 @@ try {
           tall: last.bottom >= innerHeight - 0.5,
           top: first.top,
           hd: document.querySelector('.hd').getBoundingClientRect().top,
-          // the anchor cell's centre on the back button's centre
-          dx: rb.left + col * cw + cw / 2 - (plus.left + plus.width / 2),
+          // the anchor cell's centre on the back button's pin, where the phone's own "+" is
+          dx: rb.left + col * cw + cw / 2 - pinX,
           dy: rb.top + rb.height / 2 - (plus.top + plus.height / 2),
           cw,
           over: document.documentElement.scrollWidth - document.documentElement.clientWidth,
@@ -2077,7 +2252,7 @@ try {
         name: (() => { const n = document.querySelector('.name'); const b = n.getBoundingClientRect(); return [Math.round(b.left), Math.round(b.top + parseFloat(getComputedStyle(n).paddingTop))]; })(),
       }));
       const k = 1440 / 1728;
-      const want = r === '/' ? [32 * k, 132 * k, 20 * k] : [12 * k, 122 * k, 60 * k];
+      const want = r === '/' ? [32 * k, 132 * k, 20 * k] : [0, 122 * k, 72 * k];
       const near = (a, b) => a.every((v, i) => Math.abs(v - b[i]) <= 1);
       if (o.over !== 0 || Math.abs(parseFloat(o.fs) - 1440 / 43.2) > 0.01 || !near(o.plus, want) || !near(o.name, [72 * k, 20 * k])) wbad.push(`${r} ${JSON.stringify(o)}`);
     }

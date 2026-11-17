@@ -21,7 +21,7 @@
  */
 
 import { host, pool } from './band.ts';
-import { band, letters, plan, type Edge, type Letter, type Plan } from './ink.ts';
+import { band, letters, plan, type Edge, type Letter, type MenuGeo, type Plan } from './ink.ts';
 import { faces, paint, rest, unface, type Face } from './glitch.ts';
 import { engage, hold, move, release, releaseAll } from './magnet.ts';
 import { reducedMotion } from './offsets.ts';
@@ -123,6 +123,32 @@ function measure(b: HTMLElement): Geo {
   };
 }
 
+/**
+ * A menu row's geometry for its hover. The figure's cell is one mono cell
+ * either side of its text (the count on home, the detail in the pages block),
+ * and only when it sits beside the label and leaves the page colour most of
+ * the row.
+ */
+function menuGeo(b: HTMLElement, g: Geo, px: number): MenuGeo {
+  const cell = g.fs / 2;
+  let fig: [number, number] | null = null;
+  const f = b.querySelector<HTMLElement>('.n, .l');
+  const w = b.querySelector<HTMLElement>('[data-word]');
+  if (f && w && f.textContent?.trim()) {
+    const r = b.getBoundingClientRect();
+    const sc = r.width / (b.offsetWidth || r.width) || 1;
+    const range = document.createRange();
+    range.selectNodeContents(f);
+    const t = range.getBoundingClientRect();
+    const wr = w.getBoundingClientRect();
+    const beside = t.top < wr.bottom - 1 && t.left > wr.right;
+    const l = Math.max(0, (t.left - r.left) / sc - cell);
+    const rr = Math.min(g.bw, (t.right - r.left) / sc + cell);
+    if (beside && rr - l <= 0.4 * g.bw) fig = [l, rr];
+  }
+  return { bw: g.bw, px, cell, fig };
+}
+
 function edgeOf(b: HTMLElement, x: number, y: number): Edge {
   const r = b.getBoundingClientRect();
   const d: [Edge, number][] = [
@@ -164,7 +190,8 @@ function on(b: HTMLElement, why: Why, e?: PointerEvent | MouseEvent): void {
   const warm = !instant && now - lastLeave < 150;
   const fs = faces(b);
   const entry = (px - geo.wl) / Math.max(1, geo.ww);
-  const P = plan(fs[0]?.label ?? '', b.getAttribute('data-hue'), edge, entry, warm);
+  const hue = b.getAttribute('data-hue');
+  const P = plan(fs[0]?.label ?? '', hue, edge, entry, warm, hue ? menuGeo(b, geo, px) : null, instant);
   const plans = fs.map((f, i) => (i === 0 ? P : plan(f.label, P.main, edge, entry, warm)));
   b.setAttribute('data-hot', '');
   b.toggleAttribute('data-wide', geo.bw > 480);
@@ -232,8 +259,10 @@ function cut(h: Hot): void {
 /** One frame of one hover. */
 function draw(h: Hot, now: number): void {
   // A frame's timestamp is when the frame began, which can be a moment before
-  // the pointer event that started this hover. Never draw from before it.
-  const t = Math.max(0, now - h.t0);
+  // the pointer event that started this hover, or the one that ended it.
+  // Never draw from before either.
+  let t = Math.max(0, now - h.t0);
+  if (h.out != null && t < h.out) t = h.out;
   if (h.out != null) {
     if (t - h.out >= EXIT_MS) return cut(h);
     const look = h.fx && lineage ? lineage.look(h, -1) : {};

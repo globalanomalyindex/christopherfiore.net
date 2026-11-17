@@ -1,0 +1,105 @@
+{
+  "request": "i want to add more randomizations to the hover states like, for example, a size change of the button and it's encapsulated by a wireframe and it follows your cursor and automatically adjusts, and what i coded with Chickpea. and i want to make sure for the colors, especially with jellybox, that the text is legible and can always be read properly. i want the hover states to also always be random for each button and be on the main menu too, and the main menu can also have the random size/aspect ratio adjustments for the buttons, smooth transitions as well /emil-design-eng and /antialgorithm and /metadump:metadump",
+  "thesis": "A hover on this site is a small generative composition: the glitch is the constant, and everything after it is drawn from a seeded deck, the way Chickpea draws a grid and a palette from a seed, so no two hovers are the same and every one still reads.",
+  "job": [
+    "point at any button, the home menu included, and see the glitch land",
+    "see a hover that differs from the last one on that button: size, aspect, a wireframe, a Chickpea move, a lineage effect",
+    "move the cursor inside the button and watch the wireframe follow and re-fit",
+    "read the label at every frame, on every band colour and on JellyBox's glass",
+    "leave and see everything settle back with no layout moved",
+    "click and get the press, then the page change",
+    "use the keyboard or a finger and get a calm, instant end frame",
+    "with reduced motion, get the still end frame and no travel"
+  ],
+  "collected": {
+    "chickpea_repo": [
+      "globalanomalyindex/chickpea @ c55533e, his own: 'a generative grid + color studio that draws you the math behind any composition'",
+      "pure seeded core, no React: (seed, dials) => grid, and a palette twin; mulberry32 prng; hashSeed(string)",
+      "grids are guillotine slice-trees: every cut crosses its rectangle, so a zero-gap tiling is structural; generators: recursive, modular, nature; composeGrid(seed, boxes, W, H) anchors a grid to live boxes",
+      "ratios snap to named positions and labels are truthful: a golden cut reads '1/φ', never a rounded decimal (ratios.ts ratioName)",
+      "palette sampled in OKLCH from a von Mises hue mixture; harmonize = enforceSpread (lightness range >= 0.28, L clamped 0.08..0.96) + dedupe + hero first; scored on contrast, separation, harmony, focal, anti-mud, vibrancy",
+      "the alive hero (InteractionLayer.tsx): hover MEASURES; the nearest seam spring-separates (DELTA 24, RADIUS 150), cursor-tracked dimension arrows light up with numbers that never collide (layoutLabels), at most 3 at once; arrows track the cursor 1:1 by transform with no transition; nudges spring by per-frame lerp 0.24 (~8 frames)",
+      "hairline svg everywhere: stroke 1.5 for arrows, 1 for guides; dashed guides '3 3' and ghosts '2 3'; arrowhead 5, end cap 3; fades 150ms cubic-bezier(.23,1,.32,1)",
+      "MorphGrid.tsx: a whisper grid built from the real engine, invisible at rest, blooms with cursor activity (max opacity .16), spotlight radius 230 around the cursor, crossfades between fresh engine grids every 4.2s over 640ms, optional blur(2px) bridge; only transform and opacity animate",
+      "reduced motion: nudges snap to 0, arrows render statically, no morph cadence"
+    ],
+    "site_now": [
+      "every hover: the glitch on 50ms drawings (ink.ts), band from the entry edge, two strips, letters spread from the pointer",
+      "lineage deck (lineage.ts): after 220ms dwell, 1 in 4 deals Mark, Decode, Knockout, Jelly, Shear, Bayer or Canister; menu rows only Decode or Canister",
+      "menu rows keep their page hue (it previews the page): designs #F5D90A, paintings #12D9E8, about #FF2D87, resume #C9F227",
+      "seams.ts + skeleton.ts are already Chickpea's hero, improved: prose words and buttons as units, dt springs, measure ink #3F5195, a hovered inline button claims 14px and shows its measurements",
+      "three properties move a button: transform (magnet), translate (seams), scale (press); hover never changes a layout box (checked)",
+      "band ink #1A1820; every HUE holds band ink at 5:1 or better; Jelly picks the JellyBox pigment nearest the band's hue from those whose highlighted state holds 4.5:1"
+    ]
+  },
+  "disciplines": {
+    "interaction design": {
+      "principles": ["feedback within a frame", "the cursor is the subject: what follows it must track 1:1, what reacts to it may spring", "variety without loss of meaning: the menu colour keeps saying which page"],
+      "tricks": ["a seeded stream per visit makes randomness replayable and checkable", "never the same draw twice running on one button", "deal from a shuffled deck, not dice, so rare cards still come up"],
+      "tests": ["twelve hovers of one button: how many distinct?", "does the label read in the worst frame?"]
+    },
+    "motion (emil)": {
+      "principles": ["exits faster than entrances", "ease-out for entering, springs for things the cursor drives", "only transform and opacity on the hot path", "never animate keyboard actions", "interruptible: a spring keeps its velocity when the target moves"],
+      "tokens": {"enter": "150 to 250ms", "exit": "50 to 120ms", "spring": "stiffness 300 to 500, damping ratio .7 to .9", "ease": "cubic-bezier(.23,1,.32,1)"},
+      "tests": ["play at 0.25x: any frame where two states overlap?", "120Hz and 60Hz feel the same (dt-based)"]
+    },
+    "colour and legibility": {
+      "principles": ["contrast is measured per frame, not per palette", "text on a translucent material reads against what shows through, so test the composite, not the pigment", "a scrim or an ink switch beats draining the colour"],
+      "tokens": {"WCAG text": "4.5:1 body, 3:1 for 24px+ or 18.66px bold", "APCA": "Lc 60 to 75 for 16 to 24px text", "OKLCH lightness gap": "0.4 to 0.6 between ink and ground"},
+      "tricks": ["pick ink per band (dark #1A1820 or ground #F3F5F8) by computed contrast, whichever wins", "for JellyBox glass, sample the rendered pixels under the label once, or bound the composite by floor and pigment", "Chickpea's enforceSpread: stretch lightness around the midpoint until the range clears the floor"],
+      "tests": ["every HUE, strip, Chickpea cell and JellyBox pigment against its ink: min ratio", "the label over the brightest and darkest Jelly highlight"]
+    },
+    "front-end": {
+      "principles": ["hover never changes layout: size changes are transforms on layers, not on the box", "one rAF clock for all hot buttons", "no per-frame layout reads"],
+      "tricks": ["grow a layer past the button with negative inset on an unclipped host", "a wireframe drawn in the page root's box scrolls with what it measures"]
+    },
+    "generative design (chickpea)": {
+      "principles": ["structural correctness: a guillotine cut always crosses its cell", "truthful labels", "seeded, so a url or a visit replays"],
+      "tricks": ["composeGrid anchors cuts to live boxes: the label's box can be one of them", "ratioName turns a measured aspect into '1/φ', '2/3', '1/2'"]
+    }
+  },
+  "the_thing": {
+    "parts": ["the button's resting box (fixed)", "the band layer", "the label overlay", "a wireframe layer (new)", "dimension labels (new)", "the lineage effect layers", "the credit"],
+    "expectations": ["it reacts at once", "it reads", "it never shoves the page", "it is different next time"],
+    "kinds": [
+      {"name": "the glitch band", "what": "today's hover: band, strips, letters on drawings"},
+      {"name": "size and aspect", "what": "the band's own box grows or shrinks to a new aspect around the label, springing, the button box unchanged"},
+      {"name": "wireframe follow", "what": "a hairline box wraps the button, leans toward the cursor and re-fits as it moves, with its live dimensions"},
+      {"name": "chickpea grid", "what": "the band cut by Chickpea's engine into a guillotine grid, cells in a Chickpea palette"},
+      {"name": "chickpea measure", "what": "the hero's move: the seam nearest the cursor parts and an arrow measures it, with a truthful ratio"},
+      {"name": "lineage", "what": "the seven effects from his past projects"}
+    ]
+  },
+  "specifics": {
+    "size and aspect": {
+      "keywords": {"1": ["size change", "aspect ratio", "random", "smooth"], "2": ["band box", "spring", "inset"], "3": ["golden aspect", "module", "overshoot"]},
+      "tokens": {"grow": "0 to 0.5em past each edge", "shrink": "to the label plus 0.25 to 0.5em", "aspects": "1/φ, 1/2, 2/3, the row's own", "settle": "220 to 380ms on a spring"},
+      "behaviors": ["the button box and every neighbour stay put", "the label never scales or squashes", "a menu row may grow taller and narrower, or hug its label"]
+    },
+    "wireframe": {
+      "keywords": {"1": ["wireframe", "encapsulated", "follows your cursor", "automatically adjusts"], "2": ["hairline", "measure ink", "dimension label"], "3": ["bounding box", "ticks", "dashed guide", "truthful ratio"]},
+      "tokens": {"stroke": "1 to 1.5px", "ink": "#3F5195 or band ink", "lean": "4 to 12px toward the cursor, springing", "label": "W × H in px or the ratio name"},
+      "behaviors": ["it wraps the band, not the box, so it re-fits when the size changes", "its corners lean toward the cursor and spring back", "labels never cross the label text"]
+    },
+    "randomness": {
+      "tokens": {"draws per hover": "size/aspect, wireframe on or off, Chickpea move, lineage card", "no repeat": "the same button never gets the same draw twice running"},
+      "behaviors": ["every hover is random, menu rows too", "the glitch always comes first", "keyboard and touch never draw"]
+    }
+  },
+  "anti_keywords": [
+    {"not": "scaling the whole button so the text stretches", "instead": "change the band layer's box; the label stays crisp at its size"},
+    {"not": "a wireframe that lags the cursor on a CSS transition", "instead": "track 1:1 by transform for what is the cursor's, spring only what reacts"},
+    {"not": "random hues on menu rows", "instead": "the page hue holds; vary shape, strips, wireframe and effect"},
+    {"not": "trusting a pigment's contrast for translucent glass", "instead": "bound or sample the composite under the label"},
+    {"not": "a size change that moves a neighbour", "instead": "layers only; the checks compare every layout box before and during"},
+    {"not": "decorative grid noise over the label", "instead": "Chickpea's restraint: hairlines, at most three labels, nothing crosses the text"}
+  ],
+  "checks": [
+    "twelve seeded hovers of one menu row: at least eight distinct, none twice running",
+    "every layout box identical before and during each new effect",
+    "label contrast at least 4.5:1 in every frame of every effect, Jelly included",
+    "the wireframe tracks the cursor in the same frame and re-fits after a size change",
+    "keyboard, touch and reduced motion: an instant still end frame, no draw"
+  ],
+  "built": []
+}

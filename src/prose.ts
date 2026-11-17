@@ -300,7 +300,7 @@ const SKIP: Record<string, string> = {
 
 /**
  * The back button: JellyBox's own X in its own ledger box. One sheet cell,
- * ruled in ink, in the gutter, with its centre where home's "+" is. With
+ * ruled in ink, the whole gutter, with a pin where home's "+" is. With
  * scripts off it is the box, JellyBox's CSS skin in glass blue, the X and a
  * plain link. `runtime/jx.ts` gives it a colour from the visit's bag, its
  * entrance and, on a desktop, JellyBox's real optics. During a page change
@@ -321,7 +321,8 @@ const backX = (back: Back, hue: string): Html =>
       'aria-label': back.label,
     },
     h('span', { class: 'jx-skin', 'aria-hidden': 'true' }),
-    h('span', { class: 'jx-plus', 'aria-hidden': 'true' }, '+'),
+    // the pin: where home's "+" is, which the box's centre is not; the mono "+" sits on it
+    h('span', { class: 'jx-pin', 'aria-hidden': 'true' }, h('span', { class: 'jx-plus' }, '+')),
     h('svg', { class: 'jx-x', viewBox: '0 0 256 256', 'aria-hidden': 'true', focusable: 'false' }, h('path', { d: X_PATH })),
   );
 

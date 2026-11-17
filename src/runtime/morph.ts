@@ -71,8 +71,9 @@
  *                pointer click 160px or more from the "+": eight flat squares carry
  *                the click along the grid to the "+", and the film opens from there
  *
- * Going back or up replays the kind that opened the page. Never the same
- * lineage film twice running. Still deterministic: the same moment of the
+ * Going back or up replays the kind that opened the page, and on a page with
+ * the back button the cover waits 100ms while its X collapses into the "+",
+ * which it then closes in on. Never the same lineage film twice running. Still deterministic: the same moment of the
  * same kind always gives the same frame.
  */
 
@@ -101,6 +102,8 @@ const REVEAL_MS = 420;
 /** Coalesce: the squares' hop to the "+", and how long the cover waits for the first arrival. */
 const HOP_MS = 140;
 const COAL_LEAD = 80;
+/** Going up: how long the cover waits while the back button's X collapses into the "+". */
+const CLOSE_LEAD = 100;
 const B4 = [
   [0, 8, 2, 10],
   [12, 4, 14, 6],
@@ -141,6 +144,9 @@ interface Grid {
   glyph: string;
   /** this film's lineage variant */
   kind: Kind;
+  /** the back button's ghost, and how close the front comes before it must show */
+  ghost: HTMLElement | null;
+  ghostR: number;
 }
 
 const html = document.documentElement;
@@ -177,8 +183,9 @@ function mount(): Grid | null {
     return null;
   }
 
-  // The "+", where it rests: the magnet may be leaning it.
-  const r = anchor.getBoundingClientRect();
+  // The "+", where it rests: the magnet may be leaning it. The back button's
+  // box is the whole gutter, so its pin marks where home's "+" is.
+  const r = (anchor.querySelector<HTMLElement>('.jx-pin') ?? anchor).getBoundingClientRect();
   const [px, py] = PULL.get(anchor) ?? [0, 0];
   const ax = r.left - px + r.width / 2;
   // A "+" scrolled off the top still starts the film, from the top edge.
@@ -230,17 +237,21 @@ function mount(): Grid | null {
   // The back button's ledger box is wider than one cell: the film would paint
   // its ground over the box's rules. A ghost of the box, its rules and its "+",
   // sits on top of the film instead, so the cell is left to the real "+".
+  let ghost: HTMLElement | null = null;
+  let ghostR = 0;
   if (anchor.matches('.jx')) {
-    const ghost = document.createElement('span');
+    ghost = document.createElement('span');
     ghost.className = 'jx-ghost';
     ghost.textContent = '+';
     const br = anchor.getBoundingClientRect();
-    ghost.style.cssText = `left:${br.left - px}px;top:${br.top - py}px;width:${br.width}px;height:${br.height}px;line-height:${br.height - 2}px`;
+    ghost.style.cssText = `left:${br.left - px}px;top:${br.top - py}px;width:${br.width}px;height:${br.height}px;line-height:${br.height - 2}px;text-indent:${(ax - (br.left - px) - cw / 2).toFixed(2)}px`;
     el.appendChild(ghost);
+    // its farthest corner from the "+", and a cell more
+    ghostR = Math.max(...[br.left - px, br.right - px].flatMap((x) => [br.top - py, br.bottom - py].map((y) => Math.hypot(x - ax, y - ay)))) + cw;
   }
   // The film draws this page's own mark in the anchor cell: the "+".
   const glyph = (anchor.dataset.glyph ?? '+').charAt(0) || '+';
-  grid = { cols, rows, cw, ch, gx, gy, ac, ar, dist, reach, glyph, kind: null };
+  grid = { cols, rows, cw, ch, gx, gy, ac, ar, dist, reach, glyph, kind: null, ghost, ghostR };
   return grid;
 }
 
@@ -260,6 +271,7 @@ function clear(): void {
   busy = false;
   html.classList.remove('morph-in');
   html.removeAttribute('data-morph');
+  html.removeAttribute('data-morph-dir');
 }
 
 /** Ramp step for a cell `s` px from live page. 0 is "+", 5 is blank. */
@@ -336,8 +348,13 @@ function frame(g: Grid, part: Part, dir: Dir, p: number): void {
   if (dir === 'out') {
     if (part === 'cover') draw(g, 'disc', p * span);
     else draw(g, 'ring', p * span - g.reach * tail);
-  } else if (part === 'cover') draw(g, 'ring', g.reach - p * span);
-  else draw(g, 'disc', (1 - p) * span);
+  } else if (part === 'cover') {
+    const R = g.reach - p * span;
+    // Going up the box is covered last, so the back button closes its X into
+    // the "+" in plain sight (jx.ts); the ghost takes over as the front arrives.
+    if (g.ghost?.hidden && R < g.ghostR) g.ghost.hidden = false;
+    draw(g, 'ring', R);
+  } else draw(g, 'disc', (1 - p) * span);
 }
 
 /** Play one part, then call `done`. Any failure calls `fail` instead. */
@@ -501,6 +518,8 @@ function leave(url: URL, click: { x: number; y: number; colour: string } | null)
   g.kind = kind;
   busy = true;
   glitchAnchor();
+  if (dir === 'home' && g.ghost) g.ghost.hidden = true;
+  html.setAttribute('data-morph-dir', dir);
   html.setAttribute('data-morph', 'cover');
   // Warm the cache while the cover plays, so the cut between pages is short.
   try {
@@ -517,10 +536,15 @@ function leave(url: URL, click: { x: number; y: number; colour: string } | null)
   // waits for the first square to arrive, 80ms: 80 + 340 is the old 400.
   const ax = g.gx + g.ac * g.cw + g.cw / 2;
   const ay = g.gy + g.ar * g.ch + g.ch / 2;
+  // Going up from a page with the back button, the cover waits 100ms while
+  // the X collapses into the "+" (jx.ts), so the field closes in on the box
+  // just as the closing lands: 100 + 340.
+  const lead = dir === 'home' && g.ghost ? CLOSE_LEAD : 0;
   if (click && Math.hypot(click.x - ax, click.y - ay) >= 160 && (forcedCoal ?? Math.random() < 1 / 3)) {
     coalesce(g, click.x, click.y, click.colour);
-    timer = window.setTimeout(cover, COAL_LEAD);
-  } else cover();
+    timer = window.setTimeout(cover, Math.max(lead, COAL_LEAD));
+  } else if (lead) timer = window.setTimeout(cover, lead);
+  else cover();
 }
 
 /** The page was opened mid-film: it is covered, so uncover it. */
