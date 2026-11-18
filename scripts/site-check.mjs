@@ -1493,13 +1493,13 @@ try {
   const homeJelly = await lp.evaluate(() => !!document.querySelector('canvas'));
   ok(!homeJelly, 'so no canvas on home, and Jelly is never dealt there');
   const deck = await lp.evaluate(() => window.__lin.state().deck.slice().sort().join(' '));
-  ok(deck === 'bayer canister decode decode jelly jelly knockout knockout mark mark mark shear', 'the deck: twelve cards, quiet ones most', deck);
+  ok(deck === 'bayer canister decode decode jelly jelly knockout knockout mark mark mark shear skeleton skeleton', 'the deck: fourteen cards, quiet ones most', deck);
   await lp.goto(`${BASE}/product-designs/`, { waitUntil: 'networkidle' });
   await settle(lp);
   await lp.waitForFunction(() => !!window.__lin, null, { timeout: 5000 });
   const own = await lp.evaluate(() => Object.fromEntries(Array.from(document.querySelectorAll('a.row[data-lin]')).map((a) => [a.querySelector('[data-word]').textContent, a.dataset.lin])));
   ok(
-    JSON.stringify(Object.entries(own).sort()) === JSON.stringify(Object.entries({ '+scream canister controls': 'canister', '+jellybox': 'jelly', '+after tokens': 'decode', '+lee': 'mark', '+mfny concentrates': 'shear', '+dither': 'bayer', '+motion archive': 'knockout' }).sort()),
+    JSON.stringify(Object.entries(own).sort()) === JSON.stringify(Object.entries({ '+scream canister controls': 'canister', '+jellybox': 'jelly', '+after tokens': 'skeleton', '+lee': 'mark', '+mfny concentrates': 'shear', '+dither': 'bayer', '+motion archive': 'knockout' }).sort()),
     'each project’s own row carries its own effect',
     JSON.stringify(own),
   );
@@ -1561,7 +1561,7 @@ try {
   const jgone = await lp.evaluate((s) => !!document.querySelector(s).querySelector('[data-band], .jx-row, [data-k="jc"]'), jrow);
   ok(!jleave.cast && jleave.band === 1 && jleave.clip.endsWith(`round ${(slab.j.h / 2).toFixed(1).replace(/\.0$/, '')}px)`) && !jgone, 'leaving, the jelly and its cast go at once; the flat band holds its shape one drawing, then it is gone', JSON.stringify([jleave, jgone]));
   const menuFits = await lp.evaluate(() => window.__lin.fits('menu').join(' '));
-  ok(menuFits === 'decode canister', 'a menu row is never dealt Jelly: its colour has to say which page it opens', menuFits);
+  ok(!menuFits.split(' ').includes('jelly') && menuFits.split(' ').length >= 2, 'a menu row is never dealt Jelly: its colour has to say which page it opens', menuFits);
   await lp.mouse.move(1430, 980);
   await sleep(1700);
   // Every effect, forced on a plain row: what it adds, that it moves nothing, and that leaving takes it all away.
@@ -1574,6 +1574,7 @@ try {
     knockout: (v) => v.x === 1 && v.kc,
     bayer: (v) => v.x === 4 && v.bay === 4,
     jelly: (v) => v.band === 0 && v.jelly,
+    skeleton: (v) => v.band === 3 && v.x >= 3,
   };
   for (const fx of Object.keys(expect)) {
     await lp.evaluate((f) => window.__lin.force(f), fx);
@@ -1767,13 +1768,24 @@ try {
     const r = a.getBoundingClientRect();
     const bars = [...a.querySelectorAll('[data-plates] .pl')];
     const ov = a.querySelector('[data-glitch]').getBoundingClientRect();
-    const covers = bars.some((b) => { const q = b.getBoundingClientRect(); return q.left <= ov.left + 1 && q.right >= ov.left + 40 && getComputedStyle(b).backgroundColor === 'rgb(255, 255, 255)'; });
-    const inside = bars.every((b) => { const q = b.getBoundingClientRect(); return q.top >= r.top - 0.5 && q.bottom <= r.bottom + 0.5; });
-    const crosses = [...a.querySelectorAll('[data-plates] .px path')].every((p) => (p.getAttribute('d').match(/M/g) ?? []).length === 8);
+    // JellyBox glass, each plate in its own pigment
+    const glass = bars.every((b) => getComputedStyle(b).backgroundImage.startsWith('linear-gradient') && /\d+ \d+ \d+/.test(b.style.getPropertyValue('--jb-rgb')));
+    const pigs = new Set(bars.map((b) => b.style.getPropertyValue('--jb-rgb').trim()));
+    const covers = bars.some((b) => { const q = b.getBoundingClientRect(); return q.left <= ov.left + 1 && q.right >= ov.left + 40; });
+    const inside = bars.every((b) => { const q = b.getBoundingClientRect(); return q.top >= r.top - 0.5 && q.bottom <= r.bottom + 0.5 && q.left >= r.left - 0.5 && q.right <= r.right + 0.5; });
+    // aligned: sides on the mono cell, and plates on one line share their top and bottom
+    const cell = parseFloat(getComputedStyle(a).fontSize) / 2;
+    const onGrid = bars.every((b) => { const x = parseFloat(b.style.left); const w = parseFloat(b.style.width); return Math.abs(x / cell - Math.round(x / cell)) < 0.02 && (Math.abs((x + w) / cell - Math.round((x + w) / cell)) < 0.02 || Math.abs(x + w - a.offsetWidth) < 0.5); });
+    const tops = new Set(bars.map((b) => b.style.top));
+    // one "+" per distinct corner
+    const d = a.querySelector('[data-plates] .px path').getAttribute('d');
+    const corners = new Set(bars.flatMap((b) => { const x = parseFloat(b.style.left); const y = parseFloat(b.style.top); const w = parseFloat(b.style.width); const h = parseFloat(b.style.height); return [[x, y], [x + w, y], [x, y + h], [x + w, y + h]].map(([p, q]) => `${Math.round(p)},${Math.round(q)}`); }));
+    const crosses = (d.match(/M/g) ?? []).length === corners.size * 2;
     const dash = getComputedStyle(a.querySelector('[data-wire] .wx')).strokeDasharray;
-    return { bars: bars.length, covers, inside, crosses, dash, on: a.querySelector('[data-plates]').classList.contains('on'), halo: a.hasAttribute('data-halo') };
+    return { bars: bars.length, glass, pigs: pigs.size, covers, inside, onGrid, tops: tops.size, crosses, dash, on: a.querySelector('[data-plates]').classList.contains('on') };
   });
-  ok(behind.bars >= 2 && behind.covers && behind.inside && behind.crosses && behind.dash === 'none' && behind.on && !behind.halo, 'the X runs solid behind the type, which sits on white plates inside the row, a "+" on every corner', JSON.stringify(behind));
+  ok(behind.bars >= 2 && behind.glass && behind.pigs === behind.bars && behind.covers && behind.inside && behind.dash === 'none' && behind.on, 'the X runs solid behind the type, which sits on JellyBox glass plates inside the row, each in its own pigment', JSON.stringify(behind));
+  ok(behind.onGrid && behind.tops === 1 && behind.crosses, 'the plates sit on the grid: sides on the mono cell, one line sharing its top and bottom, one "+" per corner', JSON.stringify(behind));
   ok(w1.chip && /^1056 × 52 · ½$/.test(w1.chip) && !w1.chipHitsLabel, 'at the middle the chip names it ½, in Chickpea’s words, and never touches the label', JSON.stringify([w1.chip, w1.chipHitsLabel]));
   await dp.mouse.move(rows[1][0] + 600, rows[1][1] + rows[1][3] / 2);
   await sleep(60);

@@ -67,7 +67,7 @@ src/
     glitch.ts    the alternate-letter faces, and the width a sentence link reserves
     lineage.ts   effects from his past projects, dealt now and then (lazy, cursor only)
     dress.ts     every pointer hover's shape, wire and Chickpea's Cut (lazy, with lineage)
-    plates.ts    white plates under the text while a skeleton's X runs behind it
+    plates.ts    JellyBox glass plates under the text while a skeleton's X runs behind it
     jx.ts        the JellyBox back button: entrance, colors, leaving (lazy)
     jellyx.ts    JellyBox's own optics renderer, mounted on a canvas (lazy, desktop only)
     magnet.ts    the magnetic pull
@@ -76,6 +76,7 @@ src/
     offsets.ts   how the magnet and the seams stay out of each other's way
   vendor/jellybox/  JellyBox's renderer and color code, copied from its repo
   vendor/chickpea/  Chickpea's grid and palette engines, copied from its repo
+  vendor/after-tokens/  After Tokens' ambient score, copied from its repo
   styles/site.css
 scripts/site-check.mjs   end-to-end checks in real Chrome and WebKit
 ```
@@ -177,11 +178,14 @@ hover twice running.
 - **The wire.** A skeleton in Chickpea's measure ink wraps the shape: its box
   and an X joining opposite corners, crossing at the centre. It re-fits ahead
   of the band as the shape morphs. The X is solid and runs behind the type,
-  which sits on white plates, one per line, with a "+" in measure ink on each
-  plate's corners (`runtime/plates.ts`). Each plate wipes in from its own left
-  edge, the way the line reads, 40ms after the one before, over 180ms, and
-  wipes back in 90ms. They follow the text's own box every frame and never
-  reach past the row.
+  which sits on plates of JellyBox's own glass skin, one per line, each in its
+  own readable JellyBox pigment (`runtime/plates.ts`). The plates sit on the
+  page's grid: their sides on the mono cell, their tops and bottoms on the
+  line's own pitch, so plates on one line share them and stacked plates meet.
+  A "+" in measure ink marks each distinct corner once. Each plate wipes in
+  from its own left edge, the way the line reads, 40ms after the one before,
+  over 180ms, the crosses land together after the last, and they all wipe
+  back in 90ms. The wire's corners and the true size use the same "+".
 - **The true size.** Whenever the band is not the button's own size, a third
   deck keeps the true box in view, quietly, in band ink at half strength:
   Plus (the site's "+" at each true corner), Rule (ledger rules on the true
@@ -200,7 +204,8 @@ hover twice running.
   on a menu row. Its credit reads "from chickpea".
 - **Legibility.** The label is always band ink, and every surface it can
   touch holds band ink at 4.5:1 or better. Every band color does already. A
-  Cut cell that touches text is lifted to OKLCH lightness 0.74. A strip deep
+  Cut cell that touches text is lifted to OKLCH lightness 0.74, and no cell
+  goes below 0.52, so none reads as black. A strip deep
   enough to reach the label's letters only takes a color that holds band ink
   at 4.5:1, on every button. A strip or outline that would run through the
   label is dropped. JellyBox's pigments
@@ -235,17 +240,18 @@ moves.
 |---|---|---|
 | Mark | lee | the band shrinks into a quiet mark, then the label is underlined |
 | Decode | after tokens | the letters run through `+=-:.` and settle |
-| Knockout | the motion archive | ink spreads out from the pointer, then blinks |
+| Skeleton | after tokens | the text gives way to After Tokens' waiting rows, rounded cells that breathe and reshape on its own score with its glimmer passing, then its 280ms handover carries the cells into the real word groups as the ink arrives |
+| Knockout | the motion archive | a deep step of the band's own color spreads out from the pointer, the letters knocked out in ground, then blinks |
 | Jelly | jellybox | the band closes into one of JellyBox's round-ended controls, the whole row 3px in, drawn by its real optics |
 | Shear | mfny concentrates | the band is cut by slanted wipes 50ms apart |
 | Bayer | dither | the band dithers through a 4 by 4 Bayer pattern under the pointer |
 | Canister | scream canister controls | the band squashes and pops, with a late letter |
 
-- **The deck.** Twelve cards: Mark 3, Decode 2, Knockout 2, Jelly 2, and one
-  each of Shear, Bayer and Canister. It is shuffled once a visit
+- **The deck.** Fourteen cards: Mark 3, Decode 2, Skeleton 2, Knockout 2,
+  Jelly 2, and one each of Shear, Bayer and Canister. It is shuffled once a visit
   (`sessionStorage` `ps-lin`) and only deals cards that fit the button: a row
-  takes any, a menu row Decode or Canister, a sentence link Mark, Decode or
-  Jelly, a chip Mark or Decode. A menu row never gets Jelly, because Jelly
+  takes any, a menu row Decode, Skeleton or Canister, a sentence link Mark,
+  Decode, Skeleton or Jelly, a chip Mark, Decode or Skeleton. A menu row never gets Jelly, because Jelly
   trades the row's color for the nearest JellyBox pigment. Jelly needs the
   optics loaded and a row at least 34px tall. Its pigment is always one that
   holds band ink at 4.5:1. Home has no X, so it never loads the optics and
@@ -265,8 +271,8 @@ moves.
 ## The back button
 
 Every subpage's back link is an X from JellyBox, taken from JellyBox itself,
-in its own ledger box: the whole gutter, 72 by 73 at his laptop, ruled above,
-below and on the right. The box's centre is 0.15em left of home's "+", so a
+in its own ledger box: the whole gutter, 72 by 73 at his laptop, ruled on all
+four sides. The box's centre is 0.15em left of home's "+", so a
 pin (`.jx-pin`) marks where the "+" is, and the film anchors there.
 
 - **Real JellyBox.** On a desktop it is drawn by JellyBox's own renderer,
@@ -452,7 +458,8 @@ measure the film rather than the battery. It checks:
   four. Each shape lands where the cursor puts it, always holds the whole
   label, and moves no layout box, and Reach follows the cursor on the cell
   grid. The wire is a skeleton whose solid X joins its corners behind the
-  type, which sits on white plates inside the row, a "+" on every corner. Every resizing hover shows a true-size mark on the button's
+  type, which sits on JellyBox glass plates inside the row, each in its own
+  pigment, their sides on the mono cell, one "+" per corner. Every resizing hover shows a true-size mark on the button's
   own box, all five in each round of five, and a Full band shows none. While
   the glitch lands no letter moves more than 9px between two frames. Every
   surface the label touches holds band ink at 4.5:1. The wire's guide sits on
@@ -611,6 +618,16 @@ engine (`composeGrid` and its tree, the ratio canon with `snapToRatio` and
 It is his own project, so take a fresh copy from it rather than editing the
 copy here.
 
+## After Tokens
+
+`src/vendor/after-tokens/ambient-score.ts` is After Tokens' own decorative
+score, copied as it is from globalanomalyindex/after-tokens at 844d332 (MIT,
+`LICENSE` beside it). The Skeleton card runs it, and takes the rest of its
+values from After Tokens' own CSS: the cell ink at 0.2 and round, the breath
+from 0.72 to 1, the white glimmer, and the 280ms handover with its ink curve
+(0.45 at 38%, full at 74%, settling from 1.5px) and its rule of three words
+at most to a target.
+
 ## Payload
 
 Measured in Chrome against the built site's preview server, cache off, first
@@ -635,8 +652,8 @@ The scripts, gzipped:
 |---|---:|---|
 | main | 12.7 kB | every page |
 | signature | 7.6 kB | home only |
-| lineage, with the dress and Chickpea | 14.3 kB | after the page is seen, for a cursor |
-| jx | 4.1 kB | subpages, and with lineage |
+| lineage, with the dress, Chickpea and After Tokens | 17.9 kB | after the page is seen, for a cursor |
+| jx, with the plates | 6.5 kB | subpages, and with lineage |
 | jellyx | 176 kB | subpages on a desktop, after the page is seen |
 
 Paintings is the heavy page. The works are WebP at 1200px, and at three tiles

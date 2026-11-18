@@ -10,9 +10,9 @@
  *   own row     a project's own row (`data-lin`) always plays its own effect
  *   cooldown    right after an effect, or within 1.5s of one: glitch only
  *   repeat      the same button again within 4s repeats what it just did
- *   otherwise   1 in 4 draws the next card that fits, from a deck of twelve
- *               shuffled once per visit: Mark 3, Decode 2, Knockout 2, Jelly 2,
- *               Shear 1, Bayer 1, Canister 1. Quiet ones come up most.
+ *   otherwise   1 in 4 draws the next card that fits, from a deck of fourteen
+ *               shuffled once per visit: Mark 3, Decode 2, Skeleton 2,
+ *               Knockout 2, Jelly 2, Shear 1, Bayer 1, Canister 1.
  *
  * In practice about one resting hover in six, and never two in a row. Fast
  * sweeps never reach the dwell, so they only ever get the glitch. The order is
@@ -29,6 +29,7 @@ import { HUES, mix, pickNot } from './band.ts';
 import { ALT, mulberry, step2, step4, type Edge, type Letter } from './ink.ts';
 import { setLineage, type Hot, type Lineage, type Look } from './buttons.ts';
 import { jellyFor, jellyOptics } from './jx.ts';
+import { ambientScoreAt, createAmbientScore, type ScoreRow } from '../vendor/after-tokens/ambient-score.ts';
 // the dress rides in this chunk: every pointer hover's shape, wire and Chickpea's Cut
 import './dress.ts';
 
@@ -48,6 +49,7 @@ const SHEAR = ['#8CA7DA', '#F1CC54', '#FF5A52'];
 export const CREDIT: Record<string, string> = {
   canister: 'from scream canister controls',
   decode: 'from after tokens',
+  skeleton: 'from after tokens',
   mark: 'from lee',
   shear: 'from mfny concentrates',
   knockout: 'from the motion archive',
@@ -55,15 +57,15 @@ export const CREDIT: Record<string, string> = {
   jelly: 'from jellybox',
 };
 
-const DECK = ['mark', 'mark', 'mark', 'decode', 'decode', 'knockout', 'knockout', 'jelly', 'jelly', 'shear', 'bayer', 'canister'];
+const DECK = ['mark', 'mark', 'mark', 'decode', 'decode', 'skeleton', 'skeleton', 'knockout', 'knockout', 'jelly', 'jelly', 'shear', 'bayer', 'canister'];
 const FITS: Record<string, string[]> = {
-  row: ['mark', 'decode', 'knockout', 'jelly', 'shear', 'bayer', 'canister'],
+  row: ['mark', 'decode', 'skeleton', 'knockout', 'jelly', 'shear', 'bayer', 'canister'],
   // a button with its own page colour: the home menu, the pages rows. Never
   // Jelly: it trades the row's colour for JellyBox's nearest pigment, and a
   // menu row's colour has to say which page it opens.
-  menu: ['decode', 'canister'],
-  inline: ['mark', 'decode', 'jelly'],
-  chip: ['mark', 'decode'],
+  menu: ['decode', 'skeleton', 'canister'],
+  inline: ['mark', 'decode', 'skeleton', 'jelly'],
+  chip: ['mark', 'decode', 'skeleton'],
 };
 
 /* ------------------------------------------------------------ the deck */
@@ -235,6 +237,24 @@ function markBand(h: Hot, p: number): { c: string; s: string } {
   return { c: 'bm', s: `position:absolute;inset:0;background:${p >= 1 ? mix(GROUND, mark, 0.27) : h.P.main};clip-path:inset(0 ${(R * p).toFixed(1)}px 0 ${(L * p).toFixed(1)}px)` };
 }
 
+/**
+ * Knockout's ink: a deep step of the band's own colour, not black, so the
+ * inversion stays in the hover's colour. Deep enough that the ground-ink
+ * letters on it hold 4.5:1.
+ */
+const lumOf = (hex: string): number =>
+  [1, 3, 5]
+    .map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+    .map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4))
+    .reduce((s, v, i) => s + v * [0.2126, 0.7152, 0.0722][i], 0);
+const deepOf = (main: string): string => {
+  for (let k = 0.55; k < 0.95; k += 0.05) {
+    const c = mix(main, '#1A1820', k);
+    if ((lumOf(GROUND) + 0.05) / (lumOf(c) + 0.05) >= 4.5) return c;
+  }
+  return '#1A1820';
+};
+
 /** Knockout's second copy of the label in ground ink, clipped with the ink so each letter inverts at the edge. */
 function copyOf(h: Hot, clip: string): void {
   let kc = h.b.querySelector<HTMLSpanElement>(':scope > [data-k="kc"]');
@@ -321,6 +341,8 @@ function look(h: Hot, tau: number): Look {
         letters: ls,
       };
     }
+    case 'skeleton':
+      return skeletonLook(h, tau);
     case 'decode': {
       const per = Math.max(1, Math.ceil(h.P.letters.length / 6));
       const m = Math.floor(tau / 50);
@@ -366,7 +388,7 @@ function look(h: Hot, tau: number): Look {
       const clip = `clip-path:inset(0 ${((1 - px) * (1 - p) * 100).toFixed(2)}% 0 ${(px * (1 - p) * 100).toFixed(2)}%);visibility:${blink ? 'hidden' : 'visible'}`;
       return {
         letters: alt(h),
-        extra: [{ c: '', s: `position:absolute;inset:0;background:#12141B;${clip}` }],
+        extra: [{ c: '', s: `position:absolute;inset:0;background:${deepOf(h.P.main)};${clip}` }],
         own: (hh) => copyOf(hh, clip),
       };
     }
@@ -410,7 +432,195 @@ function look(h: Hot, tau: number): Look {
   return {};
 }
 
+/* ---------------------------------------------------------- Skeleton */
+
+/*
+ * Skeleton, from after tokens: his study of ambient skeleton loading and how
+ * generated text arrives, in its own terms. From the settled glitch the text
+ * goes, and After Tokens' waiting rows take its place: rounded cells of the
+ * ink at 0.2, breathing, reshaping on After Tokens' own score (its
+ * `ambientScoreAt`, run 24 times faster so a hover sees it move), with its
+ * white glimmer passing once. At 480ms its 280ms handover: the cells travel
+ * and reshape toward the actual word groups, three words at most, while the
+ * ink arrives on its own curve. Every row of the button's text, the label and
+ * each line of its detail, goes through it together.
+ */
+const SK_WAIT = 480;
+const SK_HAND = 280;
+const SK_SPEED = 24;
+type R = { x: number; y: number; w: number; h: number };
+interface SkRow extends R {
+  targets: R[];
+}
+const skGeo = new WeakMap<Hot, { rows: SkRow[]; score: ScoreRow[]; details: HTMLElement[] }>();
+const E_SHAPE = bez(0.32, 0, 0.25, 1);
+const E_TRANSFER = bez(0.22, 1, 0.36, 1);
+const E_INK = bez(0.25, 1, 0.5, 1);
+
+/** After Tokens' bubble-transfer rule: up to three words on one line make a target, 10% down and 80% tall. */
+function groupsOf(words: R[]): R[] {
+  const out: R[] = [];
+  for (let i = 0; i < words.length; ) {
+    const first = words[i++];
+    let right = first.x + first.w;
+    let n = 1;
+    while (i < words.length && n < 3 && Math.abs(words[i].y - first.y) < 2) {
+      right = Math.max(right, words[i].x + words[i].w);
+      i++;
+      n++;
+    }
+    out.push({ x: first.x, y: first.y + first.h * 0.1, w: right - first.x, h: first.h * 0.8 });
+  }
+  return out;
+}
+
+function skeletonGeo(h: Hot) {
+  const had = skGeo.get(h);
+  if (had) return had;
+  const b = h.b;
+  const br = b.getBoundingClientRect();
+  const sc = br.width / (b.offsetWidth || br.width) || 1;
+  const rel = (r: DOMRect, dx = 0, dy = 0): R => ({ x: (r.left - br.left) / sc - dx, y: (r.top - br.top) / sc - dy, w: r.width / sc, h: r.height / sc });
+  const rows: SkRow[] = [];
+  const lineOf = (words: R[]): SkRow => {
+    const x = Math.min(...words.map((q) => q.x));
+    const y = Math.min(...words.map((q) => q.y));
+    return { x, y, w: Math.max(...words.map((q) => q.x + q.w)) - x, h: Math.max(...words.map((q) => q.y + q.h)) - y, targets: groupsOf(words) };
+  };
+  // the label: its overlay's letters, without any glide still running, gathered into words
+  const ov = b.querySelector<HTMLElement>('[data-glitch]');
+  if (ov) {
+    const words: R[] = [];
+    let cur: R | null = null;
+    for (const sp of Array.from(ov.children) as HTMLElement[]) {
+      if (!(sp.textContent ?? '').trim()) {
+        if (cur) words.push(cur);
+        cur = null;
+        continue;
+      }
+      const q = rel(sp.getBoundingClientRect(), parseFloat(sp.style.left) || 0, parseFloat(sp.style.top) || 0);
+      cur = cur ? { x: cur.x, y: Math.min(cur.y, q.y), w: q.x + q.w - cur.x, h: Math.max(cur.h, q.h) } : q;
+    }
+    if (cur) words.push(cur);
+    if (words.length) rows.push(lineOf(words));
+  }
+  // the figure or the detail: every word, a row per line
+  const details = Array.from(b.querySelectorAll<HTMLElement>('.n, .l')).filter((e) => e.textContent?.trim());
+  for (const f of details) {
+    const words: R[] = [];
+    const walk = document.createTreeWalker(f, NodeFilter.SHOW_TEXT);
+    let node: Node | null;
+    while ((node = walk.nextNode()) && words.length < 120) {
+      const text = node.textContent ?? '';
+      for (const m of text.matchAll(/\S+/g)) {
+        const range = document.createRange();
+        range.setStart(node, m.index!);
+        range.setEnd(node, m.index! + m[0].length);
+        for (const r of range.getClientRects()) if (r.width > 0) words.push(rel(r));
+      }
+    }
+    const lines = new Map<number, R[]>();
+    for (const w of words) {
+      const k = [...lines.keys()].find((y) => Math.abs(y - w.y) < 2) ?? w.y;
+      lines.set(k, [...(lines.get(k) ?? []), w]);
+    }
+    lines.forEach((ws) => rows.push(lineOf(ws)));
+  }
+  const geo = { rows, score: createAmbientScore(b.getAttribute('href') ?? b.textContent ?? ''), details };
+  skGeo.set(h, geo);
+  return geo;
+}
+
+/** The ink's arrival, After Tokens' `reading-ink-arrive`: opacity and the 1.5px settle. */
+function inkArrive(u: number): { op: number; top: number } {
+  if (u <= 0) return { op: 0, top: 1.5 };
+  if (u >= 1) return { op: 1, top: 0 };
+  const op = u < 0.38 ? 0.45 * E_INK(u / 0.38) : u < 0.74 ? 0.45 + 0.55 * E_INK((u - 0.38) / 0.36) : 1;
+  const top = u < 0.74 ? 1.5 - 1.7 * E_INK(u / 0.74) : -0.2 + 0.2 * E_INK((u - 0.74) / 0.26);
+  return { op, top };
+}
+
+function skeletonLook(h: Hot, tau: number): Look {
+  const { rows, score, details } = skeletonGeo(h);
+  const fs = h.geo.fs;
+  const waiting = Math.min(tau, SK_WAIT);
+  const S = 1250 + waiting * SK_SPEED;
+  const shapes = ambientScoreAt(score, S);
+  const u = Math.max(0, Math.min(1, (tau - SK_WAIT) / SK_HAND));
+  const extra: { c: string; s: string }[] = [];
+  if (tau < SK_WAIT + SK_HAND) {
+    // the glimmer: one white band passing left to right, 120 to 360ms
+    const g = Math.max(0, Math.min(1, (tau - 120) / 240));
+    const G = -60 + 220 * g;
+    const shimmer = g > 0 && g < 1 ? `linear-gradient(90deg, transparent ${(G - 35).toFixed(1)}%, rgb(255 255 255 / .3) ${G.toFixed(1)}%, transparent ${(G + 35).toFixed(1)}%),` : '';
+    rows.forEach((row, i) => {
+      const k = (i % 4) + 1;
+      const shape = shapes[k];
+      const prev = shape.episode < 0 ? shape : ambientScoreAt(score, shape.cueAtMs - 1)[k];
+      const p = shape.episode < 0 ? 1 : E_SHAPE(Math.max(0, Math.min(1, (S - shape.cueAtMs) / shape.transitionMs)));
+      const sr = score[k];
+      const breath = 0.86 + 0.14 * Math.sin((2 * Math.PI * (S + sr.breathPhaseMs)) / sr.breathPeriodMs);
+      const fade = Math.min(1, tau / 160);
+      const W = row.w * (0.94 + 0.06 * shape.width);
+      const ph = Math.min(row.h * 0.62, 0.62 * fs);
+      const py = row.y + (row.h - ph) / 2;
+      const pills = shape.pills
+        .map((q, j) => ({ x: prev.pills[j].x + (q.x - prev.pills[j].x) * p, w: prev.pills[j].width + (q.width - prev.pills[j].width) * p, o: prev.pills[j].opacity + (q.opacity - prev.pills[j].opacity) * p }))
+        .filter((q) => q.o > 0.02 && q.w > 0.005);
+      pills.forEach((q, j) => {
+        let x = row.x + q.x * W;
+        let y = py;
+        let w = q.w * W;
+        let hh = ph;
+        let a = 0.2 * breath * fade * q.o;
+        if (u > 0) {
+          // the handover: each cell to its word group (After Tokens' index mapping)
+          const tg = row.targets[Math.min(row.targets.length - 1, Math.floor((j * row.targets.length) / pills.length))];
+          const e = E_TRANSFER(u);
+          x += (tg.x - x) * e;
+          y += (tg.y - y) * e;
+          w += (tg.w - w) * e;
+          hh += (tg.h - hh) * e;
+          a *= u < 0.48 ? 1 - 0.35 * (u / 0.48) : 0.65 * (1 - (u - 0.48) / 0.52);
+        }
+        if (a < 0.004) return;
+        extra.push({ c: 'skc', s: `position:absolute;left:${x.toFixed(1)}px;top:${y.toFixed(1)}px;width:${w.toFixed(1)}px;height:${hh.toFixed(1)}px;border-radius:999px;background:${shimmer}rgb(26 24 32 / ${a.toFixed(3)})` });
+      });
+    });
+  }
+  const ink = inkArrive(u);
+  const ovS = tau < SK_WAIT ? 'opacity:0' : u < 1 ? `opacity:${ink.op.toFixed(3)};transform:translateY(${ink.top.toFixed(2)}px)` : undefined;
+  return {
+    letters: alt(h),
+    ovS,
+    extra,
+    own: () => {
+      const st = tau < SK_WAIT ? 'opacity:0' : u < 1 ? `opacity:${ink.op.toFixed(3)};position:relative;top:${ink.top.toFixed(2)}px` : '';
+      for (const d of details) if ((d.dataset.sk ?? '') !== st) {
+        d.dataset.sk = st;
+        d.style.opacity = tau < SK_WAIT ? '0' : u < 1 ? ink.op.toFixed(3) : '';
+        d.style.position = st ? 'relative' : '';
+        d.style.top = st && tau >= SK_WAIT ? `${ink.top.toFixed(2)}px` : '';
+      }
+    },
+  };
+}
+
+/** The detail text back exactly as it was. */
+function skeletonDone(h: Hot): void {
+  const g = skGeo.get(h);
+  if (!g) return;
+  for (const d of g.details) {
+    delete d.dataset.sk;
+    d.style.opacity = '';
+    d.style.position = '';
+    d.style.top = '';
+  }
+  skGeo.delete(h);
+}
+
 function leave(h: Hot, now: number): void {
+  if (h.fx === 'skeleton') skeletonDone(h);
   if (h.fx) {
     linEnd = now;
     if (!h.b.hasAttribute('data-lin')) creditUntil = Math.max(now + 900, h.t0 + 220 + 1600);
@@ -420,6 +630,7 @@ function leave(h: Hot, now: number): void {
 }
 
 function cut(h: Hot): void {
+  skeletonDone(h);
   h.b.querySelectorAll(':scope > [data-k="kc"]').forEach((n) => n.remove());
   if (h.fx === 'jelly') jellyFor(h, cap(h), -2);
 }

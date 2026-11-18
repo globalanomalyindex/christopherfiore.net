@@ -705,6 +705,8 @@ let jpig = '#5baff3';
 let jfb = 0;
 hooks.jelly = () => (jh ? { ...jcap, pig: jpig } : null);
 hooks.reads = () => READS.slice();
+/** The readable pigments' highlighted states, as "r g b" for JellyBox's skin (the plates' glass). */
+export const glassTriples = (): string[] => READS.map((p) => triple(STATES[p][1]));
 
 const hueOf = (hex: string): number => {
   const c = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);

@@ -244,7 +244,7 @@ function mount(): Grid | null {
     ghost.className = 'jx-ghost';
     ghost.textContent = '+';
     const br = anchor.getBoundingClientRect();
-    ghost.style.cssText = `left:${br.left - px}px;top:${br.top - py}px;width:${br.width}px;height:${br.height}px;line-height:${br.height - 2}px;text-indent:${(ax - (br.left - px) - cw / 2).toFixed(2)}px`;
+    ghost.style.cssText = `left:${br.left - px}px;top:${br.top - py}px;width:${br.width}px;height:${br.height}px;line-height:${br.height - 2}px;text-indent:${(ax - (br.left - px) - anchor.clientLeft - cw / 2).toFixed(2)}px`;
     el.appendChild(ghost);
     // its farthest corner from the "+", and a cell more
     ghostR = Math.max(...[br.left - px, br.right - px].flatMap((x) => [br.top - py, br.bottom - py].map((y) => Math.hypot(x - ax, y - ay)))) + cw;

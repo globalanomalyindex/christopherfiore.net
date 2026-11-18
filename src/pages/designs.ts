@@ -12,7 +12,7 @@
 
 import { TALLY } from '../palette.ts';
 import { CASES, MOTION_ARCHIVE } from '../data/cases.ts';
-import { OWN_EFFECT, PROJECTS_TOTAL, lede, pagesBlock, row, rows, section, subpage, sum } from '../prose.ts';
+import { OWN_EFFECT, PROJECTS_TOTAL, lede, pagesBlock, row, rows, section, subpage } from '../prose.ts';
 
 export const DESIGNS = {
   title: 'product designs & experiments',
@@ -33,9 +33,6 @@ const known = new Set(ORDER.map(([status]) => status));
 for (const c of CASES) {
   if (!known.has(c.status)) throw new Error(`designs: "${c.status}" is outside the status vocabulary`);
 }
-// The helper line says they are all from one year.
-const YEARS = new Set(CASES.map((c) => c.year));
-if (YEARS.size !== 1) throw new Error('designs: the helper line says every case is from one year');
 
 export function designs() {
   return subpage(
@@ -44,7 +41,6 @@ export function designs() {
     TALLY.yellow,
     PROJECTS_TOTAL,
     lede(DESIGNS.lede),
-    sum(`grouped by how far each one got, all from ${CASES[0].year}. a row with a + opens the project.`),
     ...ORDER.map(([status, hue]) => {
       const items = CASES.filter((c) => c.status === status);
       return section(

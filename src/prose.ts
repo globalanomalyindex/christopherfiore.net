@@ -217,7 +217,7 @@ export interface RowOpts extends BtnOpts {
  */
 export const OWN_EFFECT: Record<string, string> = {
   'scream-canister-controls': 'canister',
-  'after-tokens': 'decode',
+  'after-tokens': 'skeleton',
   lee: 'mark',
   'mfny-concentrates': 'shear',
   dither: 'bayer',

@@ -324,7 +324,9 @@ function cutCells(h: Hot, T: Ins, seed: number): Cell[] {
   const rank = new Map(order.map((o, k) => [o.i, Math.min(4, k)]));
   return mods.map((m, i) => {
     const c = pal[i % pal.length];
-    const color = touches(m) ? legible(c, 0.74) : rgbToHex(gamutMapToRgb({ L: c.L, C: Math.min(c.C, maxChroma(c.L, c.H)), H: c.H }));
+    // never near black: a cell clear of text keeps at least OKLCH L 0.52; one by text, 0.74
+    const L = Math.max(0.52, c.L);
+    const color = touches(m) ? legible(c, 0.74) : rgbToHex(gamutMapToRgb({ L, C: Math.min(c.C, maxChroma(L, c.H)), H: c.H }));
     return { ...m, color, at: 150 + 50 * rank.get(i)! };
   });
 }
@@ -424,13 +426,15 @@ function trueEl(h: Hot, dr: Dr): void {
   el.setAttribute('data-true', dr.trueMark);
   el.setAttribute('aria-hidden', 'true');
   const ink = 'stroke="#1A1820"';
+  const measure = 'stroke="#3F5195"';
   let body = '';
   switch (dr.trueMark) {
     case 'plus': {
       // the site's "+" at each true corner; on a row that clips its sides, just inside them
       const ix = dr.clipX ? 5 : 0;
       const arm = 4;
-      body = [[ix, 0], [W - ix, 0], [ix, H], [W - ix, H]].map(([x, y]) => `<path ${ink} stroke-width="1.5" d="M${x - arm} ${y}H${x + arm}M${x} ${y - arm}V${y + arm}"/>`).join('');
+      // the same "+" the plates and the wire use: measure ink, 1px, 4px arms
+      body = [[ix, 0], [W - ix, 0], [ix, H], [W - ix, H]].map(([x, y]) => `<path ${measure} stroke-width="1" d="M${x - arm} ${y}H${x + arm}M${x} ${y - arm}V${y + arm}"/>`).join('');
       break;
     }
     case 'rule': {
@@ -562,7 +566,8 @@ function drawWire(h: Hot, dr: Dr, dt: number): void {
   const Y0 = 6.5;
   const X1 = 6.5 + w - 1;
   const Y1 = 6.5 + hh - 1;
-  svg.querySelector('.wt')!.setAttribute('d', `M${X0 - 5} ${Y0}H${X0}V${Y0 - 5}M${X1 + 5} ${Y0}H${X1}V${Y0 - 5}M${X0 - 5} ${Y1}H${X0}V${Y1 + 5}M${X1 + 5} ${Y1}H${X1}V${Y1 + 5}`);
+  // a "+" on each corner, the same cross the plates and the true size use
+  svg.querySelector('.wt')!.setAttribute('d', [[X0, Y0], [X1, Y0], [X0, Y1], [X1, Y1]].map(([cx, cy]) => `M${cx - 4} ${cy}H${cx + 4}M${cx} ${cy - 4}V${cy + 4}`).join(''));
   // the skeleton: an X joining the frame's opposite corners, in segments, behind the type
   svg.querySelector('.wx')!.setAttribute('d', `M${X0} ${Y0}L${X1} ${Y1}M${X1} ${Y0}L${X0} ${Y1}`);
   // the guide is the cursor's: 1:1, no easing, behind the type like the X
