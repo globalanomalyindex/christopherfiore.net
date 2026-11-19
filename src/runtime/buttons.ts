@@ -42,6 +42,8 @@ export interface Look {
   line?: string;
   /** anything else the effect owns in the DOM (Knockout's copy, Bayer's mask, Jelly's capsule) */
   own?: (h: Hot) => void;
+  /** it answers the pointer (Tricode): a pointer move draws a frame after the effect has settled */
+  follow?: boolean;
 }
 
 export interface Geo {
@@ -71,6 +73,8 @@ export interface Hot {
   px0: number | null;
   dealt: boolean;
   fx: string | null;
+  /** the effect playing answers the pointer */
+  follow?: boolean;
   /** the lineage card decided at entry, played at the dwell */
   fxPlan: string | null;
   own: boolean;
@@ -363,6 +367,7 @@ function draw(h: Hot, now: number): void {
     paint(f, i === 0 ? ls : letters(h.plans[i], t, h.instant), look.rested ? 'visibility:hidden' : look.ovS ?? null, now, !h.instant);
   });
   if (look.own) look.own(h);
+  h.follow = !!look.follow;
 }
 
 /** Still moving: the glitch landing, waiting for the dwell, an effect playing, or an exit. */
@@ -438,8 +443,8 @@ export function initButtons(): void {
         const sc = r.width / (h.b.offsetWidth || r.width) || 1;
         h.px = (e.clientX - r.left) / sc;
         h.py = (e.clientY - r.top) / sc;
-        // a wire follows the cursor in the same frame
-        if (h.dr) kick();
+        // a wire, or an effect that answers the pointer, follows it in the same frame
+        if (h.dr || h.follow) kick();
       }
     },
     { passive: true },

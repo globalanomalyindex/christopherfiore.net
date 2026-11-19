@@ -1600,13 +1600,13 @@ try {
   const homeJelly = await lp.evaluate(() => !!document.querySelector('canvas'));
   ok(!homeJelly, 'so no canvas on home, and Jelly is never dealt there');
   const deck = await lp.evaluate(() => window.__lin.state().deck.slice().sort().join(' '));
-  ok(deck === 'bayer canister decode decode jelly jelly knockout knockout mark mark mark shear skeleton skeleton', 'the deck: fourteen cards, quiet ones most', deck);
+  ok(deck === 'bayer canister decode decode jelly jelly knockout knockout mark mark mark skeleton skeleton tricode', 'the deck: fourteen cards, quiet ones most', deck);
   await lp.goto(`${BASE}/product-designs/`, { waitUntil: 'networkidle' });
   await settle(lp);
   await lp.waitForFunction(() => !!window.__lin, null, { timeout: 5000 });
   const own = await lp.evaluate(() => Object.fromEntries(Array.from(document.querySelectorAll('a.row[data-lin]')).map((a) => [a.querySelector('[data-word]').textContent, a.dataset.lin])));
   ok(
-    JSON.stringify(Object.entries(own).sort()) === JSON.stringify(Object.entries({ '+scream canister controls': 'canister', '+jellybox': 'jelly', '+after tokens': 'skeleton', '+lee': 'mark', '+mfny concentrates': 'shear', '+dither': 'bayer', '+motion archive': 'knockout' }).sort()),
+    JSON.stringify(Object.entries(own).sort()) === JSON.stringify(Object.entries({ '+scream canister controls': 'canister', '+jellybox': 'jelly', '+after tokens': 'skeleton', '+lee': 'mark', '+mfny concentrates': 'tricode', '+dither': 'bayer', '+motion archive': 'knockout' }).sort()),
     'each project’s own row carries its own effect',
     JSON.stringify(own),
   );
@@ -1703,7 +1703,7 @@ try {
     canister: (v) => v.band === 3 && /scaleY\(1\)/.test(v.host) && v.x === 0,
     decode: (v) => v.band === 3 && v.x === 0,
     mark: (v) => v.rested && v.line === 1,
-    shear: (v) => v.x === 3,
+    tricode: (v) => v.x === 3,
     knockout: (v) => v.x === 1 && v.kc,
     bayer: (v) => v.x === 4 && v.bay === 4,
     jelly: (v) => v.band === 0 && v.jelly,
@@ -1735,6 +1735,69 @@ try {
   await sleep(1300);
   const creditLater = await lp.evaluate(() => document.querySelector('.lin-credit')?.style.opacity ?? 'gone');
   ok(credit !== 'gone' && +credit === 1 && creditLater === 'gone', 'the credit holds a moment after the pointer leaves, then steps out', JSON.stringify([credit, creditLater]));
+  // Tricode, MFNY's own row: its type filter pill opened and laid flat. Three square
+  // segments in the strain colours tile the band; the one under the pointer lights.
+  await lp.mouse.move(1430, 980);
+  await sleep(1700);
+  const trow = 'a.row[data-lin="tricode"]';
+  const tb = (await center(lp, trow)).box;
+  const triB4 = await lp.evaluate(layout);
+  await lp.mouse.move(tb.x + tb.width * 0.15, tb.y - 3);
+  await sleep(200);
+  const openLog = lp.evaluate((s) => new Promise((res) => {
+    const a = document.querySelector(s);
+    const t0 = performance.now();
+    const out = [];
+    const tick = () => {
+      const ls = [...a.querySelectorAll('[data-band] .tri')];
+      out.push({ t: performance.now() - t0, right: ls.length === 3 ? parseFloat(ls[2].style.left) + parseFloat(ls[2].style.width) : null, bw: a.offsetWidth });
+      if (performance.now() - t0 < 700) requestAnimationFrame(tick);
+      else res(out);
+    };
+    requestAnimationFrame(tick);
+  }), trow);
+  await lp.mouse.move(tb.x + tb.width * 0.15, tb.y + tb.height / 2, { steps: 2 });
+  const ol = (await openLog).filter((f) => f.right != null);
+  const opened = ol.length > 0 && ol[0].right < ol[0].bw - 1 && ol.filter((f) => f.t >= ol[0].t + 117).every((f) => Math.abs(f.right - f.bw) < 0.5);
+  ok(opened, 'Tricode opens from the left like MFNY’s pill, on the band’s drawings, and tiles the whole band by 100ms', JSON.stringify(ol.slice(0, 4).map((f) => [Math.round(f.t), f.right])));
+  const TRI_LIT = ['rgb(140, 167, 218)', 'rgb(241, 204, 84)', 'rgb(255, 90, 82)'];
+  const TRI_DIM = ['rgb(192, 207, 235)', 'rgb(247, 227, 161)', 'rgb(255, 164, 160)'];
+  const lumRgb = (c) => c.match(/\d+/g).slice(0, 3).map(Number).map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }).reduce((q, v, i) => q + v * [0.2126, 0.7152, 0.0722][i], 0);
+  const triRead = () => lp.evaluate((s) => {
+    const a = document.querySelector(s);
+    const cell = parseFloat(getComputedStyle(a).fontSize) / 2;
+    const r = a.getBoundingClientRect();
+    const words = [];
+    a.querySelectorAll('[data-word], .cs > span').forEach((el) => { const q = el.getBoundingClientRect(); words.push([q.left - r.left, q.right - r.left]); });
+    a.querySelectorAll('.l').forEach((el) => {
+      const tw = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+      for (let n = tw.nextNode(); n; n = tw.nextNode()) for (const m of n.textContent.matchAll(/\S+/g)) { const rg = document.createRange(); rg.setStart(n, m.index); rg.setEnd(n, m.index + m[0].length); for (const q of rg.getClientRects()) words.push([q.left - r.left, q.right - r.left]); }
+    });
+    const ls = [...a.querySelectorAll('[data-band] .tri')].map((l) => ({ left: parseFloat(l.style.left), width: parseFloat(l.style.width), bg: getComputedStyle(l).backgroundColor, s: l.getAttribute('style') }));
+    return { bw: a.offsetWidth, cell, ls, words };
+  }, trow);
+  const triSeen = [];
+  for (const f of [0.15, 0.5, 0.85]) {
+    await lp.mouse.move(tb.x + tb.width * f, tb.y + tb.height / 2, { steps: 2 });
+    await sleep(140);
+    const v = await triRead();
+    const L = v.ls;
+    const flat = L.length === 3 && L.every((l) => !/polygon|skew|clip-path|radius|gradient/.test(l.s));
+    const tiles = flat && L[0].left === 0 && Math.abs(L[0].left + L[0].width - L[1].left) < 0.5 && Math.abs(L[1].left + L[1].width - L[2].left) < 0.5 && Math.abs(L[2].left + L[2].width - v.bw) < 0.5;
+    const seams = flat ? [L[1].left, L[2].left] : [];
+    const onGrid = seams.every((x) => Math.abs(x / v.cell - Math.round(x / v.cell)) < 0.02);
+    const whole = seams.every((x) => !v.words.some(([l, rr]) => l < x - 0.5 && rr > x + 0.5));
+    const under = (tb.width * f) < seams[0] ? 0 : (tb.width * f) < seams[1] ? 1 : 2;
+    const lit = flat && L.every((l, i) => l.bg === (i === under ? TRI_LIT[i] : TRI_DIM[i]));
+    const worst = Math.min(...L.map((l) => (lumRgb(l.bg) + 0.05) / (lumRgb('rgb(26, 24, 32)') + 0.05)));
+    triSeen.push({ f, flat, tiles, onGrid, whole, lit, worst: +worst.toFixed(2), seams });
+  }
+  const triAfter = await lp.evaluate(layout);
+  ok(triSeen.every((t) => t.flat && t.tiles && t.onGrid && t.whole), 'Tricode is flat and square: three segments tile the band edge to edge, seams on the mono cell and never inside a word', JSON.stringify(triSeen.map((t) => [t.flat, t.tiles, t.onGrid, t.whole, t.seams])));
+  ok(triSeen.every((t) => t.lit), 'MFNY’s strain colours in its order, Indica, Hybrid, Sativa: the segment under the pointer at full fill, the others at the pill’s 0.55', JSON.stringify(triSeen.map((t) => t.lit)));
+  ok(triSeen.every((t) => t.worst >= 4.5) && JSON.stringify(triB4) === JSON.stringify(triAfter), 'every segment holds band ink at 4.5:1 or better, and no layout box moves', JSON.stringify(triSeen.map((t) => t.worst)));
+  const triFits = await lp.evaluate(() => ['menu', 'inline', 'chip'].flatMap((k) => window.__lin.fits(k)));
+  ok(!triFits.includes('tricode') && !triFits.includes('shear'), 'a menu row, a sentence link and a chip never draw Tricode', JSON.stringify(triFits));
   // The odds. Right after an effect, the next hover is the glitch alone; the
   // same button again within 4s replays what it played.
   await lp.mouse.move(1430, 980);

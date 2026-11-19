@@ -219,7 +219,7 @@ export const OWN_EFFECT: Record<string, string> = {
   'scream-canister-controls': 'canister',
   'after-tokens': 'skeleton',
   lee: 'mark',
-  'mfny-concentrates': 'shear',
+  'mfny-concentrates': 'tricode',
   dither: 'bayer',
   jellybox: 'jelly',
   'motion-archive': 'knockout',

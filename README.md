@@ -256,12 +256,12 @@ moves.
 | Skeleton | after tokens | the text gives way to After Tokens' waiting rows, rounded cells that breathe and reshape on its own score with its glimmer passing, then its 280ms handover carries the cells into the real word groups as the ink arrives |
 | Knockout | the motion archive | a deep step of the band's own color spreads out from the pointer, the letters knocked out in ground, then blinks |
 | Jelly | jellybox | the band closes into one of JellyBox's round-ended controls, the whole row 3px in, drawn by its real optics |
-| Shear | mfny concentrates | the band is cut by slanted wipes 50ms apart |
+| Tricode | mfny concentrates | the band splits into the three strain colors from MFNY's filter pill, and the one under the pointer lights up |
 | Bayer | dither | the band dithers through a 4 by 4 Bayer pattern under the pointer |
 | Canister | scream canister controls | the band squashes and pops, with a late letter |
 
 - **The deck.** Fourteen cards: Mark 3, Decode 2, Skeleton 2, Knockout 2,
-  Jelly 2, and one each of Shear, Bayer and Canister. It is shuffled once a visit
+  Jelly 2, and one each of Tricode, Bayer and Canister. It is shuffled once a visit
   (`sessionStorage` `ps-lin`) and only deals cards that fit the button: a row
   takes any, a menu row Decode, Skeleton or Canister, a sentence link Mark,
   Decode, Skeleton or Jelly, a chip Mark, Decode or Skeleton. A menu row never gets Jelly, because Jelly
@@ -670,7 +670,7 @@ The scripts, gzipped:
 |---|---:|---|
 | main | 15.2 kB | every page |
 | signature | 7.6 kB | home only |
-| lineage, with the dress, Chickpea and After Tokens | 19.1 kB | after the page is seen, for a cursor |
+| lineage, with the dress, Chickpea and After Tokens | 19.6 kB | after the page is seen, for a cursor |
 | jx, with the cells | 6.3 kB | subpages, and with lineage |
 | jellyx | 176 kB | subpages on a desktop, after the page is seen |
 
