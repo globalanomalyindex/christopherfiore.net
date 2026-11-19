@@ -63,7 +63,7 @@ export const MORPH_GATE =
   "var m=JSON.parse(s),g=performance.getEntriesByType&&performance.getEntriesByType('navigation')[0];" +
   "if(m&&m.to===location.pathname&&Date.now()-m.t<4000&&(!g||g.type==='navigate')&&" +
   "!matchMedia('(prefers-reduced-motion: reduce)').matches){" +
-  "var e=document.documentElement;e.classList.add('morph-in');window.__psMorphIn=m.dir;window.__psMorphKind=m.kind||null;" +
+  "var e=document.documentElement;e.classList.add('morph-in');window.__psMorphIn=m.dir;window.__psMorphKind=m.kind||null;window.__psMorphAt=m.at||null;" +
   "setTimeout(function(){if(!window.__psMorphClaim)e.classList.remove('morph-in')},1200)}}}catch(x){}";
 
 /**

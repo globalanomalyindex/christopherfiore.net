@@ -21,7 +21,8 @@ a button from edge to edge. Bright color at rest is only chips, ledger cells
 and row tints. The loud color shows up on hover.
 
 Going from one page to another plays the ASCII morph: the page is covered
-and uncovered by a field of `+ = - : .` that spreads from the "+".
+and uncovered by a field of `+ = - : .` that ripples out from where you
+clicked.
 
 The design work is kept in [`_handoff/site-new-look/`](_handoff/site-new-look/).
 `v2/DIRECTION-v2.md` there is the approved direction, with his answers at the
@@ -308,15 +309,14 @@ pin (`.jx-pin`) marks where the "+" is, and the film anchors there.
   The disc swells to fill the box, still a disc, 3.5px inside the rules, on
   JellyBox's shape spring, and its lean eases off so it never touches a rule.
 - **Closing, going back up** (home, or a case study to product designs). The
-  film holds its cover 100ms and then closes in from the far corner, so the
-  box is the last thing it covers. Until then the entrance plays backwards,
-  faster: the jelly collapses onto the pin as the X turns to 45 degrees
-  (100ms), the band takes the dot, opens over the box in drawings while the
-  "+" lands in the mono, and leaves in one drawing. At 300ms the box is the
-  floor and the mono "+", exactly home's, and the film's last cells close
-  over it.
-- **Leaving any other way** (the film opens out of the "+" and covers the box
-  at once): the X goes back to the pin at 45 degrees, then the mono "+".
+  film ripples out from the click at once, but the box stays out of it until
+  the closing lands. The entrance plays backwards, faster: the jelly
+  collapses onto the pin as the X turns to 45 degrees (100ms), the band takes
+  the dot, opens over the box in drawings while the "+" lands in the mono,
+  and leaves in one drawing. At 300ms the box is the floor and the mono "+",
+  exactly home's, and the film's ghost of the box takes it.
+- **Leaving any other way**: the X goes back to the pin at 45 degrees, then
+  the mono "+", and the ghost takes the box when the film reaches it.
 - On a phone the box is 48px square and sits in the header row's flow.
 
 ## The morph
@@ -325,8 +325,8 @@ This is a multi-page site, so the film is cut across two documents
 (`src/runtime/morph.ts`).
 
 1. **Cover, on the page you are leaving.** A plain click on a link to another
-   page of this site is held while the page covers itself, in 340ms. The "+"
-   glitches for one drawing at the click. At full cover the window is the
+   page of this site is held while the page covers itself, in 340ms. At full
+   cover the window is the
    ground, the name and the "+". The page leaves a short note in
    `sessionStorage` and the browser navigates.
 2. **Reveal, on the page you are opening.** An inline script in every page's
@@ -335,22 +335,23 @@ This is a multi-page site, so the film is cut across two documents
    it over 420ms.
 
 Each half has its own curve, since the network sits between them: the cover
-leaves the "+" fast and settles into full cover, and the reveal shows the top
-of the page first.
+leaves the click fast and settles into full cover, and the reveal opens fast
+where you were looking.
 
 - **The grid** is cut from the real window in the page's own type. The cell
   is measured, not assumed, and the grid is placed so the page's real "+" is
   exactly one cell.
-- **Direction.** Going to a page, the cover grows out of the "+" and the new
-  page shows from the "+" outward. Going up (home, or a case study's back
-  arrow to product designs) is the same film backwards: the field closes in
-  from the far corner onto the anchor. Out of it means open. Into it means
-  back.
+- **Where it starts.** Wherever you clicked (his note: "always ripples out
+  from wherever the cursor was clicked instead of the corner"). The cover
+  grows out of that point, and the point goes into the note, so the next page
+  opens from the same place on the screen. A link opened from the keyboard
+  starts at its own centre. Going home ripples out the same way.
 - **The anchor is always on screen.** Home's anchor is his "+". On a subpage
   the same cell holds the JellyBox X, one level up: home, or product designs
   from a case study. During the film the cell shows a "+" (`data-glyph`) on
-  the box's pin, and a ghost of the X's box sits on the film. Going up, the
-  ghost waits until the front reaches the box, so the X's closing shows. The header row sticks to the top
+  the box's pin, and a ghost of the X's box sits on the film. The box stays
+  out of the film until the front reaches it, and going up until the X has
+  closed into the "+", so the closing always shows. The header row sticks to the top
   of the window, so the film can start from the X however far down the page
   you are.
 - **Glyphs.** Five marks, `+ = - : .`, then blank. "+" is the edge that
@@ -361,10 +362,7 @@ of the page first.
   - Bayer front, from dither: behind the front, his "+" dithered through a
     4 by 4 Bayer pattern
   - Figures, from the motion archive: each line carries its own running
-    count behind the front
-  - Coalesce, from one master affordance, 1 in 3 on top of any film when a
-    pointer clicks 160px or more from the "+": eight squares hop along the
-    grid to the "+" and the film opens from there
+    count of the cells it covers, behind the front
 
   Going back up replays the kind that opened the page, and the same lineage
   film never plays twice running. The same moment of the same kind always
@@ -382,9 +380,10 @@ A page can never be left covered:
 - Reduced motion: no film at all.
 
 The overlay is `aria-hidden`, takes no clicks and holds nothing that can be
-focused. `window.__morph.seek(part, dir, p, kind)` holds the film at a
-moment, and `window.__morph.force(kind, coalesce)` sets the next film, for the
-checks and for stills.
+focused. `window.__morph.seek(part, dir, p, kind, at)` holds the film at a
+moment, started from the point `at` (the "+" if left out), and
+`window.__morph.force(kind)` sets the next film, for the checks and for
+stills.
 
 ## The signature
 
@@ -500,15 +499,19 @@ measure the film rather than the battery. It checks:
   page's color, and full-width strips for the keyboard
 - Jelly on a row: the whole row 3px in with round ends, the tag and detail on
   it, a readable pigment, gone at once on leaving, never on a menu row
-- the lineage films: Bayer and Figures frames, Coalesce, the variant carried
-  to the next page, and a plain film first
+- the lineage films: Bayer and Figures frames, the variant carried to the
+  next page, and a plain film first
 - the morph:
   - the page being left covers itself fully, edge to edge, then goes
   - the page being opened starts covered before first paint, is never seen
     before the reveal, and ends uncovered
   - under 1.5s across the two pages, at 60fps
   - the grid sits on the page's real "+" and real type, also when scrolled
-  - going home runs backwards
+  - the cover is a disc around the click, a real click starts it there, the
+    next page opens from the same point, and a keyboard link starts at its
+    own centre
+  - going up by the back button, its box stays out of the film until the X
+    has closed into the "+"
   - a page is never left covered: no script, a navigation that hangs, a
     stale note, a reload, back and forward, the back/forward cache
   - modifier clicks, new tabs, the PDF and in-page jumps are left alone

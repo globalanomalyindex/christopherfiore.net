@@ -1330,14 +1330,6 @@ a.row,
   white-space: pre;
 }
 
-/* Coalesce: eight flat squares carrying the click to the "+" */
-.morph .coal {
-  position: absolute;
-  left: 0;
-  top: 0;
-  display: block;
-}
-
 /*
   Arriving mid-film: the inline gate in <head> sets this before first paint,
   and everything under the masthead waits unseen until the runtime uncovers

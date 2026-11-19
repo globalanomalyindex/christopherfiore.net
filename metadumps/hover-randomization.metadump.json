@@ -387,7 +387,8 @@
     "the glitch band, dressed: shape decks (Full, Golden, Half, Tall, Highlighter; small: Full, Outset, Inset, Tab), the wire with guide and ratio chip, and Chickpea's Cut, all from per-button decks (2026-11-17)",
     "solid X behind the type on white plates, one per line, wiping in from each line's left edge 40ms apart over 180ms, a measure-ink + on each plate corner; the halo and the masked and segmented X were tried and dropped at his word (2026-11-17)",
     "glass pills replaced by Fable's ledger cells (cells.ts): pale cells of the band's own colour under each text block, an X only in each blank 3em or wider with a + on its corners, guide only in blanks, cells on 50ms drawings 70% then whole, X at 100ms; the Jelly slab gets hairlines at blank sides and the X between (2026-11-19)",
-    "Shear replaced by Tricode, MFNY's filter pill laid flat: equal-third square segments (seams on the mono cell, never inside a word), lit under the pointer, whole by 100ms (2026-11-19)"
+    "Shear replaced by Tricode, MFNY's filter pill laid flat: equal-third square segments (seams on the mono cell, never inside a word), lit under the pointer, whole by 100ms (2026-11-19)",
+    "the page transition ripples out from the click on both pages; Coalesce and the corner glitch removed; the back button box held until its X closes (2026-11-19)"
   ],
   "tricks_learned": [
     "measure the label as the word plus its tag's ruled box, not the column it sits in, or every free run comes out negative",
@@ -408,5 +409,11 @@
     "decided_by": "Fable 5.2, with /emil-design-eng and /ask-emil",
     "decision": "Shear (MFNY's tri-code pill ported with its 13 degree skew) becomes Tricode: the same pill opened and laid flat, three square segments in MFNY's strain fills, the one under the pointer at full fill and the others at the pill's 0.55, opening on MFNY's --ease-move held on 50ms drawings",
     "refined": "seams moved to the nearest mono cell boundary that splits no word, since the site never cuts through a word"
+  },
+  "request_7": {
+    "said": "can we make it so the page transition always ripples out from wherever the cursor was clicked instead of the corner?",
+    "skills": "/emil-design-eng /design-motion-principles /ask-emil /choreograph",
+    "decision": "the film's centre is the click (a keyboard link: its own centre), written into the note so the next page opens from the same point; going home ripples out too; the back button's box is held out of the film until its X has closed (300ms), then the ghost takes it",
+    "cut": "the '+' glitch at the click (pulled the eye to the corner), Coalesce (its job was carrying the click to the '+'), the 100ms wait before the cover going up"
   }
 }

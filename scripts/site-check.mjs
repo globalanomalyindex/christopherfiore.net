@@ -183,8 +183,8 @@ async function film(pg, href, wait = 2300) {
       );
     }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-morph'] });
   });
-  // The plain film, no Coalesce: the lineage films are judged in their own section.
-  await pg.evaluate(() => window.__morph?.force(null, false));
+  // The plain film: the lineage films are judged in their own section.
+  await pg.evaluate(() => window.__morph?.force(null));
   await pg.locator(`a[href="${href.to}"]`).first().click();
   await pg.waitForURL(`**${href.to}`);
   await pg.waitForFunction(() => window.__arrive && window.__arrive.length > 2 && !document.querySelector('.morph') && !document.documentElement.classList.contains('morph-in'), null, { timeout: 5000 });
@@ -1410,6 +1410,102 @@ try {
   const g1 = await geo();
   ok(Math.abs(g1.dx) <= 1 && Math.abs(g1.dy) <= 1 && g1.top < 20, 'scrolled down, it radiates from the "+" where it now sits, at the top of the window', JSON.stringify([g1.dx, g1.dy, g1.top]));
 
+  // His note: "always ripples out from wherever the cursor was clicked instead of the corner."
+  const discAt = (at) =>
+    mp.evaluate((pt) => {
+      // a disc around the point: each row's covered run is a chord, centred on the point's x
+      window.__morph.seek('cover', 'out', 0.35, null, pt);
+      const cw = parseFloat(getComputedStyle(document.body).fontSize) / 2;
+      const runs = [...document.querySelectorAll('.morph .set.l .ln')].filter((l) => l.textContent.length).map((l) => l.getBoundingClientRect()).filter((b) => b.left > 0.5 && b.right < innerWidth - 0.5);
+      const mids = runs.map((b) => (b.left + b.right) / 2 - pt[0]);
+      const radii = runs.map((b) => Math.hypot((b.right - b.left) / 2, b.top + b.height / 2 - pt[1]));
+      window.__morph.clear();
+      return { n: runs.length, cw, off: Math.max(...mids.map(Math.abs)), spread: Math.max(...radii) - Math.min(...radii) };
+    }, at);
+  const rdisc = await discAt([900, 520]);
+  ok(rdisc.n >= 4 && rdisc.off <= rdisc.cw + 0.5 && rdisc.spread <= 2 * rdisc.cw + 1, 'the cover is a disc around the click, wherever it lands, not the corner', JSON.stringify(rdisc));
+
+  // A real click: the film starts where it lands, and the next page opens from the same point.
+  const rctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  await rctx.addInitScript(() => (window.__linQuiet = true));
+  await rctx.addInitScript(() => {
+    // the first frames of either half, as row runs, kept across the navigation
+    const tick = () => {
+      const st = document.documentElement.getAttribute('data-morph');
+      if (st === 'cover' || st === 'reveal') {
+        const L = [...document.querySelectorAll('.morph .set.l .ln')].map((l) => (l.textContent.length ? l.getBoundingClientRect() : null));
+        const R = [...document.querySelectorAll('.morph .set.r .ln')].map((l) => (l.textContent.length ? l.getBoundingClientRect() : null));
+        // the cover: the widest chord's middle; the reveal: the middle of the widest gap between a row's two lines
+        let best = null;
+        for (let i = 0; i < L.length; i++) {
+          const l = L[i];
+          const r = R[i];
+          if (st === 'cover' && l && l.left > 0.5 && l.right < innerWidth - 0.5 && (!best || l.width > best[1])) best = [(l.left + l.right) / 2, l.width];
+          if (st === 'reveal' && l && r && (!best || r.left - l.right > best[1])) best = [(l.right + r.left) / 2, r.left - l.right];
+        }
+        const k = `chk-${st}`;
+        if (best && best[1] > 60 && !sessionStorage.getItem(k)) sessionStorage.setItem(k, JSON.stringify(best));
+      }
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  });
+  const rpg = await rctx.newPage();
+  await rpg.goto(`${BASE}/`, { waitUntil: 'networkidle' });
+  await settle(rpg);
+  await sleep(2300);
+  const clickAt = await rpg.evaluate(() => { sessionStorage.removeItem('chk-cover'); sessionStorage.removeItem('chk-reveal'); const r = document.querySelector('.menu a[href="/about/"]').getBoundingClientRect(); return [r.left + r.width * 0.7, r.top + r.height / 2]; });
+  await rpg.mouse.move(clickAt[0], clickAt[1], { steps: 3 });
+  await sleep(250);
+  await rpg.mouse.click(clickAt[0], clickAt[1]);
+  await rpg.waitForURL('**/about/');
+  await rpg.waitForFunction(() => !document.querySelector('.morph') && !document.documentElement.classList.contains('morph-in'), null, { timeout: 5000 });
+  const ripLog = await rpg.evaluate(() => ({ at: window.__psMorphAt, cover: JSON.parse(sessionStorage.getItem('chk-cover') ?? 'null'), reveal: JSON.parse(sessionStorage.getItem('chk-reveal') ?? 'null') }));
+  ok(ripLog.at && Math.abs(ripLog.at[0] - clickAt[0]) <= 1 && Math.abs(ripLog.at[1] - clickAt[1]) <= 1 && ripLog.cover && Math.abs(ripLog.cover[0] - clickAt[0]) <= 12, 'a real click: the cover ripples out from where the pointer clicked', JSON.stringify({ clickAt, ...ripLog }));
+  ok(ripLog.reveal && Math.abs(ripLog.reveal[0] - clickAt[0]) <= 12, 'and the next page opens from the same point on the screen', JSON.stringify(ripLog.reveal));
+
+  // From the keyboard there is no pointer: the film starts at the link's own centre.
+  await sleep(2300);
+  const kbAt = await rpg.evaluate(() => { const a = document.querySelector('main a[href="/paintings/"]') ?? document.querySelector('a[href="/paintings/"]'); a.focus(); const r = a.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; });
+  await rpg.keyboard.press('Enter');
+  await rpg.waitForURL('**/paintings/');
+  const kbNote = await rpg.evaluate(() => window.__psMorphAt);
+  ok(kbNote && Math.abs(kbNote[0] - kbAt[0]) <= 1 && Math.abs(kbNote[1] - kbAt[1]) <= 1, 'from the keyboard it starts at the link’s own centre', JSON.stringify([kbAt, kbNote]));
+
+  // Going up by the back button: the ripple starts at the X, and its box stays out of the film until the X has closed into the "+".
+  await rpg.waitForFunction(() => !document.querySelector('.morph') && !document.documentElement.classList.contains('morph-in'), null, { timeout: 5000 });
+  await sleep(2300);
+  const xBox = await rpg.evaluate(() => { const r = document.querySelector('a.jx').getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2, r.right, r.top, r.bottom]; });
+  await rpg.evaluate((box) => {
+    const log = [];
+    let t0 = -1;
+    const tick = (now) => {
+      if (document.documentElement.getAttribute('data-morph') === 'cover') {
+        if (t0 < 0) t0 = now;
+        const g = document.querySelector('.morph .jx-ghost');
+        // does any line cover a cell of the box?
+        const over = [...document.querySelectorAll('.morph .ln')].some((l) => {
+          if (!l.textContent.length) return false;
+          const b = l.getBoundingClientRect();
+          return b.left < box[2] - 1 && b.bottom > box[3] + 1 && b.top < box[4] - 1;
+        });
+        log.push([Math.round(now - t0), !!g && !g.hidden, over]);
+        sessionStorage.setItem('chk-up', JSON.stringify(log));
+      }
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }, xBox);
+  await rpg.mouse.move(xBox[0], xBox[1], { steps: 3 });
+  await sleep(300);
+  await rpg.mouse.click(xBox[0], xBox[1]);
+  await rpg.waitForURL(`${BASE}/`);
+  const upLog = await rpg.evaluate(() => JSON.parse(sessionStorage.getItem('chk-up') ?? '[]'));
+  const upEarly = upLog.filter(([t]) => t < 280);
+  const ghostAt = upLog.find(([, g]) => g)?.[0];
+  ok(upEarly.length > 4 && upEarly.every(([, g, over]) => !g && !over) && ghostAt != null && ghostAt >= 280, 'going up by the back button, the box stays out of the film until its X has closed into the "+", then the ghost takes it', JSON.stringify({ frames: upLog.length, ghostAt, coveredEarly: upEarly.filter(([, , o]) => o).length }));
+  await rctx.close();
+
   // What is not a page change is left alone.
   await mp.goto(`${BASE}/about/`, { waitUntil: 'networkidle' });
   await settle(mp);
@@ -2404,15 +2500,8 @@ try {
     };
     const bayer = read('bayer');
     const figures = read('figures');
-    // each line's count: the three figures just behind the front "+" are how many cells it covers past the anchor
-    const anchorCol = (() => {
-      window.__morph.seek('cover', 'out', 0.5, null);
-      const l = Array.from(document.querySelectorAll('.morph .set.l .ln')).find((x) => x.textContent.trimStart().startsWith('+'));
-      const c = l.textContent.indexOf('+');
-      window.__morph.clear();
-      return c;
-    })();
-    const counts = figures.filter((t) => /\d{3}\+$/.test(t)).map((t) => [+t.slice(-4, -1), t.length - anchorCol]);
+    // each line's count: the three figures just behind the front "+" are how many cells the line covers
+    const counts = figures.filter((t) => /\d{3}\+$/.test(t)).map((t) => [+t.slice(-4, -1), t.length]);
     return {
       bayer: [...new Set(bayer.join('').replace(/ /g, ''))].join(''),
       digits: figures.some((t) => /=\d{3}\+$/.test(t) || /\d{3}\+$/.test(t)),
@@ -2420,22 +2509,15 @@ try {
     };
   });
   ok(variant.bayer === '+', 'Bayer front: behind the front only his "+", dithered', variant.bayer);
-  ok(variant.digits && variant.counts.length > 3 && variant.counts.every(([n, len]) => n === len) && new Set(variant.counts.map(([n]) => n)).size > 2, 'Figures: each line carries its own true running count behind the front: the cells from the "+" to it', JSON.stringify(variant.counts.slice(0, 6)));
-  // A forced Figures film with Coalesce: the click hops to the "+", the cover waits for it, the next page reveals with the same figures.
-  await vp.evaluate(() => window.__morph.force('figures', true));
+  ok(variant.digits && variant.counts.length > 3 && variant.counts.every(([n, len]) => n === len) && new Set(variant.counts.map(([n]) => n)).size > 2, 'Figures: each line carries its own true running count behind the front: the cells it covers', JSON.stringify(variant.counts.slice(0, 6)));
+  // A forced Figures film: the next page reveals with the same figures.
+  await vp.evaluate(() => window.__morph.force('figures'));
   const far = await center(vp, 'nav a[href="/about/"]');
-  await vp.evaluate(() => {
-    window.__coal = 0;
-    new MutationObserver(() => {
-      window.__coal = Math.max(window.__coal, document.querySelectorAll('.morph .coal').length);
-      if (window.__coal) sessionStorage.setItem('check-coal', String(window.__coal));
-    }).observe(document.body, { subtree: true, childList: true });
-  });
   await vp.mouse.click(far.x, far.y);
   await vp.waitForURL('**/about/');
   await vp.waitForFunction(() => !document.querySelector('.morph') && !document.documentElement.classList.contains('morph-in'), null, { timeout: 5000 });
-  const arrived = await vp.evaluate(() => ({ kind: window.__psMorphKind, coal: sessionStorage.getItem('check-coal') }));
-  ok(arrived.coal === '8' && arrived.kind === 'figures', 'Coalesce: eight squares carry the click to the "+", and the next page reveals with the same variant', JSON.stringify(arrived));
+  const arrived = await vp.evaluate(() => ({ kind: window.__psMorphKind, coal: document.querySelectorAll('.coal').length }));
+  ok(arrived.kind === 'figures' && arrived.coal === 0, 'the next page reveals with the same variant, and no squares carry the click anywhere', JSON.stringify(arrived));
   await vctx.close();
   // The first page change of a visit is always the plain film.
   const fctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });

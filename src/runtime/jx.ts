@@ -31,8 +31,9 @@
  * it never touches a rule. The X only turns. Pressed, JellyBox's own press.
  *
  * THE CLOSING, going back up (home, or a case study to product designs). The
- * film closes in from the far corner, so the box is the last thing it covers;
- * until then the entrance plays backwards, faster, as an exit should:
+ * film ripples out from the click, and the box is held out of it until the
+ * closing lands (morph.ts); until then the entrance plays backwards, faster,
+ * as an exit should:
  *     0    the jelly lets go and collapses onto the pin, a 0.3D dot, and the
  *          X turns to 45 degrees with it: a "+". 100ms, the site's ease-out
  *   100    THE CUT: jelly and X go; the band takes the dot, same size, same
