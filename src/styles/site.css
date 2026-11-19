@@ -433,9 +433,15 @@ code {
   --jb-rgb: var(--jb-r);
 }
 
-.jx:hover,
 .jx:focus-visible {
   --jb-rgb: var(--jb-h);
+}
+
+/* hover is a pointer's: a tap on a phone never leaves the X swollen or its skeleton up */
+@media (hover: hover) and (pointer: fine) {
+  .jx:hover {
+    --jb-rgb: var(--jb-h);
+  }
 }
 
 .jx:active {
@@ -477,10 +483,12 @@ code {
   transition: transform 480ms cubic-bezier(0.18, 1.48, 0.32, 1);
 }
 
-/* hovered, the skin swells to fill the box too, still a disc */
-.jx:hover .jx-skin {
-  transform: scale(1.067);
-  transition: transform 420ms cubic-bezier(0.22, 1.12, 0.36, 1);
+/* hovered, the skin swells to fill the box too, still a disc (JellyBox's own hover curve) */
+@media (hover: hover) and (pointer: fine) {
+  .jx:hover .jx-skin {
+    transform: scale(1.067);
+    transition: transform 420ms cubic-bezier(0.22, 1.12, 0.36, 1);
+  }
 }
 
 .jx:active .jx-skin {
@@ -525,9 +533,11 @@ code {
   transition: opacity 90ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 
-.jx:hover .jx-sk {
-  opacity: 1;
-  transition-duration: 150ms;
+@media (hover: hover) and (pointer: fine) {
+  .jx:hover .jx-sk {
+    opacity: 1;
+    transition-duration: 150ms;
+  }
 }
 
 .jx:focus-visible .jx-sk {
@@ -742,9 +752,25 @@ a.row[data-hot] {
   stroke-width: 1;
 }
 
-/* the X, solid, behind the type */
+/*
+  The X, solid, behind the type; it, the guide and the chip come in only once
+  the plates are down (x-on), so the X never meets bare letters.
+*/
+[data-wire] .wf .wx,
+[data-wire] .wf .wg,
+[data-wire] .wc {
+  opacity: 0;
+  transition: opacity 120ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
 [data-wire] .wf .wx {
   stroke-opacity: 0.75;
+}
+
+[data-wire].x-on .wf .wx,
+[data-wire].x-on .wf .wg,
+[data-wire].x-on .wc {
+  opacity: 1;
 }
 
 /*
@@ -1146,8 +1172,8 @@ a.row[data-hot] {
   color: var(--ink);
   text-decoration: none;
   -webkit-tap-highlight-color: transparent;
-  /* the press: down in 80ms, back on a slight overshoot in 220ms */
-  --pt: 220ms cubic-bezier(0.34, 1.45, 0.64, 1);
+  /* the press (Emil): down in 120ms, back in 160ms, both on the site's ease-out, no bounce */
+  --pt: 160ms cubic-bezier(0.23, 1, 0.32, 1);
   transition: scale var(--pt);
 }
 
@@ -1158,7 +1184,7 @@ a.row[data-hot] {
   only settles its label, so the row's rules never move.
 */
 .btn[data-press] {
-  --pt: 80ms cubic-bezier(0.23, 1, 0.32, 1);
+  --pt: 120ms cubic-bezier(0.23, 1, 0.32, 1);
   scale: 0.97;
 }
 
@@ -1168,12 +1194,12 @@ a.row[data-hot] {
 
 .btn [data-word] {
   transform-origin: 0 50%;
-  transition: transform 220ms cubic-bezier(0.34, 1.45, 0.64, 1);
+  transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 .btn[data-wide][data-press] [data-word] {
   transform: scale(0.985);
-  transition: transform 80ms cubic-bezier(0.23, 1, 0.32, 1);
+  transition: transform 120ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 /* the band's outline: 1.5px of band ink, cut to 3px while pressed */
@@ -1215,6 +1241,12 @@ a.row[data-hot] {
   .btn[data-press] [data-band] .st.t,
   .btn[data-press] [data-band] .st.b {
     transform: none !important;
+  }
+  /* no travel: the X's skin and glyph and the plates' wipe go straight to their end; fades stay */
+  .jx .jx-skin,
+  .jx .jx-x,
+  [data-plates] .pl {
+    transition: none !important;
   }
 }
 

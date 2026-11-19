@@ -178,10 +178,20 @@ function show(h: Hot): void {
 /* ------------------------------------------------------------ the credit */
 
 let credit: HTMLSpanElement | null = null;
-let creditFrom = 0;
-let creditUntil = 0;
 
-function showCredit(text: string, now: number): void {
+/*
+ * The credit steps in and out on two drawings of its own (0.7, then 1; 0.3,
+ * then gone), timed by itself, so it never keeps the hover's frame clock
+ * running while it simply sits there.
+ */
+let creditTimers: number[] = [];
+const clearCreditTimers = () => {
+  creditTimers.forEach((t) => clearTimeout(t));
+  creditTimers = [];
+};
+
+function showCredit(text: string, _now: number): void {
+  clearCreditTimers();
   if (!credit) {
     credit = document.createElement('span');
     credit.className = 'lin-credit';
@@ -189,23 +199,29 @@ function showCredit(text: string, now: number): void {
     document.body.appendChild(credit);
   }
   credit.textContent = text;
-  creditFrom = now;
-  creditUntil = Infinity;
+  credit.style.opacity = String(step2(0));
+  creditTimers.push(window.setTimeout(() => credit && (credit.style.opacity = '1'), 50));
 }
 
-function tick(_h: Hot | null, now: number): boolean {
-  if (!credit) return false;
-  const on = step2(now - creditFrom);
-  const off = 1 - step2(now - creditUntil);
-  const o = Math.min(on, off);
-  const s = o.toFixed(2);
-  if (credit.style.opacity !== s) credit.style.opacity = s;
-  if (o <= 0 && now > creditUntil) {
-    credit.remove();
-    credit = null;
-    return false;
-  }
-  return true;
+/** Out at `until`: 0.3 for one drawing, then gone. */
+function creditOut(until: number): void {
+  clearCreditTimers();
+  const wait = Math.max(0, until - performance.now());
+  creditTimers.push(
+    window.setTimeout(() => {
+      if (credit) credit.style.opacity = (1 - step2(0)).toFixed(2);
+      creditTimers.push(
+        window.setTimeout(() => {
+          credit?.remove();
+          credit = null;
+        }, 50),
+      );
+    }, wait),
+  );
+}
+
+function tick(_h: Hot | null, _now: number): boolean {
+  return false;
 }
 
 /* ------------------------------------------------------------ the effects */
@@ -439,15 +455,16 @@ function look(h: Hot, tau: number): Look {
  * generated text arrives, in its own terms. From the settled glitch the text
  * goes, and After Tokens' waiting rows take its place: rounded cells of the
  * ink at 0.2, breathing, reshaping on After Tokens' own score (its
- * `ambientScoreAt`, run 24 times faster so a hover sees it move), with its
- * white glimmer passing once. At 480ms its 280ms handover: the cells travel
+ * `ambientScoreAt`, run 48 times faster so a hover sees it move), with its
+ * white glimmer passing once. At 240ms (a hover's text is never gone long)
+ * its own 280ms handover: the cells travel
  * and reshape toward the actual word groups, three words at most, while the
  * ink arrives on its own curve. Every row of the button's text, the label and
  * each line of its detail, goes through it together.
  */
-const SK_WAIT = 480;
+const SK_WAIT = 240;
 const SK_HAND = 280;
-const SK_SPEED = 24;
+const SK_SPEED = 48;
 type R = { x: number; y: number; w: number; h: number };
 interface SkRow extends R {
   targets: R[];
@@ -550,7 +567,7 @@ function skeletonLook(h: Hot, tau: number): Look {
   const extra: { c: string; s: string }[] = [];
   if (tau < SK_WAIT + SK_HAND) {
     // the glimmer: one white band passing left to right, 120 to 360ms
-    const g = Math.max(0, Math.min(1, (tau - 120) / 240));
+    const g = Math.max(0, Math.min(1, (tau - 40) / 180));
     const G = -60 + 220 * g;
     const shimmer = g > 0 && g < 1 ? `linear-gradient(90deg, transparent ${(G - 35).toFixed(1)}%, rgb(255 255 255 / .3) ${G.toFixed(1)}%, transparent ${(G + 35).toFixed(1)}%),` : '';
     rows.forEach((row, i) => {
@@ -596,11 +613,11 @@ function skeletonLook(h: Hot, tau: number): Look {
     extra,
     own: () => {
       const st = tau < SK_WAIT ? 'opacity:0' : u < 1 ? `opacity:${ink.op.toFixed(3)};position:relative;top:${ink.top.toFixed(2)}px` : '';
+      // the detail settles by `translate`, a transform, never by moving its box
       for (const d of details) if ((d.dataset.sk ?? '') !== st) {
         d.dataset.sk = st;
         d.style.opacity = tau < SK_WAIT ? '0' : u < 1 ? ink.op.toFixed(3) : '';
-        d.style.position = st ? 'relative' : '';
-        d.style.top = st && tau >= SK_WAIT ? `${ink.top.toFixed(2)}px` : '';
+        d.style.translate = st && tau >= SK_WAIT ? `0 ${ink.top.toFixed(2)}px` : '';
       }
     },
   };
@@ -613,8 +630,7 @@ function skeletonDone(h: Hot): void {
   for (const d of g.details) {
     delete d.dataset.sk;
     d.style.opacity = '';
-    d.style.position = '';
-    d.style.top = '';
+    d.style.translate = '';
   }
   skGeo.delete(h);
 }
@@ -623,7 +639,7 @@ function leave(h: Hot, now: number): void {
   if (h.fx === 'skeleton') skeletonDone(h);
   if (h.fx) {
     linEnd = now;
-    if (!h.b.hasAttribute('data-lin')) creditUntil = Math.max(now + 900, h.t0 + 220 + 1600);
+    if (!h.b.hasAttribute('data-lin') && credit) creditOut(Math.max(now + 900, h.t0 + 220 + 1600));
     if (h.fx === 'jelly') jellyFor(h, cap(h), -2);
   }
   h.b.querySelectorAll(':scope > [data-k="kc"]').forEach((n) => n.remove());
@@ -642,7 +658,7 @@ export function creditFor(text: string, now: number): void {
   showCredit(text, now);
 }
 export function creditOff(now: number, t0: number): void {
-  creditUntil = Math.max(now + 900, t0 + 220 + 1600);
+  if (credit) creditOut(Math.max(now + 900, t0 + 220 + 1600));
 }
 setLineage(api);
 

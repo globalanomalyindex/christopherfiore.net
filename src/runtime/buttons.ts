@@ -111,7 +111,8 @@ export interface DressFrame {
 
 /** The dress chunk, once it has loaded with lineage. Until then hovers are the glitch, Full and plain. */
 export interface Dress {
-  deal(h: Hot): void;
+  /** at the dwell, `t` ms into the hover */
+  deal(h: Hot, t: number): void;
   frame(h: Hot, t: number, now: number): DressFrame;
   leave(h: Hot, now: number): void;
   cut(h: Hot): void;
@@ -141,7 +142,8 @@ const btnOf = (t: EventTarget | null): HTMLElement | null => {
   return b && !b.hasAttribute('data-jx') ? b : null;
 };
 
-const HOST = 'position:absolute;inset:0;z-index:-1;pointer-events:none;overflow:hidden;';
+// contained: a shape's per-frame resize lays out this layer and nothing else
+const HOST = 'position:absolute;inset:0;z-index:-1;pointer-events:none;overflow:hidden;contain:strict;';
 
 function measure(b: HTMLElement): Geo {
   const r = b.getBoundingClientRect();
@@ -256,12 +258,10 @@ function on(b: HTMLElement, why: Why, e?: PointerEvent | MouseEvent): void {
     dr: false,
   };
   HOT.set(b, h);
-  // A pointer hover decides its lineage card now and plays it at the dwell; a
-  // hover with no card is dressed (`dress.ts`). Never the keyboard or a finger.
-  if (why === 'hover' && !instant) {
-    if (lineage) h.fxPlan = lineage.deal(h);
-    if (dress && !h.fxPlan) dress.deal(h);
-  }
+  // A pointer hover decides its lineage card now and plays it at the dwell;
+  // a hover with no card is dressed at the dwell (`dress.ts`). Never the
+  // keyboard or a finger.
+  if (why === 'hover' && !instant && lineage) h.fxPlan = lineage.deal(h);
   // Reduced motion: a project's own row shows its effect's still end frame.
   if (reducedMotion() && h.own && lineage && why === 'hover') {
     h.fx = b.getAttribute('data-lin');
@@ -338,6 +338,8 @@ function draw(h: Hot, now: number): void {
     h.fx = h.fxPlan;
     // played or not, the dwell is when the cooldown and the repeat count from
     if (lineage) lineage.show(h);
+    // the dress, at the same dwell: a sweep across the menu never sets it off
+    if (dress && !h.fx && h.why.has('hover') && !h.instant) dress.deal(h, t);
   }
   const tau = t - DWELL;
   const look: Look = h.fx && lineage && tau >= 0 ? lineage.look(h, tau) : {};

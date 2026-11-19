@@ -4,9 +4,9 @@
  * it's encapsulated by a wireframe and it follows your cursor ... and what i
  * coded with Chickpea").
  *
- * Every hover still starts with the glitch on its 50ms drawings. When the band
- * has landed (150ms, or 50ms on a sweep), each button deals from two decks of
- * its own, shuffled from the visit's seed and the button's address
+ * Every hover still starts with the glitch on its 50ms drawings. At the same
+ * 220ms dwell as the lineage deck, so a sweep across the menu never sets it
+ * off, each button deals from decks of its own, shuffled from the visit's seed and the button's address
  * (`hashSeed`, from Chickpea), dealt without replacement, and a fresh shuffle
  * never starts with the card just played:
  *
@@ -49,6 +49,15 @@
  * Nothing drawn here crosses the type: the X and the guide pass behind it,
  * and the type sits on its own white plates.
  *
+ * THE ORDER (Emil: one thing at a time, never everything in one drawing):
+ * the shape begins to move and the wire's frame fades in (150ms); the plates
+ * wipe in under the text, staggered 0, 40, 70, 90ms; only once the last one is
+ * down do the X, the guide and the chip appear, so the X never meets bare
+ * letters; the true-size mark comes in at 120ms; Chickpea's cells from 0ms,
+ * a drawing apart. The frame clock stops as soon as the springs settle; a
+ * pointer move starts it again. Back on the same button within 250ms of
+ * leaving, it picks up the same cards rather than dealing new ones.
+ *
  * A hover the lineage deck deals an effect to stays Full and plain, so the
  * effect starts from the settled glitch. Keyboard, touch and reduced motion
  * never deal. Leaving: the shape holds while the band takes its one drawing
@@ -65,7 +74,7 @@ import { DARK_INK } from './band.ts';
 import { inkBase, mulberry } from './ink.ts';
 import { spring } from './jx.ts';
 import { creditFor, creditOff } from './lineage.ts';
-import { plates, platesOff } from './plates.ts';
+import { plates, platesOff, stagger } from './plates.ts';
 import { hashSeed } from '../vendor/chickpea/grid/prng.ts';
 import { composeGrid, type CompBox } from '../vendor/chickpea/grid/compose.ts';
 import { snapToRatio, ratioName } from '../vendor/chickpea/grid/ratios.ts';
@@ -106,6 +115,9 @@ interface Bag {
   lastShape: string;
   lastDress: string;
   lastTrue: string;
+  /** when the pointer last left, and what that hover was dealt: a quick return keeps it */
+  lastLeave: number;
+  lastPick: { shape: string; dress: string; true: string | null } | null;
 }
 
 interface Cell {
@@ -142,6 +154,10 @@ interface Dr {
   cutW: number;
   /** the text boxes nothing may cross, button coordinates, padded */
   texts: CompBox[];
+  /** the Cut's credit has been shown */
+  credited: boolean;
+  /** the wire's last drawn geometry, so an unmoved frame writes nothing */
+  wkey: string;
   /** the true-size mark, and its layer */
   trueMark: string | null;
   trueEl: HTMLSpanElement | null;
@@ -165,7 +181,7 @@ function bagOf(b: HTMLElement): Bag {
   let g = bags.get(b);
   if (!g || g.v !== base.v) {
     const key = b.getAttribute('href') ?? b.textContent ?? '';
-    g = { v: base.v, rng: mulberry(base.seed ^ hashSeed(key)), shapes: [], sp: 0, dresses: [], dp: 0, trues: [], tp: 0, lastShape: '', lastDress: '', lastTrue: '' };
+    g = { v: base.v, rng: mulberry(base.seed ^ hashSeed(key)), shapes: [], sp: 0, dresses: [], dp: 0, trues: [], tp: 0, lastShape: '', lastDress: '', lastTrue: '', lastLeave: -1e9, lastPick: null };
     bags.set(b, g);
   }
   return g;
@@ -327,7 +343,7 @@ function cutCells(h: Hot, T: Ins, seed: number): Cell[] {
     // never near black: a cell clear of text keeps at least OKLCH L 0.52; one by text, 0.74
     const L = Math.max(0.52, c.L);
     const color = touches(m) ? legible(c, 0.74) : rgbToHex(gamutMapToRgb({ L, C: Math.min(c.C, maxChroma(L, c.H)), H: c.H }));
-    return { ...m, color, at: 150 + 50 * rank.get(i)! };
+    return { ...m, color, at: 50 * rank.get(i)! };
   });
 }
 
@@ -339,12 +355,14 @@ function freeRun(h: Hot, T: Ins): [number, number] | null {
   return r - l > 40 ? [l, r] : null;
 }
 
-function deal(h: Hot): void {
+function deal(h: Hot, t: number): void {
   if (quiet() && !forced) return;
   const small = !wide(h);
   const g = bagOf(h.b);
-  let shape = next(g, 'shape', small ? SMALL_SHAPES : ROW_SHAPES);
-  let dress = next(g, 'dress', DRESSES);
+  // back within 250ms of leaving: the same hover, not a new card
+  const again = !forced && g.lastPick && performance.now() - g.lastLeave < 250 ? g.lastPick : null;
+  let shape = again ? again.shape : next(g, 'shape', small ? SMALL_SHAPES : ROW_SHAPES);
+  let dress = again ? again.dress : next(g, 'dress', DRESSES);
   if (forced?.shape) shape = forced.shape;
   if (forced?.dress) dress = forced.dress;
   // a link in a sentence is measured by the seams already; a small button has no room for a Cut
@@ -369,7 +387,7 @@ function deal(h: Hot): void {
     WV: [0, 0, 0, 0],
     lean: [0, 0, 0, 0],
     LV: [0, 0, 0, 0],
-    start: h.P.warm ? 50 : 150,
+    start: t,
     last: -1,
     clipX,
     // an edge that runs through the label loses its strip and its outline
@@ -382,6 +400,8 @@ function deal(h: Hot): void {
     figL: fig ? fig.x : Infinity,
     cutW: h.geo.bw - T[1] - T[3],
     texts: [label, ...(fig ? [fig] : [])].map((c) => ({ x: c.x - 0.25 * h.geo.fs, y: c.y - 0.1 * h.geo.fs, w: c.w + 0.5 * h.geo.fs, h: c.h + 0.2 * h.geo.fs })),
+    credited: false,
+    wkey: '',
     trueMark: null,
     trueEl: null,
     plates: null,
@@ -391,16 +411,17 @@ function deal(h: Hot): void {
     out: null,
   };
   // the true size, kept in view whenever the band is not the button's own size
-  if (shape !== 'full') {
+  if (again) dr.trueMark = again.true;
+  else if (shape !== 'full') {
     let m = next(g, 'true', TRUES);
     // a band that grows covers its own box: a wash under it would never show
     if (m === 'wash' && (shape === 'tall' || shape === 'outset' || shape === 'lean')) m = 'rule';
     if (forced?.true) m = forced.true;
     dr.trueMark = m;
   }
+  g.lastPick = { shape, dress, true: dr.trueMark };
   state.set(h, dr);
   h.dr = true;
-  if (cut && !h.own) creditFor('from chickpea', performance.now());
 }
 
 function wireEl(h: Hot, dr: Dr): HTMLSpanElement {
@@ -479,22 +500,29 @@ function frame(h: Hot, t: number, now: number): DressFrame {
   const dt = dr.last < 0 ? 0 : Math.min(0.05, Math.max(0, (now - dr.last) / 1000));
   dr.last = now;
   const live = h.out == null && t >= dr.start;
+  const since = t - dr.start;
   if (live) {
     // the target follows the cursor; the spring carries the band to it
     dr.T = shapeIns(h, dr.shape, h.px, h.py, dr.labR);
     step(dr.S, dr.V, dr.T, dt, SHAPE_K);
   }
-  const [st, sr, sb, sl] = dr.S;
+  // to the half pixel: a sub-pixel write moves nothing anyone can see
+  const [st, sr, sb, sl] = dr.S.map((v) => Math.round(v * 2) / 2);
   const out: DressFrame = {
-    inset: dr.S.some((v) => Math.abs(v) > 0.05) ? [st, sr, sb, sl] : null,
+    inset: dr.S.some((v) => Math.abs(v) >= 0.25) ? [st, sr, sb, sl] : null,
     dropTop: dr.dropTop && t >= dr.start,
     dropBottom: dr.dropBottom && t >= dr.start,
     outline: t < dr.start || dr.outline,
   };
   if (dr.cells && h.out == null) {
     const nearPx = (h.px - sl) / Math.max(1, g.bw - sl - sr);
+    // the credit when the first cell lands, not before: a quick pass never earns it
+    if (!dr.credited && since >= 0) {
+      dr.credited = true;
+      if (!h.own) creditFor('from chickpea', performance.now());
+    }
     out.extra = dr.cells
-      .filter((c) => t >= c.at)
+      .filter((c) => since >= c.at)
       .map((c) => {
         // the cut hairlines: band ink at half strength, full within 150px of the cursor
         const near = Math.min(Math.abs(c.x - nearPx), Math.abs(c.x + c.w - nearPx)) * (g.bw - sl - sr) < 150;
@@ -508,26 +536,40 @@ function frame(h: Hot, t: number, now: number): DressFrame {
         return { c: 'cc', s: `position:absolute;${horiz};top:${(c.y * 100).toFixed(3)}%;height:${(c.h * 100).toFixed(3)}%;background:${c.color};${sh ? `box-shadow:${sh};` : ''}clip-path:inset(0 0 0 0)` };
       });
   }
-  if (dr.trueMark && t >= dr.start && h.out == null) {
+  // the true size, once the shape has begun to move
+  if (dr.trueMark && since >= 120 && h.out == null && !dr.trueEl) {
     trueEl(h, dr);
-    if (!dr.trueEl!.classList.contains('on')) dr.trueEl!.classList.add('on');
+    fadeIn(dr.trueEl!, () => dr.out == null);
   }
   if (dr.wire && t >= dr.start) {
     drawWire(h, dr, dt);
-    // the type on its own white plates, over the X
-    if (h.out == null && dr.el) dr.plates = plates(h.b, dr.el, dr.plates);
+    // the type on its glass plates; measured while the letters may still be gliding, then left alone
+    if (h.out == null && dr.el && (!dr.plates || since < 500)) dr.plates = plates(h.b, dr.el, dr.plates);
+    // the X, the guide and the chip only once the last plate is down, so the X never meets bare letters
+    if (dr.el && dr.plates && !dr.el.classList.contains('x-on') && h.out == null && since >= platesDone(dr.plates.children.length - 1)) dr.el.classList.add('x-on');
   }
   return out;
 }
 
+/** When the last of n plates has landed, ms after they start. */
+const platesDone = (n: number): number => stagger(Math.max(0, n - 1)) + 180;
+
+/** Fade a freshly inserted layer in: the class goes on the frame after, so its transition runs. */
+function fadeIn(el: HTMLElement, still: () => boolean): void {
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    if (el.isConnected && still()) el.classList.add('on');
+  }));
+}
+
 function drawWire(h: Hot, dr: Dr, dt: number): void {
   const g = h.geo;
+  const fresh = !dr.el;
   const el = wireEl(h, dr);
   if (h.out != null) {
-    el.classList.remove('on');
+    el.classList.remove('on', 'x-on');
     return;
   }
-  el.classList.add('on');
+  if (fresh) fadeIn(el, () => dr.out == null);
   // the frame re-fits ahead of the band: the shape's target, 4px outside (inside the row's own sides when it clips them)
   const [tt, tr, tb, tl] = dr.T;
   const target: Ins = [tt - WIRE_OUT, dr.clipX ? Math.max(0.5, tr - WIRE_OUT) : tr - WIRE_OUT, tb - WIRE_OUT, dr.clipX ? Math.max(0.5, tl - WIRE_OUT) : tl - WIRE_OUT];
@@ -553,6 +595,11 @@ function drawWire(h: Hot, dr: Dr, dt: number): void {
   const [wt, wr, wb, wl] = dr.W.map((v, i) => v - dr.lean[i]) as Ins;
   const w = g.bw - wl - wr;
   const hh = g.bh - wt - wb;
+  const gx = Math.max(wl, Math.min(g.bw - wr, x));
+  // nothing to write when nothing has moved: the frame, its X and the guide stay as they are
+  const key = [wl, wt, w, hh, gx].map((v) => v.toFixed(1)).join(' ');
+  if (key === dr.wkey) return;
+  dr.wkey = key;
   const svg = el.firstElementChild as SVGSVGElement;
   svg.setAttribute('style', `left:${(wl - 6).toFixed(1)}px;top:${(wt - 6).toFixed(1)}px;width:${(w + 12).toFixed(1)}px;height:${(hh + 12).toFixed(1)}px`);
   const ox = wl - 6;
@@ -571,7 +618,6 @@ function drawWire(h: Hot, dr: Dr, dt: number): void {
   // the skeleton: an X joining the frame's opposite corners, in segments, behind the type
   svg.querySelector('.wx')!.setAttribute('d', `M${X0} ${Y0}L${X1} ${Y1}M${X1} ${Y0}L${X0} ${Y1}`);
   // the guide is the cursor's: 1:1, no easing, behind the type like the X
-  const gx = Math.max(wl, Math.min(g.bw - wr, x));
   const guide = svg.querySelector('.wg')!;
   guide.setAttribute('x1', (gx - ox).toFixed(1));
   guide.setAttribute('x2', (gx - ox).toFixed(1));
@@ -599,17 +645,19 @@ function drawWire(h: Hot, dr: Dr, dt: number): void {
     return;
   }
   const cx = Math.max(fr[0], Math.min(fr[1] - dr.chipW, gx + 8));
-  chip.setAttribute('style', `transform:translate(${cx.toFixed(1)}px,${(st + sh / 2).toFixed(1)}px) translateY(-50%)`);
+  const cs = `transform:translate(${cx.toFixed(1)}px,${(st + sh / 2).toFixed(1)}px) translateY(-50%)`;
+  if (chip.getAttribute('style') !== cs) chip.setAttribute('style', cs);
 }
 
 function leave(h: Hot, now: number): void {
   const dr = state.get(h);
   if (!dr) return;
   dr.out = now;
-  dr.el?.classList.remove('on');
+  dr.el?.classList.remove('on', 'x-on');
   dr.trueEl?.classList.remove('on');
   platesOff(dr.plates);
-  if (dr.cut && !h.own) creditOff(now, h.t0);
+  if (dr.cut && dr.credited && !h.own) creditOff(now, h.t0);
+  bagOf(h.b).lastLeave = performance.now();
 }
 
 function cut(h: Hot): void {
@@ -620,13 +668,16 @@ function cut(h: Hot): void {
   state.delete(h);
 }
 
-/** Still moving: the shape settling, or a wire that follows the cursor. */
+/**
+ * Still moving: a spring settling, or a step of the order still to come.
+ * Otherwise the clock stops; a pointer move starts it again.
+ */
 function live(h: Hot, now: number): boolean {
   const dr = state.get(h);
   if (!dr) return false;
-  if (h.out == null && dr.wire) return true;
-  const settling = dr.S.some((v, i) => Math.abs(v - dr.T[i]) > 0.1) || dr.V.some((v) => Math.abs(v) > 0.5);
-  return settling || now - h.t0 < dr.start + 400;
+  const unsettled = (v: Ins, vel: Ins, target?: Ins) => v.some((x, i) => Math.abs(x - (target ? target[i] : x)) > 0.5) || vel.some((x) => Math.abs(x) > 2);
+  const springs = unsettled(dr.S, dr.V, dr.T) || (dr.wire && (unsettled(dr.W, dr.WV) || unsettled(dr.lean, dr.LV)));
+  return springs || now - h.t0 < dr.start + 650;
 }
 
 const api: Dress = { deal, frame, leave, cut, live };

@@ -115,8 +115,9 @@ What runs where:
   everything else (below). Every other button draws from the color wheel. The
   back button has its own behavior (below).
 - **Press:** every link. A button 480px wide or less goes to `scale: .97` in
-  80ms, and a wide row scales only its label, to .985. The outline thickens
-  to 3px and the strips double. Let go and it springs back in 220ms.
+  120ms, and a wide row scales only its label, to .985. The outline thickens
+  to 3px and the strips double. Let go and it comes back in 160ms, both on
+  the site's ease-out, with no bounce.
 - **Lineage:** now and then, for a cursor, after the glitch (below).
 - **Magnet:** every link, for a cursor. A full-width row leans 3px at most.
 - **Seams and the skeleton:** prose only (ledes, paragraphs, captions), for a
@@ -158,8 +159,9 @@ other part of the hover changes, drawn from the visit's own seeded stream:
 ## The dress
 
 Every pointer hover is random, the home menu included (`runtime/dress.ts`).
-The glitch still comes first. When the band has landed (150ms, or 50ms on a
-sweep), each button deals from two decks of its own, shuffled from the
+The glitch still comes first. At the same 220ms dwell as the lineage deck,
+so a sweep across the menu never sets it off, each button deals from decks of
+its own, shuffled from the
 visit's seed and the button's address and dealt without replacement. A fresh
 shuffle never starts with the card just played, so no button gets the same
 hover twice running.
@@ -214,7 +216,7 @@ hover twice running.
 - **Smooth text.** Dessign Maison's alternates are not as wide as the mono,
   so each letter that changed face used to shove the ones after it. Now each
   letter is measured before and after a change and glides the difference away
-  in 220ms, easing in and out, and a letter that changes face comes in from a 2px blur over
+  on a spring that keeps its velocity (about 220ms), and a letter that changes face comes in from a 2px blur over
   100ms, so it reads as one letter turning. Leaving, the overlay fades out over
   90ms as the resting word's ink comes back. The keyboard gets none of it.
 - **JellyBox's skeleton.** Hovered, the back X's box shows its own skeleton,
@@ -223,6 +225,14 @@ hover twice running.
   swelling to fill the box, is a circle drawn in a square. The Jelly card on a
   row shows the same skeleton over its slab once the floor has opened, the
   whole X solid behind the row's text, every line of it on its own plate.
+- **The order.** One thing at a time, never everything in one drawing: the
+  shape begins to move and the wire's frame fades in; the plates wipe in on
+  a stagger that tightens (0, 40, 70, 90ms); only once the last plate is down
+  do the X, the guide and the chip appear, so the X never meets bare
+  letters; the true-size mark comes in at 120ms; Chickpea's cells from the
+  start, a drawing apart. The frame clock stops as soon as the springs
+  settle, and a pointer move starts it again. Back on the same button within
+  250ms of leaving, it keeps the same cards.
 - **Where it runs.** It rides in the lineage chunk, after the page is seen,
   for a cursor. A hover dealt a lineage card stays Full and plain, so the
   effect starts from the settled glitch. Keyboard, touch and reduced motion

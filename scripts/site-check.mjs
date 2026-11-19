@@ -1583,7 +1583,8 @@ try {
     const c = await center(lp, plain, 1);
     const b4 = await lp.evaluate(layout);
     await lp.mouse.move(c.x, c.y, { steps: 2 });
-    await sleep(780);
+    // Skeleton hands its cells back to the words by 520ms after the dwell; catch it while they are up
+    await sleep(fx === 'skeleton' ? 420 : 780);
     const v = await fxView(plain, 1);
     const during = await lp.evaluate(layout);
     ok(expect[fx](v) && v.credit && v.credit[0].startsWith('from ') && +v.credit[1] === 1, `${fx}: dealt after the glitch, it plays and shows its quiet credit`, JSON.stringify(v));
@@ -1652,7 +1653,7 @@ try {
   await settle(dp);
   await dp.waitForFunction(() => !!window.__dress, null, { timeout: 8000 });
   const rows = await dp.evaluate(() => [...document.querySelectorAll('.menu a')].map((a) => { const r = a.getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; }));
-  const enter = async (r, x, wait = 420) => {
+  const enter = async (r, x, wait = 620) => {
     await dp.mouse.move(1600, 880);
     await sleep(260);
     await dp.mouse.move(r[0] + x, r[1] - 3);
@@ -1696,7 +1697,7 @@ try {
   await dp.evaluate(() => window.__ink.seed(11));
   const seen = [];
   for (let i = 0; i < 12; i++) {
-    await enter(rows[1], 300);
+    await enter(rows[1], 300, 330);
     seen.push(await view());
   }
   const tuple = (v) => v && v.st && `${v.st.shape}|${v.st.wire}|${v.st.cut}|${v.strips}`;
@@ -1719,7 +1720,7 @@ try {
     await dp.mouse.move(1600, 880);
     await sleep(300);
     const b4 = await dp.evaluate(layout);
-    await enter(rows[2], 528, 120);
+    await enter(rows[2], 528, 330);
     const mid = await dp.evaluate(layout);
     const heldMid = await holds();
     await sleep(400);
@@ -1841,15 +1842,65 @@ try {
   const trues = [];
   for (let i = 0; i < 10; i++) {
     await dp.evaluate(() => window.__dress.force({ shape: 'reach', dress: 'plain' }));
-    await enter(rows[3], 300, 380);
+    await enter(rows[3], 300, 620);
     trues.push(await trueView());
   }
   const marks = trues.map((t) => t?.mark);
   ok(trues.every((t) => t && JSON.stringify(t.box) === '[0,0,0,0]' && +t.op > 0.4), 'every resizing hover keeps the true size in view, drawn on the button’s own box', JSON.stringify(trues[0]));
   ok(new Set(marks.slice(0, 5)).size === 5 && new Set(marks.slice(5, 10)).size === 5, 'its marks come from a deck: plus, rule, ticks, wash and dots in each round of five', marks.join(' '));
   await dp.evaluate(() => window.__dress.force({ shape: 'full', dress: 'plain' }));
-  await enter(rows[3], 300, 380);
+  await enter(rows[3], 300, 620);
   ok((await trueView()) === null, 'a band at the button’s own size needs no true-size mark');
+  // Emil: a sweep across the menu sets nothing off; the dress waits for the 220ms dwell.
+  await dp.evaluate(() => window.__dress.force({ shape: 'reach', dress: 'cutwire' }));
+  await dp.mouse.move(1600, 880);
+  await sleep(300);
+  await dp.mouse.move(rows[0][0] + 400, rows[0][1] - 20);
+  await sleep(120);
+  const swept = await dp.evaluate(async (rs) => {
+    const seen = new Set();
+    const mo = new MutationObserver(() => document.querySelectorAll('.menu [data-wire], .menu [data-plates], .menu [data-true]').forEach((e) => seen.add(e.closest('a').getAttribute('href'))));
+    mo.observe(document.querySelector('.menu'), { subtree: true, childList: true });
+    return new Promise((res) => setTimeout(() => { mo.disconnect(); res([...seen]); }, 10));
+  }, rows);
+  for (let y = rows[0][1] + 5; y < rows[3][1] + rows[3][3] - 5; y += 9) await dp.mouse.move(rows[0][0] + 400, y);
+  await dp.mouse.move(rows[0][0] + 400, rows[3][1] + rows[3][3] + 40);
+  await sleep(300);
+  const sweptAny = await dp.evaluate(() => document.querySelectorAll('.menu [data-wire], .menu [data-plates], .menu [data-true]').length);
+  ok(swept.length === 0 && sweptAny === 0, 'a sweep across the menu deals no dress: it waits for the dwell', JSON.stringify([swept, sweptAny]));
+  // Emil: once a wired hover settles, the clock stops; nothing is written while the pointer rests.
+  await dp.evaluate(() => window.__dress.force({ shape: 'full', dress: 'wire' }));
+  await enter(rows[1], 400, 1300);
+  const writes = await dp.evaluate(() => new Promise((res) => {
+    let n = 0;
+    const a = document.querySelector('.menu a[data-hot]');
+    const mo = new MutationObserver((ms) => { n += ms.length; });
+    mo.observe(a, { subtree: true, attributes: true, childList: true });
+    setTimeout(() => { mo.disconnect(); res(n); }, 400);
+  }));
+  ok(writes === 0, 'a resting wired hover writes nothing: the frame clock has stopped', String(writes));
+  // Emil: the X never meets bare letters; it comes in only once the plates are down.
+  await dp.mouse.move(1600, 880);
+  await sleep(300);
+  await dp.mouse.move(rows[2][0] + 500, rows[2][1] - 3);
+  await sleep(260);
+  await dp.mouse.move(rows[2][0] + 500, rows[2][1] + rows[2][3] / 2, { steps: 2 });
+  const order = await dp.evaluate(() => new Promise((res) => {
+    const log = [];
+    const a = document.querySelectorAll('.menu a')[2];
+    const t0 = performance.now();
+    const tick = () => {
+      const w = a.querySelector('[data-wire]');
+      const p = a.querySelector('[data-plates]');
+      if (w) log.push({ t: Math.round(performance.now() - t0), x: w.classList.contains('x-on'), plates: !!p && p.classList.contains('on') });
+      if (performance.now() - t0 < 900) requestAnimationFrame(tick);
+      else res(log);
+    };
+    requestAnimationFrame(tick);
+  }));
+  const firstX = order.find((f) => f.x);
+  const firstPlates = order.find((f) => f.plates);
+  ok(firstX && firstPlates && firstX.t - firstPlates.t >= 150, 'the X comes in only once the plates have wiped in', JSON.stringify([firstPlates?.t, firstX?.t]));
   // The keyboard never dresses.
   await dp.evaluate(() => window.__dress.force(null));
   await dp.mouse.move(1600, 880);

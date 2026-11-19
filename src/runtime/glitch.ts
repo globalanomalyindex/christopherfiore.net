@@ -143,32 +143,42 @@ export function faces(b: HTMLElement): Face[] {
  * smooth, things reshuffle smoothly, no jumps"). Dessign Maison's alternates
  * are not as wide as the mono, so each letter that changes face used to shove
  * every letter after it. Now each letter is measured before and after a
- * change and glides the difference away (FLIP), 220ms, easing in and
- * out as anything moving on screen should, by a relative offset that never touches the line's layout. A
+ * change and glides the difference away (FLIP) on a spring that keeps its
+ * velocity, about 220ms, by a relative offset that never touches the line's layout. A
  * letter that changes face also comes in from a 2px blur over 100ms, which
  * bridges the two glyphs so the eye reads one letter turning, not two
  * swapping. The keyboard gets none of it.
  */
-const GLIDE_MS = 220;
 const BLUR_MS = 100;
 interface Glide {
-  /** the offset applied now, px */
+  /** the offset applied now, px, and its velocity, px/s */
   ax: number;
   ay: number;
-  /** the offset the glide started from */
-  gx: number;
-  gy: number;
-  t0: number;
+  vx: number;
+  vy: number;
+  last: number;
   /** when the blur-in started, or -1 */
   b0: number;
 }
 const glides = new WeakMap<HTMLSpanElement, Glide>();
 const easeOut = (t: number) => 1 - (1 - Math.max(0, Math.min(1, t))) ** 3;
-/** A letter moving on screen eases in and out (Emil): its first and last frames barely move. */
-const easeInOut = (t: number) => {
-  const x = Math.max(0, Math.min(1, t));
-  return x < 0.5 ? 4 * x * x * x : 1 - (-2 * x + 2) ** 3 / 2;
-};
+/**
+ * The glide is a spring, not a curve (Emil: springs keep their velocity when
+ * the target moves). A letter shoved again mid-glide carries on from the
+ * speed it had instead of stalling to zero at every drawing. Frequency 28,
+ * damping 0.95: about 220ms, no visible overshoot.
+ */
+const G_FREQ = 28;
+const G_DAMP = 0.95;
+function spring(value: number, velocity: number, seconds: number): [number, number] {
+  const decay = G_DAMP * G_FREQ;
+  const wd = G_FREQ * Math.sqrt(1 - G_DAMP * G_DAMP);
+  const b = (velocity + decay * value) / wd;
+  const e = Math.exp(-decay * seconds);
+  const c = Math.cos(wd * seconds);
+  const sn = Math.sin(wd * seconds);
+  return [e * (value * c + b * sn), e * ((b * wd - decay * value) * c - (value * wd + decay * b) * sn)];
+}
 const altFace = (st: string) => st.includes('Dessign');
 
 /** Paint one frame of letters onto a face. Writes only what changed. `smooth`: glide and blur the changes. */
@@ -186,7 +196,7 @@ export function paint(f: Face, ls: readonly Letter[], ovStyle: string | null, no
     s.dataset.s = l.s;
     s.setAttribute('style', l.s);
     if (turned) {
-      const g = glides.get(s) ?? { ax: 0, ay: 0, gx: 0, gy: 0, t0: now, b0: -1 };
+      const g = glides.get(s) ?? { ax: 0, ay: 0, vx: 0, vy: 0, last: now, b0: -1 };
       g.b0 = now;
       glides.set(s, g);
     }
@@ -198,10 +208,10 @@ export function paint(f: Face, ls: readonly Letter[], ovStyle: string | null, no
       const dx = before[i][0] - (s.offsetLeft - (s.style.left ? g0?.ax ?? 0 : 0));
       const dy = before[i][1] - (s.offsetTop - (s.style.top ? g0?.ay ?? 0 : 0));
       if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) return;
-      const g = g0 ?? { ax: 0, ay: 0, gx: 0, gy: 0, t0: now, b0: -1 };
-      g.gx = g.ax + dx;
-      g.gy = g.ay + dy;
-      g.t0 = now;
+      // the offset jumps by the shove, so the letter is seen where it was; its velocity carries on
+      const g = g0 ?? { ax: 0, ay: 0, vx: 0, vy: 0, last: now, b0: -1 };
+      g.ax += dx;
+      g.ay += dy;
       glides.set(s, g);
     });
   }
@@ -210,11 +220,12 @@ export function paint(f: Face, ls: readonly Letter[], ovStyle: string | null, no
     const g = glides.get(s);
     let extra = '';
     if (g) {
-      const k = 1 - easeInOut((now - g.t0) / GLIDE_MS);
-      g.ax = g.gx * k;
-      g.ay = g.gy * k;
+      const dt = Math.min(0.05, Math.max(0, (now - g.last) / 1000));
+      g.last = now;
+      [g.ax, g.vx] = spring(g.ax, g.vx, dt);
+      [g.ay, g.vy] = spring(g.ay, g.vy, dt);
       const blur = g.b0 >= 0 ? 2 * (1 - easeOut((now - g.b0) / BLUR_MS)) : 0;
-      if (Math.abs(g.ax) < 0.05 && Math.abs(g.ay) < 0.05 && blur < 0.05) glides.delete(s);
+      if (Math.abs(g.ax) < 0.05 && Math.abs(g.ay) < 0.05 && Math.abs(g.vx) < 2 && Math.abs(g.vy) < 2 && blur < 0.05) glides.delete(s);
       else extra = `position:relative;left:${g.ax.toFixed(2)}px;top:${g.ay.toFixed(2)}px;${blur > 0.05 ? `filter:blur(${blur.toFixed(2)}px);` : ''}`;
     }
     const own = s.dataset.s ?? s.getAttribute('style') ?? '';

@@ -265,16 +265,17 @@ function setState(b: Box): void {
 }
 
 function liveState(b: Box) {
-  const { w, h } = cellSize(b);
   const now = performance.now();
   const t = now - b.t0;
   const interacting = (b.hover || b.pressed || b.focus) && !b.closing;
   const settled = !b.running && !b.closing;
+  // the keyboard alone moves nothing: the X is simply in its focused state
+  const still = reducedMotion() || (b.focus && !b.hover && !b.pressed);
   // the hand, on JellyBox's shape spring (the closing drives it itself)
   const fT = interacting ? 1 : 0;
   if (b.closing) {
     /* set by closeFrame */
-  } else if (reducedMotion()) {
+  } else if (still) {
     b.f = fT;
     b.vf = 0;
   } else {
@@ -286,11 +287,13 @@ function liveState(b: Box) {
   if (settled && !interacting && !shaping && now - b.claimedAt > 400) {
     if (++b.rest > 40) return null;
   } else b.rest = 0;
+  // measured only once the X is still drawing
+  const { w, h } = cellSize(b);
   const target = b.pressed ? 1 : b.hover || b.focus || (b.running && t >= 300 && t < 560) ? 0.88 : 0.68;
   if (target !== b.kTo) {
     b.kFrom = b.k;
     b.kTo = target;
-    b.kT0 = now;
+    b.kT0 = still ? now - 480 : now;
   }
   b.k = b.pressed ? 1 : b.kFrom + (b.kTo - b.kFrom) * E_PIGMENT((now - b.kT0) / 480);
   const d = D * b.fs;

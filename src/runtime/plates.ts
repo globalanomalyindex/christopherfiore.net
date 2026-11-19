@@ -16,10 +16,18 @@
  *
  * One plate per line of text: the label, the tag's ruled box, each line of
  * the figure or detail. Each wipes in from its own left edge, the way the
- * line reads, 40ms after the line before it, over 180ms on the site's
- * ease-out; the crosses come in together once the last plate has landed.
- * Leaving, they wipe back in 90ms. Over the X, under the type.
+ * line reads, on a stagger that tightens as it goes (0, 40, 70, 90ms, Emil's
+ * non-uniform cascade), over 180ms on the site's ease-out; the crosses come
+ * in together as the last plate lands. Leaving, they wipe back in 90ms. Over
+ * the X, under the type.
  */
+
+/** The stagger before plate i: 0, 40, 70, 90, 105, 115, ... ms. Each gap 10ms shorter, never under 10. */
+export const stagger = (i: number): number => {
+  let d = 0;
+  for (let k = 0; k < i; k++) d += Math.max(10, 40 - 10 * k);
+  return d;
+};
 
 import { glassTriples } from './jx.ts';
 
@@ -78,8 +86,11 @@ export function plates(b: HTMLElement, after: Element, el: HTMLSpanElement | nul
     }
     el.dataset.pig = pig.join('|');
     b.insertBefore(el, after.nextSibling);
-    // the wipe needs a first frame at its start
-    requestAnimationFrame(() => requestAnimationFrame(() => el?.classList.add('on')));
+    // the wipe needs a first frame at its start; a pointer that has already gone gets none
+    const made = el;
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (made.isConnected && !made.dataset.off) made.classList.add('on');
+    }));
   }
   const r = b.getBoundingClientRect();
   const sc = r.width / (b.offsetWidth || r.width) || 1;
@@ -111,7 +122,7 @@ export function plates(b: HTMLElement, after: Element, el: HTMLSpanElement | nul
   const corners = new Map<string, [number, number]>();
   boxes.forEach(([x0, y0, x1, y1], i) => {
     const bar = el!.children[i + 1] as HTMLSpanElement;
-    const box = `left:${x0.toFixed(1)}px;top:${y0.toFixed(1)}px;width:${(x1 - x0).toFixed(1)}px;height:${(y1 - y0).toFixed(1)}px;--d:${i * 40}ms;--jb-rgb:${pig[i % pig.length] || '92 176 243'}`;
+    const box = `left:${x0.toFixed(1)}px;top:${y0.toFixed(1)}px;width:${(x1 - x0).toFixed(1)}px;height:${(y1 - y0).toFixed(1)}px;--d:${stagger(i)}ms;--jb-rgb:${pig[i % pig.length] || '92 176 243'}`;
     if (bar.dataset.box !== box) {
       bar.dataset.box = box;
       bar.style.cssText = box;
@@ -122,12 +133,15 @@ export function plates(b: HTMLElement, after: Element, el: HTMLSpanElement | nul
   const d = [...corners.values()].map(([cx, cy]) => `M${(cx - 4).toFixed(1)} ${cy.toFixed(1)}H${(cx + 4).toFixed(1)}M${cx.toFixed(1)} ${(cy - 4).toFixed(1)}V${(cy + 4).toFixed(1)}`).join('');
   const path = crosses.firstElementChild!;
   if (path.getAttribute('d') !== d) path.setAttribute('d', d);
-  const delay = `${boxes.length * 40 + 100}ms`;
+  // as the last plate lands
+  const delay = `${stagger(Math.max(0, boxes.length - 1)) + 120}ms`;
   if (crosses.style.getPropertyValue('--d') !== delay) crosses.style.setProperty('--d', delay);
   return el;
 }
 
 /** Leaving: the plates wipe back. */
 export function platesOff(el: HTMLSpanElement | null): void {
-  el?.classList.remove('on');
+  if (!el) return;
+  el.dataset.off = '1';
+  el.classList.remove('on');
 }
