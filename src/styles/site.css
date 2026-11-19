@@ -557,7 +557,7 @@ code {
   stroke-opacity: 0.6;
 }
 
-/* on a row, the X solid, behind the type */
+/* on a row, the X solid, only in the slab's blanks */
 .jx-row-sk .d {
   stroke-opacity: 0.75;
   vector-effect: non-scaling-stroke;
@@ -742,10 +742,8 @@ a.row[data-hot] {
   overflow: visible;
 }
 
-/* the drawn lines only: a mask's own rects keep their fills */
 [data-wire] .wf .wb,
 [data-wire] .wf .wt,
-[data-wire] .wf .wd,
 [data-wire] .wf .wx {
   fill: none;
   stroke: #3f5195;
@@ -753,10 +751,12 @@ a.row[data-hot] {
 }
 
 /*
-  The X, solid, behind the type; it, the guide and the chip come in only once
-  the plates are down (x-on), so the X never meets bare letters.
+  The X lives only in the blanks between the type's cells (runtime/cells.ts),
+  solid. It, the "+" on its corners, the guide and the chip fade in together
+  at 100ms (x-on), once the first cell is whole.
 */
 [data-wire] .wf .wx,
+[data-wire] .wf .wt,
 [data-wire] .wf .wg,
 [data-wire] .wc {
   opacity: 0;
@@ -768,73 +768,10 @@ a.row[data-hot] {
 }
 
 [data-wire].x-on .wf .wx,
+[data-wire].x-on .wf .wt,
 [data-wire].x-on .wf .wg,
 [data-wire].x-on .wc {
   opacity: 1;
-}
-
-/*
-  Plates (runtime/plates.ts): solid white bars under the text while the X is
-  up, one per line. Each wipes in from its own left edge, the way it reads,
-  40ms after the one before, over 180ms; a "+" lands on each corner as it
-  arrives. Leaving, they wipe back in 90ms. Over the X, under the type.
-*/
-[data-plates] {
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-}
-
-/* each plate is JellyBox's own material skin, in its own pigment (--jb-rgb) */
-[data-plates] .pl {
-  position: absolute;
-  border-radius: 999px;
-  background: linear-gradient(165deg, rgb(255 255 255 / 0.78), rgb(var(--jb-rgb) / 0.26) 32%, rgb(var(--jb-rgb) / 0.46) 75%, rgb(255 255 255 / 0.5));
-  box-shadow:
-    inset 0 0 0 2px rgb(var(--jb-rgb) / 0.7),
-    inset 0 2px 2px rgb(255 255 255 / 0.95),
-    inset 0 -3px 5px rgb(var(--jb-rgb) / 0.56),
-    2px 5px 9px rgb(var(--jb-rgb) / 0.14),
-    1px 1px 2px rgb(16 45 67 / 0.07);
-  clip-path: inset(0 100% 0 0);
-  transition: clip-path 90ms cubic-bezier(0.23, 1, 0.32, 1);
-}
-
-[data-plates].on .pl {
-  clip-path: inset(0 0 0 0);
-  transition-duration: 180ms;
-  transition-delay: var(--d, 0ms);
-}
-
-/* the crosses: one svg over the whole layer, one "+" per distinct corner */
-[data-plates] .px {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-  opacity: 0;
-  transition: opacity 60ms cubic-bezier(0.23, 1, 0.32, 1);
-}
-
-[data-plates].on .px {
-  opacity: 1;
-  transition-duration: 100ms;
-  transition-delay: var(--d, 0ms);
-}
-
-[data-plates] .px path {
-  fill: none;
-  stroke: #3f5195;
-  stroke-width: 1;
-}
-
-@media (forced-colors: active) {
-  [data-plates] {
-    display: none;
-  }
 }
 
 [data-wire] .wf .wg {
@@ -1242,10 +1179,9 @@ a.row[data-hot] {
   .btn[data-press] [data-band] .st.b {
     transform: none !important;
   }
-  /* no travel: the X's skin and glyph and the plates' wipe go straight to their end; fades stay */
+  /* no travel: the X's skin and glyph go straight to their end; fades stay */
   .jx .jx-skin,
-  .jx .jx-x,
-  [data-plates] .pl {
+  .jx .jx-x {
     transition: none !important;
   }
 }

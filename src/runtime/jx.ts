@@ -51,7 +51,7 @@ import { pool } from './band.ts';
 import { ALT, band, plan, type Plan } from './ink.ts';
 import { reducedMotion } from './offsets.ts';
 import type { Hot } from './buttons.ts';
-import { plates } from './plates.ts';
+import { blocks, layout } from './cells.ts';
 
 type Optics = typeof import('./jellyx.ts');
 
@@ -678,11 +678,15 @@ export function initJx(seen: Promise<void>): void {
 
 let jc: HTMLCanvasElement | null = null;
 let jh: Hot | null = null;
-/** The Jelly card's skeleton: the slab's box and an X joining its opposite corners. */
+/**
+ * The Jelly card's skeleton: the slab's box and, in each blank stretch of it
+ * (cells.ts: 3em or wider, clear of the type), a hairline at each side and an
+ * X between. No cells on the slab: JellyBox's own glass is the surface. With
+ * no blank, the box alone.
+ */
 let jsk: SVGSVGElement | null = null;
 const NS = 'http://www.w3.org/2000/svg';
 let jskFor: Hot | null = null;
-let jplates: HTMLSpanElement | null = null;
 function skeletonFor(h: Hot, cap: Cap): void {
   if (!jsk) {
     jsk = document.createElementNS(NS, 'svg');
@@ -692,15 +696,26 @@ function skeletonFor(h: Hot, cap: Cap): void {
     jsk.setAttribute('aria-hidden', 'true');
   }
   if (jskFor !== h) {
-    // the whole X, corner to corner, solid, behind the row's text, which sits on its own white plates
     jskFor = h;
-    jsk.innerHTML = '<rect x="0" y="0" width="100" height="100"/><path class="d" d="M0 0L100 100M100 0L0 100"/>';
+    const L = cap.x;
+    const R = cap.x + cap.w;
+    const lay = layout(blocks(h.b, false), L, R, h.geo.fs);
+    const u = (x: number) => ((100 * (x - L)) / cap.w).toFixed(3);
+    let rules = '';
+    let xs = '';
+    for (const k of lay?.blanks ?? []) {
+      const a = k.a === 'L' ? L : k.a;
+      const b = k.b === 'R' ? R : k.b;
+      if (k.a !== 'L') rules += `M${u(a)} 0V100`;
+      if (k.b !== 'R') rules += `M${u(b)} 0V100`;
+      xs += `M${u(a)} 0L${u(b)} 100M${u(b)} 0L${u(a)} 100`;
+    }
+    jsk.innerHTML = `<rect x="0" y="0" width="100" height="100"/>${rules ? `<path class="r" d="${rules}"/>` : ''}${xs ? `<path class="d" d="${xs}"/>` : ''}`;
   }
   const want = `position:absolute;left:${cap.x.toFixed(1)}px;top:${cap.y.toFixed(1)}px;width:${cap.w.toFixed(1)}px;height:${cap.h.toFixed(1)}px;overflow:visible;pointer-events:none;transition:opacity 150ms cubic-bezier(.23,1,.32,1)`;
   if (jsk.getAttribute('style') !== want) jsk.setAttribute('style', want);
   if (jsk.parentNode !== h.b) h.b.insertBefore(jsk, (jc && jc.parentNode === h.b ? jc : h.host).nextSibling);
   if (!jsk.classList.contains('on')) requestAnimationFrame(() => jsk?.classList.add('on'));
-  jplates = plates(h.b, jsk, jplates);
 }
 type Cap = { x: number; y: number; w: number; h: number; r: number };
 let jcap: Cap = { x: 0, y: 0, w: 0, h: 0, r: 0 };
@@ -708,8 +723,6 @@ let jpig = '#5baff3';
 let jfb = 0;
 hooks.jelly = () => (jh ? { ...jcap, pig: jpig } : null);
 hooks.reads = () => READS.slice();
-/** The readable pigments' highlighted states, as "r g b" for JellyBox's skin (the plates' glass). */
-export const glassTriples = (): string[] => READS.map((p) => triple(STATES[p][1]));
 
 const hueOf = (hex: string): number => {
   const c = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
@@ -776,10 +789,6 @@ export function jellyFor(h: Hot, cap: Cap, open: number): void {
       jsk.remove();
     }
     if (jskFor === h) jskFor = null;
-    if (jplates?.parentNode === h.b) {
-      jplates.remove();
-      jplates = null;
-    }
     h.b.querySelectorAll(':scope > [data-k="jc"]').forEach((n) => n.remove());
     return;
   }

@@ -367,6 +367,10 @@
     {
       "not": "an X masked off at a rectangle around the label",
       "instead": "the whole X behind the type, the glyphs haloed in the colour under them, the line in segments"
+    },
+    {
+      "not": "a second material (glass pills, white bars) under the type so an X can run behind it",
+      "instead": "a paler step of the band's own colour under each text block, and the X only in the blanks between"
     }
   ],
   "checks": [
@@ -381,7 +385,8 @@
   ],
   "built": [
     "the glitch band, dressed: shape decks (Full, Golden, Half, Tall, Highlighter; small: Full, Outset, Inset, Tab), the wire with guide and ratio chip, and Chickpea's Cut, all from per-button decks (2026-11-17)",
-    "solid X behind the type on white plates, one per line, wiping in from each line's left edge 40ms apart over 180ms, a measure-ink + on each plate corner; the halo and the masked and segmented X were tried and dropped at his word (2026-11-17)"
+    "solid X behind the type on white plates, one per line, wiping in from each line's left edge 40ms apart over 180ms, a measure-ink + on each plate corner; the halo and the masked and segmented X were tried and dropped at his word (2026-11-17)",
+    "glass pills replaced by Fable's ledger cells (cells.ts): pale cells of the band's own colour under each text block, an X only in each blank 3em or wider with a + on its corners, guide only in blanks, cells on 50ms drawings 70% then whole, X at 100ms; the Jelly slab gets hairlines at blank sides and the X between (2026-11-19)"
   ],
   "tricks_learned": [
     "measure the label as the word plus its tag's ruled box, not the column it sits in, or every free run comes out negative",
@@ -390,5 +395,11 @@
   ],
   "request_2": "i mean like, for jellybox for example, i want to see a wireframe with the x connecting the opposite corners - like a skeleton visible. and the resizes would do something similar, but morph to follow the cursor, and accommodate the text always as well, so it looks like a glitchy structured type of thing. /antialgorithm /metadump:metadump and make sure the text transitions are all smooth, things reshuffle smoothly, no jumps, all glitches",
   "request_3": "can it just be an x that sits behind or something so there isn't just an abrupt cut-off? or segmented? /metadump:metadump",
-  "request_4": "i think it'll be best to keep it solid, no halo on text, and put solid white bars under the text that animate in and out when the X appears. and the bars can have crosshairs on the corners. /antialgorithm"
+  "request_4": "i think it'll be best to keep it solid, no halo on text, and put solid white bars under the text that animate in and out when the X appears. and the bars can have crosshairs on the corners. /antialgorithm",
+  "request_5": {
+    "said": "i need help with the liquid glass pills under the text - i just don't like them and i can't think of another way of doing it. please own the design decision for this",
+    "decided_by": "Fable 5.2 at xhigh, with /emil-design-eng and /ask-emil",
+    "decision": "the pills go; each block of text stands in a flat ledger cell (the band mixed 55% toward the ground, a 1px band-ink rule on each side facing a blank); the X stops running under text and joins the corners of each blank stretch of the band, 3em or wider",
+    "why": "the site already had this move in the menu figure cell (.fc); one surface family instead of a second material; the X is whole and nothing cuts it"
+  }
 }

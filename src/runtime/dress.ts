@@ -23,10 +23,11 @@
  *          3px, Lean (3px out on the cursor's side). The button's box, the
  *          label and every neighbour stay exactly where they are.
  *   DRESS  plain 2, wire 2, Cut 1, Cut and wire 1.
- *          WIRE: a skeleton in Chickpea's measure ink around the shape: its
- *          box and a solid X joining its opposite corners, behind the type,
- *          which sits on white plates (plates.ts) that wipe in as the X
- *          appears, a "+" on each plate's corners.
+ *          WIRE: a skeleton in Chickpea's measure ink around the shape. Each
+ *          block of type stands in a flat ledger cell, a paler step of the
+ *          band's own colour (cells.ts), and a solid X joins the corners of
+ *          each blank stretch of the band between them, a "+" on each of its
+ *          corners. The X never runs behind a letter.
  *          It re-fits ahead of the band (520, 0.9), the side nearest the
  *          cursor leans out up to 8px (420, 0.82), a dashed guide sits on the
  *          cursor in the same frame, and a chip beside it gives the shape's
@@ -46,14 +47,15 @@
  *          colour, under it, for a band that shrinks), Dots (a dotted
  *          outline: the plain one). They never touch the label.
  *
- * Nothing drawn here crosses the type: the X and the guide pass behind it,
- * and the type sits on its own white plates.
+ * Nothing drawn here crosses the type: the X lives only in the blanks, and
+ * the guide shows only there.
  *
  * THE ORDER (Emil: one thing at a time, never everything in one drawing):
- * the shape begins to move and the wire's frame fades in (150ms); the plates
- * wipe in under the text, staggered 0, 40, 70, 90ms; only once the last one is
- * down do the X, the guide and the chip appear, so the X never meets bare
- * letters; the true-size mark comes in at 120ms; Chickpea's cells from 0ms,
+ * the shape begins to move and the wire's frame fades in (150ms); the cells
+ * are ink, so they land on the band's own 50ms drawings, 70% then whole, from
+ * the band edge nearer each, the one nearest the cursor first and the next a
+ * drawing later; at 100ms the X, its crosses, the guide and the chip fade in
+ * (120ms); the true-size mark comes in at 120ms; Chickpea's cells from 0ms,
  * a drawing apart. The frame clock stops as soon as the springs settle; a
  * pointer move starts it again. Back on the same button within 250ms of
  * leaving, it picks up the same cards rather than dealing new ones.
@@ -61,20 +63,21 @@
  * A hover the lineage deck deals an effect to stays Full and plain, so the
  * effect starts from the settled glitch. Keyboard, touch and reduced motion
  * never deal. Leaving: the shape holds while the band takes its one drawing
- * out; the wire fades in 90ms.
+ * out; the cells go with the strips, in one frame; the wire fades in 90ms.
  *
  * LEGIBILITY. The label is always band ink (#1A1820) and every surface it can
- * touch holds band ink at 4.5:1 or better: every band colour does; a Cut cell
+ * touch holds band ink at 4.5:1 or better: every band colour does; a text
+ * cell is the band 55% of the way to the ground, 8.7:1 at worst; a Cut cell
  * that touches text is lifted to OKLCH L 0.74; a strip whose edge would run
  * through the label is dropped, and so is the outline there.
  */
 
 import { hotNow, setDress, type Dress, type DressFrame, type Hot } from './buttons.ts';
-import { DARK_INK } from './band.ts';
-import { inkBase, mulberry } from './ink.ts';
+import { DARK_INK, mix } from './band.ts';
+import { blocks, layout, xs, type Blank, type Lay, type TCell } from './cells.ts';
+import { inkBase, mulberry, step2 } from './ink.ts';
 import { spring } from './jx.ts';
 import { creditFor, creditOff } from './lineage.ts';
-import { plates, platesOff, stagger } from './plates.ts';
 import { hashSeed } from '../vendor/chickpea/grid/prng.ts';
 import { composeGrid, type CompBox } from '../vendor/chickpea/grid/compose.ts';
 import { snapToRatio, ratioName } from '../vendor/chickpea/grid/ratios.ts';
@@ -147,7 +150,14 @@ interface Dr {
   dropBottom: boolean;
   outline: boolean;
   cells: Cell[] | null;
-  free: [number, number] | null;
+  /** the wire's cells and blanks, laid out once at the deal; null: no 3em blank, so neither */
+  lay: Lay | null;
+  /** the text cells are drawn here (not on a Cut, whose text columns are the cells) */
+  drawCells: boolean;
+  /** each text cell's drawing: when it starts (ms after the deal) and the band edge it grows from */
+  cellAt: number[];
+  cellFrom: ('l' | 'r')[];
+  fill: string;
   labR: number;
   figL: number;
   /** the width the Cut was laid out for */
@@ -161,8 +171,9 @@ interface Dr {
   /** the true-size mark, and its layer */
   trueMark: string | null;
   trueEl: HTMLSpanElement | null;
-  plates: HTMLSpanElement | null;
   el: HTMLSpanElement | null;
+  /** the guide is hidden while the cursor is over a cell */
+  guideOff: boolean;
   chipText: string;
   chipW: number;
   out: number | null;
@@ -347,12 +358,38 @@ function cutCells(h: Hot, T: Ins, seed: number): Cell[] {
   });
 }
 
-/** Where the size chip may sit: on the shape's own midline, clear of every text box. */
-function freeRun(h: Hot, T: Ins): [number, number] | null {
-  const { label, fig } = textBoxes(h);
-  const l = label.x + label.w + 10;
-  const r = Math.min(h.geo.bw - T[1] - 10, fig ? fig.x - 10 : Infinity);
-  return r - l > 40 ? [l, r] : null;
+/**
+ * A Cut with the wire: no new cells. The Cut's text columns are the cells,
+ * and each run of text-free columns 3em or wider is a blank with its X.
+ */
+function cutLay(h: Hot, cells: Cell[], T: Ins, W0: number, texts: CompBox[]): Lay | null {
+  const fs = h.geo.fs;
+  const sl = T[3];
+  const cols = [...new Map(cells.map((c) => [c.x.toFixed(4), c])).values()].sort((p, q) => p.x - q.x);
+  const holds = (c: Cell) => texts.some((q) => q.x < sl + (c.x + c.w) * W0 && q.x + q.w > sl + c.x * W0);
+  const tc: TCell[] = [];
+  const blanks: Blank[] = [];
+  let run: [number, number] | null = null;
+  const flush = (end: boolean) => {
+    if (!run) return;
+    const [a, b] = run;
+    if (b - a >= 3 * fs) blanks.push({ a: a <= sl + 0.5 ? 'L' : a, b: end ? 'R' : b });
+    else tc.push({ x0: a, x1: b, toL: a <= sl + 0.5, toR: end });
+    run = null;
+  };
+  cols.forEach((c, i) => {
+    const x0 = sl + c.x * W0;
+    const x1 = sl + (c.x + c.w) * W0;
+    const end = i === cols.length - 1;
+    if (holds(c)) {
+      flush(false);
+      tc.push({ x0, x1, toL: i === 0, toR: end });
+    } else {
+      run = run ? [run[0], x1] : [x0, x1];
+      if (end) flush(true);
+    }
+  });
+  return blanks.length ? { cells: tc, blanks } : null;
 }
 
 function deal(h: Hot, t: number): void {
@@ -376,6 +413,18 @@ function deal(h: Hot, t: number): void {
   const T = shapeIns(h, shape, h.px, h.py, labR);
   const top = h.geo.bh - T[2];
   const clipX = h.b.matches('a.row, .hrow, .cell');
+  const texts = [label, ...(fig ? [fig] : [])].map((c) => ({ x: c.x - 0.25 * h.geo.fs, y: c.y - 0.1 * h.geo.fs, w: c.w + 0.5 * h.geo.fs, h: c.h + 0.2 * h.geo.fs }));
+  const cells = cut ? cutCells(h, T, g.rng() * 2 ** 31 >>> 0) : null;
+  // the wire's cells, laid out once, over the button's whole width: a band that moves later only clips them
+  const lay = !wire ? null : cells ? cutLay(h, cells, T, h.geo.bw - T[1] - T[3], texts) : layout(blocks(h.b, !!h.P.m), 0, h.geo.bw, h.geo.fs);
+  // each cell lands from the band edge nearer it; the one nearest the cursor first, the next a drawing later
+  const L0 = T[3];
+  const R0 = h.geo.bw - T[1];
+  const tcs = lay && !cells ? lay.cells : [];
+  const dist = (c: TCell) => (h.px < c.x0 ? c.x0 - h.px : h.px > c.x1 ? h.px - c.x1 : 0);
+  const order = tcs.map((c, i) => ({ i, d: dist(c) })).sort((p, q) => p.d - q.d);
+  const cellAt: number[] = [];
+  order.forEach((o, k) => (cellAt[o.i] = 50 * Math.min(3, k)));
   const dr: Dr = {
     shape,
     wire,
@@ -394,18 +443,22 @@ function deal(h: Hot, t: number): void {
     dropTop: shape === 'highlighter' || T[0] > label.y + 1,
     dropBottom: shape === 'highlighter' || top < label.y + label.h - 1,
     outline: !(T[0] > label.y + 1 || top < label.y + label.h - 1),
-    cells: cut ? cutCells(h, T, g.rng() * 2 ** 31 >>> 0) : null,
-    free: wire ? freeRun(h, T) : null,
+    cells,
+    lay,
+    drawCells: !cells,
+    cellAt,
+    cellFrom: tcs.map((c) => (c.toL || (!c.toR && (c.x0 + c.x1) / 2 < (L0 + R0) / 2) ? 'l' : 'r')),
+    fill: mix(h.P.main, GROUND, 0.55),
     labR,
     figL: fig ? fig.x : Infinity,
     cutW: h.geo.bw - T[1] - T[3],
-    texts: [label, ...(fig ? [fig] : [])].map((c) => ({ x: c.x - 0.25 * h.geo.fs, y: c.y - 0.1 * h.geo.fs, w: c.w + 0.5 * h.geo.fs, h: c.h + 0.2 * h.geo.fs })),
+    texts,
     credited: false,
     wkey: '',
     trueMark: null,
     trueEl: null,
-    plates: null,
     el: null,
+    guideOff: false,
     chipText: '',
     chipW: 0,
     out: null,
@@ -429,7 +482,9 @@ function wireEl(h: Hot, dr: Dr): HTMLSpanElement {
   const el = document.createElement('span');
   el.setAttribute('data-wire', '');
   el.setAttribute('aria-hidden', 'true');
-  el.innerHTML = '<svg class="wf"><rect class="wb"/><path class="wt"/><path class="wd"/><path class="wx"/><line class="wg"/></svg><span class="wc"></span>';
+  // one group per blank: its X and the "+" on each of its corners
+  const ks = (dr.lay?.blanks ?? []).map(() => '<g class="wk"><path class="wx"/><path class="wt"/></g>').join('');
+  el.innerHTML = `<svg class="wf"><rect class="wb"/>${ks}<line class="wg"/></svg><span class="wc"></span>`;
   // over the band and any true-size mark, under the label (a wash lies under the band)
   const after = dr.trueEl && dr.trueMark !== 'wash' ? dr.trueEl : h.host;
   h.b.insertBefore(el, after.nextSibling);
@@ -454,7 +509,7 @@ function trueEl(h: Hot, dr: Dr): void {
       // the site's "+" at each true corner; on a row that clips its sides, just inside them
       const ix = dr.clipX ? 5 : 0;
       const arm = 4;
-      // the same "+" the plates and the wire use: measure ink, 1px, 4px arms
+      // the same "+" the wire puts on its X: measure ink, 1px, 4px arms
       body = [[ix, 0], [W - ix, 0], [ix, H], [W - ix, H]].map(([x, y]) => `<path ${measure} stroke-width="1" d="M${x - arm} ${y}H${x + arm}M${x} ${y - arm}V${y + arm}"/>`).join('');
       break;
     }
@@ -541,18 +596,30 @@ function frame(h: Hot, t: number, now: number): DressFrame {
     trueEl(h, dr);
     fadeIn(dr.trueEl!, () => dr.out == null);
   }
+  // the type's cells: ink, on the band's drawings, 70% then whole, from the band edge nearer each
+  if (dr.lay && dr.drawCells && h.out == null && since >= 0) {
+    const tc = dr.lay.cells
+      .map((c, i) => {
+        const p = step2(since - dr.cellAt[i]);
+        if (p <= 0) return null;
+        // in the band host's own px: a cell at a band edge runs to that edge, wherever the shape has it
+        const horiz = c.toL && c.toR ? 'left:0;right:0' : c.toL ? `left:0;width:${Math.max(0, c.x1 - sl).toFixed(1)}px` : c.toR ? `left:${(c.x0 - sl).toFixed(1)}px;right:0` : `left:${(c.x0 - sl).toFixed(1)}px;width:${(c.x1 - c.x0).toFixed(1)}px`;
+        // a band-ink rule on each side that faces a blank
+        const sh = [c.toL ? '' : `inset 1px 0 0 ${DARK_INK}`, c.toR ? '' : `inset -1px 0 0 ${DARK_INK}`].filter(Boolean).join(',');
+        const x = `${(100 * (1 - p)).toFixed(2)}%`;
+        const clip = dr.cellFrom[i] === 'l' ? `inset(0% ${x} 0% 0%)` : `inset(0% 0% 0% ${x})`;
+        return { c: 'tc', s: `position:absolute;top:0;bottom:0;${horiz};background:${dr.fill};${sh ? `box-shadow:${sh};` : ''}clip-path:${clip}` };
+      })
+      .filter((l): l is { c: string; s: string } => !!l);
+    out.extra = [...(out.extra ?? []), ...tc];
+  }
   if (dr.wire && t >= dr.start) {
     drawWire(h, dr, dt);
-    // the type on its glass plates; measured while the letters may still be gliding, then left alone
-    if (h.out == null && dr.el && (!dr.plates || since < 500)) dr.plates = plates(h.b, dr.el, dr.plates);
-    // the X, the guide and the chip only once the last plate is down, so the X never meets bare letters
-    if (dr.el && dr.plates && !dr.el.classList.contains('x-on') && h.out == null && since >= platesDone(dr.plates.children.length - 1)) dr.el.classList.add('x-on');
+    // the X, its crosses, the guide and the chip at 100ms, once the first cell is whole
+    if (dr.el && !dr.el.classList.contains('x-on') && h.out == null && since >= 100) dr.el.classList.add('x-on');
   }
   return out;
 }
-
-/** When the last of n plates has landed, ms after they start. */
-const platesDone = (n: number): number => stagger(Math.max(0, n - 1)) + 180;
 
 /** Fade a freshly inserted layer in: the class goes on the frame after, so its transition runs. */
 function fadeIn(el: HTMLElement, still: () => boolean): void {
@@ -608,22 +675,40 @@ function drawWire(h: Hot, dr: Dr, dt: number): void {
   rect.setAttribute('y', '6.5');
   rect.setAttribute('width', Math.max(0, w - 1).toFixed(1));
   rect.setAttribute('height', Math.max(0, hh - 1).toFixed(1));
-  // corner ticks, 5px past each corner
-  const X0 = 6.5;
+  // the frame's top and bottom lines, in the svg's own px
   const Y0 = 6.5;
-  const X1 = 6.5 + w - 1;
   const Y1 = 6.5 + hh - 1;
-  // a "+" on each corner, the same cross the plates and the true size use
-  svg.querySelector('.wt')!.setAttribute('d', [[X0, Y0], [X1, Y0], [X0, Y1], [X1, Y1]].map(([cx, cy]) => `M${cx - 4} ${cy}H${cx + 4}M${cx} ${cy - 4}V${cy + 4}`).join(''));
-  // the skeleton: an X joining the frame's opposite corners, in segments, behind the type
-  svg.querySelector('.wx')!.setAttribute('d', `M${X0} ${Y0}L${X1} ${Y1}M${X1} ${Y0}L${X0} ${Y1}`);
-  // the guide is the cursor's: 1:1, no easing, behind the type like the X
-  const guide = svg.querySelector('.wg')!;
+  // an X in each blank, its corners on the frame's top and bottom lines, on
+  // the cells' rules or the frame's corners; a "+" on each corner, the same
+  // cross the true size uses
+  const spans = dr.lay ? xs(dr.lay, wl + 0.5, wl + w - 0.5, g.fs) : [];
+  const ks = svg.querySelectorAll<SVGGElement>('.wk');
+  spans.forEach((s, i) => {
+    const k = ks[i];
+    if (!k) return;
+    // a cell's edge: on the middle of its 1px rule
+    const blank = dr.lay!.blanks[i];
+    const a = (blank.a === 'L' ? s.a : s.a - 0.5) - ox;
+    const b = (blank.b === 'R' ? s.b : s.b + 0.5) - ox;
+    const on = s.op > 0;
+    k.setAttribute('opacity', s.op.toFixed(2));
+    k.firstElementChild!.setAttribute('d', on ? `M${a.toFixed(1)} ${Y0}L${b.toFixed(1)} ${Y1}M${b.toFixed(1)} ${Y0}L${a.toFixed(1)} ${Y1}` : '');
+    k.lastElementChild!.setAttribute('d', on ? [[a, Y0], [b, Y0], [a, Y1], [b, Y1]].map(([cx, cy]) => `M${(cx - 4).toFixed(1)} ${cy}H${(cx + 4).toFixed(1)}M${cx.toFixed(1)} ${cy - 4}V${cy + 4}`).join('') : '');
+  });
+  // the guide is the cursor's: 1:1, no easing; it shows only in a blank, and
+  // over a cell it goes at once, no fade
+  const guide = svg.querySelector<SVGLineElement>('.wg')!;
   guide.setAttribute('x1', (gx - ox).toFixed(1));
   guide.setAttribute('x2', (gx - ox).toFixed(1));
   guide.setAttribute('y1', '6');
   guide.setAttribute('y2', (hh + 6).toFixed(1));
   guide.setAttribute('data-x', gx.toFixed(1));
+  // with no cells laid out, the type's own padded boxes stand in for them
+  const over = dr.lay ? dr.lay.cells.some((c) => (c.toL || gx >= c.x0) && (c.toR || gx <= c.x1)) : dr.texts.some((q) => gx >= q.x && gx <= q.x + q.w);
+  if (over !== dr.guideOff) {
+    dr.guideOff = over;
+    guide.style.visibility = over ? 'hidden' : '';
+  }
   // the chip: the shape's size, and the canon ratio's name when the cursor sits on one
   const chip = el.children[1] as HTMLSpanElement;
   const [st, sr, sb, sl] = dr.S;
@@ -638,12 +723,22 @@ function drawWire(h: Hot, dr: Dr, dt: number): void {
     dr.chipText = text;
     dr.chipW = chip.offsetWidth;
   }
-  // clear space on the band's midline: past the label, short of the figure and the band's edge
-  const fr: [number, number] = [dr.labR + 6, Math.min(g.bw - sr - 10, dr.figL - 10)];
-  if (fr[1] - fr[0] < dr.chipW + 8) {
-    chip.style.visibility = 'hidden';
+  // clear space on the band's midline: in the blank the cursor is in, or the
+  // nearest one with room; with no cells, past the label and short of the figure
+  let fr: [number, number] | null = null;
+  if (dr.lay) {
+    const room = spans.filter((s) => s.op >= 1 && s.b - s.a - 12 >= dr.chipW);
+    room.sort((p, q) => Math.max(0, p.a - gx, gx - p.b) - Math.max(0, q.a - gx, gx - q.b));
+    if (room[0]) fr = [room[0].a + 6, room[0].b - 6];
+  } else {
+    fr = [dr.labR + 6, Math.min(g.bw - sr - 10, dr.figL - 10)];
+    if (fr[1] - fr[0] < dr.chipW + 8) fr = null;
+  }
+  if (!fr) {
+    if (chip.style.visibility !== 'hidden') chip.style.visibility = 'hidden';
     return;
   }
+  if (chip.style.visibility) chip.style.visibility = '';
   const cx = Math.max(fr[0], Math.min(fr[1] - dr.chipW, gx + 8));
   const cs = `transform:translate(${cx.toFixed(1)}px,${(st + sh / 2).toFixed(1)}px) translateY(-50%)`;
   if (chip.getAttribute('style') !== cs) chip.setAttribute('style', cs);
@@ -655,7 +750,6 @@ function leave(h: Hot, now: number): void {
   dr.out = now;
   dr.el?.classList.remove('on', 'x-on');
   dr.trueEl?.classList.remove('on');
-  platesOff(dr.plates);
   if (dr.cut && dr.credited && !h.own) creditOff(now, h.t0);
   bagOf(h.b).lastLeave = performance.now();
 }
@@ -664,7 +758,6 @@ function cut(h: Hot): void {
   const dr = state.get(h);
   dr?.el?.remove();
   dr?.trueEl?.remove();
-  dr?.plates?.remove();
   state.delete(h);
 }
 
@@ -690,6 +783,6 @@ window.__dress = {
   state(el) {
     const h = hotNow().find((x) => x.b === el);
     const dr = h && state.get(h);
-    return dr ? { shape: dr.shape, wire: dr.wire, cut: dr.cut, true: dr.trueMark, T: dr.T, S: dr.S, lean: dr.lean, cells: dr.cells?.map((c) => c.color) ?? null, chip: dr.chipText } : null;
+    return dr ? { shape: dr.shape, wire: dr.wire, cut: dr.cut, true: dr.trueMark, T: dr.T, S: dr.S, lean: dr.lean, cells: dr.cells?.map((c) => c.color) ?? null, chip: dr.chipText, lay: dr.lay, fill: dr.fill, cutGeo: dr.cells?.map((c) => [c.x, c.w, c.y, c.h]) ?? null, cutW: dr.cutW, texts: dr.texts } : null;
   },
 };

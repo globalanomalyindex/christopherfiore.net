@@ -67,7 +67,7 @@ src/
     glitch.ts    the alternate-letter faces, and the width a sentence link reserves
     lineage.ts   effects from his past projects, dealt now and then (lazy, cursor only)
     dress.ts     every pointer hover's shape, wire and Chickpea's Cut (lazy, with lineage)
-    plates.ts    JellyBox glass plates under the text while a skeleton's X runs behind it
+    cells.ts     the pale cells the type stands in while the wire is up, and the blanks its X fills
     jx.ts        the JellyBox back button: entrance, colors, leaving (lazy)
     jellyx.ts    JellyBox's own optics renderer, mounted on a canvas (lazy, desktop only)
     magnet.ts    the magnetic pull
@@ -177,17 +177,18 @@ hover twice running.
   and 3px into a page's gaps. Small buttons get Full, Outset 3px, Inset 3px,
   and Lean, 3px out on the cursor's side.
 - **Dress.** The deck has six cards: plain 2, wire 2, Cut 1, Cut and wire 1.
-- **The wire.** A skeleton in Chickpea's measure ink wraps the shape: its box
-  and an X joining opposite corners, crossing at the centre. It re-fits ahead
-  of the band as the shape morphs. The X is solid and runs behind the type,
-  which sits on plates of JellyBox's own glass skin, one per line, each in its
-  own readable JellyBox pigment (`runtime/plates.ts`). The plates sit on the
-  page's grid: their sides on the mono cell, their tops and bottoms on the
-  line's own pitch, so plates on one line share them and stacked plates meet.
-  A "+" in measure ink marks each distinct corner once. Each plate wipes in
-  from its own left edge, the way the line reads, 40ms after the one before,
-  over 180ms, the crosses land together after the last, and they all wipe
-  back in 90ms. The wire's corners and the true size use the same "+".
+- **The wire.** A skeleton in Chickpea's measure ink wraps the shape. It
+  re-fits ahead of the band as the shape morphs. Each block of text (the
+  label with its tag, and the figure or detail) stands in a flat cell, a
+  paler step of the band's own color (`runtime/cells.ts`). A cell is the text
+  plus a quarter em, its sides snapped out to the mono cell, the full height
+  of the band, with a 1px band-ink rule on each side that faces open band. A
+  gap under 3em goes into the cell, so every blank left is at least 3em wide.
+  Each blank gets its own solid X, corner to corner, with a "+" on each
+  corner, so the X never runs behind a letter. A row with no 3em blank gets
+  no cells and no X. A Cut with the wire adds no cells: its text columns are
+  the cells, and a run of text-free columns gets the X. The guide shows only
+  in a blank and goes at once over a cell. The true size uses the same "+".
 - **The true size.** Whenever the band is not the button's own size, a third
   deck keeps the true box in view, quietly, in band ink at half strength:
   Plus (the site's "+" at each true corner), Rule (ledger rules on the true
@@ -223,13 +224,15 @@ hover twice running.
   4px inside the rules: the box and its two diagonals. The box is all but
   square, so the diagonals run along the X's own strokes, and the disc,
   swelling to fill the box, is a circle drawn in a square. The Jelly card on a
-  row shows the same skeleton over its slab once the floor has opened, the
-  whole X solid behind the row's text, every line of it on its own plate.
+  row shows its slab's box once the floor has opened, with a hairline at
+  each side of a blank and the X only in the blank. The slab gets no cells,
+  since JellyBox's glass is already the surface.
 - **The order.** One thing at a time, never everything in one drawing: the
-  shape begins to move and the wire's frame fades in; the plates wipe in on
-  a stagger that tightens (0, 40, 70, 90ms); only once the last plate is down
-  do the X, the guide and the chip appear, so the X never meets bare
-  letters; the true-size mark comes in at 120ms; Chickpea's cells from the
+  shape begins to move and the wire's frame fades in over 150ms. The cells
+  are ink, so they land on the band's 50ms drawings, 70% and then whole, from
+  the band edge nearer each, the one nearest the cursor first. At 100ms the
+  X, its crosses, the guide and the chip fade in over 120ms. Leaving, the
+  cells go with the strips in one frame. The true-size mark comes in at 120ms; Chickpea's cells from the
   start, a drawing apart. The frame clock stops as soon as the springs
   settle, and a pointer move starts it again. Back on the same button within
   250ms of leaving, it keeps the same cards.
@@ -467,9 +470,14 @@ measure the film rather than the battery. It checks:
   and never the same twice running, with all four shapes in each round of
   four. Each shape lands where the cursor puts it, always holds the whole
   label, and moves no layout box, and Reach follows the cursor on the cell
-  grid. The wire is a skeleton whose solid X joins its corners behind the
-  type, which sits on JellyBox glass plates inside the row, each in its own
-  pigment, their sides on the mono cell, one "+" per corner. Every resizing hover shows a true-size mark on the button's
+  grid. On a menu row, rows of two and three lines, a Cut with the wire and
+  the Jelly slab, every X joins the corners of a blank 3em or wider on the
+  frame's top and bottom and clears every letter, with a "+" on each corner.
+  Every line of text stands in a flat, full-height cell with its sides on the
+  mono cell, in exactly the band mixed 55% toward the ground, which holds
+  band ink at 4.5:1 on all 23 band colors. The cells land at 70% then whole
+  by 100ms, the X only after, and leaving takes the cells in the next frame.
+  No plates exist anywhere. Every resizing hover shows a true-size mark on the button's
   own box, all five in each round of five, and a Full band shows none. While
   the glitch lands no letter moves more than 9px between two frames. Every
   surface the label touches holds band ink at 4.5:1. The wire's guide sits on
@@ -660,10 +668,10 @@ The scripts, gzipped:
 
 | Chunk | Size | Loads |
 |---|---:|---|
-| main | 12.7 kB | every page |
+| main | 15.2 kB | every page |
 | signature | 7.6 kB | home only |
-| lineage, with the dress, Chickpea and After Tokens | 17.9 kB | after the page is seen, for a cursor |
-| jx, with the plates | 6.5 kB | subpages, and with lineage |
+| lineage, with the dress, Chickpea and After Tokens | 19.1 kB | after the page is seen, for a cursor |
+| jx, with the cells | 6.3 kB | subpages, and with lineage |
 | jellyx | 176 kB | subpages on a desktop, after the page is seen |
 
 Paintings is the heavy page. The works are WebP at 1200px, and at three tiles

@@ -15,6 +15,7 @@
  * page change can never leave a page covered.
  */
 
+import { readFileSync } from 'node:fs';
 import { chromium, webkit } from 'playwright-core';
 
 const BASE = (process.env.BASE ?? 'http://localhost:4173').replace(/\/$/, '');
@@ -32,6 +33,13 @@ const ROUTES = [
   '/paintings/',
   '/about/',
 ];
+
+/** The band's 23 colours, read from band.ts, and the contrast maths the cells are held to. */
+const HUES = (readFileSync(new URL('../src/runtime/band.ts', import.meta.url), 'utf8').match(/export const HUES = \[([\s\S]*?)\] as const/)?.[1].match(/#[0-9A-Fa-f]{6}/g)) ?? [];
+const hexRgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+const mixHex = (a, b, k) => `#${hexRgb(a).map((v, i) => Math.round(v + (hexRgb(b)[i] - v) * k).toString(16).padStart(2, '0')).join('')}`;
+const lumHex = (h) => hexRgb(h).map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }).reduce((s, v, i) => s + v * [0.2126, 0.7152, 0.0722][i], 0);
+const contrastHex = (a, b) => { const [x, y] = [lumHex(a), lumHex(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
 
 let failed = 0;
 let passed = 0;
@@ -188,6 +196,105 @@ async function film(pg, href, wait = 2300) {
   const gated = await pg.evaluate(() => window.__gated);
   return { src, arrive, dir, end, total, gated };
 }
+
+/**
+ * The wire and the type's cells on the hovered button `sel` (cells.ts):
+ * every visible line of text as an x span, the frame, each blank's X and its
+ * crosses, and every band cell, all in the button's own px.
+ */
+const wireFacts = (sel) => {
+  const a = document.querySelector(sel);
+  if (!a) return null;
+  const r = a.getBoundingClientRect();
+  const sc = r.width / (a.offsetWidth || r.width) || 1;
+  const fs = parseFloat(getComputedStyle(a).fontSize);
+  const X = (v) => (v - r.left) / sc;
+  const texts = [];
+  const tw = document.createTreeWalker(a, NodeFilter.SHOW_TEXT);
+  for (let n = tw.nextNode(); n; n = tw.nextNode()) {
+    if (!n.textContent.trim() || n.parentElement.closest('.sr-only, [data-wire], [data-true]')) continue;
+    const rg = document.createRange();
+    rg.selectNodeContents(n);
+    for (const q of rg.getClientRects()) if (q.width > 0.5) texts.push([X(q.left), X(q.right)]);
+  }
+  const w = a.querySelector('[data-wire]');
+  let frame = null;
+  const xs = [];
+  const crosses = [];
+  if (w) {
+    const svg = w.querySelector('.wf');
+    const sr = svg.getBoundingClientRect();
+    const rect = svg.querySelector('.wb');
+    const ox = X(sr.left);
+    const oy = (sr.top - r.top) / sc;
+    const fx0 = ox + +rect.getAttribute('x');
+    const fy0 = oy + +rect.getAttribute('y');
+    frame = [fx0, fy0, fx0 + +rect.getAttribute('width'), fy0 + +rect.getAttribute('height')];
+    for (const k of svg.querySelectorAll('.wk')) {
+      const d = k.querySelector('.wx').getAttribute('d') || '';
+      if (!d || +k.getAttribute('opacity') === 0) continue;
+      xs.push(d.match(/-?[\d.]+/g).map(Number).map((v, i) => (i % 2 ? v + oy : v + ox)));
+      for (const m of (k.querySelector('.wt').getAttribute('d') || '').match(/M-?[\d.]+ -?[\d.]+H-?[\d.]+M-?[\d.]+ -?[\d.]+V-?[\d.]+/g) ?? []) {
+        const v = m.match(/-?[\d.]+/g).map(Number);
+        crosses.push([v[3] + ox, v[1] + oy]);
+      }
+    }
+  }
+  const band = a.querySelector('[data-band]');
+  const br = band ? band.getBoundingClientRect() : r;
+  const bm = band?.querySelector('.bm');
+  const main = bm ? getComputedStyle(bm).backgroundColor.match(/\d+/g).slice(0, 3).map(Number) : null;
+  const want = main ? `rgb(${main.map((v, i) => Math.round(v + ([243, 245, 248][i] - v) * 0.55)).join(', ')})` : null;
+  const cells = band
+    ? [...band.querySelectorAll('.tc, .fc, .cc')].map((c) => {
+        const q = c.getBoundingClientRect();
+        const cs = getComputedStyle(c);
+        return { k: c.className, x0: X(q.left), x1: X(q.right), top: q.top - br.top, bot: br.bottom - q.bottom, bg: cs.backgroundColor, flat: cs.backgroundImage === 'none' && cs.borderRadius === '0px' && cs.filter === 'none' && cs.backdropFilter === 'none', clip: c.style.clipPath };
+      })
+    : [];
+  const fig = a.querySelector('.n');
+  let figL = null;
+  if (fig && fig.textContent.trim()) {
+    const rg = document.createRange();
+    rg.selectNodeContents(fig);
+    figL = X(rg.getBoundingClientRect().left) - fs / 2;
+  }
+  return { fs, bw: a.offsetWidth, bandL: X(br.left), bandR: X(br.right), texts, frame, xs, crosses, cells, want, figL, plates: document.querySelectorAll('[data-plates]').length };
+};
+
+/** Check a: every X is two segments sharing corners on the frame's top and bottom, 3em or wider, clear of every line of text; every cross on the frame's top or bottom. */
+const xsHold = (f) => {
+  if (!f || !f.frame) return { ok: false, why: 'no wire' };
+  const near = (p, q, e = 1.01) => Math.abs(p - q) < e;
+  const [, fy0, , fy1] = f.frame;
+  const bad = f.xs.filter((n) => {
+    if (n.length !== 8) return true;
+    const [a, y0, b, y1, b2, y2, a2, y3] = n;
+    const shared = near(a, a2) && near(b, b2) && near(y0, y2) && near(y1, y3);
+    const onFrame = near(y0, fy0) && near(y1, fy1);
+    const lo = Math.min(a, b);
+    const hi = Math.max(a, b);
+    const clear = f.texts.every(([l, r]) => r <= lo + 0.5 || l >= hi - 0.5);
+    return !(shared && onFrame && hi - lo >= 3 * f.fs - 1.5 && clear);
+  });
+  const crossesOn = f.crosses.every(([, y]) => near(y, fy0) || near(y, fy1));
+  return { ok: bad.length === 0 && crossesOn && f.crosses.length === 4 * f.xs.length, n: f.xs.length, bad: bad.length, crossesOn };
+};
+
+/** Check b: every line of text lies inside a full-height, flat band cell, sides on the mono cell or a band edge, in exactly the 0.55 mix. */
+const cellsHold = (f, kinds = ['tc', 'fc']) => {
+  if (!f) return { ok: false };
+  const cell = f.fs / 2;
+  const cs = f.cells.filter((c) => kinds.includes(c.k));
+  const tc = f.cells.filter((c) => c.k === 'tc');
+  const onGrid = (x) => Math.abs(x / cell - Math.round(x / cell)) < 0.02 || Math.abs(x - f.bandL) < 0.6 || Math.abs(x - f.bandR) < 0.6 || (f.figL != null && Math.abs(x - f.figL) < 0.6);
+  const inside = f.texts.every(([l, r]) => cs.some((c) => l >= c.x0 - 0.5 && r <= c.x1 + 0.5));
+  const sides = tc.every((c) => onGrid(c.x0) && onGrid(c.x1));
+  const full = cs.every((c) => Math.abs(c.top) < 0.6 && Math.abs(c.bot) < 0.6);
+  const flat = cs.every((c) => c.flat);
+  const fill = tc.every((c) => c.bg === f.want);
+  return { ok: inside && sides && full && flat && fill && f.plates === 0, inside, sides, full, flat, fill, plates: f.plates, cells: cs.length };
+};
 
 // CHROME_ARGS: extra switches, e.g. --disable-frame-rate-limit on a laptop whose
 // battery is low enough for Chrome to cap every page at 30fps
@@ -1548,9 +1655,35 @@ try {
     const a = document.querySelector(s);
     const k = a.querySelector('.jx-row-sk');
     if (!k) return null;
-    return { d: k.querySelector('.d')?.getAttribute('d'), plates: a.querySelectorAll('[data-plates] .pl').length };
+    const r = a.getBoundingClientRect();
+    const kr = k.getBoundingClientRect();
+    const fs = parseFloat(getComputedStyle(a).fontSize);
+    const px = (u) => kr.left - r.left + (u * kr.width) / 100;
+    const nums = (sel) => (k.querySelector(sel)?.getAttribute('d')?.match(/-?[\d.]+/g) ?? []).map(Number);
+    const d = nums('.d');
+    const rules = nums('.r');
+    const texts = [];
+    const tw = document.createTreeWalker(a, NodeFilter.SHOW_TEXT);
+    for (let n = tw.nextNode(); n; n = tw.nextNode()) {
+      if (!n.textContent.trim() || n.parentElement.closest('.sr-only')) continue;
+      const rg = document.createRange();
+      rg.selectNodeContents(n);
+      for (const q of rg.getClientRects()) if (q.width > 0.5) texts.push([q.left - r.left, q.right - r.left]);
+    }
+    const xs = [];
+    for (let i = 0; i + 7 < d.length; i += 8) xs.push(d.slice(i, i + 8));
+    // each X: two segments sharing corners on the slab's top (0) and bottom (100), 3em wide or more, clear of the type
+    const good = xs.every(([a0, y0, b0, y1, b1, y2, a1, y3]) => {
+      const lo = px(Math.min(a0, b0));
+      const hi = px(Math.max(a0, b0));
+      return a0 === a1 && b0 === b1 && y0 === 0 && y1 === 100 && y2 === 0 && y3 === 100 && hi - lo >= 3 * fs - 1.5 && texts.every(([l, rr]) => rr <= lo + 0.5 || l >= hi - 0.5);
+    });
+    // a hairline at each side of a blank that is not the slab's own edge
+    const sides = new Set(xs.flatMap(([a0, , b0]) => [a0, b0]).filter((u) => u > 0.01 && u < 99.99).map((u) => u.toFixed(3)));
+    const ruled = [...sides].every((u) => rules.some((v, i) => i % 3 === 0 && v.toFixed(3) === u));
+    return { rect: !!k.querySelector('rect'), xs: xs.length, good, ruled, plates: a.querySelectorAll('[data-plates]').length };
   }, jrow);
-  ok(jsk && jsk.d === 'M0 0L100 100M100 0L0 100' && jsk.plates >= 3, 'the slab shows its skeleton too, the whole X solid behind the row’s text, every line of it on its own white plate', JSON.stringify(jsk));
+  ok(jsk && jsk.rect && jsk.xs >= 1 && jsk.good && jsk.ruled && jsk.plates === 0, 'the slab shows its skeleton too: its box, a hairline at each side of a blank, and an X only in the blank, clear of every line of text', JSON.stringify(jsk));
   ok(slab.j && slab.canvas && slab.j.x === 3 && slab.j.y === 3 && Math.abs(slab.j.w - (slab.bw - 6)) < 0.5 && Math.abs(slab.j.h - (slab.bh - 6)) < 0.5 && Math.abs(slab.j.r - slab.j.h / 2) < 0.05, 'the +jellybox row plays Jelly as one of JellyBox’s round-ended controls, the row minus 3px on every side, in JellyBox’s own optics', JSON.stringify(slab.j));
   ok(slab.tag && slab.detail && JSON.stringify(jb4) === JSON.stringify(jduring), 'the tag box and the detail lie on the slab, and nothing moves', JSON.stringify([slab.tag, slab.detail]));
   ok(slab.reads.includes(slab.j.pig) && !slab.reads.includes('#136aee') && !slab.reads.includes('#dd3c88'), 'its colour is a JellyBox pigment that holds band ink at 4.5:1 (never lagoon blue or candy pink)', `${slab.j.pig} of ${slab.reads.join(' ')}`);
@@ -1751,47 +1884,25 @@ try {
   const w1 = await view();
   const gx = w1.guide != null ? +w1.guide : null;
   ok(gx != null && Math.abs(gx - 528) <= 1, 'the guide sits on the cursor', String(gx));
-  const skel = await dp.evaluate(() => {
-    const a = document.querySelector('.menu a[data-hot]');
-    const r = a.querySelector('[data-wire] .wf rect');
-    const d = a.querySelector('[data-wire] .wf .wx').getAttribute('d');
-    const x0 = +r.getAttribute('x');
-    const y0 = +r.getAttribute('y');
-    const x1 = x0 + +r.getAttribute('width');
-    const y1 = y0 + +r.getAttribute('height');
-    const n = (d.match(/-?[\d.]+/g) ?? []).map(Number);
-    const near = (p, q) => Math.abs(p - q) < 1.01;
-    return n.length === 8 && near(n[0], x0) && near(n[1], y0) && near(n[2], x1) && near(n[3], y1) && near(n[4], x1) && near(n[5], y0) && near(n[6], x0) && near(n[7], y1);
-  });
-  ok(skel, 'the wire is a skeleton: its box, and an X joining its opposite corners');
-  const behind = await dp.evaluate(() => {
-    const a = document.querySelector('.menu a[data-hot]');
-    const r = a.getBoundingClientRect();
-    const bars = [...a.querySelectorAll('[data-plates] .pl')];
-    const ov = a.querySelector('[data-glitch]').getBoundingClientRect();
-    // JellyBox glass, each plate in its own pigment
-    const glass = bars.every((b) => getComputedStyle(b).backgroundImage.startsWith('linear-gradient') && /\d+ \d+ \d+/.test(b.style.getPropertyValue('--jb-rgb')));
-    const pigs = new Set(bars.map((b) => b.style.getPropertyValue('--jb-rgb').trim()));
-    const covers = bars.some((b) => { const q = b.getBoundingClientRect(); return q.left <= ov.left + 1 && q.right >= ov.left + 40; });
-    const inside = bars.every((b) => { const q = b.getBoundingClientRect(); return q.top >= r.top - 0.5 && q.bottom <= r.bottom + 0.5 && q.left >= r.left - 0.5 && q.right <= r.right + 0.5; });
-    // aligned: sides on the mono cell, and plates on one line share their top and bottom
-    const cell = parseFloat(getComputedStyle(a).fontSize) / 2;
-    const onGrid = bars.every((b) => { const x = parseFloat(b.style.left); const w = parseFloat(b.style.width); return Math.abs(x / cell - Math.round(x / cell)) < 0.02 && (Math.abs((x + w) / cell - Math.round((x + w) / cell)) < 0.02 || Math.abs(x + w - a.offsetWidth) < 0.5); });
-    const tops = new Set(bars.map((b) => b.style.top));
-    // one "+" per distinct corner
-    const d = a.querySelector('[data-plates] .px path').getAttribute('d');
-    const corners = new Set(bars.flatMap((b) => { const x = parseFloat(b.style.left); const y = parseFloat(b.style.top); const w = parseFloat(b.style.width); const h = parseFloat(b.style.height); return [[x, y], [x + w, y], [x, y + h], [x + w, y + h]].map(([p, q]) => `${Math.round(p)},${Math.round(q)}`); }));
-    const crosses = (d.match(/M/g) ?? []).length === corners.size * 2;
-    const dash = getComputedStyle(a.querySelector('[data-wire] .wx')).strokeDasharray;
-    return { bars: bars.length, glass, pigs: pigs.size, covers, inside, onGrid, tops: tops.size, crosses, dash, on: a.querySelector('[data-plates]').classList.contains('on') };
-  });
-  ok(behind.bars >= 2 && behind.glass && behind.pigs === behind.bars && behind.covers && behind.inside && behind.dash === 'none' && behind.on, 'the X runs solid behind the type, which sits on JellyBox glass plates inside the row, each in its own pigment', JSON.stringify(behind));
-  ok(behind.onGrid && behind.tops === 1 && behind.crosses, 'the plates sit on the grid: sides on the mono cell, one line sharing its top and bottom, one "+" per corner', JSON.stringify(behind));
+  // Fable's cells: each block of type stands in a pale ledger cell; the X lives only in the blanks.
+  const mf = await dp.evaluate(wireFacts, '.menu a[data-hot]');
+  const ma = xsHold(mf);
+  ok(ma.ok && ma.n >= 1, 'a menu row: every X joins the corners of a blank 3em or wider on the frame’s top and bottom, clear of every letter, a "+" on each corner', JSON.stringify(ma));
+  const mb = cellsHold(mf);
+  ok(mb.ok && mb.cells >= 2, 'a menu row: the label and the figure each stand in a flat, full-height cell, sides on the mono cell, the band 55% toward the ground, no plates anywhere', JSON.stringify(mb));
+  const cellAll = HUES.map((hx) => contrastHex(mixHex(hx, '#F3F5F8', 0.55), '#1A1820'));
+  ok(Math.min(...cellAll) >= 4.5, `the text cell holds band ink at 4.5:1 or better on all ${HUES.length} band colours`, `worst ${Math.min(...cellAll).toFixed(2)}:1`);
+  const guideOver = await dp.evaluate(() => { const a = document.querySelector('.menu a[data-hot]'); return getComputedStyle(a.querySelector('[data-wire] .wg')).visibility; });
+  ok(guideOver === 'visible', 'with the cursor in the blank, the guide shows', guideOver);
   ok(w1.chip && /^1056 × 52 · ½$/.test(w1.chip) && !w1.chipHitsLabel, 'at the middle the chip names it ½, in Chickpea’s words, and never touches the label', JSON.stringify([w1.chip, w1.chipHitsLabel]));
   await dp.mouse.move(rows[1][0] + 600, rows[1][1] + rows[1][3] / 2);
   await sleep(60);
   const w2 = await view();
   ok(w2.chip === '1056 × 52', 'off a canon ratio, the size alone', String(w2.chip));
+  await dp.mouse.move(rows[1][0] + 150, rows[1][1] + rows[1][3] / 2);
+  await sleep(60);
+  const guideCell = await dp.evaluate(() => { const a = document.querySelector('.menu a[data-hot]'); return getComputedStyle(a.querySelector('[data-wire] .wg')).visibility; });
+  ok(guideCell === 'hidden', 'with the cursor over a cell, the guide is gone at once', guideCell);
   // The Cut: Chickpea's grid in steps of the page colour, the label in a whole cell.
   await dp.evaluate(() => window.__dress.force({ shape: 'full', dress: 'cut' }));
   await enter(rows[1], 520, 500);
@@ -1803,8 +1914,8 @@ try {
   await enter(rows[1], 300);
   await dp.mouse.move(1600, 880);
   await sleep(130);
-  const gone = await dp.evaluate(() => { const a = document.querySelectorAll('.menu a')[1]; return { band: !!a.querySelector('[data-band]'), wire: !!a.querySelector('[data-wire]'), plates: !!a.querySelector('[data-plates]') }; });
-  ok(!gone.band && !gone.wire && !gone.plates, 'leaving, the band, the wire and the plates are gone within a drawing or two', JSON.stringify(gone));
+  const gone = await dp.evaluate(() => { const a = document.querySelectorAll('.menu a')[1]; return { band: !!a.querySelector('[data-band]'), wire: !!a.querySelector('[data-wire]') }; });
+  ok(!gone.band && !gone.wire, 'leaving, the band, its cells and the wire are gone within a drawing or two', JSON.stringify(gone));
   // Smooth text: while the glitch lands, no letter jumps; each glides to its place.
   await dp.evaluate(() => window.__dress.force({ shape: 'full', dress: 'plain' }));
   await dp.mouse.move(1600, 880);
@@ -1859,14 +1970,14 @@ try {
   await sleep(120);
   const swept = await dp.evaluate(async (rs) => {
     const seen = new Set();
-    const mo = new MutationObserver(() => document.querySelectorAll('.menu [data-wire], .menu [data-plates], .menu [data-true]').forEach((e) => seen.add(e.closest('a').getAttribute('href'))));
+    const mo = new MutationObserver(() => document.querySelectorAll('.menu [data-wire], .menu [data-true]').forEach((e) => seen.add(e.closest('a').getAttribute('href'))));
     mo.observe(document.querySelector('.menu'), { subtree: true, childList: true });
     return new Promise((res) => setTimeout(() => { mo.disconnect(); res([...seen]); }, 10));
   }, rows);
   for (let y = rows[0][1] + 5; y < rows[3][1] + rows[3][3] - 5; y += 9) await dp.mouse.move(rows[0][0] + 400, y);
   await dp.mouse.move(rows[0][0] + 400, rows[3][1] + rows[3][3] + 40);
   await sleep(300);
-  const sweptAny = await dp.evaluate(() => document.querySelectorAll('.menu [data-wire], .menu [data-plates], .menu [data-true]').length);
+  const sweptAny = await dp.evaluate(() => document.querySelectorAll('.menu [data-wire], .menu [data-true]').length);
   ok(swept.length === 0 && sweptAny === 0, 'a sweep across the menu deals no dress: it waits for the dwell', JSON.stringify([swept, sweptAny]));
   // Emil: once a wired hover settles, the clock stops; nothing is written while the pointer rests.
   await dp.evaluate(() => window.__dress.force({ shape: 'full', dress: 'wire' }));
@@ -1879,7 +1990,9 @@ try {
     setTimeout(() => { mo.disconnect(); res(n); }, 400);
   }));
   ok(writes === 0, 'a resting wired hover writes nothing: the frame clock has stopped', String(writes));
-  // Emil: the X never meets bare letters; it comes in only once the plates are down.
+  // Emil, one thing at a time: the cells are ink, on the band's drawings (70%, then whole a drawing
+  // later), the nearest first; the X, its crosses, the guide and the chip only at 100ms.
+  await dp.evaluate(() => window.__dress.force({ shape: 'full', dress: 'wire' }));
   await dp.mouse.move(1600, 880);
   await sleep(300);
   await dp.mouse.move(rows[2][0] + 500, rows[2][1] - 3);
@@ -1890,17 +2003,35 @@ try {
     const a = document.querySelectorAll('.menu a')[2];
     const t0 = performance.now();
     const tick = () => {
+      const tc = [...a.querySelectorAll('[data-band] .tc')].map((c) => c.style.clipPath);
       const w = a.querySelector('[data-wire]');
-      const p = a.querySelector('[data-plates]');
-      if (w) log.push({ t: Math.round(performance.now() - t0), x: w.classList.contains('x-on'), plates: !!p && p.classList.contains('on') });
+      log.push({ t: Math.round(performance.now() - t0), tc, x: !!w && w.classList.contains('x-on') });
       if (performance.now() - t0 < 900) requestAnimationFrame(tick);
       else res(log);
     };
     requestAnimationFrame(tick);
   }));
+  const firstCell = order.find((f) => f.tc.length);
   const firstX = order.find((f) => f.x);
-  const firstPlates = order.find((f) => f.plates);
-  ok(firstX && firstPlates && firstX.t - firstPlates.t >= 150, 'the X comes in only once the plates have wiped in', JSON.stringify([firstPlates?.t, firstX?.t]));
+  const nCells = order[order.length - 1].tc.length;
+  const steps = new Set(order.flatMap((f) => f.tc.map((c) => (FULL.test(c) ? 'whole' : (c.match(/[\d.]+%/g) ?? []).filter((v) => v !== '0%').join(' ')))));
+  const wholeBy = firstCell && order.filter((f) => f.t >= firstCell.t + 117).every((f) => f.tc.length === nCells && f.tc.every((c) => FULL.test(c)));
+  ok(firstCell && nCells >= 2 && [...steps].every((v) => v === 'whole' || v === '30%') && wholeBy, 'the cells land on drawings: each at 70%, then whole, all of them whole by 100ms', JSON.stringify([...steps]));
+  ok(firstCell && firstX && firstX.t - firstCell.t >= 75 && !order.some((f) => f.x && !f.tc.length), 'the X, its crosses, the guide and the chip come in at 100ms, after the cells', JSON.stringify([firstCell?.t, firstX?.t]));
+  await dp.evaluate(() => {
+    const a = document.querySelectorAll('.menu a')[2];
+    window.__lv = null;
+    a.addEventListener('pointerleave', () => {
+      requestAnimationFrame(() => {
+        const next = a.querySelectorAll('[data-band] .tc').length;
+        setTimeout(() => (window.__lv = { next, wire: !!a.querySelector('[data-wire]') }), 130);
+      });
+    }, { once: true });
+  });
+  await dp.mouse.move(1600, 880);
+  await sleep(300);
+  const lv = await dp.evaluate(() => window.__lv);
+  ok(lv && lv.next === 0 && !lv.wire, 'leaving, the cells go with the strips in the next frame, and the wire is gone by 130ms', JSON.stringify(lv));
   // The keyboard never dresses.
   await dp.evaluate(() => window.__dress.force(null));
   await dp.mouse.move(1600, 880);
@@ -1908,10 +2039,10 @@ try {
   await dp.keyboard.press('Tab');
   let kd = null;
   for (let i = 0; i < 6 && !(kd && kd.menu); i++) {
-    kd = await dp.evaluate(() => { const a = document.activeElement; return { menu: !!a?.closest('.menu'), st: a ? window.__dress.state(a) : 'x' }; });
+    kd = await dp.evaluate(() => { const a = document.activeElement; return { menu: !!a?.closest('.menu'), st: a ? window.__dress.state(a) : 'x', drawn: a ? a.querySelectorAll('.tc, [data-wire]').length : -1 }; });
     if (!kd.menu) await dp.keyboard.press('Tab');
   }
-  ok(kd && kd.menu && kd.st === null, 'a row reached by the keyboard is never dressed', JSON.stringify(kd));
+  ok(kd && kd.menu && kd.st === null && kd.drawn === 0, 'a row reached by the keyboard is never dressed: no cells, no wire', JSON.stringify(kd));
   // A page's rows: Tall only 3px into the gap; the Cut keeps text whole.
   await dp.goto(`${BASE}/product-designs/`, { waitUntil: 'networkidle' });
   await settle(dp);
@@ -1923,7 +2054,46 @@ try {
   const s1 = await view();
   const ovs = [-s1.host[1], s1.host[3]];
   ok(Math.max(...ovs) === 3 && Math.min(...ovs) >= 0.9 && s1.worst >= 4.5 && s1.chip && !s1.chipHitsLabel, 'on a page, Tall reaches 3px into the gap on the cursor’s side, the Cut stays legible, and the chip finds clear space', JSON.stringify([s1.host, s1.worst, s1.chip]));
+  const cf = await dp.evaluate(wireFacts, 'a.row[data-hot]');
+  const cfa = xsHold(cf);
+  const cols = cf.cells.filter((c) => c.k === 'cc');
+  const inCols = cf.texts.every(([l, r]) => cols.some((c) => l >= c.x0 - 0.5 && r <= c.x1 + 0.5));
+  ok(cfa.ok && !cf.cells.some((c) => c.k === 'tc') && inCols, 'a Cut with the wire adds no cells: its text columns hold the type, and any X sits in a text-free run', JSON.stringify([cfa, inCols]));
+  const lineRows = await dp.evaluate(() =>
+    [...document.querySelectorAll('a.row:not([data-lin])')].map((a, i) => {
+      const rg = document.createRange();
+      rg.selectNodeContents(a.querySelector('.l'));
+      return [i, new Set([...rg.getClientRects()].map((q) => Math.round(q.top))).size];
+    }),
+  );
+  for (const lines of [2, 3]) {
+    const hit = lineRows.find(([, n]) => n === lines);
+    if (!hit) {
+      ok(false, `a page row of ${lines} lines to test`);
+      continue;
+    }
+    await dp.evaluate(() => window.__dress.force({ shape: 'full', dress: 'wire' }));
+    const q = await dp.evaluate((i) => { const a = document.querySelectorAll('a.row:not([data-lin])')[i]; a.scrollIntoView({ block: 'center' }); const r = a.getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; }, hit[0]);
+    await sleep(200);
+    await enter(q, 450, 600);
+    const f = await dp.evaluate(wireFacts, 'a.row[data-hot]');
+    const xa = xsHold(f);
+    const xb = cellsHold(f);
+    ok(xa.ok && xa.n >= 1 && xb.ok && xb.cells >= 2, `a ${lines}-line row: the name and the detail stand in their cells, an X in each blank, clear of every letter`, JSON.stringify([xa, xb]));
+  }
   await dp.evaluate(() => window.__dress.force(null));
+  const rmc = await browser.newContext({ viewport: { width: 1728, height: 908 }, reducedMotion: 'reduce' });
+  const rmp = await rmc.newPage();
+  await rmp.goto(`${BASE}/`, { waitUntil: 'networkidle' });
+  await settle(rmp);
+  await rmp.waitForFunction(() => !!window.__dress, null, { timeout: 8000 });
+  await rmp.evaluate(() => window.__dress.force({ shape: 'reach', dress: 'wire' }));
+  await rmp.mouse.move(rows[1][0] + 528, rows[1][1] - 3);
+  await rmp.mouse.move(rows[1][0] + 528, rows[1][1] + rows[1][3] / 2, { steps: 2 });
+  await sleep(700);
+  const rmDrawn = await rmp.evaluate(() => document.querySelectorAll('.menu .tc, .menu [data-wire]').length);
+  ok(rmDrawn === 0, 'reduced motion: a hover draws no cells and no wire', String(rmDrawn));
+  await rmc.close();
   ok(dErr.length === 0, 'the dress throws nothing', dErr.join(' | '));
   await dctx.close();
   }
