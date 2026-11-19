@@ -388,7 +388,8 @@
     "solid X behind the type on white plates, one per line, wiping in from each line's left edge 40ms apart over 180ms, a measure-ink + on each plate corner; the halo and the masked and segmented X were tried and dropped at his word (2026-11-17)",
     "glass pills replaced by Fable's ledger cells (cells.ts): pale cells of the band's own colour under each text block, an X only in each blank 3em or wider with a + on its corners, guide only in blanks, cells on 50ms drawings 70% then whole, X at 100ms; the Jelly slab gets hairlines at blank sides and the X between (2026-11-19)",
     "Shear replaced by Tricode, MFNY's filter pill laid flat: equal-third square segments (seams on the mono cell, never inside a word), lit under the pointer, whole by 100ms (2026-11-19)",
-    "the page transition ripples out from the click on both pages; Coalesce and the corner glitch removed; the back button box held until its X closes (2026-11-19)"
+    "the page transition ripples out from the click on both pages; Coalesce and the corner glitch removed; the back button box held until its X closes (2026-11-19)",
+    "the ramp draws the page on the reveal: a 6ms survey maps the new page onto the film's grid; per-row flat gradients clipped to the marks; painting tones from build time (2026-11-19)"
   ],
   "tricks_learned": [
     "measure the label as the word plus its tag's ruled box, not the column it sits in, or every free run comes out negative",
@@ -415,5 +416,12 @@
     "skills": "/emil-design-eng /design-motion-principles /ask-emil /choreograph",
     "decision": "the film's centre is the click (a keyboard link: its own centre), written into the note so the next page opens from the same point; going home ripples out too; the back button's box is held out of the film until its X has closed (300ms), then the ghost takes it",
     "cut": "the '+' glitch at the click (pulled the eye to the corner), Coalesce (its job was carrying the click to the '+'), the 100ms wait before the cover going up"
+  },
+  "request_8": {
+    "said": "can you add an effect that works natively with the page content so it looks like it's resolving and not just appearing from the bottom of the ripple? ... keep it in character ... have fun with it, and maybe incorporate something from /antialgorithm - use Fable 5.2 for these decisions",
+    "decided_by": "Fable 5.2 (seed: guess / it only works in one place / weather)",
+    "rejected_default": "a decode/scramble on every letter, or fade-and-blur up, or rows staggering in",
+    "decision": "the ramp draws the page: on the reveal the marks ahead of the front are a rough copy of the page about to show; marks over a tint take its hue, over type stay ink and hold longer, over paper thin sooner, over a painting take its colours",
+    "built_note": "paintings' colours read at build time (scripts/tones.mjs, data-tone) because reading a 1200px painting during the reveal cost a 50-130ms frame"
   }
 }

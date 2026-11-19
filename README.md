@@ -80,6 +80,7 @@ src/
   vendor/after-tokens/  After Tokens' ambient score, copied from its repo
   styles/site.css
 scripts/site-check.mjs   end-to-end checks in real Chrome and WebKit
+scripts/tones.mjs        each painting's colours as a tiny grid of marks, for the film (npm run tones)
 ```
 
 `vite.config.ts` renders the pages twice over. In dev, a middleware renders
@@ -356,6 +357,19 @@ where you were looking.
   you are.
 - **Glyphs.** Five marks, `+ = - : .`, then blank. "+" is the edge that
   touches live page.
+- **The ramp draws the page** (Fable's call, after his note asking for the
+  page to resolve rather than just appear). On the reveal, the marks ahead of
+  the front are a rough copy of the page they are about to show. The film
+  reads the new page onto its grid once. Marks over a tint or a chip take
+  its color. Marks over type are ink and hold a little longer. Marks over
+  bare paper thin out sooner. Over a painting, each mark takes the painting's
+  color, so it arrives as colored marks first. The "+" edge and the timing do
+  not change, and the cover stays plain ink.
+- It only reads the page and never writes to it. If reading takes more than
+  6ms it keeps the colors and drops the rest, and if it fails the plain film
+  plays. A painting's colors are read ahead of time (`npm run tones`, into
+  `src/data/painting-tones.ts`) and carried on the image as `data-tone`,
+  since reading a full painting during the reveal would cost a frame.
 - **Lineage films.** Rolled at the click and written into the note, so both
   pages play the same one:
   - plain, 6 in 10, and always the first page change of a visit
@@ -512,6 +526,11 @@ measure the film rather than the battery. It checks:
     own centre
   - going up by the back button, its box stays out of the film until the X
     has closed into the "+"
+  - the ramp draws the page: read in 8ms or less, a name's word reads as type
+    and the gutter as paper, tinted rows wear their color, every color is
+    OKLCH lightness 0.76 or darker, no box moves and nothing on the page is
+    written, the pointer reaches the page inside the ring, paintings arrive
+    in their own colors, and a failed read still gives the page back
   - a page is never left covered: no script, a navigation that hangs, a
     stale note, a reload, back and forward, the back/forward cache
   - modifier clicks, new tabs, the PDF and in-page jumps are left alone
@@ -671,7 +690,7 @@ The scripts, gzipped:
 
 | Chunk | Size | Loads |
 |---|---:|---|
-| main | 15.2 kB | every page |
+| main | 17.5 kB | every page |
 | signature | 7.6 kB | home only |
 | lineage, with the dress, Chickpea and After Tokens | 19.6 kB | after the page is seen, for a cursor |
 | jx, with the cells | 6.3 kB | subpages, and with lineage |

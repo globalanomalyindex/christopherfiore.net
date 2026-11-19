@@ -1330,6 +1330,7 @@ try {
   };
   judge(await film(mp, { from: '/', to: '/product-designs/' }), 'home to product designs', 'out');
   judge(await film(mp, { from: '/product-designs/', to: '/product-designs/chellbook/' }, 300), 'index to a case study', 'out');
+  judge(await film(mp, { from: '/', to: '/paintings/' }, 300), 'home to paintings, the paintings drawn ahead of the front', 'out');
   judge(await film(mp, { from: '/paintings/', to: '/about/' }, 300), 'page to page, from the pages block', 'out');
   judge(await film(mp, { from: '/about/', to: '/' }, 300), 'going home', 'home');
 
@@ -1504,7 +1505,103 @@ try {
   const upEarly = upLog.filter(([t]) => t < 280);
   const ghostAt = upLog.find(([, g]) => g)?.[0];
   ok(upEarly.length > 4 && upEarly.every(([, g, over]) => !g && !over) && ghostAt != null && ghostAt >= 280, 'going up by the back button, the box stays out of the film until its X has closed into the "+", then the ghost takes it', JSON.stringify({ frames: upLog.length, ghostAt, coveredEarly: upEarly.filter(([, , o]) => o).length }));
+
+  // The ramp draws the page (Fable): on the reveal the marks ahead of the front are a rough
+  // copy of the page they are about to show, read from the page and never written to it.
+  const okL = (c) => {
+    const v = c.startsWith('#') ? [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16)) : c.match(/\d+/g).slice(0, 3).map(Number);
+    const [r, g, b] = v.map((x) => ((x /= 255) <= 0.04045 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4));
+    const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+    const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+    const s2 = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+    return 0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s2;
+  };
+  await rpg.goto(`${BASE}/product-designs/`, { waitUntil: 'networkidle' });
+  await settle(rpg);
+  await sleep(2300);
+  const drawn = await rpg.evaluate(() => {
+    const boxes = () => [...document.querySelectorAll('.page *')].map((e) => { const b = e.getBoundingClientRect(); return `${b.x},${b.y},${b.width},${b.height}`; }).join('|');
+    const before = boxes();
+    let muts = 0;
+    const mo = new MutationObserver((ms) => (muts += ms.length));
+    mo.observe(document.querySelector('.page'), { subtree: true, attributes: true, childList: true, characterData: true });
+    const at = [700, 450];
+    window.__morph.seek('reveal', 'out', 0.5, null, at);
+    const r = window.__morph.read();
+    const during = boxes();
+    const text1 = [...document.querySelectorAll('.morph .ink')].map((l) => l.textContent).join('\n');
+    window.__morph.seek('reveal', 'out', 0.5, null);
+    const text2 = [...document.querySelectorAll('.morph .ink')].map((l) => l.textContent).join('\n');
+    // inside the ring the page itself takes the pointer
+    const hit = document.elementFromPoint(at[0], at[1]);
+    const nm = document.querySelector('a.row [data-word]').getBoundingClientRect();
+    const kindAt = (x, y) => r.kinds[Math.floor((y - r.gy) / r.ch)]?.[Math.floor((x - r.gx) / r.cw)];
+    const hued = [...document.querySelectorAll('.morph .ink.hued')];
+    const res = {
+      ms: r.ms,
+      word: kindAt(nm.left + r.cw * 1.5, nm.top + nm.height / 2),
+      gutter: kindAt(r.gx + r.cw * 0.5, nm.top + nm.height / 2),
+      hued: hued.length,
+      transparent: hued.every((l) => getComputedStyle(l).color === 'rgba(0, 0, 0, 0)'),
+      plain: [...document.querySelectorAll('.morph .ink:not(.hued)')].every((l) => !l.style.backgroundImage),
+      same: text1 === text2 && text1.trim().length > 0,
+      colours: [...new Set(r.grad.join(' ').match(/rgb\([^)]*\)|#[0-9a-f]{6}/gi) ?? [])],
+      hit: !!hit && !hit.closest('.morph') && !!hit.closest('.page'),
+    };
+    window.__morph.clear();
+    const after = boxes();
+    mo.disconnect();
+    return { ...res, layout: before === during && before === after, muts, left: document.querySelectorAll('.morph, .morph .ink').length };
+  });
+  ok(drawn.ms <= 8 && drawn.word === '2' && drawn.gutter === '0', 'the reveal reads the page onto its grid in 8ms or less: a name’s word is type, the gutter is paper', JSON.stringify({ ms: drawn.ms, word: drawn.word, gutter: drawn.gutter }));
+  ok(drawn.hued > 3 && drawn.transparent && drawn.plain, 'a row that crosses a tint or a chip wears its colour, clipped to its marks; an ink-only row is left plain', JSON.stringify({ hued: drawn.hued, transparent: drawn.transparent, plain: drawn.plain }));
+  ok(drawn.colours.length > 2 && drawn.colours.every((c) => okL(c) <= 0.765), 'every colour in the band is OKLCH lightness 0.76 or darker, so the marks read on the ground', JSON.stringify(drawn.colours.map((c) => [c, +okL(c).toFixed(3)])));
+  ok(drawn.same && drawn.layout && drawn.muts === 0 && drawn.left === 0, 'it only reads the page: no box moves, nothing on the page is written, the same moment gives the same marks, and clearing leaves nothing', JSON.stringify({ same: drawn.same, layout: drawn.layout, muts: drawn.muts, left: drawn.left }));
+  ok(drawn.hit, 'inside the ring the page is live: the pointer reaches the page itself, not the film', String(drawn.hit));
+  await rpg.goto(`${BASE}/paintings/`, { waitUntil: 'networkidle' });
+  await settle(rpg);
+  await sleep(2300);
+  const painted = await rpg.evaluate(() => {
+    const tones = [...document.querySelectorAll('.tile img')].map((i) => i.dataset.tone ?? '');
+    window.__morph.seek('reveal', 'out', 0.45, null, [innerWidth / 2, innerHeight / 2]);
+    const r = window.__morph.read();
+    window.__morph.clear();
+    return { tones: tones.length, toned: tones.every((t) => /^\d+x\d+:[0-9a-f]+$/.test(t)), stops: Math.max(0, ...r.grad.map((g) => (g.match(/px,/g) ?? []).length)), pics: r.kinds.join('').split('3').length - 1 };
+  });
+  ok(painted.tones > 10 && painted.toned && painted.pics > 50 && painted.stops > 8, 'paintings arrive as coloured marks first: every painting carries its tone, and the band takes the painting’s colours', JSON.stringify(painted));
   await rctx.close();
+  // If reading the page fails, the plain film plays and the page is still given back.
+  const fctx2 = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  await fctx2.addInitScript(() => {
+    window.__linQuiet = true;
+    // only while the reveal reads the page: the gate's cover just lifted, the reveal not yet going
+    const real = Range.prototype.getClientRects;
+    let done = false;
+    new MutationObserver(() => {
+      if (document.documentElement?.hasAttribute('data-morph')) done = true;
+    }).observe(document, { subtree: true, attributes: true, attributeFilter: ['data-morph'] });
+    Range.prototype.getClientRects = function () {
+      const d = document.documentElement;
+      if (!done && window.__psMorphClaim && !d.classList.contains('morph-in') && !d.hasAttribute('data-morph')) {
+        window.__threw = (window.__threw ?? 0) + 1;
+        throw new Error('no rects');
+      }
+      return real.call(this);
+    };
+  });
+  const fp2 = await fctx2.newPage();
+  const fErr = [];
+  fp2.on('pageerror', (e) => fErr.push(String(e)));
+  await fp2.goto(`${BASE}/`, { waitUntil: 'networkidle' });
+  await settle(fp2);
+  await sleep(2300);
+  await fp2.locator('.menu a[href="/about/"]').click();
+  await fp2.waitForURL('**/about/');
+  await fp2.waitForFunction(() => !document.querySelector('.morph') && !document.documentElement.classList.contains('morph-in'), null, { timeout: 5000 });
+  const fEnd = await fp2.evaluate(uncovered);
+  const fThrew = await fp2.evaluate(() => window.__threw ?? 0);
+  ok(fThrew > 0 && isOpen(fEnd) && fErr.length === 0, 'if reading the page throws, the plain film plays and the page is still given back', JSON.stringify({ threw: fThrew, end: fEnd, errors: fErr }));
+  await fctx2.close();
 
   // What is not a page change is left alone.
   await mp.goto(`${BASE}/about/`, { waitUntil: 'networkidle' });
@@ -2405,7 +2502,8 @@ try {
     document.documentElement.removeAttribute('data-morph-dir');
     return at;
   });
-  const mid = closing.find((f) => f.t > 20 && f.t < 90);
+  // well into the turn: a frame at 20ms can still be the closing's first drawing
+  const mid = closing.find((f) => f.t > 45 && f.t < 90);
   // the closing runs on frame timestamps, which can trail this clock by a frame
   const cutF = closing.find((f) => f.band);
   const endF = closing[closing.length - 1];

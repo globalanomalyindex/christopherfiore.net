@@ -5,6 +5,7 @@
  * the button. No captions: only the titles stay.
  */
 
+import { TONES } from '../data/painting-tones.ts';
 import { h } from '../html.ts';
 import { TALLY } from '../palette.ts';
 import { ARTSTATION_HREF, PAINTINGS } from '../data/paintings.ts';
@@ -47,6 +48,8 @@ const tile = (p: PaintingRecord, eager: boolean) =>
       height: p.height,
       loading: eager ? 'eager' : 'lazy',
       decoding: 'async',
+      // its colours as a grid of marks, for the film's reveal (scripts/tones.mjs)
+      'data-tone': TONES[p.image] ?? null,
     }),
     cellBtn(p.wall, p.href, { newTab: true }),
   );

@@ -1320,6 +1320,19 @@ a.row,
   margin-left: auto;
 }
 
+/* the marks; on the reveal a row that crosses colour wears it, clipped to its marks */
+.morph .ink {
+  display: block;
+  white-space: pre;
+}
+
+.morph .ink.hued {
+  color: transparent;
+  background-repeat: no-repeat;
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
 /* the back button's box, drawn on top of the film so its rules are never covered; its "+" on the pin */
 .morph .jx-ghost {
   position: absolute;

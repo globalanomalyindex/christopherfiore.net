@@ -9,7 +9,8 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "check": "tsc --noEmit",
-    "check:site": "node scripts/site-check.mjs"
+    "check:site": "node scripts/site-check.mjs",
+    "tones": "node scripts/tones.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.20.4",

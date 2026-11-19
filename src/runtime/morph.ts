@@ -44,6 +44,22 @@
  * 2 x 2 stagger knits the steps. Nothing is random: the same moment always
  * gives the same frame.
  *
+ * THE RAMP DRAWS THE PAGE (Fable, after his note: "an effect that works
+ * natively with the page content so it looks like it's resolving and not
+ * just appearing"). The whole site is one typeface on one character grid, so
+ * a cell-sized copy of a page is nearly the page. On the reveal the film
+ * reads the new page onto its grid once (`survey`), and the marks ahead of
+ * the front become a rough copy of what each cell is about to be: over a
+ * tint or a chip they take that fill's hue, over type they are ink and hold
+ * a little further out, over bare paper they thin out sooner, and over a
+ * painting they take its colours, read ahead of time onto a tiny grid of
+ * marks (scripts/tones.mjs), so a painting arrives
+ * as coloured marks first. Nothing is added behind the front and no time is
+ * added: the front is the only clock. It only reads the page, never writes
+ * to it, and past 6ms or on any error it keeps what it has (or nothing, and
+ * the plain film plays). The cover stays plain ink, so a click is never
+ * held up by it.
+ *
  * WHAT CAN NEVER HAPPEN: A PAGE LEFT COVERED.
  *   - scripts off: the gate never runs. Links are plain links.
  *   - this module never arrives: the gate uncovers by itself at 1.2s.
@@ -93,7 +109,12 @@ declare global {
     /** where the film started on the page before: the click, in window px */
     __psMorphAt?: [number, number] | null;
     __psMorphClaim?: number;
-    __morph?: { seek(part: Part, dir: Dir, p: number, kind?: Kind, at?: [number, number]): void; clear(): void; force(kind: Kind | undefined): void };
+    __morph?: {
+      seek(part: Part, dir: Dir, p: number, kind?: Kind, at?: [number, number]): void;
+      clear(): void;
+      force(kind: Kind | undefined): void;
+      read(): { cols: number; rows: number; cw: number; ch: number; gx: number; gy: number; ms: number; dense: boolean; kinds: string[]; grad: string[] } | null;
+    };
   }
 }
 
@@ -131,6 +152,10 @@ const BAYER = [
   [0.75, 0.25],
 ];
 const STAGGER = 0.016;
+/** How much sooner (+) or later (-) the ramp thins over each kind of cell: paper, a fill, type, a picture. */
+const BIAS = [0.085, 0, -0.03, 0];
+/** The survey's budget, ms: past it the colours stay and the density is dropped. */
+const SURVEY_MS = 6;
 
 interface Grid {
   cols: number;
@@ -162,12 +187,30 @@ interface Grid {
   bx1: number;
   by0: number;
   by1: number;
+  /** the next page, read onto the grid (the reveal only) */
+  map: Survey | null;
+}
+
+/** What each cell of the grid is about to be. */
+interface Survey {
+  /** 0 paper, 1 a fill, 2 type, 3 a picture */
+  kind: Uint8Array;
+  /** index into `pal`; 0 is ink */
+  hue: Uint16Array;
+  pal: string[];
+  /** false once the budget ran out: every cell then thins as a fill does */
+  dense: boolean;
+  ms: number;
+  /** each row's colours as one flat-stop image, in grid px; '' for an ink-only row */
+  grad: string[];
 }
 
 const html = document.documentElement;
 let overlay: HTMLDivElement | null = null;
-let left: HTMLDivElement[] = [];
-let right: HTMLDivElement[] = [];
+let left: HTMLSpanElement[] = [];
+let right: HTMLSpanElement[] = [];
+/** where each right line starts, in cells, for its colour image */
+let r0s: number[] = [];
 let shown: string[] = [];
 /** where each left line starts, in cells */
 let offs: number[] = [];
@@ -240,13 +283,17 @@ function mount(at: [number, number] | null = null): Grid | null {
     const set = document.createElement('div');
     set.className = `set ${cls}`;
     set.style.cssText = `left:${gx}px;top:${gy}px;width:${cols * cw}px;line-height:${ch}px`;
-    const lines: HTMLDivElement[] = [];
+    const lines: HTMLSpanElement[] = [];
     for (let y = 0; y < rows; y++) {
       const ln = document.createElement('div');
       ln.className = 'ln';
       ln.style.height = `${ch}px`;
+      // the marks themselves: the line keeps the ground, so the string is still the mask
+      const ink = document.createElement('span');
+      ink.className = 'ink';
+      ln.appendChild(ink);
       set.appendChild(ln);
-      lines.push(ln);
+      lines.push(ink);
     }
     el.appendChild(set);
     return lines;
@@ -255,6 +302,7 @@ function mount(at: [number, number] | null = null): Grid | null {
   right = stack('r');
   shown = new Array(rows * 2).fill('');
   offs = new Array(rows).fill(0);
+  r0s = new Array(rows).fill(-1);
   overlay = el;
   // The back button's ledger box is wider than one cell: the film would paint
   // its ground over the box's rules. A ghost of the box, its rules and its "+",
@@ -284,7 +332,7 @@ function mount(at: [number, number] | null = null): Grid | null {
   }
   // The film draws this page's own mark in the anchor cell: the "+".
   const glyph = (anchor.dataset.glyph ?? '+').charAt(0) || '+';
-  grid = { cols, rows, cw, ch, gx, gy, ac, ar, ox, oy, oc, dist, reach, glyph, kind: null, ghost, ghostNear, holdUntil: 0, bx1, by0, by1 };
+  grid = { cols, rows, cw, ch, gx, gy, ac, ar, ox, oy, oc, dist, reach, glyph, kind: null, ghost, ghostNear, holdUntil: 0, bx1, by0, by1, map: null };
   return grid;
 }
 
@@ -297,6 +345,7 @@ function unmount(): void {
   left = [];
   right = [];
   offs = [];
+  r0s = [];
 }
 
 /** Everything off, now. Safe to call at any time, any number of times. */
@@ -308,15 +357,231 @@ function clear(): void {
   html.removeAttribute('data-morph-dir');
 }
 
-/** Ramp step for a cell `s` px from live page. 0 is "+", 5 is blank. */
-function stepOf(g: Grid, s: number, x: number, y: number): number {
+/** Ramp step for a cell `s` px from live page, over a cell of kind `k`. 0 is "+", 5 is blank. */
+function stepOf(g: Grid, s: number, x: number, y: number, k = 1): number {
   let v = s / g.reach + (BAYER[y & 1][x & 1] - 0.5) * STAGGER;
   if (v < 0) v = 0;
+  // the "+" edge never moves; behind it paper thins sooner and type holds longer
+  if (v >= STEP[0]) v = Math.max(0, v + BIAS[k] * Math.min(1, (v - STEP[0]) / 0.03));
   for (let i = 0; i < STEP.length; i++) {
     if (v < STEP[i]) return i;
     v -= STEP[i];
   }
   return STEP.length;
+}
+
+/* ------------------------------------------------- the ramp draws the page */
+
+const lin = (v: number) => ((v /= 255) <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+const gam = (v: number) => Math.round(255 * Math.max(0, Math.min(1, v <= 0.0031308 ? 12.92 * v : 1.055 * v ** (1 / 2.4) - 0.055)));
+const toLab = (r: number, g: number, b: number): [number, number, number] => {
+  const [R, G, B] = [lin(r), lin(g), lin(b)];
+  const l = Math.cbrt(0.4122214708 * R + 0.5363325363 * G + 0.0514459929 * B);
+  const m = Math.cbrt(0.2119034982 * R + 0.6806995451 * G + 0.1073969566 * B);
+  const s = Math.cbrt(0.0883024619 * R + 0.2817188376 * G + 0.6299787005 * B);
+  return [0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s, 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s, 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s];
+};
+const fromLab = (L: number, a: number, b: number): number[] => {
+  const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3;
+  const m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3;
+  const s = (L - 0.0894841775 * a - 1.291485548 * b) ** 3;
+  return [4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s, -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s, -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s];
+};
+/** A colour pulled into the band's readable range: OKLCH L at most 0.76, chroma at least `cmin`, kept inside sRGB. */
+function inRange(r: number, g: number, b: number, cmin: number): string {
+  const [L0, A, B] = toLab(r, g, b);
+  const L = Math.min(L0, 0.76);
+  const h = Math.atan2(B, A);
+  let C = Math.max(Math.hypot(A, B), cmin);
+  for (let i = 0; i < 12; i++) {
+    if (fromLab(L, C * Math.cos(h), C * Math.sin(h)).every((v) => v >= -0.001 && v <= 1.001)) break;
+    C *= 0.9;
+  }
+  const c = fromLab(L, C * Math.cos(h), C * Math.sin(h)).map(gam);
+  return `rgb(${c[0]},${c[1]},${c[2]})`;
+}
+/** A fill's mid step: a grey or a near-black stays ink. */
+function fillHue(r: number, g: number, b: number): string | null {
+  const [L, A, B] = toLab(r, g, b);
+  if (Math.hypot(A, B) < 0.012 || L < 0.35) return null;
+  return inRange(r, g, b, 0.15);
+}
+const rgbOf = (css: string): number[] | null => {
+  const m = css.match(/[\d.]+/g);
+  return m ? m.map(Number) : null;
+};
+
+/** Rebuild the colour images of rows [y0, y1) and put them on that row's lines. */
+function paintRows(g: Grid, y0: number, y1: number): void {
+  const m = g.map;
+  if (!m) return;
+  const ink = getComputedStyle(html).getPropertyValue('--ink').trim() || '#1a1820';
+  for (let y = y0; y < y1; y++) {
+    const o = y * g.cols;
+    const stops: string[] = [];
+    let any = false;
+    for (let x = 0; x < g.cols; ) {
+      const c = m.hue[o + x];
+      let e = x + 1;
+      while (e < g.cols && m.hue[o + e] === c) e++;
+      if (c) any = true;
+      stops.push(`${c ? m.pal[c] : ink} ${(x * g.cw).toFixed(2)}px ${(e * g.cw).toFixed(2)}px`);
+      x = e;
+    }
+    m.grad[y] = any ? `linear-gradient(90deg,${stops.join(',')})` : '';
+    for (const [ln, at] of [[left[y], offs[y]], [right[y], Math.max(0, r0s[y])]] as [HTMLSpanElement, number][]) {
+      if (!ln) continue;
+      ln.classList.toggle('hued', any);
+      ln.style.backgroundImage = m.grad[y];
+      ln.style.backgroundSize = any ? `${(g.cols * g.cw).toFixed(2)}px 100%` : '';
+      ln.style.backgroundPositionX = any ? `${(-at * g.cw).toFixed(2)}px` : '';
+    }
+  }
+}
+
+/**
+ * Read the page onto the grid: what each cell is about to be, and its colour.
+ * One pass over what is in the window, word by word for the first 500 words,
+ * inside a 6ms budget. Paintings come from the marks they carry.
+ */
+function survey(g: Grid): void {
+  const t0 = performance.now();
+  const { cols, rows, cw, ch, gx, gy } = g;
+  const vh = window.innerHeight;
+  const kind = new Uint8Array(cols * rows);
+  const hue = new Uint16Array(cols * rows);
+  const pal: string[] = [''];
+  const palIx = new Map<string, number>();
+  const ix = (css: string | null) => {
+    if (!css) return 0;
+    let i = palIx.get(css);
+    if (!i) {
+      i = pal.push(css) - 1;
+      palIx.set(css, i);
+    }
+    return i;
+  };
+  const span = (a: number, b: number, n: number, size: number, org: number) => [Math.max(0, Math.ceil((a - org) / size - 0.5)), Math.min(n, Math.ceil((b - org) / size - 0.5))];
+  // a cell belongs to a rect when its centre is inside it; type always wins over a fill
+  const paint = (rc: DOMRect, k: number, c: number) => {
+    const [x0, x1] = span(rc.left, rc.right, cols, cw, gx);
+    const [y0, y1] = span(rc.top, rc.bottom, rows, ch, gy);
+    for (let y = y0; y < y1; y++) {
+      for (let x = x0; x < x1; x++) {
+        const i = y * cols + x;
+        if (k === 2) {
+          kind[i] = 2;
+          hue[i] = 0;
+        } else if (kind[i] !== 2) {
+          kind[i] = k;
+          hue[i] = c;
+        }
+      }
+    }
+  };
+  const m: Survey = { kind, hue, pal, dense: true, ms: 0, grad: new Array(rows).fill('') };
+  g.map = m;
+  const page = document.querySelector('.page');
+  if (!page) return;
+  const ground = getComputedStyle(document.body).backgroundColor;
+  const tw = document.createTreeWalker(page, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
+  const range = document.createRange();
+  const imgs: [HTMLImageElement, DOMRect][] = [];
+  let words = 0;
+  let seen = 0;
+  const past = () => {
+    while (true) {
+      const sib = tw.nextSibling();
+      if (sib) return sib;
+      if (!tw.parentNode()) return null;
+    }
+  };
+  let n: Node | null = tw.nextNode();
+  while (n) {
+    if (++seen % 64 === 0 && performance.now() - t0 > SURVEY_MS) {
+      // out of time: the colours so far stay, the density goes
+      m.dense = false;
+      break;
+    }
+    if (n.nodeType === 1) {
+      const el = n as HTMLElement;
+      const rc = el.getBoundingClientRect();
+      // wholly above the grid or below the window: nothing under it can show
+      if (rc.bottom <= gy || rc.top >= vh || el.matches('.morph, .sr-only')) {
+        n = past();
+        continue;
+      }
+      if (el.tagName === 'IMG') {
+        imgs.push([el as HTMLImageElement, rc]);
+        n = past();
+        continue;
+      }
+      const cs = getComputedStyle(el);
+      if (cs.visibility === 'hidden' || cs.opacity === '0') {
+        n = past();
+        continue;
+      }
+      const bg = rgbOf(cs.backgroundColor);
+      // a fill, not a rule: at least half a cell each way, and not the ground
+      if (bg && !(bg.length > 3 && bg[3] === 0) && cs.backgroundColor !== ground && rc.width >= cw / 2 && rc.height >= ch / 2) paint(rc, 1, ix(fillHue(bg[0], bg[1], bg[2])));
+    } else {
+      const t = n.nodeValue ?? '';
+      if (t.trim()) {
+        range.selectNodeContents(n);
+        const all = range.getBoundingClientRect();
+        if (all.bottom > gy && all.top < vh && all.width >= 1) {
+          if (words > 500) {
+            for (const rc of range.getClientRects()) paint(rc, 2, 0);
+          } else {
+            for (const w of t.matchAll(/\S+/g)) {
+              range.setStart(n, w.index!);
+              range.setEnd(n, w.index! + w[0].length);
+              words++;
+              for (const rc of range.getClientRects()) paint(rc, 2, 0);
+            }
+          }
+        }
+      }
+    }
+    n = tw.nextNode();
+  }
+  // pictures: each cell takes the colour of the painting under it, from the
+  // tiny grid of marks the page carries on it (scripts/tones.mjs). Reading the
+  // picture's own pixels here would decode it in the reveal's first frame.
+  for (const [img, rc] of imgs) {
+    const t = /^(\d+)x(\d+):([0-9a-f]+)$/.exec(img.dataset.tone ?? '');
+    if (!t) continue;
+    const tw = +t[1];
+    const th = +t[2];
+    const tone = t[3];
+    // its own size, from the file once loaded, else from the size the page gives it
+    const nw = img.naturalWidth || +(img.getAttribute('width') ?? 0);
+    const nh = img.naturalHeight || +(img.getAttribute('height') ?? 0);
+    if (tone.length !== tw * th * 3 || !nw || !nh) continue;
+    const fit = getComputedStyle(img).objectFit;
+    const sx = rc.width / nw;
+    const sy = rc.height / nh;
+    const sc = fit === 'contain' ? Math.min(sx, sy) : fit === 'cover' ? Math.max(sx, sy) : 0;
+    const w = sc ? nw * sc : rc.width;
+    const h = sc ? nh * sc : rc.height;
+    const L = rc.left + (rc.width - w) / 2;
+    const T = rc.top + (rc.height - h) / 2;
+    const [x0, x1] = span(Math.max(L, rc.left), Math.min(L + w, rc.right), cols, cw, gx);
+    const [y0, y1] = span(Math.max(T, rc.top), Math.min(T + h, rc.bottom), rows, ch, gy);
+    for (let y = y0; y < y1; y++) {
+      const v = Math.max(0, Math.min(th - 1, Math.floor(((gy + (y + 0.5) * ch - T) / h) * th)));
+      for (let x = x0; x < x1; x++) {
+        const i = y * cols + x;
+        if (kind[i] === 2) continue;
+        const u = Math.max(0, Math.min(tw - 1, Math.floor(((gx + (x + 0.5) * cw - L) / w) * tw)));
+        const k = (v * tw + u) * 3;
+        kind[i] = 3;
+        hue[i] = ix(`#${tone[k]}0${tone[k + 1]}0${tone[k + 2]}0`);
+      }
+    }
+  }
+  m.ms = performance.now() - t0;
+  paintRows(g, 0, rows);
 }
 
 /** Figures: the character k cells behind a front, with `count` read the right way round from the "+". */
@@ -372,7 +637,8 @@ function draw(g: Grid, shape: Shape, R: number): void {
         const v = sd / g.reach / (2 * TAIL);
         return v < 1 && v < (B4[(y - ar) & 3][(x - ac) & 3] + 0.5) / 16 ? '+' : ' ';
       }
-      const i = stepOf(g, sd, x, y);
+      const m = g.map;
+      const i = stepOf(g, sd, x, y, m && m.dense ? m.kind[o + x] : 1);
       return i < RAMP.length ? RAMP[i] : ' ';
     };
     let ls = '';
@@ -393,11 +659,18 @@ function draw(g: Grid, shape: Shape, R: number): void {
     for (let x = r0; x < cols; x++) rs += cell(x, x - r0, 'l');
     if (shown[y] !== ls) left[y].textContent = shown[y] = ls;
     const off = ls ? l0 : 0;
+    const hued = !!g.map?.grad[y];
     if (offs[y] !== off) {
       offs[y] = off;
-      left[y].style.transform = off ? `translateX(${(off * g.cw).toFixed(2)}px)` : '';
+      (left[y].parentElement as HTMLElement).style.transform = off ? `translateX(${(off * g.cw).toFixed(2)}px)` : '';
+      // the row's colour image stays on the grid as the line moves along it
+      if (hued) left[y].style.backgroundPositionX = `${(-off * g.cw).toFixed(2)}px`;
     }
     if (shown[rows + y] !== rs) right[y].textContent = shown[rows + y] = rs;
+    if (hued && r0s[y] !== r0) {
+      r0s[y] = r0;
+      right[y].style.backgroundPositionX = `${(-r0 * g.cw).toFixed(2)}px`;
+    }
   }
 }
 
@@ -581,6 +854,12 @@ function arrive(dir: Dir, kind: Kind, at: [number, number] | null): Promise<void
         // Covered by the overlay now, in the same frame the gate's cover lifts.
         frame(g, 'reveal', dir, 0);
         html.classList.remove('morph-in');
+        // the page is laid out and visible under the cover now: read it onto the grid
+        try {
+          survey(g);
+        } catch {
+          g.map = null;
+        }
         html.setAttribute('data-morph', 'reveal');
         play('reveal', dir, REVEAL_MS, finish, finish);
       } catch {
@@ -623,8 +902,22 @@ export function initMorph(): Promise<void> {
       const g = grid && !at ? grid : mount(at ?? null);
       if (g) {
         g.kind = kind;
+        if (part === 'reveal' && !g.map) {
+          try {
+            survey(g);
+          } catch {
+            g.map = null;
+          }
+        }
         frame(g, part, dir, p);
       }
+    },
+    read() {
+      const g = grid;
+      if (!g?.map) return null;
+      const kinds: string[] = [];
+      for (let y = 0; y < g.rows; y++) kinds.push(Array.from(g.map.kind.subarray(y * g.cols, (y + 1) * g.cols)).join(''));
+      return { cols: g.cols, rows: g.rows, cw: g.cw, ch: g.ch, gx: g.gx, gy: g.gy, ms: g.map.ms, dense: g.map.dense, kinds, grad: g.map.grad.slice() };
     },
     clear,
     force(kind) {
