@@ -1810,7 +1810,7 @@ try {
       return {
         band: a.querySelectorAll('[data-band] [data-k="band"]').length,
         x: a.querySelectorAll('[data-band] [data-k="x"]').length,
-        bay: a.querySelectorAll('[data-band] .bay').length,
+        bay: a.querySelectorAll('[data-band] canvas[data-k="bay"]').length,
         line: a.querySelectorAll('[data-band] [data-k="n"]').length,
         kc: !!a.querySelector('[data-k="kc"]'),
         jelly: !!a.querySelector('.jx-row, [data-k="jc"]'),
@@ -1898,7 +1898,7 @@ try {
     mark: (v) => v.rested && v.line === 1,
     tricode: (v) => v.x === 3,
     knockout: (v) => v.x === 1 && v.kc,
-    bayer: (v) => v.x === 4 && v.bay === 4,
+    bayer: (v) => v.x === 0 && v.bay === 1,
     jelly: (v) => v.band === 0 && v.jelly,
     skeleton: (v) => v.band === 3 && v.x >= 3,
   };
@@ -2165,6 +2165,155 @@ try {
       grids[name] = { ...v, lines };
       await pg.mouse.move(1430, 990);
       await pg.clock.runFor(400);
+    }
+    await pg.evaluate(() => (window.__linHold = false));
+
+    // Dither, its own row: the dithered spot lives on the text and belongs to the cursor.
+    const drow = 'a.row[data-lin="bayer"]';
+    const canvasRead = ([s, n]) => {
+      const a = document.querySelectorAll(s)[n];
+      const cv = a.querySelector('[data-band] canvas[data-k="bay"]');
+      if (!cv) return { cv: false, hot: a.hasAttribute('data-hot') };
+      const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
+      let bits = '';
+      let rgb = null;
+      for (let i = 0; i < d.length; i += 4) {
+        bits += d[i + 3] ? '1' : '0';
+        if (d[i + 3] && !rgb) rgb = `rgb(${d[i]}, ${d[i + 1]}, ${d[i + 2]})`;
+      }
+      return { cv: true, w: cv.width, h: cv.height, dot: parseFloat(cv.style.width) / cv.width, draws: +cv.dataset.draws, bits, rgb, band: getComputedStyle(a.querySelector('[data-band] .bm')).backgroundColor, hot: a.hasAttribute('data-hot') };
+    };
+    // the levels each dot column of a band could be, from its lit dots, under dither's own rule
+    const B4 = (() => {
+      const bm = (sz) => { if (sz === 2) return [[0, 2], [3, 1]]; const h2 = sz / 2, s = bm(h2), m = Array.from({ length: sz }, () => new Array(sz)); for (let y = 0; y < sz; y++) for (let x = 0; x < sz; x++) m[y][x] = 4 * s[y % h2][x % h2] + [0, 2, 3, 1][(y < h2 ? 0 : 2) + (x < h2 ? 0 : 1)]; return m; };
+      return bm(4).map((r) => r.map((v) => (v + 0.5) / 16));
+    })();
+    // dither's ordered rule, recomputed here: normBayer(4), spread 255, threshold 128
+    const litAt = (k, x, y) => (k / 16) * 255 + (B4[y % 4][x % 4] - 0.5) * 255 > 128;
+    {
+      await pg.evaluate(() => window.__ink.seed(7));
+      const box = await rowBox(pg, drow);
+      const words = await pg.evaluate((s) => {
+        const a = document.querySelector(s);
+        const r = a.getBoundingClientRect();
+        const out = [];
+        const tw = document.createTreeWalker(a.querySelector('.l'), NodeFilter.SHOW_TEXT);
+        for (let n = tw.nextNode(); n; n = tw.nextNode()) for (const m of n.textContent.matchAll(/\S+/g)) { const rg = document.createRange(); rg.setStart(n, m.index); rg.setEnd(n, m.index + m[0].length); const q = rg.getClientRects()[0]; if (q) out.push({ w: m[0], x: (q.left + q.right) / 2 - r.left, y: (q.top + q.bottom) / 2 - r.top, top: q.top - r.top }); }
+        return out;
+      }, drow);
+      const tops = [...new Set(words.map((w) => Math.round(w.top)))].sort((p, q) => p - q);
+      const line = (i) => words.filter((w) => Math.round(w.top) === tops[i]);
+      const [A, B, C] = [line(0)[1], line(0)[line(0).length - 2], line(2)[1]];
+      const go = (w) => pg.mouse.move(box.x + w.x, box.y + w.y);
+      // the entrance, frame by frame, with the pointer still on a word
+      await pg.mouse.move(box.x + A.x, box.y - 40);
+      await pg.clock.runFor(400);
+      await pg.mouse.move(box.x + A.x, box.y + A.y, { steps: 2 });
+      const ent = [];
+      for (let t = 0; t <= 480; t += 16) {
+        if (t) await pg.clock.runFor(16);
+        const c = await pg.evaluate(canvasRead, [drow, 0]);
+        if (c.cv) ent.push({ t, ...c });
+      }
+      const g = await pg.evaluate(gridRead);
+      const fin = ent[ent.length - 1];
+      // the spot as the spec draws it, rebuilt here: each band's clear seams thinned to stops 4 cells apart,
+      // the level of a dot max(0, 4(n + 1) - 4dx - 8dy) / 16, lit by dither's own rule
+      const gap = 4 * g.g.cell;
+      const stops = g.g.bands.map((b) => {
+        const st = [b.seams[0]];
+        for (const s of b.seams) if (s - st[st.length - 1] >= gap - 0.01) st.push(s);
+        const end = b.seams[b.seams.length - 1];
+        if (st[st.length - 1] !== end) {
+          if (st.length > 1 && end - st[st.length - 1] < gap) st[st.length - 1] = end;
+          else st.push(end);
+        }
+        return st;
+      });
+      const iv = (st, x) => { let j = 0; while (j < st.length - 2 && x >= st[j + 1]) j++; return j; };
+      const bandOf = (y) => { const i = g.g.bands.findIndex((b) => y < b.bottom); return i < 0 ? g.g.bands.length - 1 : i; };
+      const bi = bandOf(A.y);
+      const levelAt = (n, x, y) => { const b = bandOf((y + 0.5) * fin.dot); return Math.max(0, Math.min(16, 4 * (n + 1) - 4 * Math.abs(iv(stops[b], (x + 0.5) * fin.dot) - iv(stops[b], A.x)) - 8 * Math.abs(b - bi))); };
+      const picture = (n) => { let s = ''; for (let y = 0; y < fin.h; y++) for (let x = 0; x < fin.w; x++) { const k = levelAt(n, x, y); s += k > 0 && litAt(k, x, y) ? '1' : '0'; } return s; };
+      const want = [0, 1, 2, 3].map(picture);
+      const off = [...fin.bits].filter((b, k) => b !== want[3][k]).length;
+      // every stop of every band is on the mono cell and inside no word of that band
+      const cuts = (x, b) => g.words.some((w) => Math.min(w.b, b.bottom) - Math.max(w.t, b.top) > 2 && w.l < x - 0.5 && w.r > x + 0.5);
+      const badStops = stops.flatMap((st, i) => st.filter((x) => (x !== g.bw && Math.abs(x / g.g.cell - Math.round(x / g.g.cell)) > 0.01) || cuts(x, g.g.bands[i])));
+      const j0 = iv(stops[bi], A.x);
+      ok(off === 0 && badStops.length === 0, 'Dither: the solid interval is the word under the pointer and every level edge is a clear seam of its line, dot for dot', JSON.stringify({ off, badStops, solid: [stops[bi][j0], stops[bi][j0 + 1]], word: A.w, stops: stops.map((s) => s.length) }));
+      // every whole 4 by 4 tile inside one level lights exactly 16, 12, 8 or 4 dots; the 4/16 tile is bayerMatrix(4)'s
+      const tiles = { bad: 0, n: 0, four: 0 };
+      for (let y0 = 0; y0 + 3 < fin.h; y0 += 4)
+        for (let x0 = 0; x0 + 3 < fin.w; x0 += 4) {
+          const ks = new Set();
+          for (let d = 0; d < 16; d++) ks.add(levelAt(3, x0 + (d % 4), y0 + Math.floor(d / 4)));
+          const k = [...ks][0];
+          if (ks.size !== 1 || !k) continue;
+          let lit = 0;
+          let same = true;
+          for (let d = 0; d < 16; d++) { const on = fin.bits[(y0 + Math.floor(d / 4)) * fin.w + x0 + (d % 4)] === '1'; lit += on; if (on !== litAt(k, x0 + (d % 4), y0 + Math.floor(d / 4))) same = false; }
+          tiles.n++;
+          if (lit !== k || !same) tiles.bad++;
+          if (k === 4) tiles.four++;
+        }
+      ok(tiles.n > 20 && tiles.bad === 0 && tiles.four > 0, 'Dither: every 4 by 4 tile inside a level lights exactly 16, 12, 8 or 4 dots, in the pattern dither’s own rule gives', JSON.stringify(tiles));
+      const count = (c) => [...c.bits].filter((b) => b === '1').length;
+      const grows = ent.every((f, i) => !i || [...ent[i - 1].bits].every((b, k) => b === '0' || f.bits[k] === '1'));
+      const steps = ent.map((f) => want.findIndex((w) => w === f.bits));
+      ok(ent[0].t >= 295 && ent[0].t <= 340 && steps[0] === 0 && steps.every((s, i) => s >= 0 && (!i || s >= steps[i - 1])) && grows, 'Dither enters as ink soaking out from the cursor: the first drawing lights only the pointer’s word, at 4/16, and no dot ever goes out', JSON.stringify({ first: ent[0].t, steps: steps.filter((v, i, a) => v !== a[i - 1]), counts: ent.map(count).filter((v, i, a) => v !== a[i - 1]), grows }));
+      // never frozen: resting 3s, then 10s, it still answers the pointer within two frames, by word and by line
+      const answers = async (wait, w) => {
+        await pg.clock.runFor(wait);
+        const before = await pg.evaluate(canvasRead, [drow, 0]);
+        await go(w);
+        const seen = [];
+        for (let k = 0; k < 2; k++) {
+          await pg.clock.runFor(16);
+          seen.push(await pg.evaluate(canvasRead, [drow, 0]));
+        }
+        return { changed: seen.some((c) => c.bits !== before.bits && c.draws > before.draws), draws: [before.draws, ...seen.map((c) => c.draws)] };
+      };
+      const after3 = await answers(3000, B);
+      // resting, nothing is written for a second: no mutation on the row, no draw
+      await pg.clock.runFor(1500);
+      const quiet = await pg.evaluate((s) => {
+        const a = document.querySelector(s);
+        window.__dq = new MutationObserver(() => {});
+        window.__dq.observe(a, { subtree: true, childList: true, attributes: true, characterData: true });
+        return +a.querySelector('canvas[data-k="bay"]').dataset.draws;
+      }, drow);
+      await pg.clock.runFor(1000);
+      const quiet2 = await pg.evaluate((s) => ({ records: window.__dq.takeRecords().length, draws: +document.querySelector(s).querySelector('canvas[data-k="bay"]').dataset.draws }), drow);
+      await pg.evaluate(() => window.__dq.disconnect());
+      const after10 = await answers(10000, A);
+      const lineMove = await answers(400, C);
+      ok(after3.changed && after10.changed && lineMove.changed, 'Dither never freezes: after resting 3s and 10s it follows the pointer to another word within two frames, and to another line', JSON.stringify({ after3, after10, lineMove }));
+      ok(quiet2.records === 0 && quiet2.draws === quiet, 'resting, it writes nothing: no mutation on the row and no redraw for a second', JSON.stringify({ quiet, ...quiet2 }));
+      await pg.mouse.move(1430, 990);
+      const gone = [await pg.evaluate(canvasRead, [drow, 0])];
+      await pg.clock.runFor(16);
+      gone.push(await pg.evaluate(canvasRead, [drow, 0]));
+      ok(gone.every((c) => !c.cv), 'leaving takes the canvas in the same frame', JSON.stringify(gone.map((c) => c.cv)));
+      await pg.clock.runFor(1500);
+      // its second colour: never the band's, never the same twice running
+      const cols = [];
+      for (let i = 0; i < 12; i++) {
+        await pg.mouse.move(box.x + A.x, box.y - 40);
+        await pg.clock.runFor(300);
+        await pg.mouse.move(box.x + A.x, box.y + A.y, { steps: 2 });
+        await pg.clock.runFor(500);
+        const c = await pg.evaluate(canvasRead, [drow, 0]);
+        cols.push([c.rgb, c.band]);
+        await pg.mouse.move(1430, 990);
+        await pg.clock.runFor(400);
+      }
+      ok(cols.every(([c, b], i) => c && c !== b && (!i || c !== cols[i - 1][0])), 'its colour is never the band’s and never the same twice running, over 12 hovers', JSON.stringify(cols.map((c) => c[0])));
+      const { readdirSync } = await import('node:fs');
+      const rt = new URL('../src/runtime/', import.meta.url);
+      const files = readdirSync(rt, { recursive: true }).filter((f) => String(f).endsWith('.ts'));
+      const left = files.filter((f) => /\bbay[1-4]\b|['"`]bay bay|\.bay\b|mask-image|mask-size/.test(readFileSync(new URL(String(f), rt), 'utf8')));
+      ok(left.length === 0, 'the four hand-drawn Bayer masks are gone from the runtime', left.join(' '));
     }
     await ctx.close();
     const home = await clockPage('/');

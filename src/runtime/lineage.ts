@@ -25,12 +25,13 @@
  * moves nothing.
  */
 
-import { HUES, mix, pickNot } from './band.ts';
+import { mix } from './band.ts';
 import { ALT, mulberry, step2, step4, type Edge, type Letter } from './ink.ts';
 import { hotNow, setLineage, type Hot, type Lineage, type Look } from './buttons.ts';
 import { jellyFor, jellyOptics } from './jx.ts';
 import { ambientScoreAt, createAmbientScore, type ScoreRow } from '../vendor/after-tokens/ambient-score.ts';
 import { textGrid } from './fx/textgrid.ts';
+import { ditherCut, ditherLook } from './fx/dither.ts';
 // the dress rides in this chunk: every pointer hover's shape, wire and Chickpea's Cut
 import './dress.ts';
 
@@ -307,7 +308,6 @@ function triSeams(h: Hot): [number, number] {
 }
 const markOf = new WeakMap<HTMLElement, string>();
 let markI = 0;
-const nextOf = new WeakMap<HTMLElement, string>();
 
 function markBand(h: Hot, p: number): { c: string; s: string } {
   const g = h.geo;
@@ -497,25 +497,8 @@ function look(h: Hot, tau: number): Look {
         own: (hh) => copyOf(hh, clip),
       };
     }
-    case 'bayer': {
-      if (!nextOf.has(h.b)) nextOf.set(h.b, pickNot(HUES, h.P.main));
-      const T = 4 * Math.round(g.fs / 6);
-      const cx = Math.round(h.px / T) * T;
-      const gr = t < 50 ? 0.25 : t < 100 ? 0.5 : t < 150 ? 0.75 : 1;
-      const extra = [
-        [1, 5],
-        [2, 4],
-        [3, 3],
-        [4, 2],
-      ].map(([lv, r]) => {
-        const rr = r * T * gr;
-        return {
-          c: `bay bay${lv}`,
-          s: `position:absolute;inset:0;background:${nextOf.get(h.b)};-webkit-mask-size:${T}px ${T}px;mask-size:${T}px ${T}px;clip-path:inset(0 ${Math.max(0, g.bw - cx - rr).toFixed(1)}px 0 ${Math.max(0, cx - rr).toFixed(1)}px)`,
-        };
-      });
-      return { extra };
-    }
+    case 'bayer':
+      return ditherLook(h, t);
     case 'jelly': {
       // 0: strips and outline cut, the band 70% of the way in; 50: the band is
       // the slab's rect; 100: the cut, the slab takes it; then its floor and
@@ -731,12 +714,14 @@ function leave(h: Hot, now: number): void {
     // only this hover's own credit: a hover left during the rest never showed one
     if (!h.b.hasAttribute('data-lin') && credit && begun.has(h)) creditOut(Math.max(now + 900, h.t0 + DWELL + 1600));
     if (h.fx === 'jelly') jellyFor(h, cap(h), -2);
+    if (h.fx === 'bayer') ditherCut(h);
   }
   h.b.querySelectorAll(':scope > [data-k="kc"]').forEach((n) => n.remove());
 }
 
 function cut(h: Hot): void {
   skeletonDone(h);
+  ditherCut(h);
   h.b.querySelectorAll(':scope > [data-k="kc"]').forEach((n) => n.remove());
   if (h.fx === 'jelly') jellyFor(h, cap(h), -2);
 }
