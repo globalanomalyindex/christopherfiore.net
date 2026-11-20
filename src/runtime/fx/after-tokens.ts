@@ -58,7 +58,7 @@ const E_BREATH = bez(0.45, 0, 0.55, 1);
 const SETTLE = 0.7894736842;
 
 /** After Tokens' `reading-ink-arrive` (app/globals.css): 0.45 at 38%, 1 at 74%, from 1.5px down through -0.2px to 0. */
-export function inkArrive(u: number): { op: number; top: number } {
+function inkArrive(u: number): { op: number; top: number } {
   if (u <= 0) return { op: 0, top: 1.5 };
   if (u >= 1) return { op: 1, top: 0 };
   const op = u < 0.38 ? 0.45 * E_OPEN(u / 0.38) : u < 0.74 ? 0.45 + 0.55 * E_OPEN((u - 0.38) / 0.36) : 1;
@@ -164,6 +164,7 @@ function fieldOf(h: Hot): Field {
 }
 
 const px = (v: number) => `${v.toFixed(2)}px`;
+const box = (x: number, y: number, w: number, h: number) => `position:absolute;left:${px(x)};top:${px(y)};width:${px(w)};height:${px(h)};`;
 const put = (el: HTMLElement, s: string) => {
   if (el.getAttribute('style') !== s) el.setAttribute('style', s);
 };
@@ -181,7 +182,7 @@ function division(k: SkBlock, p: number, alpha: number): void {
   // division-open: held joined to 12%, fully open at 62%
   const o = p <= 0.12 ? 0 : p >= 0.62 ? 1 : E_OPEN((p - 0.12) / 0.5);
   const clip = `inset(${px(lerp(joined, 0, o))} ${(8 * (1 - o)).toFixed(3)}% ${px(lerp(joined, 0, o))} ${(4 * (1 - o)).toFixed(3)}% round ${px(1.4 * k.font * (1 - o))})`;
-  put(div, `position:absolute;left:${px(k.l)};top:${px(k.t)};width:${px(k.w)};height:${px(k.h)};opacity:${alpha.toFixed(3)};clip-path:${clip}`);
+  put(div, `${box(k.l, k.t, k.w, k.h)}opacity:${alpha.toFixed(3)};clip-path:${clip}`);
   k.rows.forEach((r, i) => {
     const s0 = { l: 0.04 * k.w, t: k.start[i], w: 0.88 * k.w, h: 0.56 * k.font, rad: 0 };
     const shape = growingRowAt(r.row, 0);
@@ -189,7 +190,7 @@ function division(k: SkBlock, p: number, alpha: number): void {
     // the 1.018 overshoot in top, width and height at 68%
     const peak = { l: end.l, t: s0.t + 1.018 * (end.t - s0.t), w: Math.max(0, Math.min(k.w, s0.w + 1.018 * (end.w - s0.w))), h: s0.h + 1.018 * (end.h - s0.h), rad: 999 };
     const [a, b, e] = p <= 0.12 ? [s0, s0, 0] : p <= 0.68 ? [s0, peak, E_OPEN((p - 0.12) / 0.56)] : p <= SETTLE ? [peak, end, E_OPEN((p - 0.68) / (SETTLE - 0.68))] : [end, end, 0];
-    put(k.slabs[i], `position:absolute;left:${px(lerp(a.l, b.l, e))};top:${px(lerp(a.t, b.t, e))};width:${px(lerp(a.w, b.w, e))};height:${px(lerp(a.h, b.h, e))};border-radius:${px(lerp(a.rad, b.rad, e))};background:${INK}`);
+    put(k.slabs[i], `${box(lerp(a.l, b.l, e), lerp(a.t, b.t, e), lerp(a.w, b.w, e), lerp(a.h, b.h, e))}border-radius:${px(lerp(a.rad, b.rad, e))};background:${INK}`);
   });
 }
 
@@ -258,7 +259,7 @@ function draw(h: Hot, t: number): void {
       // skeleton-glimmer: the gradient sweeps each cell from -110% to 110% of its own width, linear
       const T = gl < 0 ? 0 : -110 + 220 * gl;
       const glim = gl < 0 ? '' : `linear-gradient(90deg,transparent ${(15 + T).toFixed(2)}%,rgb(255 255 255 / .3) ${(50 + T).toFixed(2)}%,transparent ${(85 + T).toFixed(2)}%),`;
-      put(c.el, `position:absolute;left:${px(c.x)};top:${px(c.y)};width:${px(c.w)};height:${px(c.h)};border-radius:999px;background:${glim}${INK};opacity:${c.a.toFixed(3)}`);
+      put(c.el, `${box(c.x, c.y, c.w, c.h)}border-radius:999px;background:${glim}${INK};opacity:${c.a.toFixed(3)}`);
       return;
     }
     // the handover: every cell on screen, in reading order, to a group by After Tokens' own mapping
@@ -274,7 +275,7 @@ function draw(h: Hot, t: number): void {
     const a = u < 0.48 ? fr.a * (1 - 0.35 * E_TRANSFER(u / 0.48)) : 0.65 * fr.a * (1 - E_TRANSFER((u - 0.48) / 0.52));
     const sx = (fr.to.r - fr.to.l) / Math.max(0.01, fr.w);
     const sy = (fr.to.b - fr.to.t) / Math.max(0.01, fr.h);
-    put(c.el, `position:absolute;left:${px(fr.x)};top:${px(fr.y)};width:${px(fr.w)};height:${px(fr.h)};border-radius:999px;background:${INK};opacity:${a.toFixed(3)};transform-origin:0 0;transform:translate(${px((fr.to.l - fr.x) * e)},${px((fr.to.t - fr.y) * e)}) scale(${(1 + (sx - 1) * e).toFixed(4)},${(1 + (sy - 1) * e).toFixed(4)})`);
+    put(c.el, `${box(fr.x, fr.y, fr.w, fr.h)}border-radius:999px;background:${INK};opacity:${a.toFixed(3)};transform-origin:0 0;transform:translate(${px((fr.to.l - fr.x) * e)},${px((fr.to.t - fr.y) * e)}) scale(${(1 + (sx - 1) * e).toFixed(4)},${(1 + (sy - 1) * e).toFixed(4)})`);
   });
 }
 

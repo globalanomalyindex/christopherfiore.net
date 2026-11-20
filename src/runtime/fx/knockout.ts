@@ -54,10 +54,9 @@ interface Ko {
 const kos = new WeakMap<Hot, Ko>();
 
 /** The text style a copy needs to set its glyphs exactly where the original's are. */
-const FONT = ['fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'fontFeatureSettings', 'fontVariant', 'fontKerning', 'letterSpacing', 'wordSpacing', 'textTransform'] as const;
-const BLOCK = [...FONT, 'lineHeight', 'textAlign', 'textIndent', 'whiteSpace', 'overflowWrap', 'wordBreak', 'hyphens', 'tabSize', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft'] as const;
-const copyStyle = (cs: CSSStyleDeclaration, keys: readonly string[]): string =>
-  keys.map((k) => `${k.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}:${cs.getPropertyValue(k.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`))}`).join(';');
+const FONT = 'font-family font-size font-weight font-style font-feature-settings font-variant font-kerning letter-spacing word-spacing text-transform'.split(' ');
+const BLOCK = [...FONT, ...'line-height text-align text-indent white-space overflow-wrap word-break hyphens tab-size padding-top padding-right padding-bottom padding-left'.split(' ')];
+const copyStyle = (cs: CSSStyleDeclaration, keys: string[]): string => keys.map((k) => `${k}:${cs.getPropertyValue(k)}`).join(';');
 
 /** The ground-ink copies of every glyph on the row, placed from measured rects. */
 function copies(h: Hot, ko: Ko): HTMLSpanElement {

@@ -5,7 +5,8 @@
  * hover. Until it lands, every hover is the glitch alone.
  *
  * Every hover is the glitch for its first 220ms. If the pointer is still
- * there, the deck may deal an effect, which starts from the settled glitch:
+ * there, the deck may deal an effect. It begins 80ms later (the rest, below),
+ * from the settled glitch:
  *
  *   own row     a project's own row (`data-lin`) always plays its own effect
  *   cooldown    right after an effect, or within 1.5s of one: glitch only
@@ -19,10 +20,16 @@
  * seeded per visit (sessionStorage `ps-lin`), so it is fixed for a visit and a
  * check can replay it: `window.__lin.force(name)` and `.seed(n)`.
  *
- * Each effect is a pure function of the time since the dwell. Leaving at any
- * moment removes everything it added in the same frame (`cut`), and the band
- * plays its own one drawing exit. No effect changes a width: hover still
- * moves nothing.
+ * Each effect is a pure function of the time since the dwell (and, where it
+ * says so, of the pointer). Leaving at any moment removes everything it added
+ * in the same frame (`cut`), and the band plays its own one drawing exit. No
+ * effect changes a width: hover still moves nothing.
+ *
+ * This file keeps the deck, the odds, the credit, the dispatch and the four
+ * effects that are only timed here (Mark, Decode, Canister, Jelly). The ones
+ * rebuilt from their projects' own code each have a module in `fx/`
+ * (after-tokens, tricode, dither, knockout), on the text grid they share
+ * (`fx/textgrid.ts`), so every band, seam and spot sits on the text.
  */
 
 import { mix } from './band.ts';
@@ -425,8 +432,6 @@ window.__lin = {
   // the checks: the live hover's text grid, without its element references
   grid: () => {
     const h = hotNow()[0];
-    if (!h) return null;
-    const g = textGrid(h);
-    return { cell: g.cell, bw: g.bw, bh: g.bh, bands: g.bands, seams: g.seams, words: g.words, blocks: g.blocks.map((k) => ({ kind: k.kind, fs: k.fs, lh: k.lh, lines: k.lines })) };
+    return h ? JSON.parse(JSON.stringify(textGrid(h), (k, v) => (k === 'el' ? undefined : v))) : null;
   },
 };
