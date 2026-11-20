@@ -547,7 +547,9 @@ measure the film rather than the battery. It checks:
   lean once, in the next frame; settled, the lean is exactly what it always
   was. Resting on a link in a sentence, the seams stop measuring once the
   box has settled: no frames in the last second of two, with the arrows and
-  the size ending exactly on the box. Every painting tile has a `srcset`
+  the size ending exactly on the box. A resting hover on a row runs the
+  clock 70 frames at most, then none, and those frames make no DOM queries
+  (in Chrome and WebKit). Every painting tile has a `srcset`
   and a `sizes`, its copies exist at the widths they claim, no tile is drawn
   from a file narrower than it is drawn (1x and 2x, 1440 and 390 wide, and
   WebKit at 3x), and the first screen of paintings at 1440 loads 800 kB of

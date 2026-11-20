@@ -20,7 +20,7 @@
  * `translate` (the seams), `scale` (the press).
  */
 
-import { host, pool } from './band.ts';
+import { host, outlineOf, pool } from './band.ts';
 import { band, letters, plan, type Edge, type Letter, type MenuGeo, type Plan } from './ink.ts';
 import { fade, faces, paint, rest, settling, unface, type Face } from './glitch.ts';
 import { engage, hold, move, release, releaseAll } from './magnet.ts';
@@ -324,10 +324,10 @@ function draw(h: Hot, now: number): void {
   if (h.out != null) {
     if (t - h.out >= EXIT_MS) return cut(h);
     const look = h.fx && lineage ? lineage.look(h, -1) : {};
-    pool(h.host, 'band', look.band ?? band(h.P, t, h.out, h.exit, h.instant), h.host.querySelector(':scope > .bo'));
+    pool(h.host, 'band', look.band ?? band(h.P, t, h.out, h.exit, h.instant), outlineOf(h.host));
     pool(h.host, 'x', []);
     pool(h.host, 'n', []);
-    h.host.dataset.ol = '0';
+    if (h.host.dataset.ol !== '0') h.host.dataset.ol = '0';
     // the shape holds while the band takes its one drawing out
     const held = HOST + box;
     if (h.host.dataset.s !== held) {
@@ -347,7 +347,7 @@ function draw(h: Hot, now: number): void {
   }
   const tau = t - DWELL;
   const look: Look = h.fx && lineage && tau >= 0 ? lineage.look(h, tau) : {};
-  const outline = h.host.querySelector(':scope > .bo');
+  const outline = outlineOf(h.host);
   let layers = look.band ?? band(h.P, t, null, null, h.instant);
   if (df.dropTop) layers = layers.filter((l) => l.c !== 'st t');
   if (df.dropBottom) layers = layers.filter((l) => l.c !== 'st b');
@@ -355,7 +355,8 @@ function draw(h: Hot, now: number): void {
   pool(h.host, 'band', layers, outline);
   pool(h.host, 'x', look.extra ?? [], outline);
   pool(h.host, 'n', look.line ? [{ c: 'bn', s: look.line }] : [], null);
-  h.host.dataset.ol = look.outline === false || df.outline === false ? '0' : '1';
+  const ol = look.outline === false || df.outline === false ? '0' : '1';
+  if (h.host.dataset.ol !== ol) h.host.dataset.ol = ol;
   const want = HOST + box + (look.hostS ?? '');
   if (h.host.dataset.s !== want) {
     h.host.style.cssText = want;

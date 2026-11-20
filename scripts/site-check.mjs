@@ -2921,6 +2921,41 @@ try {
   ok(restFrames === 0 && onBox && seamEnd.label.includes(`${seamEnd.box[2]} × ${seamEnd.box[3]}`), 'resting on a link in a sentence: no frames in the last second of two, and its arrows and size end exactly on the settled box', JSON.stringify({ restFrames, ...seamEnd, label: seamEnd.label.slice(0, 40) }));
   await sc.close();
 
+  // A resting hover on a row: the clock draws the glitch landing and the
+  // dwell, then stops, and its frames make no DOM queries (pool keeps the
+  // spans it made, and each host keeps its outline): the only queries are the
+  // hover's own, as it starts.
+  for (const eng of [browser, ...(wk ? [wk] : [])]) {
+    const rc = await eng.newContext({ viewport: { width: 1440, height: 900 } });
+    await rc.addInitScript(countFrames);
+    await rc.addInitScript(() => (window.__linQuiet = true));
+    await rc.addInitScript(() => {
+      window.__qN = 0;
+      for (const k of ['querySelector', 'querySelectorAll']) {
+        const f = Element.prototype[k];
+        Element.prototype[k] = function (...a) {
+          window.__qN++;
+          return f.apply(this, a);
+        };
+      }
+    });
+    const rp = await rc.newPage();
+    await rp.goto(`${BASE}/product-designs/`, { waitUntil: 'networkidle' });
+    await rp.waitForFunction(() => !!window.__lin, null, { timeout: 10000 }).catch(() => {});
+    const rr = await center(rp, 'a.row', 2);
+    await stillFrames(rp);
+    const n0 = await rp.evaluate(() => [window.__fbN, window.__qN]);
+    await rp.mouse.move(rr.x - rr.box.width * 0.1, rr.y);
+    await stillFrames(rp);
+    const n1 = await rp.evaluate(() => [window.__fbN, window.__qN]);
+    const after = await framesIn(rp, 1000);
+    const hot = await rp.evaluate(() => document.querySelectorAll('[data-hot] [data-band]').length);
+    const clockFrames = n1[0] - n0[0];
+    const queries = n1[1] - n0[1];
+    ok(hot === 1 && clockFrames > 5 && clockFrames <= 70 && after === 0 && queries <= 12, `${eng === wk ? 'WebKit: ' : ''}a resting hover on a row: the clock runs ${clockFrames} frames (70 at most) and then none, with ${queries} DOM queries, all as it starts`, JSON.stringify({ hot, clockFrames, after, queries }));
+    await rc.close();
+  }
+
   // Paintings load tile-sized files: every tile has a srcset and a sizes, the
   // copies exist for all twenty, and no tile is ever drawn from a file
   // narrower than it is drawn, at 1x and 2x, wide and on a phone. The
