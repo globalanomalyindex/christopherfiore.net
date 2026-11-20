@@ -74,7 +74,7 @@
 
 import { hotNow, setDress, type Dress, type DressFrame, type Hot } from './buttons.ts';
 import { DARK_INK, mix } from './band.ts';
-import { blocks, layout, xs, type Blank, type Lay, type TCell } from './cells.ts';
+import { blocks, gaps, layout, own, xs, type Blank, type Lay, type TCell } from './cells.ts';
 import { inkBase, mulberry, step2 } from './ink.ts';
 import { spring } from './jx.ts';
 import { creditFor, creditOff } from './lineage.ts';
@@ -103,6 +103,40 @@ const REFIT_K: [number, number] = [520, 0.9];
 const LEAN_K: [number, number] = [420, 0.82];
 const LEAN = 8;
 const WIRE_OUT = 4;
+
+/**
+ * Where a free edge may stop (his note: "any effect bands need to be random
+ * but always aligned with text"). `cells` are the cells of the blocks of
+ * type, sorted, overlapping ones joined; `min` is the right side of the
+ * label's. A free edge never stops strictly inside a cell: it goes to that
+ * cell's nearer side, so the band holds a block of type whole or not at all.
+ */
+interface Stops {
+  cells: [number, number][];
+  min: number;
+  /** the button's width to the fraction of a pixel (its offsetWidth is rounded), so an edge on the mono cell lands on it */
+  bw: number;
+}
+
+function stopAt(R: number, st: Stops): number {
+  let r = R;
+  for (const [a, b] of st.cells) {
+    if (r > a + 0.01 && r < b - 0.01) {
+      r = r - a < b - r ? a : b;
+      break;
+    }
+  }
+  return Math.min(st.bw, Math.max(st.min, r));
+}
+
+/** A box's layout width, unrounded. */
+function widthOf(b: HTMLElement): number {
+  const cs = getComputedStyle(b);
+  const w = parseFloat(cs.width);
+  if (!w) return b.offsetWidth;
+  const px = (v: string) => parseFloat(v) || 0;
+  return cs.boxSizing === 'border-box' ? w : w + px(cs.paddingLeft) + px(cs.paddingRight) + px(cs.borderLeftWidth) + px(cs.borderRightWidth);
+}
 
 type Ins = [number, number, number, number]; // top, right, bottom, left, px; negative overhangs
 
@@ -145,7 +179,11 @@ interface Dr {
   LV: Ins;
   start: number;
   last: number;
+  /** the hover's time at the last frame drawn, ms */
+  t: number;
   clipX: boolean;
+  /** where a free edge may stop */
+  stops: Stops;
   dropTop: boolean;
   dropBottom: boolean;
   outline: boolean;
@@ -232,10 +270,11 @@ function next(g: Bag, which: 'shape' | 'dress' | 'true', deck: string[]): string
 
 /**
  * The shape's insets from the button's own box, for the cursor at (x, y).
- * `labR` is where the label ends, plus half an em: no shape ever comes in
- * past it, so the whole label is always on the band.
+ * A free edge stops only between blocks of type and never left of the
+ * label's cell (`st`), so the whole label is always on the band and no block
+ * of type is ever cut by the band's edge.
  */
-function shapeIns(h: Hot, name: string, x: number, y: number, labR: number): Ins {
+function shapeIns(h: Hot, name: string, x: number, y: number, st: Stops): Ins {
   const g = h.geo;
   const bw = g.bw;
   const bh = g.bh;
@@ -244,13 +283,13 @@ function shapeIns(h: Hot, name: string, x: number, y: number, labR: number): Ins
   switch (name) {
     case 'reach': {
       // the free edge follows the cursor a cell at a time, two cells ahead of it
-      const R = Math.min(bw, Math.max(labR, Math.round((x + 2 * cell) / cell) * cell));
-      return [0, bw - R, 0, 0];
+      const R = stopAt(Math.round((x + 2 * cell) / cell) * cell, st);
+      return [0, st.bw - R, 0, 0];
     }
     case 'ratio': {
-      // the free edge sits on the canon ratio nearest the cursor (Chickpea's snapToRatio)
-      const R = Math.min(bw, Math.max(labR, snapToRatio(Math.max(0.05, Math.min(0.95, x / bw))) * bw));
-      return [0, bw - R, 0, 0];
+      // the canon ratio nearest the cursor (Chickpea's snapToRatio), on the nearest mono-cell column
+      const R = stopAt(Math.round((snapToRatio(Math.max(0.05, Math.min(0.95, x / st.bw))) * st.bw) / cell) * cell, st);
+      return [0, st.bw - R, 0, 0];
     }
     case 'tall': {
       // it grows over the next row on the cursor's side, and a little on the other
@@ -323,8 +362,18 @@ function cutCells(h: Hot, T: Ins, seed: number): Cell[] {
   const comps = [off(label), ...(fig ? [off(fig)] : [])];
   const grid = composeGrid(seed, comps, W, H);
   const cols = [0, ...grid.guides.filter((q) => q.axis === 'v').map((q) => q.pos).sort((a, b) => a - b), 1];
-  // short rows take no horizontal cuts; and a column that holds any text stays whole
-  const rows = H < 80 ? [] : grid.guides.filter((q) => q.axis === 'h').map((q) => q.pos).sort((a, b) => a - b);
+  // Short rows take no horizontal cuts, and a column that holds any text stays whole.
+  // Each cut Chickpea proposes moves to the nearest boundary between two lines of the
+  // row's tallest block of type, so the Cut's rows follow the lines: one line, no cuts.
+  const lines = H < 80 ? [] : gaps(h.b);
+  const rows: number[] = [];
+  for (const q of grid.guides) {
+    if (q.axis !== 'h' || !lines.length) continue;
+    const y = q.pos * H + T[0];
+    const at = (lines.reduce((b, l) => (Math.abs(l - y) < Math.abs(b - y) ? l : b)) - T[0]) / H;
+    if (at > 0 && at < 1 && !rows.some((v) => Math.abs(v - at) * H < 0.5)) rows.push(at);
+  }
+  rows.sort((a, b) => a - b);
   const holds = (x0: number, x1: number) => comps.some((c) => c.x / W < x1 - 1e-6 && (c.x + c.w) / W > x0 + 1e-6);
   const mods: { x: number; y: number; w: number; h: number }[] = [];
   for (let i = 0; i < cols.length - 1; i++) {
@@ -409,14 +458,35 @@ function deal(h: Hot, t: number): void {
   if (inline) wire = false;
   if (small) cut = false;
   const { label, fig } = textBoxes(h);
-  const labR = Math.min(h.geo.bw, label.x + label.w + h.geo.fs / 2);
-  const T = shapeIns(h, shape, h.px, h.py, labR);
+  const bw = h.geo.bw;
+  const labR = Math.min(bw, label.x + label.w + h.geo.fs / 2);
+  const bl = blocks(h.b, !!h.P.m);
+  // the wire's cells (not on a Cut, whose text columns are its cells), laid out once over
+  // the button's whole width: a band that moves later only clips them
+  const wireLay = wire && !cut ? layout(bl, 0, bw, h.geo.fs) : null;
+  // where a free edge may stop: the blocks' own cells and, with the wire, the wire's cells
+  const spans = [
+    ...own(bl, h.geo.fs).map((c): [number, number] => [Math.max(0, c.x0), Math.min(bw, c.x1)]),
+    ...(wireLay?.cells ?? []).map((c): [number, number] => [c.toL ? 0 : c.x0, c.toR ? bw : c.x1]),
+  ]
+    .filter(([a, b]) => b > a)
+    .sort((p, q) => p[0] - q[0]);
+  const joined: [number, number][] = [];
+  for (const [a, b] of spans) {
+    const last = joined[joined.length - 1];
+    if (last && a < last[1] - 0.01) last[1] = Math.max(last[1], b);
+    else joined.push([a, b]);
+  }
+  // the label's own cell, and whatever it overlaps: the band always holds it whole
+  const labCell = bl.length && !bl[0].fig ? own(bl.slice(0, 1), h.geo.fs)[0] : null;
+  const home = labCell ? joined.find(([a, b]) => labCell.x0 < b && labCell.x1 > a) : null;
+  const stops: Stops = { cells: joined, min: home ? home[1] : labR, bw: widthOf(h.b) };
+  const T = shapeIns(h, shape, h.px, h.py, stops);
   const top = h.geo.bh - T[2];
   const clipX = h.b.matches('a.row, .hrow, .cell');
   const texts = [label, ...(fig ? [fig] : [])].map((c) => ({ x: c.x - 0.25 * h.geo.fs, y: c.y - 0.1 * h.geo.fs, w: c.w + 0.5 * h.geo.fs, h: c.h + 0.2 * h.geo.fs }));
   const cells = cut ? cutCells(h, T, g.rng() * 2 ** 31 >>> 0) : null;
-  // the wire's cells, laid out once, over the button's whole width: a band that moves later only clips them
-  const lay = !wire ? null : cells ? cutLay(h, cells, T, h.geo.bw - T[1] - T[3], texts) : layout(blocks(h.b, !!h.P.m), 0, h.geo.bw, h.geo.fs);
+  const lay = !wire ? null : cells ? cutLay(h, cells, T, bw - T[1] - T[3], texts) : wireLay;
   // each cell lands from the band edge nearer it; the one nearest the cursor first, the next a drawing later
   const L0 = T[3];
   const R0 = h.geo.bw - T[1];
@@ -438,7 +508,9 @@ function deal(h: Hot, t: number): void {
     LV: [0, 0, 0, 0],
     start: t,
     last: -1,
+    t,
     clipX,
+    stops,
     // an edge that runs through the label loses its strip and its outline
     dropTop: shape === 'highlighter' || T[0] > label.y + 1,
     dropBottom: shape === 'highlighter' || top < label.y + label.h - 1,
@@ -554,11 +626,12 @@ function frame(h: Hot, t: number, now: number): DressFrame {
   const g = h.geo;
   const dt = dr.last < 0 ? 0 : Math.min(0.05, Math.max(0, (now - dr.last) / 1000));
   dr.last = now;
+  dr.t = t;
   const live = h.out == null && t >= dr.start;
   const since = t - dr.start;
   if (live) {
     // the target follows the cursor; the spring carries the band to it
-    dr.T = shapeIns(h, dr.shape, h.px, h.py, dr.labR);
+    dr.T = shapeIns(h, dr.shape, h.px, h.py, dr.stops);
     step(dr.S, dr.V, dr.T, dt, SHAPE_K);
   }
   // to the half pixel: a sub-pixel write moves nothing anyone can see
@@ -783,6 +856,6 @@ window.__dress = {
   state(el) {
     const h = hotNow().find((x) => x.b === el);
     const dr = h && state.get(h);
-    return dr ? { shape: dr.shape, wire: dr.wire, cut: dr.cut, true: dr.trueMark, T: dr.T, S: dr.S, lean: dr.lean, cells: dr.cells?.map((c) => c.color) ?? null, chip: dr.chipText, lay: dr.lay, fill: dr.fill, cutGeo: dr.cells?.map((c) => [c.x, c.w, c.y, c.h]) ?? null, cutW: dr.cutW, texts: dr.texts } : null;
+    return dr ? { shape: dr.shape, wire: dr.wire, cut: dr.cut, true: dr.trueMark, T: dr.T, S: dr.S, V: dr.V, lean: dr.lean, cells: dr.cells?.map((c) => c.color) ?? null, chip: dr.chipText, lay: dr.lay, fill: dr.fill, cutGeo: dr.cells?.map((c) => [c.x, c.w, c.y, c.h]) ?? null, cutW: dr.cutW, texts: dr.texts, start: dr.start, t: dr.t, stops: dr.stops } : null;
   },
 };

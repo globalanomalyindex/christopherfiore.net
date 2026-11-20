@@ -2067,13 +2067,20 @@ try {
   await settle(dp);
   await dp.waitForFunction(() => !!window.__dress, null, { timeout: 8000 });
   const rows = await dp.evaluate(() => [...document.querySelectorAll('.menu a')].map((a) => { const r = a.getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; }));
-  const enter = async (r, x, wait = 620) => {
+  /** The dress on the hot button has begun and run `after` ms, by its own clock: never a sleep counted from the dwell. */
+  const begun = (pg, after = 0) =>
+    pg.waitForFunction((n) => {
+      const a = document.querySelector('.menu a[data-hot], a.row[data-hot]');
+      const st = a && window.__dress.state(a);
+      return !!st && st.t >= st.start + n;
+    }, after, { timeout: 5000 }).then(() => true, () => false);
+  const enter = async (r, x, after = 300) => {
     await dp.mouse.move(1600, 880);
     await sleep(260);
     await dp.mouse.move(r[0] + x, r[1] - 3);
     await sleep(260);
     await dp.mouse.move(r[0] + x, r[1] + r[3] / 2, { steps: 2 });
-    await sleep(wait);
+    await begun(dp, after);
   };
   const view = () =>
     dp.evaluate(() => {
@@ -2111,7 +2118,7 @@ try {
   await dp.evaluate(() => window.__ink.seed(11));
   const seen = [];
   for (let i = 0; i < 12; i++) {
-    await enter(rows[1], 300, 330);
+    await enter(rows[1], 300, 30);
     seen.push(await view());
   }
   const tuple = (v) => v && v.st && `${v.st.shape}|${v.st.wire}|${v.st.cut}|${v.strips}`;
@@ -2134,10 +2141,10 @@ try {
     await dp.mouse.move(1600, 880);
     await sleep(300);
     const b4 = await dp.evaluate(layout);
-    await enter(rows[2], 528, 330);
+    await enter(rows[2], 528, 30);
     const mid = await dp.evaluate(layout);
     const heldMid = await holds();
-    await sleep(400);
+    await begun(dp, 500);
     const v = await view();
     const heldEnd = await holds();
     const after = await dp.evaluate(layout);
@@ -2147,7 +2154,7 @@ try {
     const land =
       shape === 'full' ? JSON.stringify(v.host) === '[0,0,0,0]' :
       shape === 'reach' ? Math.abs(R - 560) <= 1 :
-      shape === 'ratio' ? Math.abs(R - W / 2) <= 1 :
+      shape === 'ratio' ? Math.abs(R - Math.round(W / 2 / 20) * 20) <= 1 :
       v.host[1] < 0 && v.host[3] > 0;
     ok(land && same && heldMid && heldEnd, `${shape}: it lands where the cursor puts it, holds the whole label, and no layout box moves`, JSON.stringify([v.host, same, heldMid, heldEnd]));
   }
@@ -2186,7 +2193,7 @@ try {
   ok(guideCell === 'hidden', 'with the cursor over a cell, the guide is gone at once', guideCell);
   // The Cut: Chickpea's grid in steps of the page colour, the label in a whole cell.
   await dp.evaluate(() => window.__dress.force({ shape: 'full', dress: 'cut' }));
-  await enter(rows[1], 520, 500);
+  await enter(rows[1], 520, 250);
   const c1 = await view();
   const credit = await dp.evaluate(() => document.querySelector('.lin-credit')?.textContent ?? null);
   ok(c1.st.cut && c1.st.cells.length >= 2 && c1.worst >= 4.5 && credit === 'from chickpea', 'the Cut tiles the row with Chickpea’s composeGrid, the label’s cell legible, credited "from chickpea"', JSON.stringify([c1.st.cells, c1.worst, credit]));
@@ -2234,14 +2241,14 @@ try {
   const trues = [];
   for (let i = 0; i < 10; i++) {
     await dp.evaluate(() => window.__dress.force({ shape: 'reach', dress: 'plain' }));
-    await enter(rows[3], 300, 620);
+    await enter(rows[3], 300, 400);
     trues.push(await trueView());
   }
   const marks = trues.map((t) => t?.mark);
   ok(trues.every((t) => t && JSON.stringify(t.box) === '[0,0,0,0]' && +t.op > 0.4), 'every resizing hover keeps the true size in view, drawn on the button’s own box', JSON.stringify(trues[0]));
   ok(new Set(marks.slice(0, 5)).size === 5 && new Set(marks.slice(5, 10)).size === 5, 'its marks come from a deck: plus, rule, ticks, wash and dots in each round of five', marks.join(' '));
   await dp.evaluate(() => window.__dress.force({ shape: 'full', dress: 'plain' }));
-  await enter(rows[3], 300, 620);
+  await enter(rows[3], 300, 400);
   ok((await trueView()) === null, 'a band at the button’s own size needs no true-size mark');
   // Emil: a sweep across the menu sets nothing off; the dress waits for the 220ms dwell.
   await dp.evaluate(() => window.__dress.force({ shape: 'reach', dress: 'cutwire' }));
@@ -2262,7 +2269,9 @@ try {
   ok(swept.length === 0 && sweptAny === 0, 'a sweep across the menu deals no dress: it waits for the dwell', JSON.stringify([swept, sweptAny]));
   // Emil: once a wired hover settles, the clock stops; nothing is written while the pointer rests.
   await dp.evaluate(() => window.__dress.force({ shape: 'full', dress: 'wire' }));
-  await enter(rows[1], 400, 1300);
+  // the dress's clock runs to 650ms after it begins, then stops once the springs settle
+  await enter(rows[1], 400, 640);
+  await sleep(300);
   const writes = await dp.evaluate(() => new Promise((res) => {
     let n = 0;
     const a = document.querySelector('.menu a[data-hot]');
@@ -2331,7 +2340,7 @@ try {
   await dp.evaluate(() => window.__dress.force({ shape: 'tall', dress: 'cutwire' }));
   const sr = await dp.evaluate(() => { const a = document.querySelectorAll('a.row:not([data-lin])')[3]; a.scrollIntoView({ block: 'center' }); const q = a.getBoundingClientRect(); return [q.left, q.top, q.width, q.height]; });
   await sleep(300);
-  await enter(sr, 700, 600);
+  await enter(sr, 700, 300);
   const s1 = await view();
   const ovs = [-s1.host[1], s1.host[3]];
   ok(Math.max(...ovs) === 3 && Math.min(...ovs) >= 0.9 && s1.worst >= 4.5 && s1.chip && !s1.chipHitsLabel, 'on a page, Tall reaches 3px into the gap on the cursor’s side, the Cut stays legible, and the chip finds clear space', JSON.stringify([s1.host, s1.worst, s1.chip]));
@@ -2356,12 +2365,188 @@ try {
     await dp.evaluate(() => window.__dress.force({ shape: 'full', dress: 'wire' }));
     const q = await dp.evaluate((i) => { const a = document.querySelectorAll('a.row:not([data-lin])')[i]; a.scrollIntoView({ block: 'center' }); const r = a.getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; }, hit[0]);
     await sleep(200);
-    await enter(q, 450, 600);
+    await enter(q, 450, 300);
     const f = await dp.evaluate(wireFacts, 'a.row[data-hot]');
     const xa = xsHold(f);
     const xb = cellsHold(f);
     ok(xa.ok && xa.n >= 1 && xb.ok && xb.cells >= 2, `a ${lines}-line row: the name and the detail stand in their cells, an X in each blank, clear of every letter`, JSON.stringify([xa, xb]));
   }
+  // The band holds whole blocks of type: Reach and Ratio stop only between them, on the mono cell.
+  /** The hot button's free edge, against its blocks of type (padded a quarter em, out to the mono cell) and its words. */
+  const edgeFacts = () => {
+    const a = document.querySelector('.menu a[data-hot], a.row[data-hot]');
+    if (!a) return null;
+    // in the button's own px, to the fraction (no scale while hovered: the magnet only moves it)
+    const r = a.getBoundingClientRect();
+    const X = (v) => v - r.left;
+    const fs = parseFloat(getComputedStyle(a).fontSize);
+    const cell = fs / 2;
+    const bw = r.width;
+    const band = a.querySelector('[data-band]').getBoundingClientRect();
+    const R = X(band.right);
+    const rg = document.createRange();
+    const box = (el) => {
+      rg.selectNodeContents(el);
+      const q = rg.getBoundingClientRect();
+      return [X(q.left), X(q.right)];
+    };
+    const out = (x0, x1) => [Math.floor((x0 - fs / 4) / cell + 1e-6) * cell, Math.ceil((x1 + fs / 4) / cell - 1e-6) * cell];
+    // every word: the resting text, and the glitch face's letters run together between spaces
+    const words = [];
+    const tw = document.createTreeWalker(a, NodeFilter.SHOW_TEXT);
+    for (let n = tw.nextNode(); n; n = tw.nextNode()) {
+      if (!n.nodeValue.trim() || n.parentElement.closest('.sr-only, [data-wire], [data-true], [data-glitch]')) continue;
+      for (const m of n.nodeValue.matchAll(/\S+/g)) {
+        rg.setStart(n, m.index);
+        rg.setEnd(n, m.index + m[0].length);
+        for (const q of rg.getClientRects()) if (q.width > 0) words.push([X(q.left), X(q.right)]);
+      }
+    }
+    const w = a.querySelector('[data-word]');
+    const ov = a.querySelector('[data-glitch]');
+    let run = null;
+    for (const c of ov ? ov.children : []) {
+      const q = c.getBoundingClientRect();
+      if (c.tagName === 'BR' || !c.textContent.trim()) {
+        if (run) words.push(run);
+        run = null;
+      } else run = run ? [run[0], X(q.right)] : [X(q.left), X(q.right)];
+    }
+    if (run) words.push(run);
+    const tag = a.querySelector('.cs > span');
+    const lab = [box(w), ...(ov ? [box(ov)] : []), ...(tag ? [[X(tag.getBoundingClientRect().left), X(tag.getBoundingClientRect().right)]] : [])];
+    const cells = [out(Math.min(...lab.map((q) => q[0])), Math.max(...lab.map((q) => q[1])))];
+    const f = a.querySelector('.n, .l');
+    if (f && f.textContent.trim()) {
+      const q = box(f);
+      cells.push(a.hasAttribute('data-hue') ? [q[0] - cell, q[1] + cell] : out(q[0], q[1]));
+    }
+    const wr = w.getBoundingClientRect();
+    const or = ov ? ov.getBoundingClientRect() : wr;
+    return {
+      R: +R.toFixed(2),
+      onGrid: Math.abs(R / cell - Math.round(R / cell)) * cell <= 0.51 || Math.abs(R - bw) <= 0.51,
+      inCell: cells.some(([x0, x1]) => R > x0 + 0.5 && R < x1 - 0.5),
+      inWord: words.some(([l, q]) => R > l + 0.5 && R < q - 0.5),
+      holds: band.left <= Math.min(wr.left, or.left) + 0.5 && band.right >= Math.max(wr.right, or.right) - 0.5,
+    };
+  };
+  /** The shape spring has come to rest on its target, as the dress's own clock judges it. */
+  const atRest = () =>
+    dp.waitForFunction(() => {
+      const a = document.querySelector('.menu a[data-hot], a.row[data-hot]');
+      const st = a && window.__dress.state(a);
+      return !!st && st.t >= st.start && st.S.every((v, i) => Math.abs(v - st.T[i]) <= 0.5) && st.V.every((v) => Math.abs(v) <= 2);
+    }, null, { timeout: 5000 }).then(() => true, () => false);
+  const pdRows = await dp.evaluate(() =>
+    [...document.querySelectorAll('a.row:not(nav a)')].map((a, i) => {
+      const rg = document.createRange();
+      rg.selectNodeContents(a.querySelector('.l'));
+      return { i, lines: new Set([...rg.getClientRects()].map((q) => Math.round(q.top))).size, dither: /dither/.test(a.getAttribute('href')) };
+    }),
+  );
+  const pick = (n) => pdRows.find((x) => x.lines === n && !x.dither)?.i ?? -1;
+  const ditherAt = pdRows.find((x) => x.dither)?.i ?? -1;
+  const edgeRows = [['a one-line row', pick(1)], ['a two-line row', pick(2)], ['the three-line +dither row', ditherAt]];
+  for (const shape of ['reach', 'ratio']) {
+    const bad = [];
+    let n = 0;
+    const sweep = async (sel, i, what) => {
+      const q = await dp.evaluate(([s, k]) => { const a = document.querySelectorAll(s)[k]; a.scrollIntoView({ block: 'center' }); const r = a.getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; }, [sel, i]);
+      await sleep(200);
+      await enter(q, q[2] * 0.5 / 12, 0);
+      for (let k = 0; k < 12; k++) {
+        await dp.mouse.move(q[0] + (q[2] * (k + 0.5)) / 12, q[1] + q[3] / 2);
+        await dp.evaluate(() => new Promise((res) => requestAnimationFrame(() => requestAnimationFrame(res))));
+        const rested = await atRest();
+        const e = await dp.evaluate(edgeFacts);
+        n++;
+        if (!rested || !e || !e.onGrid || e.inCell || e.inWord || !e.holds) bad.push(`${what} ${k} ${JSON.stringify({ rested, ...e })}`);
+      }
+    };
+    await dp.evaluate((s) => window.__dress.force({ shape: s, dress: 'plain' }), shape);
+    for (const [what, i] of edgeRows) {
+      if (i < 0) bad.push(`no ${what}`);
+      else await sweep('a.row:not(nav a)', i, what);
+    }
+    await dp.goto(`${BASE}/`, { waitUntil: 'networkidle' });
+    await settle(dp);
+    await dp.waitForFunction(() => !!window.__dress, null, { timeout: 8000 });
+    await dp.evaluate((s) => window.__dress.force({ shape: s, dress: 'plain' }), shape);
+    await sweep('.menu a', 1, 'a home menu row');
+    ok(bad.length === 0 && n === 48, `${shape}: on a one-line row, a two-line row, the three-line +dither row and a home menu row, twelve cursor positions each, the free edge rests on the mono cell, never inside a block of type or a word, and the whole label is on the band`, bad.slice(0, 6).join(' | '));
+    await dp.goto(`${BASE}/product-designs/`, { waitUntil: 'networkidle' });
+    await settle(dp);
+    await dp.waitForFunction(() => !!window.__dress, null, { timeout: 8000 });
+  }
+  // The Cut's rows follow the lines: every horizontal cut between two lines of the row's tallest block of type.
+  /** The hot row's Cut: its horizontal cuts and its line boundaries (px from the top), and whether the label keeps one whole cell. */
+  const cutFacts = () => {
+    const a = document.querySelector('.menu a[data-hot], a.row[data-hot]');
+    const st = a && window.__dress.state(a);
+    if (!st || !st.cutGeo) return null;
+    const r = a.getBoundingClientRect();
+    const bh = a.offsetHeight;
+    const lines = (rects) => {
+      const out = [];
+      for (const q of rects.filter((x) => x.width > 0.5).sort((p, q2) => p.top - q2.top)) {
+        const t = q.top - r.top;
+        const u = q.bottom - r.top;
+        const cur = out[out.length - 1];
+        if (cur && t < (cur[0] + cur[1]) / 2) cur[1] = Math.max(cur[1], u);
+        else out.push([t, u]);
+      }
+      return out;
+    };
+    const text = (el) => {
+      if (!el) return [];
+      const out = [];
+      const tw = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+      const rg = document.createRange();
+      for (let n = tw.nextNode(); n; n = tw.nextNode()) {
+        if (!n.nodeValue.trim() || n.parentElement.closest('[data-glitch], .sr-only')) continue;
+        rg.selectNodeContents(n);
+        out.push(...rg.getClientRects());
+      }
+      return out;
+    };
+    const tag = a.querySelector('.cs > span');
+    const lab = lines([...text(a.querySelector('[data-word]')), ...(tag ? [tag.getBoundingClientRect()] : [])]);
+    const fig = lines(text(a.querySelector('.n, .l')));
+    const tall = (ls) => (ls.length ? ls[ls.length - 1][1] - ls[0][0] : 0);
+    const block = tall(fig) > tall(lab) ? fig : lab;
+    const gapsAt = block.slice(1).map((l, i) => (block[i][1] + l[0]) / 2);
+    const cuts = [...new Set(st.cutGeo.filter(([, , y]) => y > 0.001).map(([, , y]) => +(y * bh).toFixed(2)))];
+    const w = a.querySelector('[data-word]').getBoundingClientRect();
+    const L = { x0: w.left - r.left, x1: w.right - r.left, y0: w.top - r.top, y1: w.bottom - r.top };
+    const whole = st.cutGeo.some(([x, cw, y, ch]) => x * st.cutW <= L.x0 + 0.5 && (x + cw > 0.999 ? a.offsetWidth : (x + cw) * st.cutW) >= L.x1 - 0.5 && y * bh <= L.y0 + 0.5 && (y + ch) * bh >= L.y1 - 0.5);
+    return { lines: block.length, gaps: gapsAt.map((v) => +v.toFixed(2)), cuts, onLines: cuts.every((c) => gapsAt.some((g) => Math.abs(g - c) <= 0.5)), whole };
+  };
+  const cutBad = [];
+  const linesSeen = new Set();
+  let cutsSeen = 0;
+  // a few hovers of each row: every Cut is a fresh draw of Chickpea's grid
+  const cutHover = async (sel, i, k) => {
+    const q = await dp.evaluate(([s2, j]) => { const a = document.querySelectorAll(s2)[j]; a.scrollIntoView({ block: 'center' }); const r = a.getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; }, [sel, i]);
+    await sleep(150);
+    await enter(q, 300 + 90 * k, 250);
+    const c = await dp.evaluate(cutFacts);
+    const v = await view();
+    const credit = await dp.evaluate(() => document.querySelector('.lin-credit')?.textContent ?? null);
+    if (c) linesSeen.add(c.lines);
+    if (c && c.lines > 1) cutsSeen += c.cuts.length;
+    // credited, unless it is a project's own row, which already says where it came from
+    const own = await dp.evaluate(([s2, j]) => document.querySelectorAll(s2)[j].hasAttribute('data-lin'), [sel, i]);
+    if (!c || !c.onLines || !c.whole || (c.lines === 1 && c.cuts.length) || !(v.worst >= 4.5) || (!own && credit !== 'from chickpea')) cutBad.push(`${sel} ${i} ${JSON.stringify({ ...c, worst: v.worst, credit, own })}`);
+  };
+  await dp.evaluate(() => window.__dress.force({ shape: 'full', dress: 'cut' }));
+  for (const i of [pick(1), pick(2), ditherAt]) for (let k = 0; k < 4; k++) await cutHover('a.row:not(nav a)', i, k);
+  await dp.goto(`${BASE}/`, { waitUntil: 'networkidle' });
+  await settle(dp);
+  await dp.waitForFunction(() => !!window.__dress, null, { timeout: 8000 });
+  await dp.evaluate(() => window.__dress.force({ shape: 'full', dress: 'cut' }));
+  for (let k = 0; k < 2; k++) await cutHover('.menu a', 1, k);
+  ok(cutsSeen > 0 && cutBad.length === 0 && [1, 2, 3].every((n) => linesSeen.has(n)), `the Cut on rows of one, two and three lines: every horizontal cut Chickpea’s composeGrid proposes lands between two lines of the row’s tallest block of type (${cutsSeen} cuts), a one-line row has none, the label keeps one whole, legible cell, credited "from chickpea" (a project's own row: no credit)`, `${[...linesSeen]} | ${cutBad.slice(0, 4).join(' | ')}`);
   await dp.evaluate(() => window.__dress.force(null));
   const rmc = await browser.newContext({ viewport: { width: 1728, height: 908 }, reducedMotion: 'reduce' });
   const rmp = await rmc.newPage();
