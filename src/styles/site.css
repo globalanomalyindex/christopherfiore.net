@@ -1072,17 +1072,29 @@ a.row[data-hot] {
   background: var(--t);
 }
 
+/*
+  Every painting stands on the bottom of its box, right on its title, so the
+  gap from picture to title is the same on every tile, wide or tall. The film
+  reads this object-position to put its coloured marks on the picture.
+*/
 .tile img {
   display: block;
   width: 100%;
   height: 8.3333em;
   object-fit: contain;
+  object-position: 50% 100%;
 }
 
+/*
+  A title always fits its tile: even one very long word breaks inside it.
+  The hover keeps the resting lines letter for letter (glitch.ts), so it
+  breaks in the same places.
+*/
 .tile .cell {
   display: block;
   padding: 0 0.5em;
   font-weight: 700;
+  overflow-wrap: anywhere;
 }
 
 /* how a subpage ends: the signature, small */
@@ -1233,6 +1245,16 @@ a.row,
   position: relative;
   display: inline-block;
   max-width: 100%;
+}
+
+/*
+  Lines level. The glitch face is set at 1.14em, and a letter that size would
+  stretch its line box and push the baseline down 3 to 4px. A letter of the
+  overlay adds nothing to the line box, so the overlay's lines are exactly the
+  resting ones: every baseline, and the pitch between lines, holds on hover.
+*/
+[data-glitch] > span {
+  line-height: 0;
 }
 
 /*

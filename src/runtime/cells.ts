@@ -72,20 +72,29 @@ export function blocks(b: HTMLElement, menuFig: boolean): Block[] {
 }
 
 /**
+ * Each block's own cell, unmerged, in button px: the block padded 0.25em,
+ * its sides snapped outward to the mono cell. A menu row's figure keeps the
+ * band's own figure cell. In the blocks' order, so the label's comes first.
+ * The dress's free edge stops on these (dress.ts), so a band holds a block
+ * of type whole or not at all.
+ */
+export function own(bl: Block[], fs: number): { x0: number; x1: number }[] {
+  const cell = fs / 2;
+  const pad = 0.25 * fs;
+  return bl.map((k) => ({
+    x0: k.fig ? k.x0 : Math.floor((k.x0 - pad) / cell + 1e-6) * cell,
+    x1: k.fig ? k.x1 : Math.ceil((k.x1 + pad) / cell - 1e-6) * cell,
+  }));
+}
+
+/**
  * The cells and blanks of a band from L to R (button px), for type at font
  * size `fs`. Null when no blank of 3em is left: then nothing is laid out.
  */
 export function layout(bl: Block[], L: number, R: number, fs: number): Lay | null {
-  const cell = fs / 2;
-  const pad = 0.25 * fs;
   const min = 3 * fs;
-  const cs: TCell[] = bl
-    .map((k) => {
-      // a menu row's figure keeps the band's own figure cell; every other block, padded and on the mono cell
-      const x0 = k.fig ? k.x0 : Math.floor((k.x0 - pad) / cell + 1e-6) * cell;
-      const x1 = k.fig ? k.x1 : Math.ceil((k.x1 + pad) / cell - 1e-6) * cell;
-      return { x0: Math.max(L, x0), x1: Math.min(R, x1), toL: false, toR: false };
-    })
+  const cs: TCell[] = own(bl, fs)
+    .map((c) => ({ x0: Math.max(L, c.x0), x1: Math.min(R, c.x1), toL: false, toR: false }))
     .filter((c) => c.x1 > c.x0)
     .sort((p, q) => p.x0 - q.x0);
   if (!cs.length) return null;
@@ -111,6 +120,49 @@ export function layout(bl: Block[], L: number, R: number, fs: number): Lay | nul
   for (let i = 0; i < cells.length - 1; i++) blanks.push({ a: cells[i].x1, b: cells[i + 1].x0 });
   if (!last.toR) blanks.push({ a: last.x1, b: 'R' });
   return blanks.length ? { cells, blanks } : null;
+}
+
+/**
+ * Where a horizontal cut may run without crossing a line of type: the
+ * boundaries between the lines of the button's tallest block (the label, its
+ * lines and its tag, or the figure or detail), halfway from one line's foot
+ * to the next one's head, in button px from the top. Empty when that block
+ * is one line.
+ */
+export function gaps(b: HTMLElement): number[] {
+  const r = b.getBoundingClientRect();
+  const sc = r.height / (b.offsetHeight || r.height) || 1;
+  const lines = (rects: DOMRect[]): [number, number][] => {
+    const out: [number, number][] = [];
+    for (const q of rects.filter((x) => x.width > 0.5 && x.height > 0).sort((p, q) => p.top - q.top)) {
+      const t = (q.top - r.top) / sc;
+      const u = (q.bottom - r.top) / sc;
+      const cur = out[out.length - 1];
+      // the same line: it starts above the middle of the one before
+      if (cur && t < (cur[0] + cur[1]) / 2) cur[1] = Math.max(cur[1], u);
+      else out.push([t, u]);
+    }
+    return out;
+  };
+  const textRects = (el: Element | null): DOMRect[] => {
+    if (!el || !el.textContent?.trim()) return [];
+    const out: DOMRect[] = [];
+    const tw = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    const range = document.createRange();
+    for (let n = tw.nextNode(); n; n = tw.nextNode()) {
+      // the resting word only: the glitch's face keeps its lines
+      if (!n.nodeValue?.trim() || n.parentElement?.closest('[data-glitch], .sr-only')) continue;
+      range.selectNodeContents(n);
+      out.push(...Array.from(range.getClientRects()));
+    }
+    return out;
+  };
+  const tag = b.querySelector('.cs > span');
+  const label = lines([...textRects(b.querySelector('[data-word]')), ...(tag ? [tag.getBoundingClientRect()] : [])]);
+  const fig = lines(textRects(b.querySelector('.n, .l')));
+  const tall = (ls: [number, number][]) => (ls.length ? ls[ls.length - 1][1] - ls[0][0] : 0);
+  const block = tall(fig) > tall(label) ? fig : label;
+  return block.slice(1).map((l, i) => (block[i][1] + l[0]) / 2);
 }
 
 /**

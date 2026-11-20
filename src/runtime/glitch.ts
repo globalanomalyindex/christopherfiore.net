@@ -16,7 +16,7 @@
  * scale instead of going stale on every resize.
  */
 
-import { tail, type Letter } from './ink.ts';
+import { ALT as ALT_FACE, tail, type Letter } from './ink.ts';
 
 export { tail };
 
@@ -29,9 +29,6 @@ const FEAT = "'salt' 1, 'ss01' 1";
  */
 const ALT_SIZE = '1.14em';
 
-/** Labels found to sit on one line when reserved. Their overlay never wraps. */
-const oneLine = new WeakSet<HTMLElement>();
-
 /** The label, without any overlay text a live glitch has appended. */
 const labelOf = (w: HTMLElement): string =>
   Array.from(w.childNodes)
@@ -41,21 +38,34 @@ const labelOf = (w: HTMLElement): string =>
 
 const isGlitching = (w: HTMLElement) => !!w.querySelector('[data-glitch]');
 
+/**
+ * What a label's overlay needs, worked out on its first hover at a width and
+ * kept until the next resize or font load (`reserve()` starts afresh): where
+ * its resting lines start, whether it keeps its "..." tail, and how much a
+ * line too wide for its cell is narrowed. Most hovers then measure nothing.
+ */
+interface Fit {
+  key: string;
+  starts: number[];
+  tail: boolean;
+  scale: number;
+}
+let fits = new WeakMap<HTMLElement, Fit>();
+
 /** Measure every label twice and reserve the wider. Safe to call again on resize. */
 export function reserve(root: ParentNode = document): void {
+  fits = new WeakMap();
   root.querySelectorAll<HTMLElement>('[data-word]').forEach((w) => {
     if (isGlitching(w)) return;
     const txt = labelOf(w);
     w.style.minWidth = '';
     w.style.textAlign = '';
-    oneLine.delete(w);
     if (!txt.trim()) return;
 
     const range = document.createRange();
     range.selectNodeContents(w);
     const lines = new Set(Array.from(range.getClientRects()).map((r) => Math.round(r.top))).size;
     if (lines !== 1) return;
-    oneLine.add(w);
 
     const probe = (alt: boolean) => {
       const s = document.createElement('span');
@@ -106,9 +116,73 @@ export interface Face {
 }
 
 /**
+ * Where the resting label's lines start: the index, by character (code
+ * point, as the overlay's spans are cut), of the first letter of each line
+ * after the first. Empty when the label sits on one line. A space belongs to
+ * the line it ends, so a line always starts on a letter, or mid-word where a
+ * long word had to break.
+ */
+function lineStarts(w: HTMLElement): number[] {
+  const nodes = Array.from(w.childNodes).filter((n): n is Text => n.nodeType === Node.TEXT_NODE);
+  const range = document.createRange();
+  range.selectNodeContents(w);
+  if (new Set(Array.from(range.getClientRects()).map((r) => Math.round(r.top))).size < 2) return [];
+  const starts: number[] = [];
+  let line: DOMRect | null = null;
+  let k = 0;
+  for (const n of nodes) {
+    let i = 0;
+    for (const ch of n.nodeValue ?? '') {
+      if (ch.trim()) {
+        range.setStart(n, i);
+        range.setEnd(n, i + ch.length);
+        const q = range.getClientRects()[0];
+        if (q) {
+          // a new line: this letter sits below the middle of the line before
+          if (line && q.top >= (line.top + line.bottom) / 2) starts.push(k);
+          if (!line || q.top >= (line.top + line.bottom) / 2) line = q;
+        }
+      }
+      i += ch.length;
+      k++;
+    }
+  }
+  return starts;
+}
+
+/** Each line of an overlay, as its letter spans: the lines are the runs between its forced breaks. */
+const linesOf = (ov: HTMLElement): HTMLSpanElement[][] => {
+  const out: HTMLSpanElement[][] = [[]];
+  for (const c of Array.from(ov.children)) {
+    if (c.tagName === 'BR') out.push([]);
+    else out[out.length - 1].push(c as HTMLSpanElement);
+  }
+  return out;
+};
+
+/** How far each line of an overlay reaches, in px from its left edge, to its furthest inked letter. */
+const lineWidths = (ov: HTMLElement): number[] => {
+  const o = ov.getBoundingClientRect().left;
+  return linesOf(ov).map((ln) => Math.max(0, ...ln.filter((s) => (s.textContent ?? '').trim()).map((s) => s.getBoundingClientRect().right - o)));
+};
+
+/**
  * Lay an overlay over every label in `b`. The resting word goes clear and
  * the overlay, the same text plus its tail, takes its place, inside the box
  * `reserve()` kept for it. The clock paints the overlay; nothing here moves.
+ *
+ * LINES LOCKED (his note: "the words to not shift from non-hover to hover").
+ * A label that wraps at rest gets an overlay that never wraps on its own: it
+ * is set nowrap with a forced break before the first letter of each resting
+ * line, so the hover has exactly the resting lines and no word can change
+ * line. If the last line and its "..." would be wider than the cell in the
+ * glitch face, that label goes without its tail. A line still too wide (a
+ * run of capitals, say) is narrowed as a whole to fit, never wrapped. A
+ * painting's title is held to its tile the same way on one line.
+ *
+ * LINES LEVEL. The overlay keeps the resting line-height, and its letters add
+ * nothing to the line box (`[data-glitch] > span` in site.css), so every
+ * baseline sits where it was at rest and the pitch between lines holds.
  */
 export function faces(b: HTMLElement): Face[] {
   const out: Face[] = [];
@@ -119,19 +193,62 @@ export function faces(b: HTMLElement): Face[] {
     const pl = parseFloat(cs.paddingLeft) || 0;
     const pr = parseFloat(cs.paddingRight) || 0;
     const pt = parseFloat(cs.paddingTop) || 0;
+    // the content box, unrounded: the room every line of the overlay has
+    const cw = parseFloat(cs.width);
+    const room = cw ? cw - (cs.boxSizing === 'border-box' ? pl + pr : 0) : w.clientWidth - pl - pr;
+    const cell = w.parentElement ?? w;
+    const key = `${txt}|${room.toFixed(2)}|${cell.clientWidth}`;
+    const had = fits.get(w);
+    const fit = had && had.key === key ? had : null;
+    const starts = fit ? fit.starts : lineStarts(w);
     const ov = document.createElement('span');
     ov.setAttribute('aria-hidden', 'true');
     ov.setAttribute('data-glitch', '');
     ov.style.cssText =
-      `position:absolute;left:${pl}px;top:${pt}px;width:${w.clientWidth - pl - pr}px;` +
-      `pointer-events:none;white-space:${oneLine.has(w) ? 'nowrap' : 'normal'};text-align:${cs.textAlign}`;
-    const spans = Array.from(txt + tail(txt)).map((ch) => {
+      `position:absolute;left:${pl}px;top:${pt}px;width:${room}px;` +
+      `pointer-events:none;white-space:nowrap;text-align:${cs.textAlign}`;
+    const n = Array.from(txt).length;
+    const spans = Array.from(txt + (!fit || fit.tail ? tail(txt) : '')).map((ch, i) => {
+      if (starts.includes(i)) ov.appendChild(document.createElement('br'));
       const s = document.createElement('span');
       s.textContent = ch;
       ov.appendChild(s);
       return s;
     });
     w.appendChild(ov);
+    let scale = fit ? fit.scale : 1;
+    if (!fit) {
+      // a painting's title: its tile is its cell, on one line as on several
+      const fixed = !!w.closest('.tile');
+      let keep = true;
+      if (starts.length || fixed) {
+        // measured in the face the hover lands in: every letter in the glitch face, spaces in the mono
+        spans.forEach((s) => {
+          if (s.textContent?.trim()) s.setAttribute('style', ALT_FACE);
+        });
+        // in layout px (a press may already be scaling the button), up to the cell's content edge
+        const wr = w.getBoundingClientRect();
+        const k = wr.width / (room + pl + pr || 1) || 1;
+        const ccs = getComputedStyle(cell);
+        const edge = (cell.getBoundingClientRect().right - ((parseFloat(ccs.paddingRight) || 0) + (parseFloat(ccs.borderRightWidth) || 0)) * k - (wr.left + pl * k)) / k;
+        const avail = fixed ? edge : room;
+        let widths = lineWidths(ov).map((x) => x / k);
+        if (spans.length > n && widths[widths.length - 1] > avail + 0.5) {
+          keep = false;
+          spans.splice(n).forEach((s) => s.remove());
+          widths = lineWidths(ov).map((x) => x / k);
+        }
+        const widest = Math.max(...widths);
+        if (widest > avail + 0.5) scale = avail / widest;
+        spans.forEach((s) => s.removeAttribute('style'));
+      }
+      fits.set(w, { key, starts, tail: keep, scale });
+    }
+    if (scale < 1) {
+      const o = cs.textAlign === 'right' || cs.textAlign === 'end' ? '100%' : cs.textAlign === 'center' ? '50%' : '0';
+      ov.style.transform = `scaleX(${scale.toFixed(4)})`;
+      ov.style.transformOrigin = `${o} 0`;
+    }
     w.style.color = 'transparent';
     out.push({ w, ov, spans, label: txt });
   });

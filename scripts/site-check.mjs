@@ -694,16 +694,24 @@ try {
   }
 
   // Every label, in both faces: the hover label never runs out of its cell
-  // into the column beside it.
+  // into the column beside it. The hover keeps the resting lines (glitch.ts),
+  // so each resting line, the last with its tail, must fit the cell in the
+  // face the hover lands in: letters in Dessign Maison, spaces in the mono.
   for (const path of ['/product-designs/', '/paintings/', '/about/', '/product-designs/guestpass/']) {
     await page.goto(BASE + path, { waitUntil: 'networkidle' });
     await settle(page);
     const spill = await page.evaluate(() =>
       Array.from(document.querySelectorAll('.nm [data-word], .cell [data-word], .fig [data-word]')).flatMap((w) => {
+        const ALT = "font-family:'Dessign Maison',Georgia,serif;font-feature-settings:'salt' 1,'ss01' 1;font-size:1.14em;font-weight:400";
         const width = (text) => {
           const s = document.createElement('span');
-          s.textContent = text;
-          s.style.cssText = "position:absolute;visibility:hidden;white-space:pre;left:0;top:0;font-family:'Dessign Maison',Georgia,serif;font-feature-settings:'salt' 1,'ss01' 1;font-size:1.14em;font-weight:400";
+          s.style.cssText = 'position:absolute;visibility:hidden;white-space:pre;left:0;top:0';
+          for (const ch of Array.from(text)) {
+            const c = document.createElement('span');
+            c.textContent = ch;
+            if (ch.trim()) c.style.cssText = ALT;
+            s.appendChild(c);
+          }
           w.appendChild(s);
           const x = s.getBoundingClientRect().width;
           s.remove();
@@ -711,19 +719,36 @@ try {
         };
         const cell = w.parentElement;
         const cs = getComputedStyle(cell);
-        // the overlay starts at the cell's left padding and may run to its edge
-        const room = cell.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
-        // A name too long for its column wraps at rest, and its overlay wraps with it:
-        // then every word, and the last with its tail, must fit the column on its own.
-        const range = document.createRange();
-        range.selectNodeContents(w.firstChild);
-        const lines = new Set(Array.from(range.getClientRects()).map((r) => Math.round(r.top))).size;
-        const pieces = lines > 1 ? w.textContent.split(' ').map((p, i, a) => (i === a.length - 1 ? `${p}...` : p)) : [`${w.textContent}...`];
+        // the overlay starts at the cell's left padding and may run to its edge; the
+        // header's figure chip is sized to its word, and its face may use the chip's own padding
+        const room = cell.clientWidth - parseFloat(cs.paddingLeft) - (cell.matches('.fig') ? 0 : parseFloat(cs.paddingRight));
+        // the resting lines, each letter on the line its own box sits on
+        const label = [...w.childNodes].filter((n) => n.nodeType === 3).map((n) => n.nodeValue).join('');
+        const lines = [];
+        let at = null;
+        const rg = document.createRange();
+        for (const n of [...w.childNodes].filter((c) => c.nodeType === 3)) {
+          let i = 0;
+          for (const ch of n.nodeValue) {
+            if (ch.trim()) {
+              rg.setStart(n, i);
+              rg.setEnd(n, i + ch.length);
+              const q = rg.getClientRects()[0];
+              if (q && (!at || q.top >= (at.top + at.bottom) / 2)) {
+                lines.push('');
+                at = q;
+              }
+            }
+            if (lines.length) lines[lines.length - 1] += ch;
+            i += ch.length;
+          }
+        }
+        const pieces = lines.map((l, i) => (i === lines.length - 1 && !label.includes('@') ? `${l.trim()}...` : l.trim()));
         const widest = Math.max(...pieces.map(width));
-        return widest > room + 0.5 ? [`${w.textContent} ${Math.round(widest)}>${Math.round(room)}`] : [];
+        return widest > room + 0.5 ? [`${label} (${lines.length} lines) ${Math.round(widest)}>${Math.round(room)}`] : [];
       }),
     );
-    ok(spill.length === 0, `${path}: every hover label fits its cell`, spill.join(' | '));
+    ok(spill.length === 0, `${path}: every hover label fits its cell, each resting line in the glitch face, the last with its tail`, spill.join(' | '));
   }
 
   // The back button answers for itself: no band, no glitch, no magnet. JellyBox's material leans; the X stays still.
@@ -2042,13 +2067,20 @@ try {
   await settle(dp);
   await dp.waitForFunction(() => !!window.__dress, null, { timeout: 8000 });
   const rows = await dp.evaluate(() => [...document.querySelectorAll('.menu a')].map((a) => { const r = a.getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; }));
-  const enter = async (r, x, wait = 620) => {
+  /** The dress on the hot button has begun and run `after` ms, by its own clock: never a sleep counted from the dwell. */
+  const begun = (pg, after = 0) =>
+    pg.waitForFunction((n) => {
+      const a = document.querySelector('.menu a[data-hot], a.row[data-hot]');
+      const st = a && window.__dress.state(a);
+      return !!st && st.t >= st.start + n;
+    }, after, { timeout: 5000 }).then(() => true, () => false);
+  const enter = async (r, x, after = 300) => {
     await dp.mouse.move(1600, 880);
     await sleep(260);
     await dp.mouse.move(r[0] + x, r[1] - 3);
     await sleep(260);
     await dp.mouse.move(r[0] + x, r[1] + r[3] / 2, { steps: 2 });
-    await sleep(wait);
+    await begun(dp, after);
   };
   const view = () =>
     dp.evaluate(() => {
@@ -2086,7 +2118,7 @@ try {
   await dp.evaluate(() => window.__ink.seed(11));
   const seen = [];
   for (let i = 0; i < 12; i++) {
-    await enter(rows[1], 300, 330);
+    await enter(rows[1], 300, 30);
     seen.push(await view());
   }
   const tuple = (v) => v && v.st && `${v.st.shape}|${v.st.wire}|${v.st.cut}|${v.strips}`;
@@ -2109,10 +2141,10 @@ try {
     await dp.mouse.move(1600, 880);
     await sleep(300);
     const b4 = await dp.evaluate(layout);
-    await enter(rows[2], 528, 330);
+    await enter(rows[2], 528, 30);
     const mid = await dp.evaluate(layout);
     const heldMid = await holds();
-    await sleep(400);
+    await begun(dp, 500);
     const v = await view();
     const heldEnd = await holds();
     const after = await dp.evaluate(layout);
@@ -2122,7 +2154,7 @@ try {
     const land =
       shape === 'full' ? JSON.stringify(v.host) === '[0,0,0,0]' :
       shape === 'reach' ? Math.abs(R - 560) <= 1 :
-      shape === 'ratio' ? Math.abs(R - W / 2) <= 1 :
+      shape === 'ratio' ? Math.abs(R - Math.round(W / 2 / 20) * 20) <= 1 :
       v.host[1] < 0 && v.host[3] > 0;
     ok(land && same && heldMid && heldEnd, `${shape}: it lands where the cursor puts it, holds the whole label, and no layout box moves`, JSON.stringify([v.host, same, heldMid, heldEnd]));
   }
@@ -2161,7 +2193,7 @@ try {
   ok(guideCell === 'hidden', 'with the cursor over a cell, the guide is gone at once', guideCell);
   // The Cut: Chickpea's grid in steps of the page colour, the label in a whole cell.
   await dp.evaluate(() => window.__dress.force({ shape: 'full', dress: 'cut' }));
-  await enter(rows[1], 520, 500);
+  await enter(rows[1], 520, 250);
   const c1 = await view();
   const credit = await dp.evaluate(() => document.querySelector('.lin-credit')?.textContent ?? null);
   ok(c1.st.cut && c1.st.cells.length >= 2 && c1.worst >= 4.5 && credit === 'from chickpea', 'the Cut tiles the row with Chickpea’s composeGrid, the label’s cell legible, credited "from chickpea"', JSON.stringify([c1.st.cells, c1.worst, credit]));
@@ -2209,14 +2241,14 @@ try {
   const trues = [];
   for (let i = 0; i < 10; i++) {
     await dp.evaluate(() => window.__dress.force({ shape: 'reach', dress: 'plain' }));
-    await enter(rows[3], 300, 620);
+    await enter(rows[3], 300, 400);
     trues.push(await trueView());
   }
   const marks = trues.map((t) => t?.mark);
   ok(trues.every((t) => t && JSON.stringify(t.box) === '[0,0,0,0]' && +t.op > 0.4), 'every resizing hover keeps the true size in view, drawn on the button’s own box', JSON.stringify(trues[0]));
   ok(new Set(marks.slice(0, 5)).size === 5 && new Set(marks.slice(5, 10)).size === 5, 'its marks come from a deck: plus, rule, ticks, wash and dots in each round of five', marks.join(' '));
   await dp.evaluate(() => window.__dress.force({ shape: 'full', dress: 'plain' }));
-  await enter(rows[3], 300, 620);
+  await enter(rows[3], 300, 400);
   ok((await trueView()) === null, 'a band at the button’s own size needs no true-size mark');
   // Emil: a sweep across the menu sets nothing off; the dress waits for the 220ms dwell.
   await dp.evaluate(() => window.__dress.force({ shape: 'reach', dress: 'cutwire' }));
@@ -2237,7 +2269,9 @@ try {
   ok(swept.length === 0 && sweptAny === 0, 'a sweep across the menu deals no dress: it waits for the dwell', JSON.stringify([swept, sweptAny]));
   // Emil: once a wired hover settles, the clock stops; nothing is written while the pointer rests.
   await dp.evaluate(() => window.__dress.force({ shape: 'full', dress: 'wire' }));
-  await enter(rows[1], 400, 1300);
+  // the dress's clock runs to 650ms after it begins, then stops once the springs settle
+  await enter(rows[1], 400, 640);
+  await sleep(300);
   const writes = await dp.evaluate(() => new Promise((res) => {
     let n = 0;
     const a = document.querySelector('.menu a[data-hot]');
@@ -2306,7 +2340,7 @@ try {
   await dp.evaluate(() => window.__dress.force({ shape: 'tall', dress: 'cutwire' }));
   const sr = await dp.evaluate(() => { const a = document.querySelectorAll('a.row:not([data-lin])')[3]; a.scrollIntoView({ block: 'center' }); const q = a.getBoundingClientRect(); return [q.left, q.top, q.width, q.height]; });
   await sleep(300);
-  await enter(sr, 700, 600);
+  await enter(sr, 700, 300);
   const s1 = await view();
   const ovs = [-s1.host[1], s1.host[3]];
   ok(Math.max(...ovs) === 3 && Math.min(...ovs) >= 0.9 && s1.worst >= 4.5 && s1.chip && !s1.chipHitsLabel, 'on a page, Tall reaches 3px into the gap on the cursor’s side, the Cut stays legible, and the chip finds clear space', JSON.stringify([s1.host, s1.worst, s1.chip]));
@@ -2331,12 +2365,262 @@ try {
     await dp.evaluate(() => window.__dress.force({ shape: 'full', dress: 'wire' }));
     const q = await dp.evaluate((i) => { const a = document.querySelectorAll('a.row:not([data-lin])')[i]; a.scrollIntoView({ block: 'center' }); const r = a.getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; }, hit[0]);
     await sleep(200);
-    await enter(q, 450, 600);
+    await enter(q, 450, 300);
     const f = await dp.evaluate(wireFacts, 'a.row[data-hot]');
     const xa = xsHold(f);
     const xb = cellsHold(f);
     ok(xa.ok && xa.n >= 1 && xb.ok && xb.cells >= 2, `a ${lines}-line row: the name and the detail stand in their cells, an X in each blank, clear of every letter`, JSON.stringify([xa, xb]));
   }
+  // The band holds whole blocks of type: Reach and Ratio stop only between them, on the mono cell.
+  /** The hot button's free edge, against its blocks of type (padded a quarter em, out to the mono cell) and its words. */
+  const edgeFacts = () => {
+    const a = document.querySelector('.menu a[data-hot], a.row[data-hot]');
+    if (!a) return null;
+    // in the button's own px, to the fraction (no scale while hovered: the magnet only moves it)
+    const r = a.getBoundingClientRect();
+    const X = (v) => v - r.left;
+    const fs = parseFloat(getComputedStyle(a).fontSize);
+    const cell = fs / 2;
+    const bw = r.width;
+    const band = a.querySelector('[data-band]').getBoundingClientRect();
+    const R = X(band.right);
+    const rg = document.createRange();
+    const box = (el) => {
+      rg.selectNodeContents(el);
+      const q = rg.getBoundingClientRect();
+      return [X(q.left), X(q.right)];
+    };
+    const out = (x0, x1) => [Math.floor((x0 - fs / 4) / cell + 1e-6) * cell, Math.ceil((x1 + fs / 4) / cell - 1e-6) * cell];
+    // every word: the resting text, and the glitch face's letters run together between spaces
+    const words = [];
+    const tw = document.createTreeWalker(a, NodeFilter.SHOW_TEXT);
+    for (let n = tw.nextNode(); n; n = tw.nextNode()) {
+      if (!n.nodeValue.trim() || n.parentElement.closest('.sr-only, [data-wire], [data-true], [data-glitch]')) continue;
+      for (const m of n.nodeValue.matchAll(/\S+/g)) {
+        rg.setStart(n, m.index);
+        rg.setEnd(n, m.index + m[0].length);
+        for (const q of rg.getClientRects()) if (q.width > 0) words.push([X(q.left), X(q.right)]);
+      }
+    }
+    const w = a.querySelector('[data-word]');
+    const ov = a.querySelector('[data-glitch]');
+    let run = null;
+    for (const c of ov ? ov.children : []) {
+      const q = c.getBoundingClientRect();
+      if (c.tagName === 'BR' || !c.textContent.trim()) {
+        if (run) words.push(run);
+        run = null;
+      } else run = run ? [run[0], X(q.right)] : [X(q.left), X(q.right)];
+    }
+    if (run) words.push(run);
+    const tag = a.querySelector('.cs > span');
+    const lab = [box(w), ...(ov ? [box(ov)] : []), ...(tag ? [[X(tag.getBoundingClientRect().left), X(tag.getBoundingClientRect().right)]] : [])];
+    const cells = [out(Math.min(...lab.map((q) => q[0])), Math.max(...lab.map((q) => q[1])))];
+    const f = a.querySelector('.n, .l');
+    if (f && f.textContent.trim()) {
+      const q = box(f);
+      cells.push(a.hasAttribute('data-hue') ? [q[0] - cell, q[1] + cell] : out(q[0], q[1]));
+    }
+    const wr = w.getBoundingClientRect();
+    const or = ov ? ov.getBoundingClientRect() : wr;
+    return {
+      R: +R.toFixed(2),
+      onGrid: Math.abs(R / cell - Math.round(R / cell)) * cell <= 0.51 || Math.abs(R - bw) <= 0.51,
+      inCell: cells.some(([x0, x1]) => R > x0 + 0.5 && R < x1 - 0.5),
+      inWord: words.some(([l, q]) => R > l + 0.5 && R < q - 0.5),
+      holds: band.left <= Math.min(wr.left, or.left) + 0.5 && band.right >= Math.max(wr.right, or.right) - 0.5,
+    };
+  };
+  /** The shape spring has come to rest on its target, as the dress's own clock judges it. */
+  const atRest = () =>
+    dp.waitForFunction(() => {
+      const a = document.querySelector('.menu a[data-hot], a.row[data-hot]');
+      const st = a && window.__dress.state(a);
+      return !!st && st.t >= st.start && st.S.every((v, i) => Math.abs(v - st.T[i]) <= 0.5) && st.V.every((v) => Math.abs(v) <= 2);
+    }, null, { timeout: 5000 }).then(() => true, () => false);
+  const pdRows = await dp.evaluate(() =>
+    [...document.querySelectorAll('a.row:not(nav a)')].map((a, i) => {
+      const rg = document.createRange();
+      rg.selectNodeContents(a.querySelector('.l'));
+      return { i, lines: new Set([...rg.getClientRects()].map((q) => Math.round(q.top))).size, dither: /dither/.test(a.getAttribute('href')) };
+    }),
+  );
+  const pick = (n) => pdRows.find((x) => x.lines === n && !x.dither)?.i ?? -1;
+  const ditherAt = pdRows.find((x) => x.dither)?.i ?? -1;
+  const edgeRows = [['a one-line row', pick(1)], ['a two-line row', pick(2)], ['the three-line +dither row', ditherAt]];
+  for (const shape of ['reach', 'ratio']) {
+    const bad = [];
+    let n = 0;
+    const sweep = async (sel, i, what) => {
+      const q = await dp.evaluate(([s, k]) => { const a = document.querySelectorAll(s)[k]; a.scrollIntoView({ block: 'center' }); const r = a.getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; }, [sel, i]);
+      await sleep(200);
+      await enter(q, q[2] * 0.5 / 12, 0);
+      for (let k = 0; k < 12; k++) {
+        await dp.mouse.move(q[0] + (q[2] * (k + 0.5)) / 12, q[1] + q[3] / 2);
+        await dp.evaluate(() => new Promise((res) => requestAnimationFrame(() => requestAnimationFrame(res))));
+        const rested = await atRest();
+        const e = await dp.evaluate(edgeFacts);
+        n++;
+        if (!rested || !e || !e.onGrid || e.inCell || e.inWord || !e.holds) bad.push(`${what} ${k} ${JSON.stringify({ rested, ...e })}`);
+      }
+    };
+    await dp.evaluate((s) => window.__dress.force({ shape: s, dress: 'plain' }), shape);
+    for (const [what, i] of edgeRows) {
+      if (i < 0) bad.push(`no ${what}`);
+      else await sweep('a.row:not(nav a)', i, what);
+    }
+    await dp.goto(`${BASE}/`, { waitUntil: 'networkidle' });
+    await settle(dp);
+    await dp.waitForFunction(() => !!window.__dress, null, { timeout: 8000 });
+    await dp.evaluate((s) => window.__dress.force({ shape: s, dress: 'plain' }), shape);
+    await sweep('.menu a', 1, 'a home menu row');
+    ok(bad.length === 0 && n === 48, `${shape}: on a one-line row, a two-line row, the three-line +dither row and a home menu row, twelve cursor positions each, the free edge rests on the mono cell, never inside a block of type or a word, and the whole label is on the band`, bad.slice(0, 6).join(' | '));
+    await dp.goto(`${BASE}/product-designs/`, { waitUntil: 'networkidle' });
+    await settle(dp);
+    await dp.waitForFunction(() => !!window.__dress, null, { timeout: 8000 });
+  }
+  // The Cut's rows follow the lines: every horizontal cut between two lines of the row's tallest block of type.
+  /** The hot row's Cut: its horizontal cuts and its line boundaries (px from the top), and whether the label keeps one whole cell. */
+  const cutFacts = () => {
+    const a = document.querySelector('.menu a[data-hot], a.row[data-hot]');
+    const st = a && window.__dress.state(a);
+    if (!st || !st.cutGeo) return null;
+    const r = a.getBoundingClientRect();
+    const bh = a.offsetHeight;
+    const lines = (rects) => {
+      const out = [];
+      for (const q of rects.filter((x) => x.width > 0.5).sort((p, q2) => p.top - q2.top)) {
+        const t = q.top - r.top;
+        const u = q.bottom - r.top;
+        const cur = out[out.length - 1];
+        if (cur && t < (cur[0] + cur[1]) / 2) cur[1] = Math.max(cur[1], u);
+        else out.push([t, u]);
+      }
+      return out;
+    };
+    const text = (el) => {
+      if (!el) return [];
+      const out = [];
+      const tw = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+      const rg = document.createRange();
+      for (let n = tw.nextNode(); n; n = tw.nextNode()) {
+        if (!n.nodeValue.trim() || n.parentElement.closest('[data-glitch], .sr-only')) continue;
+        rg.selectNodeContents(n);
+        out.push(...rg.getClientRects());
+      }
+      return out;
+    };
+    const tag = a.querySelector('.cs > span');
+    const lab = lines([...text(a.querySelector('[data-word]')), ...(tag ? [tag.getBoundingClientRect()] : [])]);
+    const fig = lines(text(a.querySelector('.n, .l')));
+    const tall = (ls) => (ls.length ? ls[ls.length - 1][1] - ls[0][0] : 0);
+    const block = tall(fig) > tall(lab) ? fig : lab;
+    const gapsAt = block.slice(1).map((l, i) => (block[i][1] + l[0]) / 2);
+    const cuts = [...new Set(st.cutGeo.filter(([, , y]) => y > 0.001).map(([, , y]) => +(y * bh).toFixed(2)))];
+    const w = a.querySelector('[data-word]').getBoundingClientRect();
+    const L = { x0: w.left - r.left, x1: w.right - r.left, y0: w.top - r.top, y1: w.bottom - r.top };
+    const whole = st.cutGeo.some(([x, cw, y, ch]) => x * st.cutW <= L.x0 + 0.5 && (x + cw > 0.999 ? a.offsetWidth : (x + cw) * st.cutW) >= L.x1 - 0.5 && y * bh <= L.y0 + 0.5 && (y + ch) * bh >= L.y1 - 0.5);
+    return { lines: block.length, gaps: gapsAt.map((v) => +v.toFixed(2)), cuts, onLines: cuts.every((c) => gapsAt.some((g) => Math.abs(g - c) <= 0.5)), whole };
+  };
+  const cutBad = [];
+  const linesSeen = new Set();
+  let cutsSeen = 0;
+  // a few hovers of each row: every Cut is a fresh draw of Chickpea's grid
+  const cutHover = async (sel, i, k) => {
+    const q = await dp.evaluate(([s2, j]) => { const a = document.querySelectorAll(s2)[j]; a.scrollIntoView({ block: 'center' }); const r = a.getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; }, [sel, i]);
+    await sleep(150);
+    await enter(q, 300 + 90 * k, 250);
+    const c = await dp.evaluate(cutFacts);
+    const v = await view();
+    const credit = await dp.evaluate(() => document.querySelector('.lin-credit')?.textContent ?? null);
+    if (c) linesSeen.add(c.lines);
+    if (c && c.lines > 1) cutsSeen += c.cuts.length;
+    // credited, unless it is a project's own row, which already says where it came from
+    const own = await dp.evaluate(([s2, j]) => document.querySelectorAll(s2)[j].hasAttribute('data-lin'), [sel, i]);
+    if (!c || !c.onLines || !c.whole || (c.lines === 1 && c.cuts.length) || !(v.worst >= 4.5) || (!own && credit !== 'from chickpea')) cutBad.push(`${sel} ${i} ${JSON.stringify({ ...c, worst: v.worst, credit, own })}`);
+  };
+  await dp.evaluate(() => window.__dress.force({ shape: 'full', dress: 'cut' }));
+  for (const i of [pick(1), pick(2), ditherAt]) for (let k = 0; k < 4; k++) await cutHover('a.row:not(nav a)', i, k);
+  await dp.goto(`${BASE}/`, { waitUntil: 'networkidle' });
+  await settle(dp);
+  await dp.waitForFunction(() => !!window.__dress, null, { timeout: 8000 });
+  await dp.evaluate(() => window.__dress.force({ shape: 'full', dress: 'cut' }));
+  for (let k = 0; k < 2; k++) await cutHover('.menu a', 1, k);
+  ok(cutsSeen > 0 && cutBad.length === 0 && [1, 2, 3].every((n) => linesSeen.has(n)), `the Cut on rows of one, two and three lines: every horizontal cut Chickpea’s composeGrid proposes lands between two lines of the row’s tallest block of type (${cutsSeen} cuts), a one-line row has none, the label keeps one whole, legible cell, credited "from chickpea" (a project's own row: no credit)`, `${[...linesSeen]} | ${cutBad.slice(0, 4).join(' | ')}`);
+  // The rest before the dress, filmed on a paused clock: nothing of it before 295ms, then one thing at a time.
+  const cctx = await browser.newContext({ viewport: { width: 1728, height: 908 } });
+  await cctx.addInitScript(() => (window.__linHold = true));
+  const cp = await cctx.newPage();
+  await cp.clock.install();
+  /** One hover, frame by frame on the paused clock: the dress's own time, and everything it draws. */
+  const filmDress = async (path, sel, i, force, x) => {
+    await cp.goto(BASE + path, { waitUntil: 'networkidle' });
+    await settle(cp);
+    await cp.waitForFunction(() => !!window.__dress, null, { timeout: 8000 });
+    await cp.evaluate((f) => window.__dress.force(f), force);
+    const q = await cp.evaluate(([s, k]) => { const a = document.querySelectorAll(s)[k]; a.scrollIntoView({ block: 'center' }); const r = a.getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; }, [sel, i]);
+    // from the empty gutter, straight in: a cold entry, the glitch in its four drawings
+    await cp.mouse.move(4, 880);
+    await sleep(300);
+    await cp.clock.pauseAt((await cp.evaluate(() => Date.now())) + 1000);
+    await cp.mouse.move(q[0] + x, q[1] + q[3] / 2);
+    const log = [];
+    for (let k = 0; k < 45; k++) {
+      log.push(await cp.evaluate(([s, j]) => {
+        const a = document.querySelectorAll(s)[j];
+        const r = a.getBoundingClientRect();
+        const band = a.querySelector('[data-band]')?.getBoundingClientRect();
+        const st = window.__dress.state(a);
+        const w = a.querySelector('[data-wire]');
+        return {
+          t: st ? st.t : null,
+          start: st ? st.start : null,
+          T: st ? st.T : null,
+          bw: a.offsetWidth,
+          band: band ? [band.left - r.left, band.right - r.left] : null,
+          inset: !!band && [band.left - r.left, band.top - r.top, r.right - band.right, r.bottom - band.bottom].some((v) => Math.abs(v) >= 0.25),
+          wire: !!w,
+          x: !!w && w.classList.contains('x-on'),
+          tc: [...a.querySelectorAll('[data-band] .tc')].map((c) => { const b = c.getBoundingClientRect(); return [b.left - r.left, b.right - r.left, c.style.clipPath]; }),
+          cc: a.querySelectorAll('[data-band] .cc').length,
+          tru: !!a.querySelector('[data-true]'),
+          credit: document.querySelector('.lin-credit')?.textContent ?? null,
+        };
+      }, [sel, i]));
+      await cp.clock.runFor(16);
+    }
+    await cp.mouse.move(4, 880);
+    await cp.clock.runFor(800);
+    await cp.clock.resume();
+    return log;
+  };
+  const drawnAny = (f) => f.inset || f.wire || f.tc.length || f.cc || f.tru;
+  const entrance = (log) => {
+    const first = log.find(drawnAny);
+    const early = log.filter((f) => drawnAny(f) && !(f.t >= 295));
+    // a text cell outside the band's target, unless the side past it is the band's own edge, where a cell that runs to it stretches
+    const outside = log.filter((f) => f.T && f.tc.some(([x0, x1]) => !((x0 >= f.T[3] - 0.6 || Math.abs(x0 - f.band[0]) < 0.6) && (x1 <= f.bw - f.T[1] + 0.6 || Math.abs(x1 - f.band[1]) < 0.6) && x0 < f.bw - f.T[1] - 0.5)));
+    const steps = new Set(log.flatMap((f) => f.tc.map(([, , c]) => (FULL.test(c) ? 'whole' : (c.match(/[\d.]+%/g) ?? []).filter((v) => v !== '0%').join(' ')))));
+    const firstCell = log.find((f) => f.tc.length);
+    const firstX = log.find((f) => f.x);
+    return { first: first?.t ?? null, early: early.length, outside: outside.length, steps: [...steps], cellAt: firstCell?.t ?? null, xAt: firstX?.t ?? null, start: log.find((f) => f.start != null)?.start ?? null };
+  };
+  const films = [
+    ['a home menu row, Ratio with the wire', '/', '.menu a', 2, { shape: 'ratio', dress: 'wire' }, 528],
+    ['a page row, Ratio with the wire', '/product-designs/', 'a.row:not(nav a)', pick(1), { shape: 'ratio', dress: 'wire' }, 700],
+    ['the +dither row, Reach with the wire', '/product-designs/', 'a.row:not(nav a)', ditherAt, { shape: 'reach', dress: 'wire' }, 450],
+  ];
+  for (const [what, path, sel, i, force, x] of films) {
+    const e = entrance(await filmDress(path, sel, i, force, x));
+    ok(e.start === 300 && e.early === 0 && e.first != null && e.first <= 340, `${what}: nothing of the dress (shape, wire, cell, Cut, true size) before 295ms; it begins at the 300ms drawing, two after the glitch lands, and shows by 340ms`, JSON.stringify(e));
+    ok(e.outside === 0 && e.cellAt != null && e.steps.every((v) => v === 'whole' || v === '30%') && e.xAt != null && e.xAt - e.cellAt >= 75, `${what}: no text cell is ever drawn outside the band’s target; the cells land 70% then whole, on drawings, and the X comes after`, JSON.stringify(e));
+  }
+  const cutLog = await filmDress('/', '.menu a', 1, { shape: 'reach', dress: 'cut' }, 520);
+  const firstCc = cutLog.find((f) => f.cc);
+  const firstTrue = cutLog.find((f) => f.tru);
+  ok(firstCc && firstCc.t >= 295 && firstCc.t <= 340 && firstCc.credit === 'from chickpea' && !cutLog.some((f) => f.cc && !(f.t >= 295)), 'the Cut: its first cell lands at the 300ms drawing, and its credit steps in with it', JSON.stringify(firstCc && { t: firstCc.t, credit: firstCc.credit }));
+  ok(firstTrue && firstTrue.t >= firstTrue.start + 120 && firstTrue.t <= firstTrue.start + 140, 'the true-size mark comes in 120ms after the dress begins', JSON.stringify(firstTrue && { t: firstTrue.t, start: firstTrue.start }));
+  await cctx.close();
   await dp.evaluate(() => window.__dress.force(null));
   const rmc = await browser.newContext({ viewport: { width: 1728, height: 908 }, reducedMotion: 'reduce' });
   const rmp = await rmc.newPage();
@@ -2352,6 +2636,304 @@ try {
   await rmc.close();
   ok(dErr.length === 0, 'the dress throws nothing', dErr.join(' | '));
   await dctx.close();
+  }
+  /* ------------------------------------------------------- round 5: the paintings */
+  {
+  console.log('\n[paintings]');
+  /**
+   * Every tile: where its picture is painted (from the picture's own ratio and
+   * its object-position, never the file's pixel size), and where its title is.
+   */
+  const standing = () => {
+    const at = (v, free) => (v.endsWith('%') ? (parseFloat(v) / 100) * free : v.endsWith('px') ? parseFloat(v) : free / 2);
+    return [...document.querySelectorAll('.tile')].map((t) => {
+      const img = t.querySelector('img');
+      const r = img.getBoundingClientRect();
+      const cs = getComputedStyle(img);
+      const nw = +img.getAttribute('width') || img.naturalWidth;
+      const nh = +img.getAttribute('height') || img.naturalHeight;
+      const sc = cs.objectFit === 'contain' ? Math.min(r.width / nw, r.height / nh) : cs.objectFit === 'cover' ? Math.max(r.width / nw, r.height / nh) : 0;
+      const w = sc ? nw * sc : r.width;
+      const h = sc ? nh * sc : r.height;
+      const [px, py] = cs.objectPosition.split(' ');
+      const left = r.left + at(px, r.width - w);
+      const top = r.top + at(py, r.height - h);
+      const title = t.querySelector('.cell').getBoundingClientRect();
+      return { name: t.querySelector('[data-word]').textContent, row: Math.round(t.getBoundingClientRect().top), gap: title.top - (top + h), titleTop: title.top, pic: [left, top, left + w, top + h], box: [r.left, r.top, r.right, r.bottom], tone: !!img.dataset.tone };
+    });
+  };
+  /** One level: every painting stands on its title, and every title in a grid row shares one top. */
+  const levels = (tiles) => {
+    const off = tiles.filter((t) => Math.abs(t.gap) > 0.5).map((t) => `${t.name} ${t.gap.toFixed(1)}`);
+    const rowsOf = new Map();
+    for (const t of tiles) rowsOf.set(t.row, [...(rowsOf.get(t.row) ?? []), t.titleTop]);
+    const uneven = [...rowsOf.values()].filter((ts) => Math.max(...ts) - Math.min(...ts) > 0.5).length;
+    return { ok: tiles.length === 20 && !off.length && !uneven, off, uneven, rows: rowsOf.size };
+  };
+  /**
+   * A label's type, in its button's own px (the magnet moves the button, not
+   * the type in it): each line's letters by index, where its first letter
+   * starts, and its baseline. At rest from the resting text; hovered from the
+   * overlay. An empty inline span finds a line's baseline: its top is the
+   * baseline less the mono's ascent, the same face at rest and hovered (an
+   * inline-block would give a long unbroken word a place to break before it).
+   * `edge` is the content edge of the label's cell, `over` how far any glyph
+   * of the overlay runs past it, `out` how far any glyph leaves the tile.
+   */
+  const typeFacts = ([sel, nth]) => {
+    const a = document.querySelectorAll(sel)[nth];
+    const r = a.getBoundingClientRect();
+    const X = (v) => v - r.left;
+    const Y = (v) => v - r.top;
+    const w = a.querySelector('[data-word]');
+    const cell = w.parentElement;
+    const cr = cell.getBoundingClientRect();
+    const edge = X(cr.right - parseFloat(getComputedStyle(cell).paddingRight));
+    const tile = a.closest('.tile')?.getBoundingClientRect();
+    const probe = () => {
+      const p = document.createElement('span');
+      p.style.cssText = 'display:inline';
+      return p;
+    };
+    const ov = w.querySelector('[data-glitch]');
+    if (!ov) {
+      const letters = [];
+      let k = 0;
+      for (const n of [...w.childNodes].filter((c) => c.nodeType === 3)) {
+        let i = 0;
+        for (const ch of n.nodeValue) {
+          if (ch.trim()) {
+            const rg = document.createRange();
+            rg.setStart(n, i);
+            rg.setEnd(n, i + ch.length);
+            const q = rg.getClientRects()[0];
+            if (q) letters.push({ k, top: Y(q.top), bottom: Y(q.bottom), left: X(q.left), right: X(q.right), q });
+          }
+          i += ch.length;
+          k++;
+        }
+      }
+      const lines = [];
+      for (const l of letters) {
+        const cur = lines[lines.length - 1];
+        if (!cur || l.top >= (cur.top + cur.bottom) / 2) lines.push({ top: l.top, bottom: l.bottom, first: l.left, ks: [l.k] });
+        else cur.ks.push(l.k);
+      }
+      const p = probe();
+      w.insertBefore(p, w.firstChild);
+      const b0 = Y(p.getBoundingClientRect().top);
+      p.remove();
+      const out = tile ? Math.max(0, ...letters.map(({ q }) => Math.max(tile.left - q.left, q.right - tile.right, tile.top - q.top, q.bottom - tile.bottom))) : 0;
+      return { n: k, lines: lines.map((l) => ({ ks: l.ks, first: l.first, base: b0 + l.top - lines[0].top })), edge, over: 0, out };
+    }
+    // hovered: a probe at the start of the overlay and after each forced break finds each line's baseline
+    const spans = [...ov.children].filter((c) => c.tagName === 'SPAN');
+    const heads = [ov.firstChild, ...[...ov.children].filter((c) => c.tagName === 'BR').map((b) => b.nextSibling)];
+    const ps = heads.map((h) => ov.insertBefore(probe(), h));
+    const lines = ps.map((p) => {
+      const q = p.getBoundingClientRect();
+      return { base: Y(q.top), mid: Y(q.top + q.height / 2), first: null, ks: [] };
+    });
+    ps.forEach((p) => p.remove());
+    let over = -Infinity;
+    let out = 0;
+    spans.forEach((s, k) => {
+      if (!s.textContent.trim()) return;
+      const q = s.getBoundingClientRect();
+      // its line: the one whose middle is nearest the middle of its glyph box
+      const mid = Y(q.top + q.height / 2);
+      const ln = lines.reduce((b, l, i) => (Math.abs(mid - l.mid) < Math.abs(mid - lines[b].mid) ? i : b), 0);
+      if (lines[ln].first == null) lines[ln].first = X(q.left);
+      lines[ln].ks.push(k);
+      over = Math.max(over, X(q.right) - edge);
+      if (tile) out = Math.max(out, tile.left - q.left, q.right - tile.right, tile.top - q.top, q.bottom - tile.bottom);
+    });
+    return { n: spans.length, lines, edge, over, out, tail: ov.textContent.endsWith('...') };
+  };
+  /** Rest and hover agree: the same letters on the same lines, each line starting where it did, on the same baseline. */
+  const sameType = (rest, hov) => {
+    if (!rest || !hov) return { ok: false, why: 'no type' };
+    const lineOf = (f) => new Map(f.lines.flatMap((l, i) => l.ks.map((k) => [k, i])));
+    const lr = lineOf(rest);
+    const lh = lineOf(hov);
+    const moved = [...lr].filter(([k, i]) => lh.get(k) !== i).length;
+    const starts = Math.max(0, ...rest.lines.map((l, i) => Math.abs(l.first - (hov.lines[i]?.first ?? 1e9))));
+    const base = Math.max(0, ...rest.lines.map((l, i) => Math.abs(l.base - (hov.lines[i]?.base ?? 1e9))));
+    const pitch = Math.max(0, ...rest.lines.slice(1).map((l, i) => Math.abs((l.base - rest.lines[i].base) - ((hov.lines[i + 1]?.base ?? 1e9) - hov.lines[i].base))));
+    const ok = rest.lines.length === hov.lines.length && moved === 0 && starts <= 1 && base <= 0.5 && pitch <= 0.5;
+    return { ok, lines: rest.lines.length, moved, starts: +starts.toFixed(2), base: +base.toFixed(2), pitch: +pitch.toFixed(2), over: +hov.over.toFixed(2) };
+  };
+  /** Hover the nth `sel` and read its type at rest and once the glitch and every glide have settled. */
+  const hoverType = async (pg, sel, nth) => {
+    await pg.evaluate(([s, i]) => document.querySelectorAll(s)[i].scrollIntoView({ block: 'center' }), [sel, nth]);
+    const b4 = await pg.evaluate(layout);
+    const rest = await pg.evaluate(typeFacts, [sel, nth]);
+    const box = await pg.evaluate(([s, i]) => { const q = document.querySelectorAll(s)[i].getBoundingClientRect(); return [q.left + Math.min(q.width / 2, 40), q.top + q.height / 2]; }, [sel, nth]);
+    await pg.mouse.move(box[0], box[1]);
+    const landed = await pg.waitForFunction(([s, i]) => {
+      const ov = document.querySelectorAll(s)[i].querySelector('[data-glitch]');
+      return !!ov && [...ov.children].every((c) => c.tagName === 'BR' || !c.textContent.trim() || (/Dessign/.test(c.getAttribute('style') ?? '') && !/left:|blur|color:/.test(c.getAttribute('style') ?? '')));
+    }, [sel, nth], { timeout: 4000 }).then(() => true, () => false);
+    const hov = landed ? await pg.evaluate(typeFacts, [sel, nth]) : null;
+    const now = await pg.evaluate(layout);
+    // and after: the pointer off to the page's empty corner, the overlay gone
+    await pg.mouse.move(1, pg.viewportSize().height - 1);
+    await pg.waitForFunction(([s, i]) => !document.querySelectorAll(s)[i].querySelector('[data-glitch]'), [sel, nth], { timeout: 3000 }).catch(() => {});
+    const after = await pg.evaluate(layout);
+    return { rest, hov, moved: b4.filter((v, i) => v !== now[i] || v !== after[i]).length };
+  };
+  /** Every picture on the page in, so a lazy image arriving never reads as a hover moving a box. */
+  const allIn = (pg) => pg.evaluate(async () => {
+    document.querySelectorAll('img[loading="lazy"]').forEach((i) => (i.loading = 'eager'));
+    await Promise.all([...document.images].map((i) => i.decode().catch(() => {})));
+  });
+  const pViews = [['Chrome', browser, 1728, 908], ['Chrome', browser, 1440, 900], ['Chrome', browser, 1024, 800], ['Chrome', browser, 760, 900], ['Chrome', browser, 600, 900], ...(wk ? [['WebKit', wk, 1440, 900], ['WebKit', wk, 390, 844]] : [])];
+  for (const [eng, br, vw, vh] of pViews) {
+    const pctx = await br.newContext({ viewport: { width: vw, height: vh } });
+    // the lineage deck and the dress held still: these judge the type
+    await pctx.addInitScript(() => { window.__linQuiet = true; window.__dressQuiet = true; });
+    const pp = await pctx.newPage();
+    await pp.goto(`${BASE}/paintings/`, { waitUntil: 'networkidle' });
+    await settle(pp);
+    const lv = levels(await pp.evaluate(standing));
+    ok(lv.ok, `${eng} ${vw} wide: every painting stands right on its title, and every title in a row is on one level`, JSON.stringify(lv));
+    // every title, hovered: no word changes line, no line moves, nothing runs out of the cell, no box moves
+    await allIn(pp);
+    const bad = [];
+    let wrapped = 0;
+    for (let i = 0; i < 20; i++) {
+      const f = await hoverType(pp, '.tile .cell', i);
+      const s = sameType(f.rest, f.hov);
+      if (f.rest?.lines.length > 1) wrapped++;
+      if (!s.ok || s.over > 0.5 || f.moved) bad.push(`${i} ${JSON.stringify({ ...s, moved: f.moved })}`);
+    }
+    ok(bad.length === 0 && wrapped > 0 === vw > 480, `${eng} ${vw} wide: hovering each title, every word stays on its line, each line starts where it did, on the same baseline and pitch, inside its cell, and no box moves before, during or after (${wrapped} wrapped)`, bad.join(' | '));
+    await pctx.close();
+  }
+  // Break it: the worst titles a painting could carry, set into the tiles the way the page sets
+  // a label (an address may only break after its "@"). At rest and hovered, every letter stays
+  // inside its tile, the hover keeps the resting lines on their baselines, and no box moves.
+  const WORST = [
+    '+donaudampfschifffahrtsgesellschaftskapitän',
+    '+the long walk home through the snow after the last train had already left the station',
+    '+a',
+    '+bartholomew.fitzgerald@northwind-industries-holdings.example.com',
+    '+夜明け前の静かな港で船を待っている',
+    '+những ngày mưa ở hà nội',
+    '+sunset 🌅 over the bay, again 🌊🌊',
+    '+WAITING FOR THE NIGHT BUS AT MIDNIGHT',
+  ];
+  for (const vw of [360, 390, 760, 1440, 2560]) {
+    const wctx = await browser.newContext({ viewport: { width: vw, height: 900 } });
+    await wctx.addInitScript(() => { window.__linQuiet = true; window.__dressQuiet = true; });
+    const wp = await wctx.newPage();
+    await wp.goto(`${BASE}/paintings/`, { waitUntil: 'networkidle' });
+    await settle(wp);
+    await allIn(wp);
+    await wp.evaluate((titles) => {
+      const ws = [...document.querySelectorAll('.tile [data-word]')];
+      titles.forEach((t, i) => ws[i].replaceChildren(...t.split(/(?<=@)/).flatMap((part, k) => (k ? [document.createElement('wbr'), part] : [part]))));
+    }, WORST);
+    // the faces for the scripts the new titles use (Vietnamese, say) arrive as they are asked for
+    await wp.evaluate(() => document.fonts.ready);
+    const over = await wp.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    const bad = [];
+    for (let i = 0; i < WORST.length; i++) {
+      const f = await hoverType(wp, '.tile .cell', i);
+      const s = sameType(f.rest, f.hov);
+      if (!s.ok || f.rest.out > 0.5 || !f.hov || f.hov.out > 0.5 || f.moved) bad.push(`${WORST[i]} ${JSON.stringify({ ...s, rest: +f.rest.out.toFixed(1), hover: f.hov ? +f.hov.out.toFixed(1) : null, moved: f.moved })}`);
+    }
+    ok(over === 0 && bad.length === 0, `${vw} wide, the worst titles (a 42-letter word, 86 letters, one letter, an address, Japanese, Vietnamese, emoji, capitals): every letter inside its tile at rest and on hover, the same lines, no box moves`, `${over}px sideways | ${bad.join(' | ')}`);
+    await wctx.close();
+  }
+  // The same, for every wrapped label elsewhere, and the baseline of every kind of label.
+  for (const vw of [1440, 760]) {
+    const lctx = await browser.newContext({ viewport: { width: vw, height: 900 } });
+    await lctx.addInitScript(() => { window.__linQuiet = true; window.__dressQuiet = true; });
+    const lp = await lctx.newPage();
+    for (const path of ['/product-designs/', '/about/', '/product-designs/chellbook/']) {
+      await lp.goto(BASE + path, { waitUntil: 'networkidle' });
+      await settle(lp);
+      await allIn(lp);
+      // every label that wraps at rest
+      const wrappedAt = await lp.evaluate(() => [...document.querySelectorAll('a[data-btn]')].map((a, i) => {
+        const w = a.querySelector('[data-word]');
+        if (!w || a.matches('.jx, .plus')) return -1;
+        const rg = document.createRange();
+        rg.selectNodeContents(w);
+        return new Set([...rg.getClientRects()].map((q) => Math.round(q.top))).size > 1 ? i : -1;
+      }).filter((i) => i >= 0));
+      const bad = [];
+      for (const i of wrappedAt) {
+        const f = await hoverType(lp, 'a[data-btn]', i);
+        const s = sameType(f.rest, f.hov);
+        if (!s.ok || s.over > 0.5 || f.moved) bad.push(`${i} ${JSON.stringify({ ...s, moved: f.moved })}`);
+      }
+      ok(wrappedAt.length > 0 && bad.length === 0, `${vw} wide, ${path}: every wrapped label (${wrappedAt.length}) keeps its resting lines on hover, each on its own baseline, inside its cell, and no box moves`, bad.join(' | '));
+      await lp.mouse.move(2, 898);
+    }
+    // the baseline of a row, a home menu row, a chip, a sentence link and the header's figure chip
+    const kinds = [['/product-designs/', 'a.row', 'a row'], ['/', '.menu a', 'a home menu row'], ['/about/', '.glance .cell', 'a chip'], ['/product-designs/chellbook/', '.btn.in', 'a link in a sentence'], ['/about/', '.hd .fig', 'the header’s figure chip']];
+    const lows = [];
+    for (const [path, sel, what] of kinds) {
+      await lp.goto(BASE + path, { waitUntil: 'networkidle' });
+      await settle(lp);
+      await sleep(path === '/' ? 1800 : 0);
+      const f = await hoverType(lp, sel, 0);
+      const s = sameType(f.rest, f.hov);
+      if (!s.ok || f.moved) lows.push(`${what} ${JSON.stringify({ ...s, moved: f.moved })}`);
+      await lp.mouse.move(2, 898);
+    }
+    ok(lows.length === 0, `${vw} wide: a row, a home menu row, a chip, a link in a sentence and the header’s figure chip keep their baseline on hover`, lows.join(' | '));
+    await lctx.close();
+  }
+  // The film draws a painting where it is now painted: on its title, not in the middle of its box.
+  const fctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  await fctx.addInitScript(() => (window.__linQuiet = true));
+  const fp = await fctx.newPage();
+  await fp.goto(`${BASE}/paintings/`, { waitUntil: 'networkidle' });
+  await settle(fp);
+  await sleep(2300);
+  const marks = await fp.evaluate((standingSrc) => {
+    const standing = eval(standingSrc);
+    document.querySelector('.grid').scrollIntoView({ block: 'start' });
+    window.scrollBy(0, -60);
+    window.__morph.seek('reveal', 'out', 0.45, null, [innerWidth / 2, innerHeight / 2]);
+    const r = window.__morph.read();
+    window.__morph.clear();
+    if (!r) return null;
+    const out = [];
+    for (const t of standing()) {
+      const [bl, bt, br, bb] = t.box;
+      const [l, tp, rt, bm] = t.pic;
+      // only a wide painting, letterboxed in its box, wholly on the grid
+      if (!t.tone || bb - bt - (bm - tp) < 1 || bt < r.gy || bb > innerHeight) continue;
+      let miss = 0;
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+      for (let y = 0; y < r.rows; y++) {
+        const cy = r.gy + (y + 0.5) * r.ch;
+        if (cy < bt || cy >= bb) continue;
+        for (let x = 0; x < r.cols; x++) {
+          const cx = r.gx + (x + 0.5) * r.cw;
+          if (cx < bl || cx >= br) continue;
+          const k = r.kinds[y][x];
+          const on = cx >= l && cx < rt && cy >= tp && cy < bm;
+          if (k === '3') {
+            x0 = Math.min(x0, r.gx + x * r.cw);
+            x1 = Math.max(x1, r.gx + (x + 1) * r.cw);
+            y0 = Math.min(y0, r.gy + y * r.ch);
+            y1 = Math.max(y1, r.gy + (y + 1) * r.ch);
+          }
+          if ((k === '3') !== on && k !== '2') miss++;
+        }
+      }
+      const near = Math.abs(x0 - l) <= r.cw && Math.abs(x1 - rt) <= r.cw && Math.abs(y0 - tp) <= r.ch && Math.abs(y1 - bm) <= r.ch;
+      out.push({ name: t.name, miss, near, letterbox: Math.round(bb - bt - (bm - tp)) });
+    }
+    return out;
+  }, `(${standing.toString()})`);
+  ok(marks && marks.length >= 2 && marks.every((m) => m.miss === 0 && m.near), 'the film draws a wide painting’s colours where it is painted, standing on its title: every coloured mark on the picture, none in the box above it', JSON.stringify(marks));
+  await fctx.close();
   }
   /* ------------------------------------------------------- round 3: menu hovers */
   {

@@ -101,9 +101,23 @@ and an overlay of the same text glitches on top of it into Dessign Maison's
 alternates plus a "..." tail. A label in a row, a tile or the menu sits in a
 cell of fixed width, inside a button that clips its own overflow, so nothing
 around it can move. A link inside a sentence reserves the wider of its two
-widths once the fonts load, written in `em`. The check script compares every
-layout box before and during a hover to prove nothing moves, and measures
-every label in both faces to prove it fits its cell.
+widths once the fonts load, written in `em`.
+
+- **Lines locked.** The overlay keeps the resting lines. A label that wraps
+  at rest gets a forced break before the first letter of each of its lines,
+  and the overlay never wraps on its own, so no word ever changes line. A
+  letter still glides a few pixels along its own line as it changes face.
+- **The tail.** If the last line and its "..." would be wider than the cell
+  in the glitch face, that label goes without the "...". A line still too
+  wide (a run of capitals, say) is narrowed as a whole to fit, never wrapped.
+  A painting's title on one line is held to its tile the same way.
+- **Lines level.** The overlay's letters add nothing to the line box, so
+  every baseline stays exactly where it was at rest, and the space between
+  two lines holds.
+
+The check script compares every layout box before, during and after a hover
+to prove nothing moves, and measures every line of every label in both faces
+to prove it fits its cell.
 
 **Three things move a button, through three properties.** The magnet writes
 `transform`, the seams write `translate` and a press writes `scale`, so none
@@ -168,7 +182,7 @@ so a sweep across the menu never sets it off, each button deals from decks of
 its own, shuffled from the
 visit's seed and the button's address and dealt without replacement. A fresh
 shuffle never starts with the card just played, so no button gets the same
-hover twice running.
+hover twice running. What it deals begins 80ms later (below).
 
 - **Shape.** The band's own box morphs after the cursor and always holds the
   whole label. Every target snaps to a structure, the mono cell or Chickpea's
@@ -176,10 +190,17 @@ hover twice running.
   between, so it moves in steps but never jumps. The button's box, the label
   and every neighbor stay exactly where they are. Rows get Full; Reach, whose
   free edge follows the cursor a cell at a time; Ratio, whose free edge sits
-  on the canon ratio nearest the cursor (½, 1/φ, ⅔); and Tall, which grows
-  over the next row on the cursor's side, 6px on home, under that row's words,
-  and 3px into a page's gaps. Small buttons get Full, Outset 3px, Inset 3px,
-  and Lean, 3px out on the cursor's side.
+  on the mono cell nearest the canon ratio nearest the cursor (½, 1/φ, ⅔);
+  and Tall, which grows over the next row on the cursor's side, 6px on home,
+  under that row's words, and 3px into a page's gaps. Small buttons get Full,
+  Outset 3px, Inset 3px, and Lean, 3px out on the cursor's side.
+- **Edges stop at blocks of type.** Each block of text (the label with its
+  tag, and the figure or detail) has a cell: the text plus a quarter em, its
+  sides snapped out to the mono cell. Reach's and Ratio's free edge never
+  stops inside one. If it would, it moves to that cell's nearer side, and it
+  never stops left of the label's cell. So in a blank stretch Reach still
+  follows the cursor a cell at a time, and over a paragraph the band takes
+  the paragraph whole or not at all. With the wire, its cells count too.
 - **Dress.** The deck has six cards: plain 2, wire 2, Cut 1, Cut and wire 1.
 - **The wire.** A skeleton in Chickpea's measure ink wraps the shape. It
   re-fits ahead of the band as the shape morphs. Each block of text (the
@@ -206,9 +227,12 @@ hover twice running.
   within 1px of one. The chip only sits where there is no text.
 - **The Cut.** Chickpea's own `composeGrid` tiles the shape around the label
   and the figure, so the label keeps one whole cell and no cut crosses any
-  text. The cells fill on drawings from the cursor's cell outward. Their
-  colors come from Chickpea's palette engine, or from steps of the page color
-  on a menu row. Its credit reads "from chickpea".
+  text. Its rows follow the lines: each cut across that Chickpea proposes
+  moves to the nearest gap between two lines of the row's tallest block of
+  text, and a row whose text is one line gets none. The cells fill on
+  drawings from the cursor's cell outward. Their colors come from Chickpea's
+  palette engine, or from steps of the page color on a menu row. Its credit
+  reads "from chickpea".
 - **Legibility.** The label is always band ink, and every surface it can
   touch holds band ink at 4.5:1 or better. Every band color does already. A
   Cut cell that touches text is lifted to OKLCH lightness 0.74, and no cell
@@ -231,15 +255,22 @@ hover twice running.
   row shows its slab's box once the floor has opened, with a hairline at
   each side of a blank and the X only in the blank. The slab gets no cells,
   since JellyBox's glass is already the surface.
-- **The order.** One thing at a time, never everything in one drawing: the
-  shape begins to move and the wire's frame fades in over 150ms. The cells
-  are ink, so they land on the band's 50ms drawings, 70% and then whole, from
-  the band edge nearer each, the one nearest the cursor first. At 100ms the
-  X, its crosses, the guide and the chip fade in over 120ms. Leaving, the
-  cells go with the strips in one frame. The true-size mark comes in at 120ms; Chickpea's cells from the
-  start, a drawing apart. The frame clock stops as soon as the springs
-  settle, and a pointer move starts it again. Back on the same button within
-  250ms of leaving, it keeps the same cards.
+- **The rest.** The glitch lands at 200ms. The dress waits two held
+  drawings and begins at 300ms, 80ms after the dwell, on the hover's own 50ms
+  drawings, so it reads as a second beat and not as a stutter one frame
+  after the first.
+- **The order.** Then one thing at a time, never everything in one drawing:
+  the shape begins to move and the wire's frame fades in over 150ms. The
+  cells are ink, so they land on the band's 50ms drawings, 70% and then
+  whole, each growing from its side nearer the cursor, the one nearest the
+  cursor first. A cell is drawn only while it lies inside the band's target
+  shape, never drawn to be clipped away. 100ms in, the X, its crosses, the
+  guide and the chip fade in over 120ms. Leaving, the cells go with the
+  strips in one frame. The true-size mark comes in at 120ms; Chickpea's cells
+  from the start, a drawing apart, its credit with the first. The frame
+  clock stops as soon as the springs settle, and a pointer move starts it
+  again. Back on the same button within 250ms of leaving, it keeps the same
+  cards.
 - **Where it runs.** It rides in the lineage chunk, after the page is seen,
   for a cursor. A hover dealt a lineage card stays Full and plain, so the
   effect starts from the settled glitch. Keyboard, touch and reduced motion
@@ -473,11 +504,24 @@ measure the film rather than the battery. It checks:
   or en dashes and uses American spelling
 - every project under its own status word, in the index order, and the
   paintings by year
+- the paintings: in Chrome at 1728, 1440, 1024, 760 and 600 wide and in
+  WebKit at 1440 and 390, every painting stands right on its title and every
+  title in a row shares one level. Hovering each title keeps every word on
+  its line, each line's first letter, baseline and spacing where they were,
+  every letter inside its cell, and moves no box before, during or after.
+  The same holds for every wrapped label on product designs, about and a
+  case study, and a row, a home menu row, a chip, a link in a sentence and
+  the header's figure chip keep their baseline. The worst titles (a
+  42-letter word, 86 letters, one letter, an address, Japanese, Vietnamese,
+  emoji, capitals) stay inside their tiles at rest and on hover at 360, 390,
+  760, 1440 and 2560 wide. The film draws a wide painting's colors where it
+  is painted, none in the box above it
 - his window at 1728 x 908, px for px: the name, the "+", his three lines,
   the rules, the ledger cells and hairlines, the sheet, the menu and the
   signature, and a subpage's X box, total and section counts
 - band, glitch, zero reflow on every page, every hover label fitting its
-  cell, the magnet, seams, the skeleton, and a sentence link claiming space
+  cell (each resting line in the glitch face, the last with its "..."), the
+  magnet, seams, the skeleton, and a sentence link claiming space
 - the glitch on drawings, frame by frame: half the band in the first frame,
   all of it and both strips by 150ms, letters spreading from the pointer's
   side, landed by 200ms, two drawings on a sweep, one to leave
@@ -498,7 +542,15 @@ measure the film rather than the battery. It checks:
   surface the label touches holds band ink at 4.5:1. The wire's guide sits on
   the cursor and its chip names ½ in Chickpea's words without touching the
   label. The Cut is legible and credited. Leaving is fast, the keyboard is
-  never dressed, and Tall stays inside a page's gaps
+  never dressed, and Tall stays inside a page's gaps. Reach and Ratio, on a
+  one-line row, a two-line row, the three-line +dither row and a home menu
+  row at twelve cursor positions each, rest on the mono cell, never inside a
+  block of type or a word, with the whole label on the band. Every cut
+  across in a Cut lands between two lines, and a one-line row has none.
+  Filmed on a paused clock, nothing of the dress shows before 295ms: it
+  begins on the 300ms drawing and shows by 340ms, no text cell is ever
+  drawn outside the band's target, the X comes after the cells, the Cut's
+  credit steps in with its first cell, and the true-size mark at 120ms
 - lineage: the chunk loads only for a cursor, the deck of twelve, each
   project's own row playing its own effect, every effect's layers and credit,
   zero reflow while it plays, nothing left behind after leaving, and the
@@ -587,8 +639,8 @@ em.
 |---|---|---|
 | 1728 and wider | 40px at 1728, then a third as fast, to 48px at 2765 | his laptop, from his screenshot. The page stays left-aligned and the hairlines keep running to the right edge. |
 | 691 to 1728 | the width over 43.2: 33.3px at 1440, 22.2px at 960 | the window is always 86.4 columns, 80 of them content, so nothing rewraps |
-| 690 and under | 16px | rows stack: the name, then the detail under it. The "+" moves to one column from the edge. The total takes its own line and only the title line sticks. The back X is a 48px box in the header row. Paintings go two a row. |
-| 480 and under | 16px | one painting a row, each at its own shape |
+| 690 and under | 16px | rows stack: the name, then the detail under it. The "+" moves to one column from the edge. The total takes its own line and only the title line sticks. The back X is a 48px box in the header row. Paintings go two a row, three above. At every width a painting stands on the bottom of its box, right on its title, so every title in a row is on one level, and a title too long for its tile breaks inside it. |
+| 480 and under | 16px | one painting a row, each at its own shape, right on its title |
 
 On touch, every link is at least 44px tall: rows and cells grow to it, and
 the small ones (the "+", a chip, a link in a sentence) get a 44px touch area.
