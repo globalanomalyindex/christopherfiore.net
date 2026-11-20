@@ -30,6 +30,8 @@ import { ALT, mulberry, step2, step4, type Edge, type Letter } from './ink.ts';
 import { hotNow, setLineage, type Hot, type Lineage, type Look } from './buttons.ts';
 import { jellyFor, jellyOptics } from './jx.ts';
 import { skeletonDone, skeletonLook } from './fx/after-tokens.ts';
+import { tricodeLook } from './fx/tricode.ts';
+import { bez } from './fx/curve.ts';
 import { textGrid } from './fx/textgrid.ts';
 import { ditherCut, ditherLook } from './fx/dither.ts';
 // the dress rides in this chunk: every pointer hover's shape, wire and Chickpea's Cut
@@ -46,22 +48,6 @@ declare global {
 
 const GROUND = '#F3F5F8';
 const MARKS = ['#CF9A3C', '#8A6A86', '#4F8384'];
-/**
- * Tricode: MFNY's type filter pill (public/mfny/concentrates.html), opened and
- * laid flat. Its fills in TRI_ORDER (Indica, Hybrid, Sativa, from TYPE_STYLE),
- * each pre-mixed over the pill's white surface at its hover opacities: the
- * segment under the pointer at 1, the others at 0.55, and 0.6 while none is.
- * The lowest, Sativa lit, holds band ink at 5.7:1.
- */
-const TRI = [
-  { lit: '#8CA7DA', dim: '#C0CFEB', idle: '#BACAE9' },
-  { lit: '#F1CC54', dim: '#F7E3A1', idle: '#F7E098' },
-  { lit: '#FF5A52', dim: '#FFA4A0', idle: '#FF9C97' },
-];
-/** The pill's divider on its second and third segments, verbatim. */
-const TRI_RULE = 'inset 1.5px 0 0 0 rgba(255,255,255,0.9)';
-/** A segment opens from 27px collapsed to 64px open (SEGMENT_COLLAPSED, segmentOpen). */
-const TRI_K0 = 27 / 64;
 
 export const CREDIT: Record<string, string> = {
   canister: 'from scream canister controls',
@@ -243,69 +229,7 @@ function tick(_h: Hot | null, _now: number): boolean {
 /* ------------------------------------------------------------ the effects */
 
 const alt = (h: Hot): Letter[] => h.P.chars.map((c) => ({ c, s: c.trim() ? ALT : '' }));
-const bez = (x1: number, y1: number, x2: number, y2: number) => (x: number) => {
-  if (x <= 0) return 0;
-  if (x >= 1) return 1;
-  let t = x;
-  for (let i = 0; i < 10; i++) {
-    const cx = 3 * x1 * t * (1 - t) ** 2 + 3 * x2 * t * t * (1 - t) + t ** 3 - x;
-    const d = 3 * x1 * (1 - t) ** 2 + 6 * (x2 - x1) * t * (1 - t) + 3 * (1 - x2) * t * t;
-    if (Math.abs(d) < 1e-6) break;
-    t = Math.max(0, Math.min(1, t - cx / d));
-  }
-  return 3 * y1 * t * (1 - t) ** 2 + 3 * y2 * t * t * (1 - t) + t ** 3;
-};
 const E_SETTLE = bez(0.16, 1, 0.3, 1);
-/** MFNY's --ease-move, for anything that changes size or position. */
-const E_MOVE = bez(0.2, 0.85, 0.25, 1);
-/** Tricode's two seams for a hover, on the mono cell and never inside a word. */
-const triOf = new WeakMap<Hot, [number, number]>();
-
-/**
- * Where Tricode's seams go: the pill's equal thirds, each moved to the
- * nearest mono cell boundary that splits no word (the site never cuts
- * through one), at most 8 cells away.
- */
-function triSeams(h: Hot): [number, number] {
-  const had = triOf.get(h);
-  if (had) return had;
-  const b = h.b;
-  const g = h.geo;
-  const cell = g.fs / 2;
-  const r = b.getBoundingClientRect();
-  const sc = r.width / (b.offsetWidth || r.width) || 1;
-  const words: [number, number][] = [];
-  const add = (q: DOMRect) => {
-    if (q.width > 0.5) words.push([(q.left - r.left) / sc, (q.right - r.left) / sc]);
-  };
-  // the label and the tag's ruled box stay whole
-  b.querySelectorAll('[data-word], .cs > span').forEach((el) => add(el.getBoundingClientRect()));
-  b.querySelectorAll('.l, .n').forEach((el) => {
-    const tw = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
-    for (let n = tw.nextNode(); n; n = tw.nextNode()) {
-      for (const m of (n.textContent ?? '').matchAll(/\S+/g)) {
-        const rg = document.createRange();
-        rg.setStart(n, m.index!);
-        rg.setEnd(n, m.index! + m[0].length);
-        for (const q of rg.getClientRects()) add(q);
-      }
-    }
-  });
-  const clear = (x: number) => !words.some(([l, rr]) => l < x - 0.5 && rr > x + 0.5);
-  const seam = (target: number): number => {
-    const k0 = Math.round(target / cell);
-    for (let d = 0; d <= 8; d++) {
-      for (const k of d ? [k0 + d, k0 - d] : [k0]) {
-        const x = k * cell;
-        if (x > cell && x < g.bw - cell && clear(x)) return x;
-      }
-    }
-    return k0 * cell;
-  };
-  const out: [number, number] = [seam(g.bw / 3), seam((2 * g.bw) / 3)];
-  triOf.set(h, out);
-  return out;
-}
 const markOf = new WeakMap<HTMLElement, string>();
 let markI = 0;
 
@@ -469,23 +393,8 @@ function look(h: Hot, tau: number): Look {
         line: f ? `position:absolute;left:${(g.wl - 0.25 * g.fs).toFixed(1)}px;bottom:0;height:2px;width:${(W * f).toFixed(1)}px;background:${mix(GROUND, markOf.get(h.b)!, 0.72)}` : undefined,
       };
     }
-    case 'tricode': {
-      // MFNY's pill opening from the left on its own curve, held on the band's
-      // drawings: 76%, 95%, then the three tile the whole band at 100ms
-      const e = t < 50 ? E_MOVE(0.25) : t < 100 ? E_MOVE(0.5) : 1;
-      const k = TRI_K0 + (1 - TRI_K0) * e;
-      const cell = g.fs / 2;
-      const snap = (v: number) => Math.min(g.bw, Math.round(v / cell) * cell);
-      const [s1, s2] = triSeams(h);
-      const xs = [0, snap(s1 * k), snap(s2 * k), e >= 1 ? g.bw : snap(g.bw * k)];
-      // the segment under the pointer lights; the pill's hover, a hard cut at the seam
-      const on = h.px < xs[3] ? (h.px < xs[1] ? 0 : h.px < xs[2] ? 1 : 2) : -1;
-      const extra = TRI.map((c, i) => ({
-        c: 'tri',
-        s: `position:absolute;top:0;bottom:0;left:${xs[i].toFixed(1)}px;width:${(xs[i + 1] - xs[i]).toFixed(1)}px;background:${on < 0 ? c.idle : i === on ? c.lit : c.dim}${i ? `;box-shadow:${TRI_RULE}` : ''}`,
-      }));
-      return { letters: alt(h), extra, follow: true };
-    }
+    case 'tricode':
+      return tricodeLook(h, t);
     case 'knockout': {
       const px = Math.max(0, Math.min(1, (h.px0 ?? g.bw / 2) / g.bw));
       const p = step4(t);

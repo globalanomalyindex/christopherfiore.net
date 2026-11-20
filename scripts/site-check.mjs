@@ -1954,67 +1954,6 @@ try {
   await sleep(1300);
   const creditLater = await lp.evaluate(() => document.querySelector('.lin-credit')?.style.opacity ?? 'gone');
   ok(credit !== 'gone' && +credit === 1 && creditLater === 'gone', 'the credit holds a moment after the pointer leaves, then steps out', JSON.stringify([credit, creditLater]));
-  // Tricode, MFNY's own row: its type filter pill opened and laid flat. Three square
-  // segments in the strain colours tile the band; the one under the pointer lights.
-  await lp.mouse.move(1430, 980);
-  await sleep(1700);
-  const trow = 'a.row[data-lin="tricode"]';
-  const tb = (await center(lp, trow)).box;
-  const triB4 = await lp.evaluate(layout);
-  await lp.mouse.move(tb.x + tb.width * 0.15, tb.y - 3);
-  await sleep(200);
-  const openLog = lp.evaluate((s) => new Promise((res) => {
-    const a = document.querySelector(s);
-    const t0 = performance.now();
-    const out = [];
-    const tick = () => {
-      const ls = [...a.querySelectorAll('[data-band] .tri')];
-      out.push({ t: performance.now() - t0, right: ls.length === 3 ? parseFloat(ls[2].style.left) + parseFloat(ls[2].style.width) : null, bw: a.offsetWidth });
-      if (performance.now() - t0 < 700) requestAnimationFrame(tick);
-      else res(out);
-    };
-    requestAnimationFrame(tick);
-  }), trow);
-  await lp.mouse.move(tb.x + tb.width * 0.15, tb.y + tb.height / 2, { steps: 2 });
-  const ol = (await openLog).filter((f) => f.right != null);
-  const opened = ol.length > 0 && ol[0].right < ol[0].bw - 1 && ol.filter((f) => f.t >= ol[0].t + 117).every((f) => Math.abs(f.right - f.bw) < 0.5);
-  ok(opened, 'Tricode opens from the left like MFNY’s pill, on the band’s drawings, and tiles the whole band by 100ms', JSON.stringify(ol.slice(0, 4).map((f) => [Math.round(f.t), f.right])));
-  const TRI_LIT = ['rgb(140, 167, 218)', 'rgb(241, 204, 84)', 'rgb(255, 90, 82)'];
-  const TRI_DIM = ['rgb(192, 207, 235)', 'rgb(247, 227, 161)', 'rgb(255, 164, 160)'];
-  const lumRgb = (c) => c.match(/\d+/g).slice(0, 3).map(Number).map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }).reduce((q, v, i) => q + v * [0.2126, 0.7152, 0.0722][i], 0);
-  const triRead = () => lp.evaluate((s) => {
-    const a = document.querySelector(s);
-    const cell = parseFloat(getComputedStyle(a).fontSize) / 2;
-    const r = a.getBoundingClientRect();
-    const words = [];
-    a.querySelectorAll('[data-word], .cs > span').forEach((el) => { const q = el.getBoundingClientRect(); words.push([q.left - r.left, q.right - r.left]); });
-    a.querySelectorAll('.l').forEach((el) => {
-      const tw = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
-      for (let n = tw.nextNode(); n; n = tw.nextNode()) for (const m of n.textContent.matchAll(/\S+/g)) { const rg = document.createRange(); rg.setStart(n, m.index); rg.setEnd(n, m.index + m[0].length); for (const q of rg.getClientRects()) words.push([q.left - r.left, q.right - r.left]); }
-    });
-    const ls = [...a.querySelectorAll('[data-band] .tri')].map((l) => ({ left: parseFloat(l.style.left), width: parseFloat(l.style.width), bg: getComputedStyle(l).backgroundColor, s: l.getAttribute('style') }));
-    return { bw: a.offsetWidth, cell, ls, words };
-  }, trow);
-  const triSeen = [];
-  for (const f of [0.15, 0.5, 0.85]) {
-    await lp.mouse.move(tb.x + tb.width * f, tb.y + tb.height / 2, { steps: 2 });
-    await sleep(140);
-    const v = await triRead();
-    const L = v.ls;
-    const flat = L.length === 3 && L.every((l) => !/polygon|skew|clip-path|radius|gradient/.test(l.s));
-    const tiles = flat && L[0].left === 0 && Math.abs(L[0].left + L[0].width - L[1].left) < 0.5 && Math.abs(L[1].left + L[1].width - L[2].left) < 0.5 && Math.abs(L[2].left + L[2].width - v.bw) < 0.5;
-    const seams = flat ? [L[1].left, L[2].left] : [];
-    const onGrid = seams.every((x) => Math.abs(x / v.cell - Math.round(x / v.cell)) < 0.02);
-    const whole = seams.every((x) => !v.words.some(([l, rr]) => l < x - 0.5 && rr > x + 0.5));
-    const under = (tb.width * f) < seams[0] ? 0 : (tb.width * f) < seams[1] ? 1 : 2;
-    const lit = flat && L.every((l, i) => l.bg === (i === under ? TRI_LIT[i] : TRI_DIM[i]));
-    const worst = Math.min(...L.map((l) => (lumRgb(l.bg) + 0.05) / (lumRgb('rgb(26, 24, 32)') + 0.05)));
-    triSeen.push({ f, flat, tiles, onGrid, whole, lit, worst: +worst.toFixed(2), seams });
-  }
-  const triAfter = await lp.evaluate(layout);
-  ok(triSeen.every((t) => t.flat && t.tiles && t.onGrid && t.whole), 'Tricode is flat and square: three segments tile the band edge to edge, seams on the mono cell and never inside a word', JSON.stringify(triSeen.map((t) => [t.flat, t.tiles, t.onGrid, t.whole, t.seams])));
-  ok(triSeen.every((t) => t.lit), 'MFNY’s strain colours in its order, Indica, Hybrid, Sativa: the segment under the pointer at full fill, the others at the pill’s 0.55', JSON.stringify(triSeen.map((t) => t.lit)));
-  ok(triSeen.every((t) => t.worst >= 4.5) && JSON.stringify(triB4) === JSON.stringify(triAfter), 'every segment holds band ink at 4.5:1 or better, and no layout box moves', JSON.stringify(triSeen.map((t) => t.worst)));
   const triFits = await lp.evaluate(() => ['menu', 'inline', 'chip'].flatMap((k) => window.__lin.fits(k)));
   ok(!triFits.includes('tricode') && !triFits.includes('shear'), 'a menu row, a sentence link and a chip never draw Tricode', JSON.stringify(triFits));
   // The odds. Right after an effect, the next hover is the glitch alone; the
@@ -2388,6 +2327,70 @@ try {
       ok(all.every((v) => v.blank.length === 0 && v.mono), 'no blank frame: the text and the cells are never both gone, and the text only falls as the ink leaves and only rises as it arrives', JSON.stringify(Object.fromEntries(Object.entries(sk).filter(([, v]) => v).map(([k, v]) => [k, [v.blank, v.mono]]))));
       ok(all.every((v) => v.lowFor <= 340 && v.over != null && v.over <= 560), 'the text is under 0.45 for 340ms at most, and the card is over within 560ms of its first frame', JSON.stringify(Object.fromEntries(Object.entries(sk).filter(([, v]) => v).map(([k, v]) => [k, [v.lowFor, v.over]]))));
       ok(all.every((v) => v.clean), 'at the end no cell, no inline opacity or translate, and no layout box moved', JSON.stringify(Object.fromEntries(Object.entries(sk).filter(([, v]) => v).map(([k, v]) => [k, [v.clean, v.why]]))));
+    }
+
+    // Tricode, MFNY's own row: the pill laid flat. The row is one link, so one
+    // hover is one opening and one selection, and nothing in it answers the pointer.
+    {
+      const trow = 'a.row[data-lin="tricode"]';
+      const TRI_LIT = ['rgb(140, 167, 218)', 'rgb(241, 204, 84)', 'rgb(255, 90, 82)'];
+      const TRI_IDLE = ['rgb(186, 202, 233)', 'rgb(247, 224, 152)', 'rgb(255, 156, 151)'];
+      const triRead = ([s, n]) => {
+        const a = document.querySelectorAll(s)[n];
+        return { bw: a.offsetWidth, ls: [...a.querySelectorAll('[data-band] .tri')].map((l) => ({ l: parseFloat(l.style.left), r: parseFloat(l.style.left) + parseFloat(l.style.width), bg: getComputedStyle(l).backgroundColor, s: l.getAttribute('style') })) };
+      };
+      const lumRgb = (c) => c.match(/\d+/g).slice(0, 3).map(Number).map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }).reduce((q, v, i) => q + v * [0.2126, 0.7152, 0.0722][i], 0);
+      const seen = [];
+      for (const f of [0.15, 0.5, 0.85]) {
+        const { frames, box } = await filmFx(pg, trow, 0, null, f, 480, triRead);
+        const g = await pg.evaluate(gridRead);
+        const end = frames[frames.length - 1].ls;
+        const xs = [0, end[1]?.l, end[2]?.l, g.bw];
+        const on = frames.filter((fr) => fr.ls.length);
+        const t0 = on[0].t;
+        // the opening: whole segments only, landing one a drawing, then the step up
+        const whole = on.every((fr) => fr.ls.every((l, i) => Math.abs(l.l - xs[i]) < 0.01 && Math.abs(l.r - xs[i + 1]) < 0.01));
+        const order = on.map((fr) => fr.ls.length).every((n, i, a) => !i || n >= a[i - 1]) && on.find((fr) => fr.ls.length === 3).t - t0 <= 116;
+        // after the step: move across the whole row for a second; nothing in the band host may change
+        await pg.evaluate((s) => {
+          const host = document.querySelector(s).querySelector('[data-band]');
+          window.__tq = new MutationObserver(() => {});
+          window.__tq.observe(host, { subtree: true, childList: true, attributes: true, attributeFilter: ['style', 'class'] });
+        }, trow);
+        for (let k = 0; k <= 20; k++) {
+          await pg.mouse.move(box.x + box.width * (k / 20), box.y + box.height * (k % 2 ? 0.3 : 0.7));
+          await pg.clock.runFor(50);
+        }
+        const moved = await pg.evaluate(() => { const n = window.__tq.takeRecords().length; window.__tq.disconnect(); return n; });
+        const x0 = box.width * f;
+        const under = x0 < xs[1] ? 0 : x0 < xs[2] ? 1 : 2;
+        const lit = end.every((l, i) => l.bg === (i === under ? TRI_LIT[i] : TRI_IDLE[i]));
+        const cuts = (x) => g.words.some((w) => w.l < x - 0.5 && w.r > x + 0.5);
+        const seams = [xs[1], xs[2]];
+        const onSeams = seams.every((x) => g.g.seams.some((s) => Math.abs(s - x) < 0.01) && Math.abs(x / g.g.cell - Math.round(x / g.g.cell)) < 0.01 && !cuts(x));
+        const wide = [xs[1] - xs[0], xs[2] - xs[1], xs[3] - xs[2]].every((w) => w >= 6 * g.g.cell - 0.01);
+        const flat = end.length === 3 && end.every((l) => !/polygon|skew|clip-path|radius|gradient/.test(l.s));
+        const worst = Math.min(...end.map((l) => (lumRgb(l.bg) + 0.05) / (lumRgb('rgb(26, 24, 32)') + 0.05)));
+        seen.push({ f, whole, order, moved, lit, onSeams, wide, flat, worst: +worst.toFixed(2), seams });
+        await awayFx(pg);
+      }
+      ok(seen.every((v) => v.moved === 0), 'Tricode answers nothing inside the row: after its step, a second of moving across the whole row changes no segment', JSON.stringify(seen.map((v) => v.moved)));
+      ok(seen.every((v) => v.lit), 'the lit segment is the one that held the pointer at the dwell; the other two stay at the open pill’s 0.6', JSON.stringify(seen.map((v) => [v.f, v.lit])));
+      ok(seen.every((v) => v.onSeams && v.wide), 'both seams are clear on every line, on the mono cell, and every segment is at least 3em wide', JSON.stringify(seen.map((v) => [v.seams, v.onSeams, v.wide])));
+      ok(seen.every((v) => v.whole && v.order), 'the opening lands one whole segment a drawing, never a segment between seams', JSON.stringify(seen.map((v) => [v.whole, v.order])));
+      ok(seen.every((v) => v.flat && v.worst >= 4.5), 'three flat segments tile the band, and every one holds band ink at 4.5:1 or better', JSON.stringify(seen.map((v) => v.worst)));
+      // the seams are random, from the row's own stream, and never the same twice running
+      await pg.evaluate(() => window.__ink.seed(11));
+      const pairs = [];
+      for (let i = 0; i < 12; i++) {
+        const { frames } = await filmFx(pg, trow, 0, null, 0.3, 432, triRead);
+        const ls = frames[frames.length - 1].ls;
+        pairs.push(`${ls[1]?.l}|${ls[2]?.l}`);
+        await pg.mouse.move(1430, 990);
+        await pg.clock.runFor(400);
+      }
+      ok(new Set(pairs).size >= 4 && pairs.every((p, i) => !i || p !== pairs[i - 1]), 'over 12 hovers the seams change: at least four pairs, never the same twice running', JSON.stringify(pairs));
+      await awayFx(pg);
     }
     await ctx.close();
     const home = await clockPage('/');
