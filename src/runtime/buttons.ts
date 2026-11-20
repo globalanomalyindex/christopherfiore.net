@@ -436,11 +436,15 @@ export function initButtons(): void {
     'pointermove',
     (e) => {
       if (e.pointerType === 'touch') return;
-      move(e.clientX, e.clientY, current);
+      // Reads only: the hovered button's box is read once, here, while the
+      // browser's styles are still fresh from its own hit test, and shared
+      // with the magnet, which writes its lean in the next frame. So a move
+      // never makes the browser recompute styles to answer a read.
       const h = current && HOT.get(current);
-      if (h) {
-        const r = h.b.getBoundingClientRect();
-        const sc = r.width / (h.b.offsetWidth || r.width) || 1;
+      const r = current?.getBoundingClientRect();
+      const sc = h && r ? r.width / (h.b.offsetWidth || r.width) || 1 : 1;
+      move(e.clientX, e.clientY, current, r);
+      if (h && r) {
         h.px = (e.clientX - r.left) / sc;
         h.py = (e.clientY - r.top) / sc;
         // a wire, or an effect that answers the pointer, follows it in the same frame

@@ -2827,6 +2827,69 @@ try {
     await wfc.close();
   }
 
+  // The pointer path: a move reads the hovered button's box once, before its
+  // one write, so it never makes the browser recompute styles or layout to
+  // answer a read. 120 moves inside a hovered row, the deck and the dress
+  // held still. (Chrome only: the counts come from its DevTools protocol.)
+  const mc = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  await mc.addInitScript(countFrames);
+  await mc.addInitScript(() => (window.__linQuiet = true));
+  const mp3 = await mc.newPage();
+  const mcdp = await mc.newCDPSession(mp3);
+  await mcdp.send('Performance.enable');
+  const perf = async () => Object.fromEntries((await mcdp.send('Performance.getMetrics')).metrics.map((m) => [m.name, m.value]));
+  // the page has stopped drawing: no frame for 300ms
+  const stillFrames = (pg) => pg.waitForFunction(() => {
+    const n = window.__fbN;
+    if (window.__fbLast !== n) {
+      window.__fbLast = n;
+      window.__fbAt = performance.now();
+    }
+    return performance.now() - window.__fbAt > 300;
+  }, null, { polling: 50, timeout: 10000 }).catch(() => {});
+  await mp3.goto(`${BASE}/product-designs/`, { waitUntil: 'networkidle' });
+  await mp3.waitForFunction(() => !!window.__lin, null, { timeout: 10000 }).catch(() => {});
+  const mrow = await center(mp3, 'a.row', 2);
+  const rest = mrow.box;
+  await mp3.mouse.move(rest.x + rest.width * 0.2, mrow.y, { steps: 3 });
+  await stillFrames(mp3);
+  await mp3.evaluate(() => {
+    window.__mf = 0;
+    window.__mfOn = true;
+    const t = () => {
+      if (!window.__mfOn) return;
+      window.__mf++;
+      requestAnimationFrame(t);
+    };
+    requestAnimationFrame(t);
+  });
+  const pm0 = await perf();
+  for (let i = 0; i < 120; i++) await mp3.mouse.move(rest.x + rest.width * (0.2 + (0.6 * i) / 120), mrow.y + Math.sin(i / 5) * 3);
+  const pm1 = await perf();
+  const mFrames = await mp3.evaluate(() => {
+    window.__mfOn = false;
+    return window.__mf;
+  });
+  const mLay = pm1.LayoutCount - pm0.LayoutCount;
+  const mRec = pm1.RecalcStyleCount - pm0.RecalcStyleCount;
+  ok(mLay <= 12 && mRec <= mFrames, `120 pointer moves inside a hovered row: ${mLay} layouts (12 at most) and ${mRec} style recalcs in ${mFrames} frames (one a frame at most)`, JSON.stringify({ mLay, mRec, mFrames, taskMs: Math.round((pm1.TaskDuration - pm0.TaskDuration) * 1000) }));
+  // and the magnet leans exactly as it always has: settled after a move, the
+  // pull is a tenth of the cursor's offset from the row's resting centre,
+  // capped at 3px across and min(6, 3 + 3% of its height) down
+  const leanOff = [];
+  for (const [fx, fy] of [[0.1, 0.3], [0.5, 0.5], [0.9, 0.7], [0.3, 0.6]]) {
+    const x = rest.x + rest.width * fx;
+    const y = rest.y + rest.height * fy;
+    await mp3.mouse.move(x, y);
+    await mp3.waitForFunction(() => document.querySelectorAll('a.row')[2].getAnimations().length === 0, null, { timeout: 3000 }).catch(() => {});
+    const got = (await mp3.evaluate(() => document.querySelectorAll('a.row')[2].style.transform)).match(/-?[\d.]+/g)?.map(Number) ?? [];
+    const capY = Math.min(6, 3 + rest.height * 0.03);
+    const want = [Math.max(-3, Math.min(3, (x - (rest.x + rest.width / 2)) * 0.1)), Math.max(-capY, Math.min(capY, (y - (rest.y + rest.height / 2)) * 0.1))];
+    if (got.length !== 2 || Math.abs(got[0] - want[0]) > 0.011 || Math.abs(got[1] - want[1]) > 0.011) leanOff.push(`${got} want ${want.map((v) => v.toFixed(2))}`);
+  }
+  ok(leanOff.length === 0, 'and the magnet leans exactly as before: a tenth of the cursor’s offset from the resting centre, capped', leanOff.join(' | '));
+  await mc.close();
+
   // Paintings load tile-sized files: every tile has a srcset and a sizes, the
   // copies exist for all twenty, and no tile is ever drawn from a file
   // narrower than it is drawn, at 1x and 2x, wide and on a phone. The

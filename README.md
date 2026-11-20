@@ -541,7 +541,11 @@ measure the film rather than the battery. It checks:
 - the frame budget: 2s of idle on five pages runs no frames at all, in
   Chrome and WebKit, and none after a hover on the X or a row that played
   Jelly; after 5s at rest the X still swells by the second frame; JellyBox's
-  `optics.js` hashes to the copy we took. Every painting tile has a `srcset`
+  `optics.js` hashes to the copy we took. 120 pointer moves inside a hovered
+  row cost 12 layouts at most and one style recalc a frame at most, because a
+  move reads the button's box once, in the event, and the magnet writes its
+  lean once, in the next frame; settled, the lean is exactly what it always
+  was. Every painting tile has a `srcset`
   and a `sizes`, its copies exist at the widths they claim, no tile is drawn
   from a file narrower than it is drawn (1x and 2x, 1440 and 390 wide, and
   WebKit at 3x), and the first screen of paintings at 1440 loads 800 kB of
