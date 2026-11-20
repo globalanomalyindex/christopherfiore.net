@@ -1242,6 +1242,16 @@ a.row,
 }
 
 /*
+  Lines level. The glitch face is set at 1.14em, and a letter that size would
+  stretch its line box and push the baseline down 3 to 4px. A letter of the
+  overlay adds nothing to the line box, so the overlay's lines are exactly the
+  resting ones: every baseline, and the pitch between lines, holds on hover.
+*/
+[data-glitch] > span {
+  line-height: 0;
+}
+
+/*
   A word the seam engine has split out. It has to be an atomic inline box,
   because a plain inline box cannot be translated, and the seams move words
   with `translate`.

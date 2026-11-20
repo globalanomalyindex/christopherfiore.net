@@ -694,16 +694,24 @@ try {
   }
 
   // Every label, in both faces: the hover label never runs out of its cell
-  // into the column beside it.
+  // into the column beside it. The hover keeps the resting lines (glitch.ts),
+  // so each resting line, the last with its tail, must fit the cell in the
+  // face the hover lands in: letters in Dessign Maison, spaces in the mono.
   for (const path of ['/product-designs/', '/paintings/', '/about/', '/product-designs/guestpass/']) {
     await page.goto(BASE + path, { waitUntil: 'networkidle' });
     await settle(page);
     const spill = await page.evaluate(() =>
       Array.from(document.querySelectorAll('.nm [data-word], .cell [data-word], .fig [data-word]')).flatMap((w) => {
+        const ALT = "font-family:'Dessign Maison',Georgia,serif;font-feature-settings:'salt' 1,'ss01' 1;font-size:1.14em;font-weight:400";
         const width = (text) => {
           const s = document.createElement('span');
-          s.textContent = text;
-          s.style.cssText = "position:absolute;visibility:hidden;white-space:pre;left:0;top:0;font-family:'Dessign Maison',Georgia,serif;font-feature-settings:'salt' 1,'ss01' 1;font-size:1.14em;font-weight:400";
+          s.style.cssText = 'position:absolute;visibility:hidden;white-space:pre;left:0;top:0';
+          for (const ch of Array.from(text)) {
+            const c = document.createElement('span');
+            c.textContent = ch;
+            if (ch.trim()) c.style.cssText = ALT;
+            s.appendChild(c);
+          }
           w.appendChild(s);
           const x = s.getBoundingClientRect().width;
           s.remove();
@@ -711,19 +719,36 @@ try {
         };
         const cell = w.parentElement;
         const cs = getComputedStyle(cell);
-        // the overlay starts at the cell's left padding and may run to its edge
-        const room = cell.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
-        // A name too long for its column wraps at rest, and its overlay wraps with it:
-        // then every word, and the last with its tail, must fit the column on its own.
-        const range = document.createRange();
-        range.selectNodeContents(w.firstChild);
-        const lines = new Set(Array.from(range.getClientRects()).map((r) => Math.round(r.top))).size;
-        const pieces = lines > 1 ? w.textContent.split(' ').map((p, i, a) => (i === a.length - 1 ? `${p}...` : p)) : [`${w.textContent}...`];
+        // the overlay starts at the cell's left padding and may run to its edge; the
+        // header's figure chip is sized to its word, and its face may use the chip's own padding
+        const room = cell.clientWidth - parseFloat(cs.paddingLeft) - (cell.matches('.fig') ? 0 : parseFloat(cs.paddingRight));
+        // the resting lines, each letter on the line its own box sits on
+        const label = [...w.childNodes].filter((n) => n.nodeType === 3).map((n) => n.nodeValue).join('');
+        const lines = [];
+        let at = null;
+        const rg = document.createRange();
+        for (const n of [...w.childNodes].filter((c) => c.nodeType === 3)) {
+          let i = 0;
+          for (const ch of n.nodeValue) {
+            if (ch.trim()) {
+              rg.setStart(n, i);
+              rg.setEnd(n, i + ch.length);
+              const q = rg.getClientRects()[0];
+              if (q && (!at || q.top >= (at.top + at.bottom) / 2)) {
+                lines.push('');
+                at = q;
+              }
+            }
+            if (lines.length) lines[lines.length - 1] += ch;
+            i += ch.length;
+          }
+        }
+        const pieces = lines.map((l, i) => (i === lines.length - 1 && !label.includes('@') ? `${l.trim()}...` : l.trim()));
         const widest = Math.max(...pieces.map(width));
-        return widest > room + 0.5 ? [`${w.textContent} ${Math.round(widest)}>${Math.round(room)}`] : [];
+        return widest > room + 0.5 ? [`${label} (${lines.length} lines) ${Math.round(widest)}>${Math.round(room)}`] : [];
       }),
     );
-    ok(spill.length === 0, `${path}: every hover label fits its cell`, spill.join(' | '));
+    ok(spill.length === 0, `${path}: every hover label fits its cell, each resting line in the glitch face, the last with its tail`, spill.join(' | '));
   }
 
   // The back button answers for itself: no band, no glitch, no magnet. JellyBox's material leans; the X stays still.
@@ -2386,6 +2411,119 @@ try {
     const uneven = [...rowsOf.values()].filter((ts) => Math.max(...ts) - Math.min(...ts) > 0.5).length;
     return { ok: tiles.length === 20 && !off.length && !uneven, off, uneven, rows: rowsOf.size };
   };
+  /**
+   * A label's type, in its button's own px (the magnet moves the button, not
+   * the type in it): each line's letters by index, where its first letter
+   * starts, and its baseline. At rest from the resting text; hovered from the
+   * overlay. A zero-size inline-block on the baseline finds a baseline.
+   * `edge` is the content edge of the label's cell, `over` how far any glyph
+   * of the overlay runs past it, `out` how far any glyph leaves the tile.
+   */
+  const typeFacts = ([sel, nth]) => {
+    const a = document.querySelectorAll(sel)[nth];
+    const r = a.getBoundingClientRect();
+    const X = (v) => v - r.left;
+    const Y = (v) => v - r.top;
+    const w = a.querySelector('[data-word]');
+    const cell = w.parentElement;
+    const cr = cell.getBoundingClientRect();
+    const edge = X(cr.right - parseFloat(getComputedStyle(cell).paddingRight));
+    const tile = a.closest('.tile')?.getBoundingClientRect();
+    const probe = () => {
+      const p = document.createElement('span');
+      p.style.cssText = 'display:inline-block;width:0;height:0;vertical-align:baseline';
+      return p;
+    };
+    const ov = w.querySelector('[data-glitch]');
+    if (!ov) {
+      const letters = [];
+      let k = 0;
+      for (const n of [...w.childNodes].filter((c) => c.nodeType === 3)) {
+        let i = 0;
+        for (const ch of n.nodeValue) {
+          if (ch.trim()) {
+            const rg = document.createRange();
+            rg.setStart(n, i);
+            rg.setEnd(n, i + ch.length);
+            const q = rg.getClientRects()[0];
+            if (q) letters.push({ k, top: Y(q.top), bottom: Y(q.bottom), left: X(q.left), right: X(q.right), q });
+          }
+          i += ch.length;
+          k++;
+        }
+      }
+      const lines = [];
+      for (const l of letters) {
+        const cur = lines[lines.length - 1];
+        if (!cur || l.top >= (cur.top + cur.bottom) / 2) lines.push({ top: l.top, bottom: l.bottom, first: l.left, ks: [l.k] });
+        else cur.ks.push(l.k);
+      }
+      const p = probe();
+      w.insertBefore(p, w.firstChild);
+      const b0 = Y(p.getBoundingClientRect().top);
+      p.remove();
+      const out = tile ? Math.max(0, ...letters.map(({ q }) => Math.max(tile.left - q.left, q.right - tile.right, tile.top - q.top, q.bottom - tile.bottom))) : 0;
+      return { n: k, lines: lines.map((l) => ({ ks: l.ks, first: l.first, base: b0 + l.top - lines[0].top })), edge, over: 0, out };
+    }
+    // hovered: a probe at the start of the overlay and after each forced break finds each line's baseline
+    const spans = [...ov.children].filter((c) => c.tagName === 'SPAN');
+    const heads = [ov.firstChild, ...[...ov.children].filter((c) => c.tagName === 'BR').map((b) => b.nextSibling)];
+    const ps = heads.map((h) => ov.insertBefore(probe(), h));
+    const bases = ps.map((p) => Y(p.getBoundingClientRect().top));
+    ps.forEach((p) => p.remove());
+    const lines = bases.map((base) => ({ base, first: null, ks: [] }));
+    let over = -Infinity;
+    let out = 0;
+    spans.forEach((s, k) => {
+      if (!s.textContent.trim()) return;
+      const q = s.getBoundingClientRect();
+      // its line: the baseline nearest the foot of its glyph box (about 70% of the way down)
+      const foot = Y(q.top) + 0.7 * q.height;
+      const ln = lines.reduce((b, l, i) => (Math.abs(foot - l.base) < Math.abs(foot - lines[b].base) ? i : b), 0);
+      if (lines[ln].first == null) lines[ln].first = X(q.left);
+      lines[ln].ks.push(k);
+      over = Math.max(over, X(q.right) - edge);
+      if (tile) out = Math.max(out, tile.left - q.left, q.right - tile.right, tile.top - q.top, q.bottom - tile.bottom);
+    });
+    return { n: spans.length, lines, edge, over, out, tail: ov.textContent.endsWith('...') };
+  };
+  /** Rest and hover agree: the same letters on the same lines, each line starting where it did, on the same baseline. */
+  const sameType = (rest, hov) => {
+    if (!rest || !hov) return { ok: false, why: 'no type' };
+    const lineOf = (f) => new Map(f.lines.flatMap((l, i) => l.ks.map((k) => [k, i])));
+    const lr = lineOf(rest);
+    const lh = lineOf(hov);
+    const moved = [...lr].filter(([k, i]) => lh.get(k) !== i).length;
+    const starts = Math.max(0, ...rest.lines.map((l, i) => Math.abs(l.first - (hov.lines[i]?.first ?? 1e9))));
+    const base = Math.max(0, ...rest.lines.map((l, i) => Math.abs(l.base - (hov.lines[i]?.base ?? 1e9))));
+    const pitch = Math.max(0, ...rest.lines.slice(1).map((l, i) => Math.abs((l.base - rest.lines[i].base) - ((hov.lines[i + 1]?.base ?? 1e9) - hov.lines[i].base))));
+    const ok = rest.lines.length === hov.lines.length && moved === 0 && starts <= 1 && base <= 0.5 && pitch <= 0.5;
+    return { ok, lines: rest.lines.length, moved, starts: +starts.toFixed(2), base: +base.toFixed(2), pitch: +pitch.toFixed(2), over: +hov.over.toFixed(2) };
+  };
+  /** Hover the nth `sel` and read its type at rest and once the glitch and every glide have settled. */
+  const hoverType = async (pg, sel, nth) => {
+    await pg.evaluate(([s, i]) => document.querySelectorAll(s)[i].scrollIntoView({ block: 'center' }), [sel, nth]);
+    const b4 = await pg.evaluate(layout);
+    const rest = await pg.evaluate(typeFacts, [sel, nth]);
+    const box = await pg.evaluate(([s, i]) => { const q = document.querySelectorAll(s)[i].getBoundingClientRect(); return [q.left + Math.min(q.width / 2, 40), q.top + q.height / 2]; }, [sel, nth]);
+    await pg.mouse.move(box[0], box[1]);
+    const landed = await pg.waitForFunction(([s, i]) => {
+      const ov = document.querySelectorAll(s)[i].querySelector('[data-glitch]');
+      return !!ov && [...ov.children].every((c) => c.tagName === 'BR' || !c.textContent.trim() || (/Dessign/.test(c.getAttribute('style') ?? '') && !/left:|blur|color:/.test(c.getAttribute('style') ?? '')));
+    }, [sel, nth], { timeout: 4000 }).then(() => true, () => false);
+    const hov = landed ? await pg.evaluate(typeFacts, [sel, nth]) : null;
+    const now = await pg.evaluate(layout);
+    // and after: the pointer off to the page's empty corner, the overlay gone
+    await pg.mouse.move(1, pg.viewportSize().height - 1);
+    await pg.waitForFunction(([s, i]) => !document.querySelectorAll(s)[i].querySelector('[data-glitch]'), [sel, nth], { timeout: 3000 }).catch(() => {});
+    const after = await pg.evaluate(layout);
+    return { rest, hov, moved: b4.filter((v, i) => v !== now[i] || v !== after[i]).length };
+  };
+  /** Every picture on the page in, so a lazy image arriving never reads as a hover moving a box. */
+  const allIn = (pg) => pg.evaluate(async () => {
+    document.querySelectorAll('img[loading="lazy"]').forEach((i) => (i.loading = 'eager'));
+    await Promise.all([...document.images].map((i) => i.decode().catch(() => {})));
+  });
   const pViews = [['Chrome', browser, 1728, 908], ['Chrome', browser, 1440, 900], ['Chrome', browser, 1024, 800], ['Chrome', browser, 760, 900], ['Chrome', browser, 600, 900], ...(wk ? [['WebKit', wk, 1440, 900], ['WebKit', wk, 390, 844]] : [])];
   for (const [eng, br, vw, vh] of pViews) {
     const pctx = await br.newContext({ viewport: { width: vw, height: vh } });
@@ -2396,7 +2534,59 @@ try {
     await settle(pp);
     const lv = levels(await pp.evaluate(standing));
     ok(lv.ok, `${eng} ${vw} wide: every painting stands right on its title, and every title in a row is on one level`, JSON.stringify(lv));
+    // every title, hovered: no word changes line, no line moves, nothing runs out of the cell, no box moves
+    await allIn(pp);
+    const bad = [];
+    let wrapped = 0;
+    for (let i = 0; i < 20; i++) {
+      const f = await hoverType(pp, '.tile .cell', i);
+      const s = sameType(f.rest, f.hov);
+      if (f.rest?.lines.length > 1) wrapped++;
+      if (!s.ok || s.over > 0.5 || f.moved) bad.push(`${i} ${JSON.stringify({ ...s, moved: f.moved })}`);
+    }
+    ok(bad.length === 0 && wrapped > 0 === vw > 480, `${eng} ${vw} wide: hovering each title, every word stays on its line, each line starts where it did, on the same baseline and pitch, inside its cell, and no box moves before, during or after (${wrapped} wrapped)`, bad.join(' | '));
     await pctx.close();
+  }
+  // The same, for every wrapped label elsewhere, and the baseline of every kind of label.
+  for (const vw of [1440, 760]) {
+    const lctx = await browser.newContext({ viewport: { width: vw, height: 900 } });
+    await lctx.addInitScript(() => { window.__linQuiet = true; window.__dressQuiet = true; });
+    const lp = await lctx.newPage();
+    for (const path of ['/product-designs/', '/about/', '/product-designs/chellbook/']) {
+      await lp.goto(BASE + path, { waitUntil: 'networkidle' });
+      await settle(lp);
+      await allIn(lp);
+      // every label that wraps at rest
+      const wrappedAt = await lp.evaluate(() => [...document.querySelectorAll('a[data-btn]')].map((a, i) => {
+        const w = a.querySelector('[data-word]');
+        if (!w || a.matches('.jx, .plus')) return -1;
+        const rg = document.createRange();
+        rg.selectNodeContents(w);
+        return new Set([...rg.getClientRects()].map((q) => Math.round(q.top))).size > 1 ? i : -1;
+      }).filter((i) => i >= 0));
+      const bad = [];
+      for (const i of wrappedAt) {
+        const f = await hoverType(lp, 'a[data-btn]', i);
+        const s = sameType(f.rest, f.hov);
+        if (!s.ok || s.over > 0.5 || f.moved) bad.push(`${i} ${JSON.stringify({ ...s, moved: f.moved })}`);
+      }
+      ok(wrappedAt.length > 0 && bad.length === 0, `${vw} wide, ${path}: every wrapped label (${wrappedAt.length}) keeps its resting lines on hover, each on its own baseline, inside its cell, and no box moves`, bad.join(' | '));
+      await lp.mouse.move(2, 898);
+    }
+    // the baseline of a row, a home menu row, a chip, a sentence link and the header's figure chip
+    const kinds = [['/product-designs/', 'a.row', 'a row'], ['/', '.menu a', 'a home menu row'], ['/about/', '.glance .cell', 'a chip'], ['/product-designs/chellbook/', '.btn.in', 'a link in a sentence'], ['/about/', '.hd .fig', 'the header’s figure chip']];
+    const lows = [];
+    for (const [path, sel, what] of kinds) {
+      await lp.goto(BASE + path, { waitUntil: 'networkidle' });
+      await settle(lp);
+      await sleep(path === '/' ? 1800 : 0);
+      const f = await hoverType(lp, sel, 0);
+      const s = sameType(f.rest, f.hov);
+      if (!s.ok || f.moved) lows.push(`${what} ${JSON.stringify({ ...s, moved: f.moved })}`);
+      await lp.mouse.move(2, 898);
+    }
+    ok(lows.length === 0, `${vw} wide: a row, a home menu row, a chip, a link in a sentence and the header’s figure chip keep their baseline on hover`, lows.join(' | '));
+    await lctx.close();
   }
   // The film draws a painting where it is now painted: on its title, not in the middle of its box.
   const fctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
