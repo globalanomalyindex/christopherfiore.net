@@ -2547,6 +2547,80 @@ try {
   await dp.evaluate(() => window.__dress.force({ shape: 'full', dress: 'cut' }));
   for (let k = 0; k < 2; k++) await cutHover('.menu a', 1, k);
   ok(cutsSeen > 0 && cutBad.length === 0 && [1, 2, 3].every((n) => linesSeen.has(n)), `the Cut on rows of one, two and three lines: every horizontal cut Chickpea’s composeGrid proposes lands between two lines of the row’s tallest block of type (${cutsSeen} cuts), a one-line row has none, the label keeps one whole, legible cell, credited "from chickpea" (a project's own row: no credit)`, `${[...linesSeen]} | ${cutBad.slice(0, 4).join(' | ')}`);
+  // The rest before the dress, filmed on a paused clock: nothing of it before 295ms, then one thing at a time.
+  const cctx = await browser.newContext({ viewport: { width: 1728, height: 908 } });
+  await cctx.addInitScript(() => (window.__linHold = true));
+  const cp = await cctx.newPage();
+  await cp.clock.install();
+  /** One hover, frame by frame on the paused clock: the dress's own time, and everything it draws. */
+  const filmDress = async (path, sel, i, force, x) => {
+    await cp.goto(BASE + path, { waitUntil: 'networkidle' });
+    await settle(cp);
+    await cp.waitForFunction(() => !!window.__dress, null, { timeout: 8000 });
+    await cp.evaluate((f) => window.__dress.force(f), force);
+    const q = await cp.evaluate(([s, k]) => { const a = document.querySelectorAll(s)[k]; a.scrollIntoView({ block: 'center' }); const r = a.getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; }, [sel, i]);
+    // from the empty gutter, straight in: a cold entry, the glitch in its four drawings
+    await cp.mouse.move(4, 880);
+    await sleep(300);
+    await cp.clock.pauseAt((await cp.evaluate(() => Date.now())) + 1000);
+    await cp.mouse.move(q[0] + x, q[1] + q[3] / 2);
+    const log = [];
+    for (let k = 0; k < 45; k++) {
+      log.push(await cp.evaluate(([s, j]) => {
+        const a = document.querySelectorAll(s)[j];
+        const r = a.getBoundingClientRect();
+        const band = a.querySelector('[data-band]')?.getBoundingClientRect();
+        const st = window.__dress.state(a);
+        const w = a.querySelector('[data-wire]');
+        return {
+          t: st ? st.t : null,
+          start: st ? st.start : null,
+          T: st ? st.T : null,
+          bw: a.offsetWidth,
+          band: band ? [band.left - r.left, band.right - r.left] : null,
+          inset: !!band && [band.left - r.left, band.top - r.top, r.right - band.right, r.bottom - band.bottom].some((v) => Math.abs(v) >= 0.25),
+          wire: !!w,
+          x: !!w && w.classList.contains('x-on'),
+          tc: [...a.querySelectorAll('[data-band] .tc')].map((c) => { const b = c.getBoundingClientRect(); return [b.left - r.left, b.right - r.left, c.style.clipPath]; }),
+          cc: a.querySelectorAll('[data-band] .cc').length,
+          tru: !!a.querySelector('[data-true]'),
+          credit: document.querySelector('.lin-credit')?.textContent ?? null,
+        };
+      }, [sel, i]));
+      await cp.clock.runFor(16);
+    }
+    await cp.mouse.move(4, 880);
+    await cp.clock.runFor(800);
+    await cp.clock.resume();
+    return log;
+  };
+  const drawnAny = (f) => f.inset || f.wire || f.tc.length || f.cc || f.tru;
+  const entrance = (log) => {
+    const first = log.find(drawnAny);
+    const early = log.filter((f) => drawnAny(f) && !(f.t >= 295));
+    // a text cell outside the band's target, unless the side past it is the band's own edge, where a cell that runs to it stretches
+    const outside = log.filter((f) => f.T && f.tc.some(([x0, x1]) => !((x0 >= f.T[3] - 0.6 || Math.abs(x0 - f.band[0]) < 0.6) && (x1 <= f.bw - f.T[1] + 0.6 || Math.abs(x1 - f.band[1]) < 0.6) && x0 < f.bw - f.T[1] - 0.5)));
+    const steps = new Set(log.flatMap((f) => f.tc.map(([, , c]) => (FULL.test(c) ? 'whole' : (c.match(/[\d.]+%/g) ?? []).filter((v) => v !== '0%').join(' ')))));
+    const firstCell = log.find((f) => f.tc.length);
+    const firstX = log.find((f) => f.x);
+    return { first: first?.t ?? null, early: early.length, outside: outside.length, steps: [...steps], cellAt: firstCell?.t ?? null, xAt: firstX?.t ?? null, start: log.find((f) => f.start != null)?.start ?? null };
+  };
+  const films = [
+    ['a home menu row, Ratio with the wire', '/', '.menu a', 2, { shape: 'ratio', dress: 'wire' }, 528],
+    ['a page row, Ratio with the wire', '/product-designs/', 'a.row:not(nav a)', pick(1), { shape: 'ratio', dress: 'wire' }, 700],
+    ['the +dither row, Reach with the wire', '/product-designs/', 'a.row:not(nav a)', ditherAt, { shape: 'reach', dress: 'wire' }, 450],
+  ];
+  for (const [what, path, sel, i, force, x] of films) {
+    const e = entrance(await filmDress(path, sel, i, force, x));
+    ok(e.start === 300 && e.early === 0 && e.first != null && e.first <= 340, `${what}: nothing of the dress (shape, wire, cell, Cut, true size) before 295ms; it begins at the 300ms drawing, two after the glitch lands, and shows by 340ms`, JSON.stringify(e));
+    ok(e.outside === 0 && e.cellAt != null && e.steps.every((v) => v === 'whole' || v === '30%') && e.xAt != null && e.xAt - e.cellAt >= 75, `${what}: no text cell is ever drawn outside the band’s target; the cells land 70% then whole, on drawings, and the X comes after`, JSON.stringify(e));
+  }
+  const cutLog = await filmDress('/', '.menu a', 1, { shape: 'reach', dress: 'cut' }, 520);
+  const firstCc = cutLog.find((f) => f.cc);
+  const firstTrue = cutLog.find((f) => f.tru);
+  ok(firstCc && firstCc.t >= 295 && firstCc.t <= 340 && firstCc.credit === 'from chickpea' && !cutLog.some((f) => f.cc && !(f.t >= 295)), 'the Cut: its first cell lands at the 300ms drawing, and its credit steps in with it', JSON.stringify(firstCc && { t: firstCc.t, credit: firstCc.credit }));
+  ok(firstTrue && firstTrue.t >= firstTrue.start + 120 && firstTrue.t <= firstTrue.start + 140, 'the true-size mark comes in 120ms after the dress begins', JSON.stringify(firstTrue && { t: firstTrue.t, start: firstTrue.start }));
+  await cctx.close();
   await dp.evaluate(() => window.__dress.force(null));
   const rmc = await browser.newContext({ viewport: { width: 1728, height: 908 }, reducedMotion: 'reduce' });
   const rmp = await rmc.newPage();

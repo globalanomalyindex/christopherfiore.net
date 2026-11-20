@@ -103,6 +103,15 @@ const REFIT_K: [number, number] = [520, 0.9];
 const LEAN_K: [number, number] = [420, 0.82];
 const LEAN = 8;
 const WIRE_OUT = 4;
+/**
+ * The rest before the dress (his note on the glitch into the hover feeling
+ * "not smooth, or unintentional"). The glitch lands at 200ms; the dress
+ * begins 80ms after the 220ms dwell, on the hover's own 50ms drawings: at
+ * 300ms, two held drawings after the glitch, so it reads as a second beat and
+ * not as a stutter one frame after the first.
+ */
+const REST = 80;
+const DRAW = 50;
 
 /**
  * Where a free edge may stop (his note: "any effect bands need to be random
@@ -177,6 +186,7 @@ interface Dr {
   WV: Ins;
   lean: Ins;
   LV: Ins;
+  /** when the dress begins, ms into the hover: the dwell, then the rest, on a drawing */
   start: number;
   last: number;
   /** the hover's time at the last frame drawn, ms */
@@ -192,8 +202,13 @@ interface Dr {
   lay: Lay | null;
   /** the text cells are drawn here (not on a Cut, whose text columns are the cells) */
   drawCells: boolean;
-  /** each text cell's drawing: when it starts (ms after the deal) and the band edge it grows from */
+  /**
+   * each text cell's drawing: its turn (ms after the start, the cells inside
+   * the band nearest the cursor first), when it began to land (-1: not drawn
+   * now), and the side it grows from, the one nearer the cursor
+   */
   cellAt: number[];
+  cellIn: number[];
   cellFrom: ('l' | 'r')[];
   fill: string;
   labR: number;
@@ -462,7 +477,7 @@ function deal(h: Hot, t: number): void {
   const labR = Math.min(bw, label.x + label.w + h.geo.fs / 2);
   const bl = blocks(h.b, !!h.P.m);
   // the wire's cells (not on a Cut, whose text columns are its cells), laid out once over
-  // the button's whole width: a band that moves later only clips them
+  // the button's whole width; a cell is drawn only while it lies inside the band's target
   const wireLay = wire && !cut ? layout(bl, 0, bw, h.geo.fs) : null;
   // where a free edge may stop: the blocks' own cells and, with the wire, the wire's cells
   const spans = [
@@ -487,14 +502,7 @@ function deal(h: Hot, t: number): void {
   const texts = [label, ...(fig ? [fig] : [])].map((c) => ({ x: c.x - 0.25 * h.geo.fs, y: c.y - 0.1 * h.geo.fs, w: c.w + 0.5 * h.geo.fs, h: c.h + 0.2 * h.geo.fs }));
   const cells = cut ? cutCells(h, T, g.rng() * 2 ** 31 >>> 0) : null;
   const lay = !wire ? null : cells ? cutLay(h, cells, T, bw - T[1] - T[3], texts) : wireLay;
-  // each cell lands from the band edge nearer it; the one nearest the cursor first, the next a drawing later
-  const L0 = T[3];
-  const R0 = h.geo.bw - T[1];
-  const tcs = lay && !cells ? lay.cells : [];
-  const dist = (c: TCell) => (h.px < c.x0 ? c.x0 - h.px : h.px > c.x1 ? h.px - c.x1 : 0);
-  const order = tcs.map((c, i) => ({ i, d: dist(c) })).sort((p, q) => p.d - q.d);
-  const cellAt: number[] = [];
-  order.forEach((o, k) => (cellAt[o.i] = 50 * Math.min(3, k)));
+  const n = lay && !cells ? lay.cells.length : 0;
   const dr: Dr = {
     shape,
     wire,
@@ -506,7 +514,8 @@ function deal(h: Hot, t: number): void {
     WV: [0, 0, 0, 0],
     lean: [0, 0, 0, 0],
     LV: [0, 0, 0, 0],
-    start: t,
+    // on the hover's own drawings: 300ms after entry for a dwell met on time
+    start: Math.floor((t + REST) / DRAW) * DRAW,
     last: -1,
     t,
     clipX,
@@ -518,8 +527,9 @@ function deal(h: Hot, t: number): void {
     cells,
     lay,
     drawCells: !cells,
-    cellAt,
-    cellFrom: tcs.map((c) => (c.toL || (!c.toR && (c.x0 + c.x1) / 2 < (L0 + R0) / 2) ? 'l' : 'r')),
+    cellAt: [],
+    cellIn: new Array(n).fill(-1),
+    cellFrom: new Array(n).fill('l'),
     fill: mix(h.P.main, GROUND, 0.55),
     labR,
     figL: fig ? fig.x : Infinity,
@@ -669,11 +679,38 @@ function frame(h: Hot, t: number, now: number): DressFrame {
     trueEl(h, dr);
     fadeIn(dr.trueEl!, () => dr.out == null);
   }
-  // the type's cells: ink, on the band's drawings, 70% then whole, from the band edge nearer each
+  // the type's cells: ink, on the band's drawings, 70% then whole, each from its side nearer
+  // the cursor. Only a cell inside the band's target is drawn, never one the band will clip away.
   if (dr.lay && dr.drawCells && h.out == null && since >= 0) {
-    const tc = dr.lay.cells
+    const lay = dr.lay;
+    const Lt = dr.T[3];
+    const Rt = dr.stops.bw - dr.T[1];
+    // a cell that runs to a band edge is inside while it starts inside; any other, while it lies wholly inside
+    const inside = (c: TCell) => (c.toL ? c.x1 > Lt + 0.5 : c.x0 >= Lt - 0.5) && (c.toR ? c.x0 < Rt - 0.5 : c.x1 <= Rt + 0.5);
+    const ext = (c: TCell): [number, number] => [c.toL ? Lt : c.x0, c.toR ? Rt : c.x1];
+    if (!dr.cellAt.length) {
+      // their turns, decided as the dress begins: the cells inside the band, nearest the cursor first, a drawing apart
+      const dist = (c: TCell) => {
+        const [a, b] = ext(c);
+        return h.px < a ? a - h.px : h.px > b ? h.px - b : 0;
+      };
+      const order = lay.cells.map((c, i) => ({ i, d: (inside(c) ? 0 : 1e9) + dist(c) })).sort((p, q) => p.d - q.d);
+      order.forEach((o, k) => (dr.cellAt[o.i] = DRAW * Math.min(3, k)));
+    }
+    const tc = lay.cells
       .map((c, i) => {
-        const p = step2(since - dr.cellAt[i]);
+        if (!inside(c)) {
+          dr.cellIn[i] = -1;
+          return null;
+        }
+        if (since < dr.cellAt[i]) return null;
+        if (dr.cellIn[i] < 0) {
+          // it lands now, on a drawing, growing from its side nearer the cursor
+          dr.cellIn[i] = dr.cellAt[i] + Math.floor((since - dr.cellAt[i]) / DRAW) * DRAW;
+          const [a, b] = ext(c);
+          dr.cellFrom[i] = h.px - a <= b - h.px ? 'l' : 'r';
+        }
+        const p = step2(since - dr.cellIn[i]);
         if (p <= 0) return null;
         // in the band host's own px: a cell at a band edge runs to that edge, wherever the shape has it
         const horiz = c.toL && c.toR ? 'left:0;right:0' : c.toL ? `left:0;width:${Math.max(0, c.x1 - sl).toFixed(1)}px` : c.toR ? `left:${(c.x0 - sl).toFixed(1)}px;right:0` : `left:${(c.x0 - sl).toFixed(1)}px;width:${(c.x1 - c.x0).toFixed(1)}px`;
