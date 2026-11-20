@@ -1814,6 +1814,7 @@ try {
         line: a.querySelectorAll('[data-band] [data-k="n"]').length,
         kc: !!a.querySelector('[data-k="kc"]'),
         jelly: !!a.querySelector('.jx-row, [data-k="jc"]'),
+        sk: !!a.querySelector('[data-band] [data-k="sk"]'),
         rested: a.querySelector('[data-word]').style.color === '',
         host: a.querySelector('[data-band]').style.transform,
         credit: document.querySelector('.lin-credit') ? [document.querySelector('.lin-credit').textContent, document.querySelector('.lin-credit').style.opacity] : null,
@@ -1890,6 +1891,29 @@ try {
   ok(!menuFits.split(' ').includes('jelly') && menuFits.split(' ').length >= 2, 'a menu row is never dealt Jelly: its colour has to say which page it opens', menuFits);
   await lp.mouse.move(1430, 980);
   await sleep(1700);
+  /** Anything an effect adds to a row, beyond the settled glitch, and the credit. */
+  const anyFx = ([s, n]) => {
+    const a = document.querySelectorAll(s)[n];
+    const hot = a.hasAttribute('data-hot');
+    const host = a.querySelector('[data-band]');
+    const w = a.querySelector('[data-word]');
+    const ov = a.querySelector('[data-glitch]');
+    const label = [...w.childNodes].filter((c) => c.nodeType === 3).map((c) => c.nodeValue).join('');
+    const want = [...(label + (label.includes('@') ? '' : '...'))];
+    const spans = ov ? [...ov.children].filter((c) => c.tagName === 'SPAN') : [];
+    // while hot, the glitch alone never: drops the outline, moves the host,
+    // styles the overlay, changes a letter's text or lets the word rest
+    const layer =
+      !!a.querySelector('[data-band] [data-k="x"], [data-band] [data-k="n"], [data-k="kc"], [data-k="bay"], [data-k="sk"], .jx-row, [data-k="jc"]') ||
+      (hot &&
+        (host?.dataset.ol === '0' ||
+          !!host?.style.transform ||
+          !!(ov && (ov.style.opacity || ov.style.transform || ov.style.visibility)) ||
+          spans.some((sp, i) => sp.textContent !== want[i]) ||
+          w.style.color === ''));
+    const cr = document.querySelector('.lin-credit');
+    return { layer, credit: cr ? cr.textContent : null, hot };
+  };
   // Every effect, forced on a plain row: what it adds, that it moves nothing, and that leaving takes it all away.
   const plain = 'a.row:not([data-lin])';
   const expect = {
@@ -1900,7 +1924,7 @@ try {
     knockout: (v) => v.x === 1 && v.kc,
     bayer: (v) => v.x === 0 && v.bay === 1,
     jelly: (v) => v.band === 0 && v.jelly,
-    skeleton: (v) => v.band === 3 && v.x >= 3,
+    skeleton: (v) => v.band === 3 && v.sk,
   };
   for (const fx of Object.keys(expect)) {
     await lp.evaluate((f) => window.__lin.force(f), fx);
@@ -1909,8 +1933,10 @@ try {
     const c = await center(lp, plain, 1);
     const b4 = await lp.evaluate(layout);
     await lp.mouse.move(c.x, c.y, { steps: 2 });
-    // Skeleton hands its cells back to the words by 520ms after the dwell; catch it while they are up
-    await sleep(fx === 'skeleton' ? 420 : 780);
+    // wait for the effect's own first layer and time from there; Skeleton hands
+    // its cells back to the words 540ms after its first frame, so catch it while they are up
+    await lp.waitForFunction(`(${anyFx})(${JSON.stringify([plain, 1])}).layer`, null, { timeout: 3000 });
+    await sleep(fx === 'skeleton' ? 100 : 480);
     const v = await fxView(plain, 1);
     const during = await lp.evaluate(layout);
     ok(expect[fx](v) && v.credit && v.credit[0].startsWith('from ') && +v.credit[1] === 1, `${fx}: dealt after the glitch, it plays and shows its quiet credit`, JSON.stringify(v));
@@ -2068,29 +2094,6 @@ try {
     await pg.mouse.move(1430, 990);
     await pg.clock.runFor(2600);
     await pg.evaluate(() => window.__lin.force(null));
-  };
-  /** Anything an effect adds to a row, beyond the settled glitch, and the credit. */
-  const anyFx = ([s, n]) => {
-    const a = document.querySelectorAll(s)[n];
-    const hot = a.hasAttribute('data-hot');
-    const host = a.querySelector('[data-band]');
-    const w = a.querySelector('[data-word]');
-    const ov = a.querySelector('[data-glitch]');
-    const label = [...w.childNodes].filter((c) => c.nodeType === 3).map((c) => c.nodeValue).join('');
-    const want = [...(label + (label.includes('@') ? '' : '...'))];
-    const spans = ov ? [...ov.children].filter((c) => c.tagName === 'SPAN') : [];
-    // while hot, the glitch alone never: drops the outline, moves the host,
-    // styles the overlay, changes a letter's text or lets the word rest
-    const layer =
-      !!a.querySelector('[data-band] [data-k="x"], [data-band] [data-k="n"], [data-k="kc"], [data-k="bay"], [data-k="sk"], .jx-row, [data-k="jc"]') ||
-      (hot &&
-        (host?.dataset.ol === '0' ||
-          !!host?.style.transform ||
-          !!(ov && (ov.style.opacity || ov.style.transform || ov.style.visibility)) ||
-          spans.some((sp, i) => sp.textContent !== want[i]) ||
-          w.style.color === ''));
-    const cr = document.querySelector('.lin-credit');
-    return { layer, credit: cr ? cr.textContent : null, hot };
   };
   {
     const { ctx, pg } = await clockPage('/product-designs/');
@@ -2314,6 +2317,77 @@ try {
       const files = readdirSync(rt, { recursive: true }).filter((f) => String(f).endsWith('.ts'));
       const left = files.filter((f) => /\bbay[1-4]\b|['"`]bay bay|\.bay\b|mask-image|mask-size/.test(readFileSync(new URL(String(f), rt), 'utf8')));
       ok(left.length === 0, 'the four hand-drawn Bayer masks are gone from the runtime', left.join(' '));
+    }
+
+    // Skeleton, from After Tokens' shipping material: its growing rows, its division, its handover.
+    {
+      const { createHash } = await import('node:crypto');
+      const { existsSync } = await import('node:fs');
+      const vend = new URL('../src/vendor/after-tokens/', import.meta.url);
+      const sha = (f) => createHash('sha256').update(readFileSync(new URL(f, vend))).digest('hex');
+      const hashes = { 'growing-geometry.ts': 'fd351229c024f63f3ca210401af20e38a364f58c0ad20d688ab73549a12e17a5', 'ambient-geometry.ts': '7fb73b89646cc655f97d28ee4f719a3f530cbc5b4f16213ecc81f24593907338', 'types.ts': '116a4ef1d09fd12ec88f2002c90e5ceafec3dfa2efbe16249836bacf088624cf' };
+      const wrong = Object.entries(hashes).filter(([f, h]) => sha(f) !== h).map(([f]) => f);
+      ok(wrong.length === 0 && !existsSync(new URL('ambient-score.ts', vend)), 'After Tokens’ growing skeleton is vendored byte for byte at 844d332, and the score it no longer ships is gone', wrong.join(' '));
+    }
+    const skRead = ([s, n]) => {
+      const a = document.querySelectorAll(s)[n];
+      const ov = a.querySelector('[data-glitch]');
+      const ds = [...a.querySelectorAll('.l, .n')].filter((e) => e.textContent.trim());
+      const root = a.querySelector('[data-k="sk"]');
+      const divs = root ? [...root.querySelectorAll('.skd')].filter((d) => d.style.display !== 'none').map((d) => ({ op: +getComputedStyle(d).opacity, clip: d.style.clipPath, slabs: [...d.children].map((q) => ({ l: parseFloat(q.style.left), t: parseFloat(q.style.top), w: parseFloat(q.style.width), h: parseFloat(q.style.height) })) })) : [];
+      const fop = root ? +getComputedStyle(root.querySelector('.skf')).opacity : 0;
+      const cells = root ? [...root.querySelectorAll('.skc')].map((c) => ({ row: c.dataset.row, a: +getComputedStyle(c).opacity * fop })) : [];
+      return { text: ov ? +getComputedStyle(ov).opacity : 1, detail: ds.map((d) => +getComputedStyle(d).opacity), inline: ds.some((d) => d.style.opacity || d.style.translate) || !!ov?.style.opacity || !!ov?.style.transform, sk: !!root, divs, cells, hot: a.hasAttribute('data-hot') };
+    };
+    const skFilm = async (p, sel, nth, fx) => {
+      // scrolled first: the sticky header's offsets follow the scroll
+      await rowBox(p, sel, nth);
+      const b4 = await p.evaluate(layout);
+      const { frames } = await filmFx(p, sel, nth, fx, 0.5, 980, skRead);
+      const lines = await p.evaluate(() => window.__lin.grid().blocks.filter((k) => k.kind !== 'tag').reduce((s, k) => s + k.lines.length, 0));
+      const blocks = await p.evaluate(() => window.__lin.grid().blocks.filter((k) => k.kind !== 'tag').length);
+      const after = await p.evaluate(layout);
+      await awayFx(p);
+      const on = frames.filter((f) => f.sk || f.inline);
+      const t0 = on[0]?.t ?? 0;
+      const text = (f) => Math.min(f.text, ...f.detail);
+      // what stands in for the text: the division (its opacity holds the 0.2) or the cells, each by its own alpha
+      const shown = (f) => Math.max(0, ...f.divs.map((d) => d.op), ...f.cells.map((c) => c.a));
+      const first = on[0];
+      const joined = !!first && first.divs.length === blocks && first.divs.every((d) => /round/.test(d.clip) && d.slabs.every((q, i) => !i || (Math.abs(q.t - (d.slabs[i - 1].t + d.slabs[i - 1].h)) < 0.5 && Math.abs(q.l - d.slabs[0].l) < 0.5 && Math.abs(q.w - d.slabs[0].w) < 0.5)));
+      // the field: from the end of the division to the handover
+      const field = frames.filter((f) => f.t - t0 >= 190 && f.t - t0 < 260);
+      const perRow = field.map((f) => { const m = {}; f.cells.filter((c) => c.a > 0.006).forEach((c) => (m[c.row] = (m[c.row] ?? 0) + 1)); return Object.values(m); });
+      const rows = field.length > 0 && perRow.every((r) => r.length === lines && r.every((n) => n >= 1 && n <= 3));
+      const blank = frames.filter((f) => f.t >= t0 && text(f) < 0.1 && shown(f) < 0.05).map((f) => f.t - t0);
+      // the text only falls while the ink leaves and only rises while it arrives
+      let mono = true;
+      frames.forEach((f, i) => {
+        if (!i) return;
+        const d = text(f) - text(frames[i - 1]);
+        const at = f.t - t0;
+        if ((d < -1e-3 && !(at >= -16 && at <= 106)) || (d > 1e-3 && !(at >= 244 && at <= 556))) mono = false;
+      });
+      const low = frames.filter((f) => f.t >= t0 && text(f) < 0.45);
+      const lowFor = low.length ? low[low.length - 1].t - low[0].t + 16 : 0;
+      const done = frames.find((f) => f.t > t0 && !f.sk && !f.inline);
+      const end = frames[frames.length - 1];
+      return { t0, joined, inks: first ? text(first) : 0, rows, perRow: perRow[0], lines, blank, mono, lowFor, over: done ? done.t - t0 : null, clean: !end.sk && !end.inline && end.cells.length === 0 && JSON.stringify(b4) === JSON.stringify(after), why: [end.sk, end.inline, end.cells.length, b4.filter((x, k) => x !== after[k]).length] };
+    };
+    {
+      const sk = {};
+      sk.own = await skFilm(pg, 'a.row[data-lin="skeleton"]', 0, null);
+      sk.three = await skFilm(pg, plainC, 0, 'skeleton');
+      sk.one = await skFilm(pg, 'a.row[data-lin="knockout"]', 0, 'skeleton');
+      const pc = await clockPage('/paintings/');
+      sk.title = await skFilm(pc.pg, 'a.cell', 2, 'skeleton');
+      await pc.ctx.close();
+      const all = Object.values(sk).filter(Boolean);
+      ok(all.every((v) => v.joined && v.inks > 0.5), 'Skeleton opens as one capsule per block of text, joined, while the ink is still there', JSON.stringify(Object.fromEntries(Object.entries(sk).filter(([, v]) => v).map(([k, v]) => [k, [v.joined, v.inks]]))));
+      ok(all.every((v) => v.rows), 'while the field is up, one skeleton row per line of text, each holding 1, 2 or 3 cells, never more', JSON.stringify(Object.fromEntries(Object.entries(sk).filter(([, v]) => v).map(([k, v]) => [k, [v.lines, v.perRow]]))));
+      ok(all.every((v) => v.blank.length === 0 && v.mono), 'no blank frame: the text and the cells are never both gone, and the text only falls as the ink leaves and only rises as it arrives', JSON.stringify(Object.fromEntries(Object.entries(sk).filter(([, v]) => v).map(([k, v]) => [k, [v.blank, v.mono]]))));
+      ok(all.every((v) => v.lowFor <= 340 && v.over != null && v.over <= 560), 'the text is under 0.45 for 340ms at most, and the card is over within 560ms of its first frame', JSON.stringify(Object.fromEntries(Object.entries(sk).filter(([, v]) => v).map(([k, v]) => [k, [v.lowFor, v.over]]))));
+      ok(all.every((v) => v.clean), 'at the end no cell, no inline opacity or translate, and no layout box moved', JSON.stringify(Object.fromEntries(Object.entries(sk).filter(([, v]) => v).map(([k, v]) => [k, [v.clean, v.why]]))));
     }
     await ctx.close();
     const home = await clockPage('/');
