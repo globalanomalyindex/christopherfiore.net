@@ -230,12 +230,16 @@ function on(b: HTMLElement, why: Why, e?: PointerEvent | MouseEvent): void {
   const px = x != null ? (x - r.left) / sc : geo.bw / 2;
   const edge: Edge = x != null && y != null ? edgeOf(b, x, y) : 'l';
   const warm = !instant && now - lastLeave < 150;
+  const hue = b.getAttribute('data-hue');
+  // a menu row's figure cell is read before faces() writes the overlay, so
+  // the read never makes the browser lay the page out again (the overlay is
+  // absolutely placed: it moves nothing this reads)
+  const mg = hue ? menuGeo(b, geo, px) : null;
   const fs = faces(b);
   const entry = (px - geo.wl) / Math.max(1, geo.ww);
-  const hue = b.getAttribute('data-hue');
   // the label's line box, with room for the glitch face, which stands 1.14 times as tall
   const lab = { bh: geo.bh, top: geo.wt - 0.1 * geo.fs, bottom: geo.wt + geo.wh + 0.1 * geo.fs };
-  const P = plan(fs[0]?.label ?? '', hue, edge, entry, warm, hue ? menuGeo(b, geo, px) : null, instant, lab);
+  const P = plan(fs[0]?.label ?? '', hue, edge, entry, warm, mg, instant, lab);
   const plans = fs.map((f, i) => (i === 0 ? P : plan(f.label, P.main, edge, entry, warm)));
   b.setAttribute('data-hot', '');
   b.toggleAttribute('data-wide', geo.bw > 480);

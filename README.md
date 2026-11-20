@@ -710,11 +710,11 @@ wire (2026-11-19):
 
 | Page | Desktop, 1440 x 900 at 1x | Phone, 390 x 844 at 3x |
 |---|---:|---:|
-| home | 168 kB | 142 kB |
-| product designs | 339 kB | 142 kB |
+| home | 169 kB | 142 kB |
+| product designs | 339 kB | 143 kB |
 | chellbook | 427 kB | 278 kB |
-| about | 340 kB | 144 kB |
-| paintings | 787 kB | 2,499 kB |
+| about | 341 kB | 144 kB |
+| paintings | 786 kB | 2,499 kB |
 
 On a desktop every subpage carries about 200 kB more than a phone: that is
 JellyBox's optics for the back X (three.js and spectral.js, 176 kB gzipped)
@@ -725,10 +725,10 @@ The scripts, gzipped:
 
 | Chunk | Size | Loads |
 |---|---:|---|
-| main | 17.6 kB | every page |
+| main | 17.9 kB | every page |
 | signature | 7.6 kB | home only |
 | lineage, with the dress, Chickpea and After Tokens | 19.6 kB | after the page is seen, for a cursor |
-| jx, with the cells | 6.3 kB | subpages, and with lineage |
+| jx, with the cells | 6.4 kB | subpages, and with lineage |
 | jellyx | 176 kB | subpages on a desktop, after the page is seen |
 
 The checks hold main to 18.5 kB, lineage to 23 kB and jx to 7 kB.
@@ -742,7 +742,7 @@ the tile really draws it at, worked out from the tile's size in `site.css`.
 The browser takes the smallest file that is at least as wide as the tile in
 its own pixels: at 1440 wide that is the 480px copy at 1x and the full file
 at 2x, the 800px copy on a phone at 2x, and the full file on a phone at 3x.
-A 2x laptop comes to 2,458 kB and a phone at 1x to 499 kB. The picture is
+A 2x laptop comes to 2,459 kB and a phone at 1x to 499 kB. The picture is
 drawn at the same size either way.
 
 Make the copies with `npm run tiles` (`scripts/tiles.mjs`, which needs
