@@ -2826,6 +2826,87 @@ try {
     ok(early > 5 && quiet === 0, `WebKit: a page at rest runs no frames (the X drawn by ${optics})`, JSON.stringify({ early, quiet }));
     await wfc.close();
   }
+
+  // Paintings load tile-sized files: every tile has a srcset and a sizes, the
+  // copies exist for all twenty, and no tile is ever drawn from a file
+  // narrower than it is drawn, at 1x and 2x, wide and on a phone. The
+  // painting's own file is the most there is, so that one may be narrower.
+  const tilesSeen = (pg) => pg.evaluate(() => Array.from(document.querySelectorAll('.tile img')).map((img) => {
+    const b = img.getBoundingClientRect();
+    const cands = (img.getAttribute('srcset') ?? '').split(',').map((c) => c.trim().split(/\s+/)).filter((c) => c[0]).map(([u, w]) => [new URL(u, location.href).href, parseInt(w, 10)]);
+    const drawn = Math.min(b.width, img.naturalWidth ? (b.height * img.naturalWidth) / img.naturalHeight : b.width);
+    // naturalWidth is scaled by the srcset's density; the file's own pixels are its w
+    const file = cands.find((c) => c[0] === img.currentSrc)?.[1] ?? img.naturalWidth;
+    return { src: img.getAttribute('src'), sizes: img.getAttribute('sizes') ?? '', cands, cur: img.currentSrc.split('/').pop(), file, done: img.complete && img.naturalWidth > 0, drawn, dpr: devicePixelRatio };
+  }));
+  const upscaled = [];
+  let tiles = null;
+  const views = [[browser, 1440, 900, 1], [browser, 1440, 900, 2], [browser, 390, 844, 1], [browser, 390, 844, 2], ...(wk ? [[wk, 1440, 900, 1], [wk, 390, 844, 3]] : [])];
+  for (const [eng, w, h, dpr] of views) {
+    const pc = await eng.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: dpr });
+    const pp = await pc.newPage();
+    await pp.goto(`${BASE}/paintings/`, { waitUntil: 'networkidle' });
+    // bring every tile in, so the lazy ones load too
+    const H = await pp.evaluate(() => document.documentElement.scrollHeight);
+    for (let y = 0; y < H; y += h / 2) {
+      await pp.evaluate((yy) => window.scrollTo(0, yy), y);
+      await sleep(60);
+    }
+    await pp.waitForFunction(() => Array.from(document.querySelectorAll('.tile img')).every((i) => i.complete && i.naturalWidth > 0), null, { timeout: 15000 }).catch(() => {});
+    const seen = await tilesSeen(pp);
+    tiles ??= seen;
+    for (const t of seen) {
+      const most = Math.max(t.file, ...t.cands.map((c) => c[1]));
+      if (!t.done || t.file + 1 < Math.min(t.drawn * t.dpr, most)) upscaled.push(`${eng === wk ? 'WebKit ' : ''}${w}@${dpr}x ${t.cur} drawn ${t.drawn.toFixed(0)}px from ${t.file}px`);
+    }
+    await pc.close();
+  }
+  ok(tiles && tiles.length === 20 && tiles.every((t) => t.cands.length >= 2 && t.cands.some((c) => c[1] === 480) && t.sizes.includes('vw')), 'every painting tile has a srcset of its copies and its own file, and a sizes', JSON.stringify(tiles?.find((t) => t.cands.length < 2 || !t.sizes) ?? null));
+  ok(upscaled.length === 0, `no tile is drawn from a file narrower than it is drawn, at 1x and 2x, at 1440 and 390 wide${wk ? ', and in WebKit' : ''}`, upscaled.join(' | '));
+  // each copy is there and is as wide as the srcset says
+  const tc = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const tp = await tc.newPage();
+  await tp.goto(`${BASE}/paintings/`, { waitUntil: 'domcontentloaded' });
+  const wrongTiles = await tp.evaluate(async (cands) => {
+    const bad = [];
+    await Promise.all(cands.map(([u, w]) => new Promise((r) => {
+      const im = new Image();
+      im.onload = () => {
+        if (im.naturalWidth !== w) bad.push(`${u} is ${im.naturalWidth}, not ${w}`);
+        r();
+      };
+      im.onerror = () => {
+        bad.push(`${u} missing`);
+        r();
+      };
+      im.src = u;
+    })));
+    return bad;
+  }, (tiles ?? []).flatMap((t) => t.cands));
+  ok(tiles?.length === 20 && wrongTiles.length === 0, 'the tile copies exist for all twenty, each as wide as its srcset says', wrongTiles.join(' | '));
+  await tc.close();
+  // the first screen, wide, at 1x, cache off: what its pictures cost
+  const fc = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const fpp = await fc.newPage();
+  await fpp.goto(`${BASE}/paintings/`, { waitUntil: 'networkidle' });
+  await sleep(2500);
+  const imgBytes = await fpp.evaluate(() => performance.getEntriesByType('resource').filter((e) => e.initiatorType === 'img').reduce((s, e) => s + e.encodedBodySize, 0));
+  ok(imgBytes > 0 && imgBytes <= 800_000, `paintings, the first screen at 1440 and 1x: ${Math.round(imgBytes / 1000)} kB of pictures, 800 kB at most`, String(imgBytes));
+  await fc.close();
+
+  // The scripts' budgets, gzipped, when the build checked is the local one.
+  if (/\/\/(localhost|127\.0\.0\.1)[:/]/.test(`${BASE}/`)) {
+    const { gzipSync } = await import('node:zlib');
+    const cc = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const cpg = await cc.newPage();
+    await cpg.goto(`${BASE}/about/`, { waitUntil: 'networkidle' });
+    await cpg.waitForFunction(() => !!window.__lin && !!window.__jx, null, { timeout: 10000 }).catch(() => {});
+    const urls = await cpg.evaluate(() => performance.getEntriesByType('resource').map((e) => e.name).filter((u) => /\/assets\/(index|lineage|jx)-[\w-]+\.js$/.test(u)));
+    const gz = {};
+    for (const u of urls) gz[u.match(/\/assets\/(index|lineage|jx)-/)[1]] = gzipSync(await (await cpg.request.get(u)).body()).length;
+    ok(gz.index <= 18_500 && gz.lineage <= 23_000 && gz.jx <= 7_000, `the scripts, gzipped: main ${(gz.index / 1000).toFixed(1)} kB of 18.5, lineage ${(gz.lineage / 1000).toFixed(1)} of 23, jx ${(gz.jx / 1000).toFixed(1)} of 7`, JSON.stringify(gz));
+    await cc.close();
+  }
   }
 
   /* ---------------------------------------------------------- every width */
