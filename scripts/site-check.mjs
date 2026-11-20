@@ -2541,6 +2541,13 @@ try {
   await sleep(700);
   const back = await xp.evaluate(() => window.__jx.body());
   ok(back && Math.abs(back.w - 60) < 1 && Math.abs(back.r - 30) < 1, 'let go, it springs back to its disc', JSON.stringify(back));
+  // At rest JellyBox's loop parks (jx-clock.ts); a hover wakes it and the disc swells again.
+  await xp.waitForFunction(() => window.__jx.parked() === 1, null, { timeout: 4000 }).catch(() => {});
+  const parkedX = await xp.evaluate(() => window.__jx.parked());
+  await xp.mouse.move(36, size.box[2] / 2 + 122, { steps: 3 });
+  await sleep(800);
+  const woke = await xp.evaluate(() => ({ parked: window.__jx.parked(), body: window.__jx.body() }));
+  ok(parkedX === 1 && woke.parked === 0 && woke.body && Math.abs(woke.body.w - fill) < 0.5, 'at rest its JellyBox loop parks, and a hover wakes it: the disc fills the box again', JSON.stringify({ parkedX, woke }));
   await xctx.close();
   // Phones: JellyBox's own CSS skin, never the optics; the box is 44px.
   const xph = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
@@ -2705,6 +2712,330 @@ try {
     await bf3.close();
   } finally {
     await bfBrowser.close();
+  }
+
+  /* ------------------------------------------------------- the frame budget */
+  {
+  console.log('\n[frame budget]');
+  const { createHash } = await import('node:crypto');
+  // Every requestAnimationFrame callback on the page, counted from before any
+  // page script runs. JellyBox's loop reaches the window's own through
+  // jx-clock.ts, so it is counted too.
+  const countFrames = () => {
+    window.__fbN = 0;
+    const raf = window.requestAnimationFrame.bind(window);
+    window.requestAnimationFrame = (cb) => raf((t) => {
+      window.__fbN++;
+      cb(t);
+    });
+  };
+  const framesIn = async (pg, ms) => {
+    const n0 = await pg.evaluate(() => window.__fbN);
+    await sleep(ms);
+    return (await pg.evaluate(() => window.__fbN)) - n0;
+  };
+  // the vendored renderer is JellyBox's own, byte for byte: the loop is parked from our side
+  const opticsSha = createHash('sha256').update(readFileSync(new URL('../src/vendor/jellybox/renderer/optics.js', import.meta.url))).digest('hex');
+  ok(opticsSha === '16ad4f53214de1bba5a52fae4d9085e19f7fdc094da2251f5de5da7317cb4a62', 'JellyBox’s optics.js is untouched, byte for byte', opticsSha);
+
+  // A page at rest runs no frames. Each page in its own window, side by side;
+  // each first proves it is drawing frames at all, so a quiet count means quiet.
+  const IDLE = ['/', '/product-designs/', '/paintings/', '/about/', '/product-designs/chellbook/'];
+  const idleCtx = await Promise.all(IDLE.map(async () => {
+    const c = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    await c.addInitScript(countFrames);
+    return c;
+  }));
+  const idle = await Promise.all(IDLE.map(async (r, i) => {
+    const pg = await idleCtx[i].newPage();
+    await pg.goto(BASE + r, { waitUntil: 'load' });
+    await pg.mouse.move(1430, 890);
+    // drawing: home writes its signature in, a subpage's X enters
+    const early = await framesIn(pg, 400);
+    // the entrance is over 6s after the page started
+    await pg.waitForFunction(() => performance.now() > 6000, null, { timeout: 15000 });
+    const quiet = await framesIn(pg, 2000);
+    const vis = await pg.evaluate(() => document.visibilityState);
+    return { r, early, quiet, vis };
+  }));
+  ok(idle.every((o) => o.vis === 'visible' && o.early > 5 && o.quiet === 0), 'a page at rest runs no frames: 2s of idle on home, product designs, paintings, about and a case study, zero callbacks', JSON.stringify(idle));
+  await Promise.all(idleCtx.map((c) => c.close()));
+
+  const fbx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  await fbx.addInitScript(countFrames);
+  const fp = await fbx.newPage();
+  await fp.goto(`${BASE}/about/`, { waitUntil: 'networkidle' });
+  await fp.mouse.move(1430, 890);
+  await fp.waitForFunction(() => performance.now() > 6000, null, { timeout: 15000 });
+  // After 5s at rest, the X still answers at once: its body grows by the
+  // second frame after the pointer enters (the first frame draws it, the
+  // second is the first this counter can see it in).
+  await sleep(5000);
+  const xb = await fp.locator('a.jx').boundingBox();
+  await fp.evaluate(() => {
+    window.__sw = [];
+    const a = document.querySelector('a.jx');
+    document.addEventListener('pointerover', (e) => {
+      if (!a.contains(e.target) || window.__sw.length) return;
+      window.__sw.push(window.__jx.body().w);
+      let n = 0;
+      const tick = () => {
+        window.__sw.push(window.__jx.body().w);
+        if (++n < 6) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    }, true);
+  });
+  await fp.mouse.move(xb.x + xb.width / 2, xb.y + xb.height / 2);
+  await sleep(1500);
+  const sw = await fp.evaluate(() => window.__sw);
+  const grewAt = sw.findIndex((w) => w > sw[0] + 0.1);
+  ok(grewAt >= 1 && grewAt <= 2, 'after 5s at rest the X answers at once: it swells by the second frame after the pointer enters', JSON.stringify(sw.map((w) => +w.toFixed(2))));
+  // leave the X after a 1.5s hover: 1.5s later, nothing runs
+  await fp.mouse.move(1430, 890, { steps: 3 });
+  await sleep(1500);
+  const afterX = await framesIn(fp, 2000);
+  ok(afterX === 0, 'after a 1.5s hover on the X, 1.5s after leaving it: zero callbacks in 2s', String(afterX));
+  // a row that played Jelly: once it is cut, JellyBox's second canvas parks too
+  await fp.goto(`${BASE}/product-designs/`, { waitUntil: 'networkidle' });
+  await fp.mouse.move(1430, 890);
+  await fp.waitForFunction(() => !!window.__lin && performance.now() > 3000, null, { timeout: 15000 });
+  await fp.evaluate(() => window.__lin.force('jelly'));
+  const jr = await center(fp, 'a.row', 2);
+  await fp.mouse.move(jr.x - jr.box.width * 0.1, jr.y, { steps: 4 });
+  await fp.waitForFunction(() => !!window.__jx?.jelly(), null, { timeout: 5000 }).catch(() => {});
+  const jellyUp = await fp.evaluate(() => !!window.__jx?.jelly());
+  await sleep(1200);
+  await fp.mouse.move(1430, 890, { steps: 3 });
+  await fp.evaluate(() => window.__lin.force(null));
+  await sleep(1500);
+  const afterJelly = await framesIn(fp, 2000);
+  ok(jellyUp && afterJelly === 0, 'after a row that played Jelly, 1.5s after leaving it: zero callbacks in 2s', JSON.stringify({ jellyUp, afterJelly }));
+  await fbx.close();
+  // the same clock in WebKit
+  if (wk) {
+    const wfc = await wk.newContext({ viewport: { width: 1440, height: 900 } });
+    await wfc.addInitScript(countFrames);
+    const wfp = await wfc.newPage();
+    await wfp.goto(`${BASE}/about/`, { waitUntil: 'load' });
+    await wfp.mouse.move(1430, 890);
+    const early = await framesIn(wfp, 400);
+    await wfp.waitForFunction(() => performance.now() > 6000, null, { timeout: 15000 });
+    const quiet = await framesIn(wfp, 2000);
+    const optics = await wfp.evaluate(() => document.querySelector('a.jx canvas')?.dataset.renderer ?? 'skin');
+    ok(early > 5 && quiet === 0, `WebKit: a page at rest runs no frames (the X drawn by ${optics})`, JSON.stringify({ early, quiet }));
+    await wfc.close();
+  }
+
+  // The pointer path: a move reads the hovered button's box once, before its
+  // one write, so it never makes the browser recompute styles or layout to
+  // answer a read. 120 moves inside a hovered row, the deck and the dress
+  // held still. (Chrome only: the counts come from its DevTools protocol.)
+  const mc = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  await mc.addInitScript(countFrames);
+  await mc.addInitScript(() => (window.__linQuiet = true));
+  const mp3 = await mc.newPage();
+  const mcdp = await mc.newCDPSession(mp3);
+  await mcdp.send('Performance.enable');
+  const perf = async () => Object.fromEntries((await mcdp.send('Performance.getMetrics')).metrics.map((m) => [m.name, m.value]));
+  // the page has stopped drawing: no frame for 300ms
+  const stillFrames = (pg) => pg.waitForFunction(() => {
+    const n = window.__fbN;
+    if (window.__fbLast !== n) {
+      window.__fbLast = n;
+      window.__fbAt = performance.now();
+    }
+    return performance.now() - window.__fbAt > 300;
+  }, null, { polling: 50, timeout: 10000 }).catch(() => {});
+  await mp3.goto(`${BASE}/product-designs/`, { waitUntil: 'networkidle' });
+  await mp3.waitForFunction(() => !!window.__lin, null, { timeout: 10000 }).catch(() => {});
+  const mrow = await center(mp3, 'a.row', 2);
+  const rest = mrow.box;
+  await mp3.mouse.move(rest.x + rest.width * 0.2, mrow.y, { steps: 3 });
+  await stillFrames(mp3);
+  await mp3.evaluate(() => {
+    window.__mf = 0;
+    window.__mfOn = true;
+    const t = () => {
+      if (!window.__mfOn) return;
+      window.__mf++;
+      requestAnimationFrame(t);
+    };
+    requestAnimationFrame(t);
+  });
+  const pm0 = await perf();
+  for (let i = 0; i < 120; i++) await mp3.mouse.move(rest.x + rest.width * (0.2 + (0.6 * i) / 120), mrow.y + Math.sin(i / 5) * 3);
+  const pm1 = await perf();
+  const mFrames = await mp3.evaluate(() => {
+    window.__mfOn = false;
+    return window.__mf;
+  });
+  const mLay = pm1.LayoutCount - pm0.LayoutCount;
+  const mRec = pm1.RecalcStyleCount - pm0.RecalcStyleCount;
+  ok(mLay <= 12 && mRec <= mFrames, `120 pointer moves inside a hovered row: ${mLay} layouts (12 at most) and ${mRec} style recalcs in ${mFrames} frames (one a frame at most)`, JSON.stringify({ mLay, mRec, mFrames, taskMs: Math.round((pm1.TaskDuration - pm0.TaskDuration) * 1000) }));
+  // and the magnet leans exactly as it always has: settled after a move, the
+  // pull is a tenth of the cursor's offset from the row's resting centre,
+  // capped at 3px across and min(6, 3 + 3% of its height) down
+  const leanOff = [];
+  for (const [fx, fy] of [[0.1, 0.3], [0.5, 0.5], [0.9, 0.7], [0.3, 0.6]]) {
+    const x = rest.x + rest.width * fx;
+    const y = rest.y + rest.height * fy;
+    await mp3.mouse.move(x, y);
+    await mp3.waitForFunction(() => document.querySelectorAll('a.row')[2].getAnimations().length === 0, null, { timeout: 3000 }).catch(() => {});
+    const got = (await mp3.evaluate(() => document.querySelectorAll('a.row')[2].style.transform)).match(/-?[\d.]+/g)?.map(Number) ?? [];
+    const capY = Math.min(6, 3 + rest.height * 0.03);
+    const want = [Math.max(-3, Math.min(3, (x - (rest.x + rest.width / 2)) * 0.1)), Math.max(-capY, Math.min(capY, (y - (rest.y + rest.height / 2)) * 0.1))];
+    if (got.length !== 2 || Math.abs(got[0] - want[0]) > 0.011 || Math.abs(got[1] - want[1]) > 0.011) leanOff.push(`${got} want ${want.map((v) => v.toFixed(2))}`);
+  }
+  ok(leanOff.length === 0, 'and the magnet leans exactly as before: a tenth of the cursor’s offset from the resting centre, capped', leanOff.join(' | '));
+  await mc.close();
+
+  // Resting on a link in a sentence: the seams loop measures the box only
+  // while it can still move (the magnet's follow, a spring, a press), then
+  // stops. The arrows and the size it shows end exactly on the settled box.
+  const sc = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  await sc.addInitScript(countFrames);
+  await sc.addInitScript(() => (window.__linQuiet = true));
+  const sp = await sc.newPage();
+  await sp.goto(`${BASE}/product-designs/chellbook/`, { waitUntil: 'networkidle' });
+  await sp.waitForFunction(() => !!document.querySelector('[data-seams-live] [data-arrow]'), null, { timeout: 10000 }).catch(() => {});
+  const lc = await center(sp, '#the-work .btn.in');
+  await sp.mouse.move(lc.x - 60, lc.y, { steps: 2 });
+  await sp.mouse.move(lc.x, lc.y, { steps: 4 });
+  await sleep(1000);
+  const restFrames = await framesIn(sp, 1000);
+  const seamEnd = await sp.evaluate(() => {
+    const b = document.querySelector('#the-work .btn.in');
+    const root = b.closest('[data-seams-live]');
+    const R0 = root.getBoundingClientRect();
+    const r = b.getBoundingClientRect();
+    const arrows = Array.from(root.querySelectorAll(':scope > [data-arrow]'))
+      .filter((a) => getComputedStyle(a).opacity === '1')
+      .map((a) => {
+        const x1 = +(a.style.transform.match(/translate\(([-\d.]+)px/)?.[1] ?? NaN);
+        return [x1, x1 + +a.querySelector('line').getAttribute('x2')];
+      });
+    return { box: [r.left - R0.left, r.right - R0.left, Math.round(r.width), Math.round(r.height)], arrows, label: root.querySelector('[data-skeleton]').textContent };
+  });
+  const onBox = seamEnd.arrows.length > 0 && seamEnd.arrows.every(([a, z]) => Math.abs(z - seamEnd.box[0]) <= 0.2 || Math.abs(a - seamEnd.box[1]) <= 0.2);
+  ok(restFrames === 0 && onBox && seamEnd.label.includes(`${seamEnd.box[2]} × ${seamEnd.box[3]}`), 'resting on a link in a sentence: no frames in the last second of two, and its arrows and size end exactly on the settled box', JSON.stringify({ restFrames, ...seamEnd, label: seamEnd.label.slice(0, 40) }));
+  await sc.close();
+
+  // A resting hover on a row: the clock draws the glitch landing and the
+  // dwell, then stops, and its frames make no DOM queries (pool keeps the
+  // spans it made, and each host keeps its outline): the only queries are the
+  // hover's own, as it starts.
+  for (const eng of [browser, ...(wk ? [wk] : [])]) {
+    const rc = await eng.newContext({ viewport: { width: 1440, height: 900 } });
+    await rc.addInitScript(countFrames);
+    await rc.addInitScript(() => (window.__linQuiet = true));
+    await rc.addInitScript(() => {
+      window.__qN = 0;
+      for (const k of ['querySelector', 'querySelectorAll']) {
+        const f = Element.prototype[k];
+        Element.prototype[k] = function (...a) {
+          window.__qN++;
+          return f.apply(this, a);
+        };
+      }
+    });
+    const rp = await rc.newPage();
+    await rp.goto(`${BASE}/product-designs/`, { waitUntil: 'networkidle' });
+    await rp.waitForFunction(() => !!window.__lin, null, { timeout: 10000 }).catch(() => {});
+    const rr = await center(rp, 'a.row', 2);
+    await stillFrames(rp);
+    const n0 = await rp.evaluate(() => [window.__fbN, window.__qN]);
+    await rp.mouse.move(rr.x - rr.box.width * 0.1, rr.y);
+    await stillFrames(rp);
+    const n1 = await rp.evaluate(() => [window.__fbN, window.__qN]);
+    const after = await framesIn(rp, 1000);
+    const hot = await rp.evaluate(() => document.querySelectorAll('[data-hot] [data-band]').length);
+    const clockFrames = n1[0] - n0[0];
+    const queries = n1[1] - n0[1];
+    ok(hot === 1 && clockFrames > 5 && clockFrames <= 70 && after === 0 && queries <= 12, `${eng === wk ? 'WebKit: ' : ''}a resting hover on a row: the clock runs ${clockFrames} frames (70 at most) and then none, with ${queries} DOM queries, all as it starts`, JSON.stringify({ hot, clockFrames, after, queries }));
+    await rc.close();
+  }
+
+  // Paintings load tile-sized files: every tile has a srcset and a sizes, the
+  // copies exist for all twenty, and no tile is ever drawn from a file
+  // narrower than it is drawn, at 1x and 2x, wide and on a phone. The
+  // painting's own file is the most there is, so that one may be narrower.
+  const tilesSeen = (pg) => pg.evaluate(() => Array.from(document.querySelectorAll('.tile img')).map((img) => {
+    const b = img.getBoundingClientRect();
+    const cands = (img.getAttribute('srcset') ?? '').split(',').map((c) => c.trim().split(/\s+/)).filter((c) => c[0]).map(([u, w]) => [new URL(u, location.href).href, parseInt(w, 10)]);
+    const drawn = Math.min(b.width, img.naturalWidth ? (b.height * img.naturalWidth) / img.naturalHeight : b.width);
+    // naturalWidth is scaled by the srcset's density; the file's own pixels are its w
+    const file = cands.find((c) => c[0] === img.currentSrc)?.[1] ?? img.naturalWidth;
+    return { src: img.getAttribute('src'), sizes: img.getAttribute('sizes') ?? '', cands, cur: img.currentSrc.split('/').pop(), file, done: img.complete && img.naturalWidth > 0, drawn, dpr: devicePixelRatio };
+  }));
+  const upscaled = [];
+  let tiles = null;
+  const views = [[browser, 1440, 900, 1], [browser, 1440, 900, 2], [browser, 390, 844, 1], [browser, 390, 844, 2], ...(wk ? [[wk, 1440, 900, 1], [wk, 390, 844, 3]] : [])];
+  for (const [eng, w, h, dpr] of views) {
+    const pc = await eng.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: dpr });
+    const pp = await pc.newPage();
+    await pp.goto(`${BASE}/paintings/`, { waitUntil: 'networkidle' });
+    // bring every tile in, so the lazy ones load too
+    const H = await pp.evaluate(() => document.documentElement.scrollHeight);
+    for (let y = 0; y < H; y += h / 2) {
+      await pp.evaluate((yy) => window.scrollTo(0, yy), y);
+      await sleep(60);
+    }
+    await pp.waitForFunction(() => Array.from(document.querySelectorAll('.tile img')).every((i) => i.complete && i.naturalWidth > 0), null, { timeout: 15000 }).catch(() => {});
+    const seen = await tilesSeen(pp);
+    tiles ??= seen;
+    for (const t of seen) {
+      const most = Math.max(t.file, ...t.cands.map((c) => c[1]));
+      if (!t.done || t.file + 1 < Math.min(t.drawn * t.dpr, most)) upscaled.push(`${eng === wk ? 'WebKit ' : ''}${w}@${dpr}x ${t.cur} drawn ${t.drawn.toFixed(0)}px from ${t.file}px`);
+    }
+    await pc.close();
+  }
+  ok(tiles && tiles.length === 20 && tiles.every((t) => t.cands.length >= 2 && t.cands.some((c) => c[1] === 480) && t.sizes.includes('vw')), 'every painting tile has a srcset of its copies and its own file, and a sizes', JSON.stringify(tiles?.find((t) => t.cands.length < 2 || !t.sizes) ?? null));
+  ok(upscaled.length === 0, `no tile is drawn from a file narrower than it is drawn, at 1x and 2x, at 1440 and 390 wide${wk ? ', and in WebKit' : ''}`, upscaled.join(' | '));
+  // each copy is there and is as wide as the srcset says
+  const tc = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const tp = await tc.newPage();
+  await tp.goto(`${BASE}/paintings/`, { waitUntil: 'domcontentloaded' });
+  const wrongTiles = await tp.evaluate(async (cands) => {
+    const bad = [];
+    await Promise.all(cands.map(([u, w]) => new Promise((r) => {
+      const im = new Image();
+      im.onload = () => {
+        if (im.naturalWidth !== w) bad.push(`${u} is ${im.naturalWidth}, not ${w}`);
+        r();
+      };
+      im.onerror = () => {
+        bad.push(`${u} missing`);
+        r();
+      };
+      im.src = u;
+    })));
+    return bad;
+  }, (tiles ?? []).flatMap((t) => t.cands));
+  ok(tiles?.length === 20 && wrongTiles.length === 0, 'the tile copies exist for all twenty, each as wide as its srcset says', wrongTiles.join(' | '));
+  await tc.close();
+  // the first screen, wide, at 1x, cache off: what its pictures cost
+  const fc = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const fpp = await fc.newPage();
+  await fpp.goto(`${BASE}/paintings/`, { waitUntil: 'networkidle' });
+  await sleep(2500);
+  const imgBytes = await fpp.evaluate(() => performance.getEntriesByType('resource').filter((e) => e.initiatorType === 'img').reduce((s, e) => s + e.encodedBodySize, 0));
+  ok(imgBytes > 0 && imgBytes <= 800_000, `paintings, the first screen at 1440 and 1x: ${Math.round(imgBytes / 1000)} kB of pictures, 800 kB at most`, String(imgBytes));
+  await fc.close();
+
+  // The scripts' budgets, gzipped, when the build checked is the local one.
+  if (/\/\/(localhost|127\.0\.0\.1)[:/]/.test(`${BASE}/`)) {
+    const { gzipSync } = await import('node:zlib');
+    const cc = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const cpg = await cc.newPage();
+    await cpg.goto(`${BASE}/about/`, { waitUntil: 'networkidle' });
+    await cpg.waitForFunction(() => !!window.__lin && !!window.__jx, null, { timeout: 10000 }).catch(() => {});
+    const urls = await cpg.evaluate(() => performance.getEntriesByType('resource').map((e) => e.name).filter((u) => /\/assets\/(index|lineage|jx)-[\w-]+\.js$/.test(u)));
+    const gz = {};
+    for (const u of urls) gz[u.match(/\/assets\/(index|lineage|jx)-/)[1]] = gzipSync(await (await cpg.request.get(u)).body()).length;
+    ok(gz.index <= 18_500 && gz.lineage <= 23_000 && gz.jx <= 7_000, `the scripts, gzipped: main ${(gz.index / 1000).toFixed(1)} kB of 18.5, lineage ${(gz.lineage / 1000).toFixed(1)} of 23, jx ${(gz.jx / 1000).toFixed(1)} of 7`, JSON.stringify(gz));
+    await cc.close();
+  }
   }
 
   /* ---------------------------------------------------------- every width */

@@ -20,7 +20,7 @@
  * `translate` (the seams), `scale` (the press).
  */
 
-import { host, pool } from './band.ts';
+import { host, outlineOf, pool } from './band.ts';
 import { band, letters, plan, type Edge, type Letter, type MenuGeo, type Plan } from './ink.ts';
 import { fade, faces, paint, rest, settling, unface, type Face } from './glitch.ts';
 import { engage, hold, move, release, releaseAll } from './magnet.ts';
@@ -230,12 +230,16 @@ function on(b: HTMLElement, why: Why, e?: PointerEvent | MouseEvent): void {
   const px = x != null ? (x - r.left) / sc : geo.bw / 2;
   const edge: Edge = x != null && y != null ? edgeOf(b, x, y) : 'l';
   const warm = !instant && now - lastLeave < 150;
+  const hue = b.getAttribute('data-hue');
+  // a menu row's figure cell is read before faces() writes the overlay, so
+  // the read never makes the browser lay the page out again (the overlay is
+  // absolutely placed: it moves nothing this reads)
+  const mg = hue ? menuGeo(b, geo, px) : null;
   const fs = faces(b);
   const entry = (px - geo.wl) / Math.max(1, geo.ww);
-  const hue = b.getAttribute('data-hue');
   // the label's line box, with room for the glitch face, which stands 1.14 times as tall
   const lab = { bh: geo.bh, top: geo.wt - 0.1 * geo.fs, bottom: geo.wt + geo.wh + 0.1 * geo.fs };
-  const P = plan(fs[0]?.label ?? '', hue, edge, entry, warm, hue ? menuGeo(b, geo, px) : null, instant, lab);
+  const P = plan(fs[0]?.label ?? '', hue, edge, entry, warm, mg, instant, lab);
   const plans = fs.map((f, i) => (i === 0 ? P : plan(f.label, P.main, edge, entry, warm)));
   b.setAttribute('data-hot', '');
   b.toggleAttribute('data-wide', geo.bw > 480);
@@ -324,10 +328,10 @@ function draw(h: Hot, now: number): void {
   if (h.out != null) {
     if (t - h.out >= EXIT_MS) return cut(h);
     const look = h.fx && lineage ? lineage.look(h, -1) : {};
-    pool(h.host, 'band', look.band ?? band(h.P, t, h.out, h.exit, h.instant), h.host.querySelector(':scope > .bo'));
+    pool(h.host, 'band', look.band ?? band(h.P, t, h.out, h.exit, h.instant), outlineOf(h.host));
     pool(h.host, 'x', []);
     pool(h.host, 'n', []);
-    h.host.dataset.ol = '0';
+    if (h.host.dataset.ol !== '0') h.host.dataset.ol = '0';
     // the shape holds while the band takes its one drawing out
     const held = HOST + box;
     if (h.host.dataset.s !== held) {
@@ -347,7 +351,7 @@ function draw(h: Hot, now: number): void {
   }
   const tau = t - DWELL;
   const look: Look = h.fx && lineage && tau >= 0 ? lineage.look(h, tau) : {};
-  const outline = h.host.querySelector(':scope > .bo');
+  const outline = outlineOf(h.host);
   let layers = look.band ?? band(h.P, t, null, null, h.instant);
   if (df.dropTop) layers = layers.filter((l) => l.c !== 'st t');
   if (df.dropBottom) layers = layers.filter((l) => l.c !== 'st b');
@@ -355,7 +359,8 @@ function draw(h: Hot, now: number): void {
   pool(h.host, 'band', layers, outline);
   pool(h.host, 'x', look.extra ?? [], outline);
   pool(h.host, 'n', look.line ? [{ c: 'bn', s: look.line }] : [], null);
-  h.host.dataset.ol = look.outline === false || df.outline === false ? '0' : '1';
+  const ol = look.outline === false || df.outline === false ? '0' : '1';
+  if (h.host.dataset.ol !== ol) h.host.dataset.ol = ol;
   const want = HOST + box + (look.hostS ?? '');
   if (h.host.dataset.s !== want) {
     h.host.style.cssText = want;
@@ -436,11 +441,15 @@ export function initButtons(): void {
     'pointermove',
     (e) => {
       if (e.pointerType === 'touch') return;
-      move(e.clientX, e.clientY, current);
+      // Reads only: the hovered button's box is read once, here, while the
+      // browser's styles are still fresh from its own hit test, and shared
+      // with the magnet, which writes its lean in the next frame. So a move
+      // never makes the browser recompute styles to answer a read.
       const h = current && HOT.get(current);
-      if (h) {
-        const r = h.b.getBoundingClientRect();
-        const sc = r.width / (h.b.offsetWidth || r.width) || 1;
+      const r = current?.getBoundingClientRect();
+      const sc = h && r ? r.width / (h.b.offsetWidth || r.width) || 1 : 1;
+      move(e.clientX, e.clientY, current, r);
+      if (h && r) {
         h.px = (e.clientX - r.left) / sc;
         h.py = (e.clientY - r.top) / sc;
         // a wire, or an effect that answers the pointer, follows it in the same frame

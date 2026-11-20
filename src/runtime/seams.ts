@@ -26,8 +26,19 @@
  * Owns `translate` on units and buttons. The magnet owns `transform`.
  */
 
+import { FOLLOW_MS, SPRING_MS } from './magnet.ts';
 import { PULL, SEAM_X, reducedMotion } from './offsets.ts';
 import { drawArrows, drawLive, makeLayers, type Arrow } from './skeleton.ts';
+
+/**
+ * How long a hovered box can keep moving after something touched it, ms: the
+ * magnet's follow after a move, its spring when the pointer passes from one
+ * button to the next (the one let go may be a neighbour), and the press
+ * (`--pt`, 160ms back up, site.css). The extra covers the frame a transition
+ * waits for before it starts, and one more to draw it settled.
+ */
+const SETTLE = 50;
+const PRESS_MS = 160;
 
 /** Seam search radius, and how much the vertical distance counts against it. */
 const R = 150;
@@ -104,6 +115,8 @@ export interface SeamState {
   skelOn: boolean;
   key: Seam | Unit | null;
   skelT: number;
+  /** until when a hovered box may still be moving under the magnet or a press, ms: its arrows follow it until then */
+  until: number;
   live: HTMLDivElement;
   arrows: [Arrow, Arrow];
 }
@@ -336,9 +349,10 @@ function loop(S: SeamState): void {
     }
     drawArrows(S);
     drawLive(S);
-    // Keep ticking while a box is hovered: its magnetic pull moves it outside
-    // these springs, and its arrows have to follow.
-    S.raf = moving || S.box ? requestAnimationFrame(step) : 0;
+    // A hovered box moves outside these springs (the magnet, a press), so the
+    // loop keeps measuring it until it has settled, and then stops: a box at
+    // rest under the cursor costs no frames. The next move starts it again.
+    S.raf = moving || (S.box && now < S.until) ? requestAnimationFrame(step) : 0;
   };
   S.raf = requestAnimationFrame(step);
 }
@@ -350,7 +364,10 @@ function track(S: SeamState, onBtn: HTMLElement | null): void {
   const R0 = S.root.getBoundingClientRect();
   S.px = S.cx - R0.left;
   S.py = S.cy - R0.top;
+  const was = S.hoverBox;
   S.hoverBox = onBtn && S.root.contains(onBtn) ? (S.units.find((u) => u.el === onBtn) ?? null) : null;
+  // the magnet follows this move; passing to another button, the one let go springs back
+  S.until = Math.max(S.until, performance.now() + (S.hoverBox !== was ? SPRING_MS : FOLLOW_MS) + SETTLE);
   retarget(S);
   const px = S.px;
   const py = S.py;
@@ -412,6 +429,7 @@ export function initSeams(root: HTMLElement): void {
     skelOn: false,
     key: null,
     skelT: 0,
+    until: 0,
     live,
     arrows,
   };
@@ -422,6 +440,15 @@ export function initSeams(root: HTMLElement): void {
     S.inside = true;
     if (!S.active && !S.box) measure(S);
   });
+
+  // A press scales the hovered box (site.css), so its arrows follow that too.
+  const press = (e: PointerEvent) => {
+    if (e.pointerType === 'touch' || !S.box) return;
+    S.until = Math.max(S.until, performance.now() + PRESS_MS + SETTLE);
+    loop(S);
+  };
+  root.addEventListener('pointerdown', press);
+  root.addEventListener('pointerup', press);
 
   root.addEventListener('pointermove', (e) => {
     if (e.pointerType === 'touch') return;
@@ -473,8 +500,8 @@ export function initSeams(root: HTMLElement): void {
   document.fonts?.addEventListener?.('loadingdone', () => relayout(S));
 
   // A page restored from the back/forward cache comes back mid-hover: a box
-  // still claiming space, the skeleton up, and a frame loop that never stops
-  // because it keeps ticking while a box is hovered. Start clean.
+  // still claiming space, the skeleton up, maybe a frame loop still running.
+  // Start clean.
   window.addEventListener('pageshow', (e) => {
     if (!e.persisted) return;
     S.inside = false;

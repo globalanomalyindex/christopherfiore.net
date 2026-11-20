@@ -2,8 +2,9 @@
  * Paintings. Twenty works, transcribed from the devkit's `data/artwork.json`
  * and `SITE_LINKS.md`. `href` points at each work's ArtStation record.
  *
- * Images are WebP at 1200px on the long edge, which covers a 652px gallery
- * column at 2x. The original JPEGs are byte-identical in
+ * Images are WebP, 1200px wide or the work's own width if it is narrower.
+ * The tiles load smaller copies of them (`TILE_WIDTHS`, below), and the full
+ * file stays the largest choice in each tile's srcset. The original JPEGs are byte-identical in
  * `_source/christopher-fiore-portfolio-devkit-v31/assets/artstation/`, which
  * is gitignored.
  *
@@ -313,6 +314,34 @@ export const PAINTINGS: PaintingRecord[] = [
     chip: chip(19),
   },
 ];
+
+/**
+ * The tile copies (`scripts/tiles.mjs`, `npm run tiles`): each painting at
+ * these widths, beside its own file, for the tile's `srcset`. A copy exists
+ * only where it is narrower than the painting's own file.
+ */
+export const TILE_WIDTHS = [480, 800] as const;
+
+/** Where a painting's copy `w` px wide lives, under public/. */
+export const tilePath = (p: PaintingRecord, w: number): string => `artstation/t/${p.slug}-${w}.webp`;
+
+/**
+ * A WebP's pixel size, read from its first 30 bytes (the RIFF header and the
+ * first chunk: VP8X, lossy VP8 or lossless VP8L), so the srcset states each
+ * file's real width.
+ */
+export function webpSize(b: Uint8Array): [number, number] {
+  const tag = String.fromCharCode(b[12], b[13], b[14], b[15]);
+  if (String.fromCharCode(b[0], b[1], b[2], b[3], b[8], b[9], b[10], b[11]) !== 'RIFFWEBP') throw new Error('webpSize: not a WebP file');
+  const u24 = (i: number) => b[i] | (b[i + 1] << 8) | (b[i + 2] << 16);
+  if (tag === 'VP8X') return [u24(24) + 1, u24(27) + 1];
+  if (tag === 'VP8 ') return [(b[26] | (b[27] << 8)) & 0x3fff, (b[28] | (b[29] << 8)) & 0x3fff];
+  if (tag === 'VP8L') {
+    const n = (b[21] | (b[22] << 8) | (b[23] << 16) | (b[24] << 24)) >>> 0;
+    return [(n & 0x3fff) + 1, ((n >>> 14) & 0x3fff) + 1];
+  }
+  throw new Error(`webpSize: unknown WebP chunk ${tag}`);
+}
 
 export const byslug = (slug: string): PaintingRecord => {
   const found = PAINTINGS.find((p) => p.slug === slug);

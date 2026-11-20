@@ -61,6 +61,9 @@ export const mix = (a: string, b: string, k: number): string => {
   return `#${A.map((v, i) => Math.round(v + (B[i] - v) * k).toString(16).padStart(2, '0')).join('')}`;
 };
 
+/** Each host's outline, so a frame never has to look it up. */
+const OUTLINE = new WeakMap<HTMLElement, HTMLSpanElement>();
+
 /** The band host: first child of the button, under its label. */
 export function host(b: HTMLElement): HTMLSpanElement {
   const el = document.createElement('span');
@@ -71,12 +74,39 @@ export function host(b: HTMLElement): HTMLSpanElement {
   outline.className = 'bo';
   el.appendChild(outline);
   b.insertBefore(el, b.firstChild);
+  OUTLINE.set(el, outline);
   return el;
+}
+
+/** The host's outline (`.bo`): the one `host` made while it is still there, or whatever `.bo` the host holds now. */
+export function outlineOf(el: HTMLElement): Element | null {
+  const o = OUTLINE.get(el);
+  return o && o.parentNode === el ? o : el.querySelector(':scope > .bo');
+}
+
+/**
+ * The spans `pool` made, per parent and key, in the order it made them, so a
+ * frame never has to query for them. Only its own spans are kept: other
+ * modules put children of their own (each with its own `data-k`) into the
+ * same parents, and pool never sees or touches them. If anything else took
+ * one of these spans out, the list is read again from the DOM.
+ */
+const MADE = new WeakMap<HTMLElement, Map<string, HTMLSpanElement[]>>();
+
+function made(parent: HTMLElement, key: string): HTMLSpanElement[] {
+  let byKey = MADE.get(parent);
+  if (!byKey) MADE.set(parent, (byKey = new Map()));
+  let have = byKey.get(key);
+  if (!have || have.some((el) => el.parentNode !== parent)) {
+    have = Array.from(parent.querySelectorAll<HTMLSpanElement>(`:scope > [data-k="${key}"]`));
+    byKey.set(key, have);
+  }
+  return have;
 }
 
 /** Make `parent` hold exactly `items.length` spans of `cls` before `before`, styled as given. Writes only what changed. */
 export function pool(parent: HTMLElement, key: string, items: readonly { c: string; s: string }[], before: Element | null = null): void {
-  const have = Array.from(parent.querySelectorAll<HTMLSpanElement>(`:scope > [data-k="${key}"]`));
+  const have = made(parent, key);
   while (have.length < items.length) {
     const s = document.createElement('span');
     s.setAttribute('data-k', key);
@@ -84,9 +114,10 @@ export function pool(parent: HTMLElement, key: string, items: readonly { c: stri
     have.push(s);
   }
   while (have.length > items.length) have.pop()!.remove();
-  items.forEach((it, i) => {
+  for (let i = 0; i < items.length; i++) {
     const el = have[i];
+    const it = items[i];
     if (el.className !== it.c) el.className = it.c;
     if (el.getAttribute('style') !== it.s) el.setAttribute('style', it.s);
-  });
+  }
 }

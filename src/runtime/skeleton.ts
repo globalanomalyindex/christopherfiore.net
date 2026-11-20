@@ -24,6 +24,9 @@ export interface Arrow {
 
 let paper = '#F3F5F8';
 
+/** The markup each skeleton layer holds now. */
+const DRAWN = new WeakMap<HTMLDivElement, string>();
+
 export function makeLayers(root: HTMLElement): { live: HTMLDivElement; arrows: [Arrow, Arrow] } {
   paper = getComputedStyle(document.documentElement).getPropertyValue('--ground').trim() || paper;
   const live = document.createElement('div');
@@ -191,6 +194,11 @@ export function drawLive(S: SeamState): void {
 
   const W = S.root.offsetWidth;
   const H = S.root.offsetHeight;
-  S.live.innerHTML = `<svg width="${W}" height="${H}" style="position:absolute;left:0;top:0;overflow:visible">${P.join('')}</svg>`;
+  // rebuilt only when something in it changed
+  const html = `<svg width="${W}" height="${H}" style="position:absolute;left:0;top:0;overflow:visible">${P.join('')}</svg>`;
+  if (DRAWN.get(S.live) !== html) {
+    S.live.innerHTML = html;
+    DRAWN.set(S.live, html);
+  }
   S.live.style.opacity = bx ? '1' : Math.min(1, S.str * 1.8).toFixed(3);
 }

@@ -71,6 +71,7 @@ src/
     cells.ts     the pale cells the type stands in while the wire is up, and the blanks its X fills
     jx.ts        the JellyBox back button: entrance, colors, leaving (lazy)
     jellyx.ts    JellyBox's own optics renderer, mounted on a canvas (lazy, desktop only)
+    jx-clock.ts  JellyBox's frame clock: its loop parks while nothing in it moves
     magnet.ts    the magnetic pull
     seams.ts     words that part under the cursor, in prose only
     skeleton.ts  the measurements drawn at the seam
@@ -81,6 +82,7 @@ src/
   styles/site.css
 scripts/site-check.mjs   end-to-end checks in real Chrome and WebKit
 scripts/tones.mjs        each painting's colours as a tiny grid of marks, for the film (npm run tones)
+scripts/tiles.mjs        each painting at the widths its tile is drawn at, for the paintings page (npm run tiles)
 ```
 
 `vite.config.ts` renders the pages twice over. In dev, a middleware renders
@@ -506,7 +508,8 @@ measure the film rather than the battery. It checks:
   X popping in on the pin at 45 degrees and settling, the hover swelling to
   fill the box as a disc, the closing into the "+" going up, JellyBox's
   three.js renderer on a desktop and its CSS skin in a 48px box on a phone,
-  the color bag and its skip list, leaving, reduced motion and scripts off
+  the color bag and its skip list, leaving, reduced motion and scripts off,
+  and JellyBox's loop parking at rest and waking on a hover
 - menu hovers: twelve seeded hovers of one row are at least eight different
   and never the same twice running, in the page's own color, with strips of
   4, 6 or 8px from the entry point, the figure cell now and then, no other
@@ -535,6 +538,23 @@ measure the film rather than the battery. It checks:
     stale note, a reload, back and forward, the back/forward cache
   - modifier clicks, new tabs, the PDF and in-page jumps are left alone
   - with scripts off every page is fully visible and links are plain links
+- the frame budget: 2s of idle on five pages runs no frames at all, in
+  Chrome and WebKit, and none after a hover on the X or a row that played
+  Jelly; after 5s at rest the X still swells by the second frame; JellyBox's
+  `optics.js` hashes to the copy we took. 120 pointer moves inside a hovered
+  row cost 12 layouts at most and one style recalc a frame at most, because a
+  move reads the button's box once, in the event, and the magnet writes its
+  lean once, in the next frame; settled, the lean is exactly what it always
+  was. Resting on a link in a sentence, the seams stop measuring once the
+  box has settled: no frames in the last second of two, with the arrows and
+  the size ending exactly on the box. A resting hover on a row runs the
+  clock 70 frames at most, then none, and those frames make no DOM queries
+  (in Chrome and WebKit). Every painting tile has a `srcset`
+  and a `sizes`, its copies exist at the widths they claim, no tile is drawn
+  from a file narrower than it is drawn (1x and 2x, 1440 and 390 wide, and
+  WebKit at 3x), and the first screen of paintings at 1440 loads 800 kB of
+  pictures at most. Against a local build, the scripts stay inside their
+  gzipped budgets
 - reduced motion (no film, no glitch, no magnet, no lineage), keyboard
   focus, and touch
 - every width from 360 to 2560: no sideways scroll, nothing off the window
@@ -648,6 +668,20 @@ dependencies, `three` (MIT) and `spectral.js` (MIT), pinned in
 `package.json`. The `.d.ts` files next to it are ours, so TypeScript can
 check the calls.
 
+**Its loop parks at rest.** JellyBox's renderer asks for a new frame on
+every frame, even when the scene says there is nothing to draw. So a page at
+rest used to run 60 empty frames a second for the X, and 60 more for the
+Jelly canvas once a row had played it. The vendored files stay byte for byte
+(a check hashes `optics.js`). Instead `vite.config.ts` hands that one module
+our own `requestAnimationFrame` and `cancelAnimationFrame` from
+`runtime/jx-clock.ts`, in dev and in the build, and the build fails if a new
+copy of JellyBox stops calling them. When a scene says it is frozen, its next
+frame is held. `jx.ts` wakes it whenever the X's state changes: the pointer
+coming or going, a press, focus, the entrance, the closing, leaving, a return
+from the back/forward cache, and a Jelly row starting. A woken spring steps
+one frame's time first, as it did before, so the X swells in the same frames
+it always did.
+
 ## Chickpea
 
 `src/vendor/chickpea/` is Chickpea's own pure seeded core, copied as it is
@@ -671,31 +705,48 @@ at most to a target.
 ## Payload
 
 Measured in Chrome against the built site's preview server, cache off, first
-screen only, 2.5s after the network goes quiet:
+screen only, 2.5s after the network goes quiet, counting every byte on the
+wire (2026-11-19):
 
-| Page | Desktop, 1440 x 900 | Phone, 390 x 844 |
+| Page | Desktop, 1440 x 900 at 1x | Phone, 390 x 844 at 3x |
 |---|---:|---:|
-| home | 145 kB | 136 kB |
-| product designs | 315 kB | 135 kB |
-| chellbook | 403 kB | 271 kB |
-| about | 316 kB | 136 kB |
-| paintings | 3,809 kB | 1,858 kB |
+| home | 169 kB | 142 kB |
+| product designs | 339 kB | 143 kB |
+| chellbook | 427 kB | 278 kB |
+| about | 341 kB | 144 kB |
+| paintings | 786 kB | 2,499 kB |
 
-On a desktop every subpage carries about 180 kB more than a phone: that is
-JellyBox's optics for the back X (three.js and spectral.js, 176 kB gzipped).
-It loads only after the page has been seen, so it never holds up the first
-paint, and phones never fetch it.
+On a desktop every subpage carries about 200 kB more than a phone: that is
+JellyBox's optics for the back X (three.js and spectral.js, 176 kB gzipped)
+and the lineage chunk. Both load only after the page has been seen, so they
+never hold up the first paint, and phones never fetch them.
 
 The scripts, gzipped:
 
 | Chunk | Size | Loads |
 |---|---:|---|
-| main | 17.5 kB | every page |
+| main | 17.9 kB | every page |
 | signature | 7.6 kB | home only |
 | lineage, with the dress, Chickpea and After Tokens | 19.6 kB | after the page is seen, for a cursor |
-| jx, with the cells | 6.3 kB | subpages, and with lineage |
+| jx, with the cells | 6.4 kB | subpages, and with lineage |
 | jellyx | 176 kB | subpages on a desktop, after the page is seen |
 
-Paintings is the heavy page. The works are WebP at 1200px, and at three tiles
-a row most of them fall inside the distance where Chrome starts loading lazy
-images. Smaller copies for the tiles would cut this.
+The checks hold main to 18.5 kB, lineage to 23 kB and jx to 7 kB.
+
+**The tile copies.** Paintings used to be the heavy page: every tile loaded
+its painting's own file, 1200px wide, which came to 3,979 kB on a desktop
+measured this way. A tile only draws its painting 147 to 493px wide there.
+Now each tile's picture has a `srcset` with two smaller copies, 480 and
+800px wide, and the painting's own file, and a `sizes` that states the width
+the tile really draws it at, worked out from the tile's size in `site.css`.
+The browser takes the smallest file that is at least as wide as the tile in
+its own pixels: at 1440 wide that is the 480px copy at 1x and the full file
+at 2x, the 800px copy on a phone at 2x, and the full file on a phone at 3x.
+A 2x laptop comes to 2,459 kB and a phone at 1x to 499 kB. The picture is
+drawn at the same size either way.
+
+Make the copies with `npm run tiles` (`scripts/tiles.mjs`, which needs
+cwebp: `brew install webp`) after adding or changing a painting. It writes
+`public/artstation/t/<slug>-480.webp` and `<slug>-800.webp` at quality 78,
+only where the copy is narrower than the painting's own file. The build
+refuses to run if a painting is missing a copy.

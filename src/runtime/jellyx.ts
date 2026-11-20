@@ -21,6 +21,10 @@
 
 import { createOptics, type OpticsController } from '../vendor/jellybox/renderer/optics.js';
 import { createJellyPalette } from '../vendor/jellybox/color.js';
+import { asked, scene } from './jx-clock.ts';
+
+/** Wake every parked scene: `jx.ts` calls it whenever the X's state changes (see `jx-clock.ts`). */
+export { wake, parked } from './jx-clock.ts';
 
 export interface Body {
   id: string;
@@ -57,12 +61,18 @@ export const sceneScale = (): number => clamp((window.devicePixelRatio || 1) / 1
 /** JellyBox's state pigment at strength k: 0.68 at rest, 0.88 highlighted, 1 pressed. */
 export const pigmentAt = (pigment: string, k: number): string => createJellyPalette('#c9e2ed', pigment).sample(clamp(k, 0, 1));
 
-/** Mount JellyBox's renderer on `canvas`. `get` returns null to freeze: the canvas keeps its last picture and costs nothing. */
+/**
+ * Mount JellyBox's renderer on `canvas`. `get` returns null to freeze: the
+ * canvas keeps its last picture, and its loop parks until `wake()` (see
+ * `jx-clock.ts`), so a frozen scene costs no frames at all.
+ */
 export function mount(canvas: HTMLCanvasElement, get: () => State | null, onFrame?: () => void): OpticsController {
   const k = sceneScale();
+  const clock = scene();
   return createOptics(canvas, {
     getScene() {
       const s = get();
+      asked(clock, !s);
       if (!s) return null;
       const W = s.width * k;
       const H = s.height * k;
