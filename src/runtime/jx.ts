@@ -228,6 +228,8 @@ interface Box {
   f: number;
   vf: number;
   lastLive: number;
+  /** the frame interval while the X was last live, ms: a woken spring steps one of these first, as it did when the loop never parked */
+  tick: number;
   /** the closing: when it started, and what it started from */
   closing: boolean;
   c0: number;
@@ -258,6 +260,17 @@ let lastBody: { w: number; h: number; r: number; x: number; y: number } | null =
 const hooks: Record<string, () => unknown> = {};
 (window as Window & { __jx?: typeof hooks }).__jx = hooks;
 
+/**
+ * The X's state changed: JellyBox's loop, parked while the X is at rest
+ * (`jx-clock.ts`), runs again on the next frame. A parked spring steps one
+ * frame's time first, not the whole time it was parked, so the X swells in
+ * the same frames it did when the loop never parked.
+ */
+function wake(b: Box | null): void {
+  if (b && b.rest > 40) b.lastLive = performance.now() - b.tick;
+  optics?.wake();
+}
+
 function setState(b: Box): void {
   const st = STATES[b.pig];
   b.a.style.setProperty('--jb-r', triple(st[0]));
@@ -283,6 +296,8 @@ function liveState(b: Box) {
     const dt = Math.min(0.05, Math.max(0, (now - (b.lastLive || now)) / 1000));
     [b.f, b.vf] = spring(b.f, b.vf, fT, dt, 30, 0.48);
   }
+  const gap = now - (b.lastLive || now);
+  if (gap > 4 && gap < 34) b.tick = gap;
   b.lastLive = now;
   const shaping = Math.abs(b.f - fT) > 0.002 || Math.abs(b.vf) > 0.02;
   if (settled && !interacting && !shaping && now - b.claimedAt > 400) {
@@ -465,6 +480,7 @@ function start(b: Box): void {
   b.dx = pinOffset(b.a);
   b.vdx = 0;
   html.classList.add('jx-run');
+  wake(b);
   // The first drawing goes on in the same task that lifts the wait, so no
   // frame ever shows the X before its curtain.
   frame(b.t0);
@@ -484,18 +500,33 @@ function wire(b: Box): void {
     b.hover = true;
     pointer(e);
     b.fb++;
+    wake(b);
   });
+  // while hovered the X is live, so a move needs no wake
   a.addEventListener('pointermove', (e) => {
     if (e.pointerType !== 'touch') pointer(e);
   });
   a.addEventListener('pointerleave', () => {
     b.hover = false;
     b.pressed = false;
+    wake(b);
   });
-  a.addEventListener('pointerdown', () => (b.pressed = true));
-  a.addEventListener('pointerup', () => (b.pressed = false));
-  a.addEventListener('focus', () => (b.focus = a.matches(':focus-visible')));
-  a.addEventListener('blur', () => (b.focus = false));
+  a.addEventListener('pointerdown', () => {
+    b.pressed = true;
+    wake(b);
+  });
+  a.addEventListener('pointerup', () => {
+    b.pressed = false;
+    wake(b);
+  });
+  a.addEventListener('focus', () => {
+    b.focus = a.matches(':focus-visible');
+    wake(b);
+  });
+  a.addEventListener('blur', () => {
+    b.focus = false;
+    wake(b);
+  });
 }
 
 /** Leaving any way but up: the X goes back to the pin and turns into a "+", the jelly goes, then the mono "+" is back. */
@@ -505,6 +536,7 @@ function leaveCut(b: Box): void {
   b.band?.remove();
   b.band = null;
   b.a.classList.add('jx-leave');
+  wake(b);
   setTimeout(() => b.a.classList.add('jx-gone'), 50);
 }
 
@@ -525,6 +557,7 @@ function close(b: Box): void {
   b.cdx = pinOffset(b.a);
   b.P = plan('+', STATES[b.pig][2], 'l', 0.5, false);
   b.a.classList.add('jx-close');
+  wake(b);
   closeFrame(b.c0);
 }
 
@@ -620,6 +653,7 @@ export function initJx(seen: Promise<void>): void {
     f: 0,
     vf: 0,
     lastLive: 0,
+    tick: 1000 / 60,
     closing: false,
     c0: 0,
     cf0: 0,
@@ -631,6 +665,8 @@ export function initJx(seen: Promise<void>): void {
   a.style.setProperty('--jx-dx', `${pinOffset(a).toFixed(2)}px`);
   hooks.body = () => lastBody;
   hooks.pin = () => pinOffset(a);
+  // how many of JellyBox's loops are parked right now (jx-clock.ts)
+  hooks.parked = () => optics?.parked() ?? null;
   wire(b);
   new MutationObserver(() => {
     if (html.getAttribute('data-morph') !== 'cover' || b.closing || a.classList.contains('jx-close') || a.classList.contains('jx-leave')) return;
@@ -655,6 +691,7 @@ export function initJx(seen: Promise<void>): void {
       if (b.canvas) b.skin.style.visibility = 'hidden';
       a.classList.remove('jx-leave', 'jx-gone', 'jx-close');
       html.classList.remove('jx-wait');
+      wake(b);
     }
   });
 
@@ -830,6 +867,8 @@ export function jellyFor(h: Hot, cap: Cap, open: number): void {
     jpig = nearest(h.P.main);
     jfb++;
     h.b.insertBefore(jc, h.host.nextSibling);
+    // its loop parked when the last Jelly was cut (jx-clock.ts)
+    o.wake();
   }
   const want = clipFor(h, cap, open);
   if (jc!.getAttribute('style') !== want) jc!.setAttribute('style', want);

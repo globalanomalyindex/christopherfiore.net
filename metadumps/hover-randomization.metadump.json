@@ -417,6 +417,13 @@
     "decision": "the film's centre is the click (a keyboard link: its own centre), written into the note so the next page opens from the same point; going home ripples out too; the back button's box is held out of the film until its X has closed (300ms), then the ghost takes it",
     "cut": "the '+' glitch at the click (pulled the eye to the corner), Coalesce (its job was carrying the click to the '+'), the 100ms wait before the cover going up"
   },
+  "round_5_performance": {
+    "said": "any optimizations for performance can and should be done",
+    "decided_by": "Fable 5.2 (lead, set the budgets), built by an Opus 5.5 expert with /animation-performance",
+    "decision": "nothing a visitor sees changes, only what it costs: JellyBox's loop parks while the X is at rest (jx-clock.ts, the vendored renderer kept byte for byte)",
+    "why": "every subpage ran 60 empty frames a second forever (301 callbacks and about 80ms of main thread per 5s of idle), and a second loop after the first Jelly row",
+    "built_note": "measured in headless Chrome at 1440 x 900 on the built site, before then after: idle subpage 301 callbacks / 72 to 87ms per 5s, then 0 / 3 to 5ms; after leaving the X or a Jelly row 120 and 240 callbacks per 2s, then 0"
+  },
   "request_8": {
     "said": "can you add an effect that works natively with the page content so it looks like it's resolving and not just appearing from the bottom of the ripple? ... keep it in character ... have fun with it, and maybe incorporate something from /antialgorithm - use Fable 5.2 for these decisions",
     "decided_by": "Fable 5.2 (seed: guess / it only works in one place / weather)",

@@ -2541,6 +2541,13 @@ try {
   await sleep(700);
   const back = await xp.evaluate(() => window.__jx.body());
   ok(back && Math.abs(back.w - 60) < 1 && Math.abs(back.r - 30) < 1, 'let go, it springs back to its disc', JSON.stringify(back));
+  // At rest JellyBox's loop parks (jx-clock.ts); a hover wakes it and the disc swells again.
+  await xp.waitForFunction(() => window.__jx.parked() === 1, null, { timeout: 4000 }).catch(() => {});
+  const parkedX = await xp.evaluate(() => window.__jx.parked());
+  await xp.mouse.move(36, size.box[2] / 2 + 122, { steps: 3 });
+  await sleep(800);
+  const woke = await xp.evaluate(() => ({ parked: window.__jx.parked(), body: window.__jx.body() }));
+  ok(parkedX === 1 && woke.parked === 0 && woke.body && Math.abs(woke.body.w - fill) < 0.5, 'at rest its JellyBox loop parks, and a hover wakes it: the disc fills the box again', JSON.stringify({ parkedX, woke }));
   await xctx.close();
   // Phones: JellyBox's own CSS skin, never the optics; the box is 44px.
   const xph = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
@@ -2705,6 +2712,120 @@ try {
     await bf3.close();
   } finally {
     await bfBrowser.close();
+  }
+
+  /* ------------------------------------------------------- the frame budget */
+  {
+  console.log('\n[frame budget]');
+  const { createHash } = await import('node:crypto');
+  // Every requestAnimationFrame callback on the page, counted from before any
+  // page script runs. JellyBox's loop reaches the window's own through
+  // jx-clock.ts, so it is counted too.
+  const countFrames = () => {
+    window.__fbN = 0;
+    const raf = window.requestAnimationFrame.bind(window);
+    window.requestAnimationFrame = (cb) => raf((t) => {
+      window.__fbN++;
+      cb(t);
+    });
+  };
+  const framesIn = async (pg, ms) => {
+    const n0 = await pg.evaluate(() => window.__fbN);
+    await sleep(ms);
+    return (await pg.evaluate(() => window.__fbN)) - n0;
+  };
+  // the vendored renderer is JellyBox's own, byte for byte: the loop is parked from our side
+  const opticsSha = createHash('sha256').update(readFileSync(new URL('../src/vendor/jellybox/renderer/optics.js', import.meta.url))).digest('hex');
+  ok(opticsSha === '16ad4f53214de1bba5a52fae4d9085e19f7fdc094da2251f5de5da7317cb4a62', 'JellyBox’s optics.js is untouched, byte for byte', opticsSha);
+
+  // A page at rest runs no frames. Each page in its own window, side by side;
+  // each first proves it is drawing frames at all, so a quiet count means quiet.
+  const IDLE = ['/', '/product-designs/', '/paintings/', '/about/', '/product-designs/chellbook/'];
+  const idleCtx = await Promise.all(IDLE.map(async () => {
+    const c = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    await c.addInitScript(countFrames);
+    return c;
+  }));
+  const idle = await Promise.all(IDLE.map(async (r, i) => {
+    const pg = await idleCtx[i].newPage();
+    await pg.goto(BASE + r, { waitUntil: 'load' });
+    await pg.mouse.move(1430, 890);
+    // drawing: home writes its signature in, a subpage's X enters
+    const early = await framesIn(pg, 400);
+    // the entrance is over 6s after the page started
+    await pg.waitForFunction(() => performance.now() > 6000, null, { timeout: 15000 });
+    const quiet = await framesIn(pg, 2000);
+    const vis = await pg.evaluate(() => document.visibilityState);
+    return { r, early, quiet, vis };
+  }));
+  ok(idle.every((o) => o.vis === 'visible' && o.early > 5 && o.quiet === 0), 'a page at rest runs no frames: 2s of idle on home, product designs, paintings, about and a case study, zero callbacks', JSON.stringify(idle));
+  await Promise.all(idleCtx.map((c) => c.close()));
+
+  const fbx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  await fbx.addInitScript(countFrames);
+  const fp = await fbx.newPage();
+  await fp.goto(`${BASE}/about/`, { waitUntil: 'networkidle' });
+  await fp.mouse.move(1430, 890);
+  await fp.waitForFunction(() => performance.now() > 6000, null, { timeout: 15000 });
+  // After 5s at rest, the X still answers at once: its body grows by the
+  // second frame after the pointer enters (the first frame draws it, the
+  // second is the first this counter can see it in).
+  await sleep(5000);
+  const xb = await fp.locator('a.jx').boundingBox();
+  await fp.evaluate(() => {
+    window.__sw = [];
+    const a = document.querySelector('a.jx');
+    document.addEventListener('pointerover', (e) => {
+      if (!a.contains(e.target) || window.__sw.length) return;
+      window.__sw.push(window.__jx.body().w);
+      let n = 0;
+      const tick = () => {
+        window.__sw.push(window.__jx.body().w);
+        if (++n < 6) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    }, true);
+  });
+  await fp.mouse.move(xb.x + xb.width / 2, xb.y + xb.height / 2);
+  await sleep(1500);
+  const sw = await fp.evaluate(() => window.__sw);
+  const grewAt = sw.findIndex((w) => w > sw[0] + 0.1);
+  ok(grewAt >= 1 && grewAt <= 2, 'after 5s at rest the X answers at once: it swells by the second frame after the pointer enters', JSON.stringify(sw.map((w) => +w.toFixed(2))));
+  // leave the X after a 1.5s hover: 1.5s later, nothing runs
+  await fp.mouse.move(1430, 890, { steps: 3 });
+  await sleep(1500);
+  const afterX = await framesIn(fp, 2000);
+  ok(afterX === 0, 'after a 1.5s hover on the X, 1.5s after leaving it: zero callbacks in 2s', String(afterX));
+  // a row that played Jelly: once it is cut, JellyBox's second canvas parks too
+  await fp.goto(`${BASE}/product-designs/`, { waitUntil: 'networkidle' });
+  await fp.mouse.move(1430, 890);
+  await fp.waitForFunction(() => !!window.__lin && performance.now() > 3000, null, { timeout: 15000 });
+  await fp.evaluate(() => window.__lin.force('jelly'));
+  const jr = await center(fp, 'a.row', 2);
+  await fp.mouse.move(jr.x - jr.box.width * 0.1, jr.y, { steps: 4 });
+  await fp.waitForFunction(() => !!window.__jx?.jelly(), null, { timeout: 5000 }).catch(() => {});
+  const jellyUp = await fp.evaluate(() => !!window.__jx?.jelly());
+  await sleep(1200);
+  await fp.mouse.move(1430, 890, { steps: 3 });
+  await fp.evaluate(() => window.__lin.force(null));
+  await sleep(1500);
+  const afterJelly = await framesIn(fp, 2000);
+  ok(jellyUp && afterJelly === 0, 'after a row that played Jelly, 1.5s after leaving it: zero callbacks in 2s', JSON.stringify({ jellyUp, afterJelly }));
+  await fbx.close();
+  // the same clock in WebKit
+  if (wk) {
+    const wfc = await wk.newContext({ viewport: { width: 1440, height: 900 } });
+    await wfc.addInitScript(countFrames);
+    const wfp = await wfc.newPage();
+    await wfp.goto(`${BASE}/about/`, { waitUntil: 'load' });
+    await wfp.mouse.move(1430, 890);
+    const early = await framesIn(wfp, 400);
+    await wfp.waitForFunction(() => performance.now() > 6000, null, { timeout: 15000 });
+    const quiet = await framesIn(wfp, 2000);
+    const optics = await wfp.evaluate(() => document.querySelector('a.jx canvas')?.dataset.renderer ?? 'skin');
+    ok(early > 5 && quiet === 0, `WebKit: a page at rest runs no frames (the X drawn by ${optics})`, JSON.stringify({ early, quiet }));
+    await wfc.close();
+  }
   }
 
   /* ---------------------------------------------------------- every width */

@@ -104,12 +104,37 @@ function prerender(): Plugin {
   };
 }
 
+/**
+ * JellyBox's optics, given our frame clock (`src/runtime/jx-clock.ts`).
+ *
+ * The vendored renderer stays byte for byte on disk. Its loop asks for a frame
+ * on every frame, even when the scene is frozen, so this hands that one module
+ * our requestAnimationFrame and cancelAnimationFrame in place of the window's:
+ * a frozen scene's next frame is held until the X is touched. The import goes
+ * on the first line, so every line number of the renderer stays the same. If
+ * a fresh copy of JellyBox stops calling the bare globals, the build fails
+ * here rather than quietly running the loop again.
+ */
+function jellyClock(): Plugin {
+  const OPTICS = /\/src\/vendor\/jellybox\/renderer\/optics\.js$/;
+  return {
+    name: 'ps:jelly-clock',
+    transform(code, id) {
+      if (!OPTICS.test(id.split('?')[0])) return null;
+      const bare = /(?<![.\w$])requestAnimationFrame\(animate\)/.test(code) && /(?<![.\w$])cancelAnimationFrame\(frame\)/.test(code);
+      const shadowed = /(?:function|const|let|var)\s+(?:requestAnimationFrame|cancelAnimationFrame)\b|window\.(?:requestAnimationFrame|cancelAnimationFrame)/.test(code);
+      if (!bare || shadowed) throw new Error('ps:jelly-clock: optics.js no longer calls the bare requestAnimationFrame(animate) and cancelAnimationFrame(frame); re-check src/runtime/jx-clock.ts');
+      return { code: `import { requestAnimationFrame, cancelAnimationFrame } from '/src/runtime/jx-clock.ts'; ${code}`, map: null };
+    },
+  };
+}
+
 export default defineConfig({
   // Absolute, because pages live at several depths (/about/, /product-designs/chellbook/)
   // and every one of them loads the same /assets/ bundle. The site is served
   // from the root of christopherfiore.net, so '/' is always right.
   base: '/',
-  plugins: [prerender()],
+  plugins: [jellyClock(), prerender()],
   build: {
     outDir: 'dist',
     assetsDir: 'assets',

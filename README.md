@@ -71,6 +71,7 @@ src/
     cells.ts     the pale cells the type stands in while the wire is up, and the blanks its X fills
     jx.ts        the JellyBox back button: entrance, colors, leaving (lazy)
     jellyx.ts    JellyBox's own optics renderer, mounted on a canvas (lazy, desktop only)
+    jx-clock.ts  JellyBox's frame clock: its loop parks while nothing in it moves
     magnet.ts    the magnetic pull
     seams.ts     words that part under the cursor, in prose only
     skeleton.ts  the measurements drawn at the seam
@@ -506,7 +507,8 @@ measure the film rather than the battery. It checks:
   X popping in on the pin at 45 degrees and settling, the hover swelling to
   fill the box as a disc, the closing into the "+" going up, JellyBox's
   three.js renderer on a desktop and its CSS skin in a 48px box on a phone,
-  the color bag and its skip list, leaving, reduced motion and scripts off
+  the color bag and its skip list, leaving, reduced motion and scripts off,
+  and JellyBox's loop parking at rest and waking on a hover
 - menu hovers: twelve seeded hovers of one row are at least eight different
   and never the same twice running, in the page's own color, with strips of
   4, 6 or 8px from the entry point, the figure cell now and then, no other
@@ -535,6 +537,10 @@ measure the film rather than the battery. It checks:
     stale note, a reload, back and forward, the back/forward cache
   - modifier clicks, new tabs, the PDF and in-page jumps are left alone
   - with scripts off every page is fully visible and links are plain links
+- the frame budget: 2s of idle on five pages runs no frames at all, in
+  Chrome and WebKit, and none after a hover on the X or a row that played
+  Jelly; after 5s at rest the X still swells by the second frame; JellyBox's
+  `optics.js` hashes to the copy we took
 - reduced motion (no film, no glitch, no magnet, no lineage), keyboard
   focus, and touch
 - every width from 360 to 2560: no sideways scroll, nothing off the window
@@ -647,6 +653,20 @@ not redrawn: the renderer (`renderer/`, everything but its `index.js`),
 dependencies, `three` (MIT) and `spectral.js` (MIT), pinned in
 `package.json`. The `.d.ts` files next to it are ours, so TypeScript can
 check the calls.
+
+**Its loop parks at rest.** JellyBox's renderer asks for a new frame on
+every frame, even when the scene says there is nothing to draw. So a page at
+rest used to run 60 empty frames a second for the X, and 60 more for the
+Jelly canvas once a row had played it. The vendored files stay byte for byte
+(a check hashes `optics.js`). Instead `vite.config.ts` hands that one module
+our own `requestAnimationFrame` and `cancelAnimationFrame` from
+`runtime/jx-clock.ts`, in dev and in the build, and the build fails if a new
+copy of JellyBox stops calling them. When a scene says it is frozen, its next
+frame is held. `jx.ts` wakes it whenever the X's state changes: the pointer
+coming or going, a press, focus, the entrance, the closing, leaving, a return
+from the back/forward cache, and a Jelly row starting. A woken spring steps
+one frame's time first, as it did before, so the X swells in the same frames
+it always did.
 
 ## Chickpea
 
