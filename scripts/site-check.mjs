@@ -2392,6 +2392,58 @@ try {
       ok(new Set(pairs).size >= 4 && pairs.every((p, i) => !i || p !== pairs[i - 1]), 'over 12 hovers the seams change: at least four pairs, never the same twice running', JSON.stringify(pairs));
       await awayFx(pg);
     }
+
+    // Knockout: the deep step spreads in steps that land on the text, and every glyph on it is ground ink.
+    {
+      const koRead = ([s, n]) => {
+        const a = document.querySelectorAll(s)[n];
+        const deep = a.querySelector('[data-band] .ko');
+        const pts = deep ? [...deep.style.clipPath.matchAll(/(-?[\d.]+)px (-?[\d.]+)px/g)].map((m) => [+m[1], +m[2]]) : [];
+        return { pts, vis: deep ? deep.style.visibility : null, kc: !!a.querySelector(':scope > [data-k="kc"]') };
+      };
+      const settled = ([s, n]) => {
+        const a = document.querySelectorAll(s)[n];
+        const kc = a.querySelector(':scope > [data-k="kc"]');
+        const deep = a.querySelector('[data-band] .ko');
+        const box = (q) => [q.left, q.top, q.right, q.bottom];
+        const runs = (el) => { const out = []; const tw = document.createTreeWalker(el, NodeFilter.SHOW_TEXT); for (let t = tw.nextNode(); t; t = tw.nextNode()) { if (!t.nodeValue.trim()) continue; const rg = document.createRange(); rg.selectNodeContents(t); out.push(...[...rg.getClientRects()].filter((q) => q.width > 0.5).map(box)); } return out; };
+        // what is copied, in order: the face's letters, the tag's words, each detail block's lines
+        const orig = [];
+        a.querySelectorAll('[data-glitch] > span').forEach((sp) => sp.textContent.trim() && orig.push(box(sp.getBoundingClientRect())));
+        a.querySelectorAll('.cs > span').forEach((t) => { const rg = document.createRange(); rg.selectNodeContents(t); orig.push(box(rg.getBoundingClientRect())); });
+        a.querySelectorAll('.l, .n').forEach((d) => d.textContent.trim() && orig.push(...runs(d)));
+        const copy = [];
+        kc?.querySelectorAll('[data-ko="l"], [data-ko="t"]').forEach((s) => copy.push(box(s.getBoundingClientRect())));
+        kc?.querySelectorAll('[data-ko="d"]').forEach((d) => copy.push(...runs(d)));
+        const off = orig.length === copy.length ? Math.max(0, ...orig.map((q, i) => Math.max(...q.map((v, k) => Math.abs(v - copy[i][k]))))) : 99;
+        // every element of a copy that holds text computes to ground ink
+        const inks = kc ? [...kc.querySelectorAll('*')].filter((e) => [...e.childNodes].some((c) => c.nodeType === 3 && c.nodeValue.trim())).map((e) => getComputedStyle(e).color) : [];
+        const hidden = [a.querySelector('[data-glitch]'), ...a.querySelectorAll('.cs > span'), ...[...a.querySelectorAll('.l, .n')].filter((d) => d.textContent.trim())].every((e) => +getComputedStyle(e).opacity === 0);
+        return { off: +off.toFixed(2), n: orig.length, inks: [...new Set(inks)], deep: deep ? getComputedStyle(deep).backgroundColor : null, hidden, kc: !!kc };
+      };
+      const lum = (c) => c.match(/\d+/g).slice(0, 3).map(Number).map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }).reduce((q, v, i) => q + v * [0.2126, 0.7152, 0.0722][i], 0);
+      const ko = {};
+      for (const [name, sel, nth, fx] of [['own', 'a.row[data-lin="knockout"]', 0, null], ['three', plainC, 0, 'knockout'], ['two', plainC, 1, 'knockout']]) {
+        const { frames } = await filmFx(pg, sel, nth, fx, 0.62, 720, koRead);
+        const g = await pg.evaluate(gridRead);
+        const s = await pg.evaluate(settled, [sel, nth]);
+        const nb = g.g.bands.length;
+        // the stepped shape: band i's right edge is point 2i, its left edge point 4nb - 1 - 2i
+        const spread = frames.filter((f) => f.pts.length === 4 * nb && f.vis === 'visible').map((f) => g.g.bands.map((b, i) => [f.pts[4 * nb - 1 - 2 * i][0], f.pts[2 * i][0]]));
+        const cuts = (x, b) => g.words.some((w) => Math.min(w.b, b.bottom) - Math.max(w.t, b.top) > 2 && w.l < x - 0.5 && w.r > x + 0.5);
+        const onSeams = spread.every((f) => f.every(([L, R], i) => [L, R].every((x) => g.g.bands[i].seams.some((v) => Math.abs(v - x) < 0.01) && !cuts(x, g.g.bands[i]))));
+        const grows = spread.every((f, k) => !k || f.every(([L, R], i) => L <= spread[k - 1][i][0] + 0.01 && R >= spread[k - 1][i][1] - 0.01));
+        const stepped = new Set(spread.map((f) => JSON.stringify(f))).size;
+        await pg.mouse.move(1430, 990);
+        const left = await pg.evaluate(([se, n]) => { const a = document.querySelectorAll(se)[n]; return { kc: !!a.querySelector('[data-k="kc"]'), op: [...a.querySelectorAll('.cs > span, .l, .n')].map((e) => e.style.opacity).filter(Boolean).length }; }, [sel, nth]);
+        ko[name] = { ...s, contrast: s.deep ? +((lum('rgb(243, 245, 248)') + 0.05) / (lum(s.deep) + 0.05)).toFixed(2) : 0, onSeams, grows, stepped, left };
+        await awayFx(pg);
+      }
+      const all = Object.values(ko);
+      ok(all.every((v) => v.kc && v.n > 0 && v.off <= 0.5 && v.inks.length === 1 && v.inks[0] === 'rgb(243, 245, 248)' && v.contrast >= 4.5 && v.hidden), 'Knockout is legible: every letter, the tag and the detail drawn by a ground-ink copy within 0.5px of it, on a deep step that holds it at 4.5:1, the originals hidden under it', JSON.stringify(Object.fromEntries(Object.entries(ko).map(([k, v]) => [k, { off: v.off, n: v.n, inks: v.inks, contrast: v.contrast, hidden: v.hidden }]))));
+      ok(all.every((v) => v.onSeams && v.grows && v.stepped >= 2), 'its spread lands on the text: on every line both edges are clear seams of that line, and it only grows', JSON.stringify(Object.fromEntries(Object.entries(ko).map(([k, v]) => [k, [v.onSeams, v.grows, v.stepped]]))));
+      ok(all.every((v) => !v.left.kc && v.left.op === 0), 'leaving takes every copy and gives every original back in the same frame', JSON.stringify(Object.fromEntries(Object.entries(ko).map(([k, v]) => [k, v.left]))));
+    }
     await ctx.close();
     const home = await clockPage('/');
     await home.pg.evaluate(() => (window.__linHold = true));

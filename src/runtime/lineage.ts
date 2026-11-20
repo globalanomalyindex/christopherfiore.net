@@ -26,11 +26,12 @@
  */
 
 import { mix } from './band.ts';
-import { ALT, mulberry, step2, step4, type Edge, type Letter } from './ink.ts';
+import { ALT, mulberry, step2, type Edge, type Letter } from './ink.ts';
 import { hotNow, setLineage, type Hot, type Lineage, type Look } from './buttons.ts';
 import { jellyFor, jellyOptics } from './jx.ts';
 import { skeletonDone, skeletonLook } from './fx/after-tokens.ts';
 import { tricodeLook } from './fx/tricode.ts';
+import { knockoutCut, knockoutLook } from './fx/knockout.ts';
 import { bez } from './fx/curve.ts';
 import { textGrid } from './fx/textgrid.ts';
 import { ditherCut, ditherLook } from './fx/dither.ts';
@@ -242,46 +243,6 @@ function markBand(h: Hot, p: number): { c: string; s: string } {
 }
 
 /**
- * Knockout's ink: a deep step of the band's own colour, not black, so the
- * inversion stays in the hover's colour. Deep enough that the ground-ink
- * letters on it hold 4.5:1.
- */
-const lumOf = (hex: string): number =>
-  [1, 3, 5]
-    .map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
-    .map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4))
-    .reduce((s, v, i) => s + v * [0.2126, 0.7152, 0.0722][i], 0);
-const deepOf = (main: string): string => {
-  for (let k = 0.55; k < 0.95; k += 0.05) {
-    const c = mix(main, '#1A1820', k);
-    if ((lumOf(GROUND) + 0.05) / (lumOf(c) + 0.05) >= 4.5) return c;
-  }
-  return '#1A1820';
-};
-
-/** Knockout's second copy of the label in ground ink, clipped with the ink so each letter inverts at the edge. */
-function copyOf(h: Hot, clip: string): void {
-  let kc = h.b.querySelector<HTMLSpanElement>(':scope > [data-k="kc"]');
-  if (!kc) {
-    kc = document.createElement('span');
-    kc.setAttribute('data-k', 'kc');
-    kc.setAttribute('aria-hidden', 'true');
-    const inner = document.createElement('span');
-    inner.style.cssText = `position:absolute;left:${h.geo.wl.toFixed(1)}px;top:${h.geo.wt.toFixed(1)}px;white-space:pre;color:${GROUND}`;
-    h.P.chars.forEach((c) => {
-      const s = document.createElement('span');
-      s.textContent = c;
-      if (c.trim()) s.setAttribute('style', ALT);
-      inner.appendChild(s);
-    });
-    kc.appendChild(inner);
-    h.b.appendChild(kc);
-  }
-  const want = `position:absolute;inset:0;z-index:1;pointer-events:none;${clip}`;
-  if (kc.getAttribute('style') !== want) kc.setAttribute('style', want);
-}
-
-/**
  * Where Jelly lies. On a row it is the row's own surface: one of JellyBox's
  * round-ended controls, 3px inside all four edges, under the name, the tag and
  * the detail. A link in a sentence is only its word, so there it is the word's.
@@ -395,17 +356,8 @@ function look(h: Hot, tau: number): Look {
     }
     case 'tricode':
       return tricodeLook(h, t);
-    case 'knockout': {
-      const px = Math.max(0, Math.min(1, (h.px0 ?? g.bw / 2) / g.bw));
-      const p = step4(t);
-      const blink = t >= 250 && t < 350;
-      const clip = `clip-path:inset(0 ${((1 - px) * (1 - p) * 100).toFixed(2)}% 0 ${(px * (1 - p) * 100).toFixed(2)}%);visibility:${blink ? 'hidden' : 'visible'}`;
-      return {
-        letters: alt(h),
-        extra: [{ c: '', s: `position:absolute;inset:0;background:${deepOf(h.P.main)};${clip}` }],
-        own: (hh) => copyOf(hh, clip),
-      };
-    }
+    case 'knockout':
+      return knockoutLook(h, t);
     case 'bayer':
       return ditherLook(h, t);
     case 'jelly': {
@@ -429,23 +381,21 @@ function look(h: Hot, tau: number): Look {
   return {};
 }
 
+/** Everything an effect added outside the band's own layers, gone in this frame, and every original back. */
+function cut(h: Hot): void {
+  skeletonDone(h);
+  ditherCut(h);
+  knockoutCut(h);
+  if (h.fx === 'jelly') jellyFor(h, cap(h), -2);
+}
+
 function leave(h: Hot, now: number): void {
-  if (h.fx === 'skeleton') skeletonDone(h);
   if (h.fx) {
     linEnd = now;
     // only this hover's own credit: a hover left during the rest never showed one
     if (!h.b.hasAttribute('data-lin') && credit && begun.has(h)) creditOut(Math.max(now + 900, h.t0 + DWELL + 1600));
-    if (h.fx === 'jelly') jellyFor(h, cap(h), -2);
-    if (h.fx === 'bayer') ditherCut(h);
   }
-  h.b.querySelectorAll(':scope > [data-k="kc"]').forEach((n) => n.remove());
-}
-
-function cut(h: Hot): void {
-  skeletonDone(h);
-  ditherCut(h);
-  h.b.querySelectorAll(':scope > [data-k="kc"]').forEach((n) => n.remove());
-  if (h.fx === 'jelly') jellyFor(h, cap(h), -2);
+  cut(h);
 }
 
 const api: Lineage = { deal, show, look, tick, leave, cut };
