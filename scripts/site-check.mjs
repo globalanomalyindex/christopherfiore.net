@@ -2890,6 +2890,37 @@ try {
   ok(leanOff.length === 0, 'and the magnet leans exactly as before: a tenth of the cursor’s offset from the resting centre, capped', leanOff.join(' | '));
   await mc.close();
 
+  // Resting on a link in a sentence: the seams loop measures the box only
+  // while it can still move (the magnet's follow, a spring, a press), then
+  // stops. The arrows and the size it shows end exactly on the settled box.
+  const sc = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  await sc.addInitScript(countFrames);
+  await sc.addInitScript(() => (window.__linQuiet = true));
+  const sp = await sc.newPage();
+  await sp.goto(`${BASE}/product-designs/chellbook/`, { waitUntil: 'networkidle' });
+  await sp.waitForFunction(() => !!document.querySelector('[data-seams-live] [data-arrow]'), null, { timeout: 10000 }).catch(() => {});
+  const lc = await center(sp, '#the-work .btn.in');
+  await sp.mouse.move(lc.x - 60, lc.y, { steps: 2 });
+  await sp.mouse.move(lc.x, lc.y, { steps: 4 });
+  await sleep(1000);
+  const restFrames = await framesIn(sp, 1000);
+  const seamEnd = await sp.evaluate(() => {
+    const b = document.querySelector('#the-work .btn.in');
+    const root = b.closest('[data-seams-live]');
+    const R0 = root.getBoundingClientRect();
+    const r = b.getBoundingClientRect();
+    const arrows = Array.from(root.querySelectorAll(':scope > [data-arrow]'))
+      .filter((a) => getComputedStyle(a).opacity === '1')
+      .map((a) => {
+        const x1 = +(a.style.transform.match(/translate\(([-\d.]+)px/)?.[1] ?? NaN);
+        return [x1, x1 + +a.querySelector('line').getAttribute('x2')];
+      });
+    return { box: [r.left - R0.left, r.right - R0.left, Math.round(r.width), Math.round(r.height)], arrows, label: root.querySelector('[data-skeleton]').textContent };
+  });
+  const onBox = seamEnd.arrows.length > 0 && seamEnd.arrows.every(([a, z]) => Math.abs(z - seamEnd.box[0]) <= 0.2 || Math.abs(a - seamEnd.box[1]) <= 0.2);
+  ok(restFrames === 0 && onBox && seamEnd.label.includes(`${seamEnd.box[2]} × ${seamEnd.box[3]}`), 'resting on a link in a sentence: no frames in the last second of two, and its arrows and size end exactly on the settled box', JSON.stringify({ restFrames, ...seamEnd, label: seamEnd.label.slice(0, 40) }));
+  await sc.close();
+
   // Paintings load tile-sized files: every tile has a srcset and a sizes, the
   // copies exist for all twenty, and no tile is ever drawn from a file
   // narrower than it is drawn, at 1x and 2x, wide and on a phone. The
