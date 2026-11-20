@@ -2353,6 +2353,99 @@ try {
   ok(dErr.length === 0, 'the dress throws nothing', dErr.join(' | '));
   await dctx.close();
   }
+  /* ------------------------------------------------------- round 5: the paintings */
+  {
+  console.log('\n[paintings]');
+  /**
+   * Every tile: where its picture is painted (from the picture's own ratio and
+   * its object-position, never the file's pixel size), and where its title is.
+   */
+  const standing = () => {
+    const at = (v, free) => (v.endsWith('%') ? (parseFloat(v) / 100) * free : v.endsWith('px') ? parseFloat(v) : free / 2);
+    return [...document.querySelectorAll('.tile')].map((t) => {
+      const img = t.querySelector('img');
+      const r = img.getBoundingClientRect();
+      const cs = getComputedStyle(img);
+      const nw = +img.getAttribute('width') || img.naturalWidth;
+      const nh = +img.getAttribute('height') || img.naturalHeight;
+      const sc = cs.objectFit === 'contain' ? Math.min(r.width / nw, r.height / nh) : cs.objectFit === 'cover' ? Math.max(r.width / nw, r.height / nh) : 0;
+      const w = sc ? nw * sc : r.width;
+      const h = sc ? nh * sc : r.height;
+      const [px, py] = cs.objectPosition.split(' ');
+      const left = r.left + at(px, r.width - w);
+      const top = r.top + at(py, r.height - h);
+      const title = t.querySelector('.cell').getBoundingClientRect();
+      return { name: t.querySelector('[data-word]').textContent, row: Math.round(t.getBoundingClientRect().top), gap: title.top - (top + h), titleTop: title.top, pic: [left, top, left + w, top + h], box: [r.left, r.top, r.right, r.bottom], tone: !!img.dataset.tone };
+    });
+  };
+  /** One level: every painting stands on its title, and every title in a grid row shares one top. */
+  const levels = (tiles) => {
+    const off = tiles.filter((t) => Math.abs(t.gap) > 0.5).map((t) => `${t.name} ${t.gap.toFixed(1)}`);
+    const rowsOf = new Map();
+    for (const t of tiles) rowsOf.set(t.row, [...(rowsOf.get(t.row) ?? []), t.titleTop]);
+    const uneven = [...rowsOf.values()].filter((ts) => Math.max(...ts) - Math.min(...ts) > 0.5).length;
+    return { ok: tiles.length === 20 && !off.length && !uneven, off, uneven, rows: rowsOf.size };
+  };
+  const pViews = [['Chrome', browser, 1728, 908], ['Chrome', browser, 1440, 900], ['Chrome', browser, 1024, 800], ['Chrome', browser, 760, 900], ['Chrome', browser, 600, 900], ...(wk ? [['WebKit', wk, 1440, 900], ['WebKit', wk, 390, 844]] : [])];
+  for (const [eng, br, vw, vh] of pViews) {
+    const pctx = await br.newContext({ viewport: { width: vw, height: vh } });
+    // the lineage deck and the dress held still: these judge the type
+    await pctx.addInitScript(() => { window.__linQuiet = true; window.__dressQuiet = true; });
+    const pp = await pctx.newPage();
+    await pp.goto(`${BASE}/paintings/`, { waitUntil: 'networkidle' });
+    await settle(pp);
+    const lv = levels(await pp.evaluate(standing));
+    ok(lv.ok, `${eng} ${vw} wide: every painting stands right on its title, and every title in a row is on one level`, JSON.stringify(lv));
+    await pctx.close();
+  }
+  // The film draws a painting where it is now painted: on its title, not in the middle of its box.
+  const fctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  await fctx.addInitScript(() => (window.__linQuiet = true));
+  const fp = await fctx.newPage();
+  await fp.goto(`${BASE}/paintings/`, { waitUntil: 'networkidle' });
+  await settle(fp);
+  await sleep(2300);
+  const marks = await fp.evaluate((standingSrc) => {
+    const standing = eval(standingSrc);
+    document.querySelector('.grid').scrollIntoView({ block: 'start' });
+    window.scrollBy(0, -60);
+    window.__morph.seek('reveal', 'out', 0.45, null, [innerWidth / 2, innerHeight / 2]);
+    const r = window.__morph.read();
+    window.__morph.clear();
+    if (!r) return null;
+    const out = [];
+    for (const t of standing()) {
+      const [bl, bt, br, bb] = t.box;
+      const [l, tp, rt, bm] = t.pic;
+      // only a wide painting, letterboxed in its box, wholly on the grid
+      if (!t.tone || bb - bt - (bm - tp) < 1 || bt < r.gy || bb > innerHeight) continue;
+      let miss = 0;
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+      for (let y = 0; y < r.rows; y++) {
+        const cy = r.gy + (y + 0.5) * r.ch;
+        if (cy < bt || cy >= bb) continue;
+        for (let x = 0; x < r.cols; x++) {
+          const cx = r.gx + (x + 0.5) * r.cw;
+          if (cx < bl || cx >= br) continue;
+          const k = r.kinds[y][x];
+          const on = cx >= l && cx < rt && cy >= tp && cy < bm;
+          if (k === '3') {
+            x0 = Math.min(x0, r.gx + x * r.cw);
+            x1 = Math.max(x1, r.gx + (x + 1) * r.cw);
+            y0 = Math.min(y0, r.gy + y * r.ch);
+            y1 = Math.max(y1, r.gy + (y + 1) * r.ch);
+          }
+          if ((k === '3') !== on && k !== '2') miss++;
+        }
+      }
+      const near = Math.abs(x0 - l) <= r.cw && Math.abs(x1 - rt) <= r.cw && Math.abs(y0 - tp) <= r.ch && Math.abs(y1 - bm) <= r.ch;
+      out.push({ name: t.name, miss, near, letterbox: Math.round(bb - bt - (bm - tp)) });
+    }
+    return out;
+  }, `(${standing.toString()})`);
+  ok(marks && marks.length >= 2 && marks.every((m) => m.miss === 0 && m.near), 'the film draws a wide painting’s colours where it is painted, standing on its title: every coloured mark on the picture, none in the box above it', JSON.stringify(marks));
+  await fctx.close();
+  }
   /* ------------------------------------------------------- round 3: menu hovers */
   {
   console.log('\n[menu hovers]');

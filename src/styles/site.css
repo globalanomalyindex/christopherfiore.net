@@ -1072,11 +1072,17 @@ a.row[data-hot] {
   background: var(--t);
 }
 
+/*
+  Every painting stands on the bottom of its box, right on its title, so the
+  gap from picture to title is the same on every tile, wide or tall. The film
+  reads this object-position to put its coloured marks on the picture.
+*/
 .tile img {
   display: block;
   width: 100%;
   height: 8.3333em;
   object-fit: contain;
+  object-position: 50% 100%;
 }
 
 .tile .cell {

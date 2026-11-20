@@ -440,6 +440,27 @@ function paintRows(g: Grid, y0: number, y1: number): void {
 }
 
 /**
+ * Where a picture sits in its box, px from the box's top left, from its
+ * computed object-position and the room left over each way (`fx`, `fy`). A
+ * percentage places that point of the picture on that point of the box; a
+ * length is an offset. Anything else is the centre, the default.
+ */
+function placeOf(pos: string, fx: number, fy: number): [number, number] {
+  const KEY: Record<string, number> = { left: 0, top: 0, center: 0.5, right: 1, bottom: 1 };
+  const at = (v: string | undefined, free: number): number => {
+    if (!v) return free / 2;
+    if (v in KEY) return KEY[v] * free;
+    const n = parseFloat(v);
+    if (!Number.isFinite(n)) return free / 2;
+    return v.endsWith('%') ? (n / 100) * free : v.endsWith('px') ? n : free / 2;
+  };
+  const [a, b] = pos.trim().split(/\s+/);
+  // keywords may come in either order: "bottom center" is the same as "center bottom"
+  const swap = a === 'top' || a === 'bottom' || b === 'left' || b === 'right';
+  return swap ? [at(b, fx), at(a, fy)] : [at(a, fx), at(b, fy)];
+}
+
+/**
  * Read the page onto the grid: what each cell is about to be, and its colour.
  * One pass over what is in the window, word by word for the first 500 words,
  * inside a 6ms budget. Paintings come from the marks they carry.
@@ -558,14 +579,17 @@ function survey(g: Grid): void {
     const nw = img.naturalWidth || +(img.getAttribute('width') ?? 0);
     const nh = img.naturalHeight || +(img.getAttribute('height') ?? 0);
     if (tone.length !== tw * th * 3 || !nw || !nh) continue;
-    const fit = getComputedStyle(img).objectFit;
+    const ics = getComputedStyle(img);
+    const fit = ics.objectFit;
     const sx = rc.width / nw;
     const sy = rc.height / nh;
     const sc = fit === 'contain' ? Math.min(sx, sy) : fit === 'cover' ? Math.max(sx, sy) : 0;
     const w = sc ? nw * sc : rc.width;
     const h = sc ? nh * sc : rc.height;
-    const L = rc.left + (rc.width - w) / 2;
-    const T = rc.top + (rc.height - h) / 2;
+    // where the picture is drawn in its box: its own object-position (a painting stands on its title)
+    const [ox, oy] = placeOf(ics.objectPosition, rc.width - w, rc.height - h);
+    const L = rc.left + ox;
+    const T = rc.top + oy;
     const [x0, x1] = span(Math.max(L, rc.left), Math.min(L + w, rc.right), cols, cw, gx);
     const [y0, y1] = span(Math.max(T, rc.top), Math.min(T + h, rc.bottom), rows, ch, gy);
     for (let y = y0; y < y1; y++) {
