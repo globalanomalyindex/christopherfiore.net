@@ -67,6 +67,7 @@ src/
     band.ts      the brutalist band that floods a button
     glitch.ts    the alternate-letter faces, and the width a sentence link reserves
     lineage.ts   effects from his past projects, dealt now and then (lazy, cursor only)
+    fx/          the effects rebuilt from their projects' code, and the text grid they share
     dress.ts     every pointer hover's shape, wire and Chickpea's Cut (lazy, with lineage)
     cells.ts     the pale cells the type stands in while the wire is up, and the blanks its X fills
     jx.ts        the JellyBox back button: entrance, colors, leaving (lazy)
@@ -77,7 +78,8 @@ src/
     offsets.ts   how the magnet and the seams stay out of each other's way
   vendor/jellybox/  JellyBox's renderer and color code, copied from its repo
   vendor/chickpea/  Chickpea's grid and palette engines, copied from its repo
-  vendor/after-tokens/  After Tokens' ambient score, copied from its repo
+  vendor/after-tokens/  After Tokens' growing skeleton, copied from its repo
+  vendor/dither/        dither's ordered rule, ported from its repo
   styles/site.css
 scripts/site-check.mjs   end-to-end checks in real Chrome and WebKit
 scripts/tones.mjs        each painting's colours as a tiny grid of marks, for the film (npm run tones)
@@ -247,20 +249,38 @@ hover twice running.
 ## Lineage
 
 Some hovers play a native translation of an effect from one of his past
-projects (`runtime/lineage.ts`). It always starts from the settled glitch,
-after the pointer has rested 220ms, and it adds layers only: no layout box
-moves.
+projects (`runtime/lineage.ts`, and `runtime/fx/` for the ones rebuilt from
+their projects' own code). The card is dealt when the pointer has rested
+220ms. The effect starts 80ms later, on the hover's sixth drawing, 300ms in.
+So the settled glitch holds for two drawings first, and the effect reads as a
+second beat, not as a stutter at the end of the first. It adds layers only:
+no layout box moves.
 
 | Effect | From | What it does |
 |---|---|---|
 | Mark | lee | the band shrinks into a quiet mark, then the label is underlined |
 | Decode | after tokens | the letters run through `+=-:.` and settle |
-| Skeleton | after tokens | the text gives way to After Tokens' waiting rows, rounded cells that breathe and reshape on its own score with its glimmer passing, then its 280ms handover carries the cells into the real word groups as the ink arrives |
-| Knockout | the motion archive | a deep step of the band's own color spreads out from the pointer, the letters knocked out in ground, then blinks |
+| Skeleton | after tokens | the text gives way to After Tokens' growing skeleton. Each block of text turns into one capsule that opens into a row per line: long lines, and clusters of up to three cells. Its glimmer passes once, then its 280ms handover carries every cell into the real word groups as the ink comes back |
+| Knockout | the motion archive | a deep step of the band's own color spreads out from where the pointer rested, in steps that never cut a word. Every letter on it is knocked out in ground ink. Then it blinks |
 | Jelly | jellybox | the band closes into one of JellyBox's round-ended controls, the whole row 3px in, drawn by its real optics |
-| Tricode | mfny concentrates | the band splits into the three strain colors from MFNY's filter pill, and the one under the pointer lights up |
-| Bayer | dither | the band dithers through a 4 by 4 Bayer pattern under the pointer |
+| Tricode | mfny concentrates | MFNY's filter pill laid flat. Its three strain colors land one at a time, each as wide as the words it holds, then the one the pointer rested on lights up. After that it stays still |
+| Bayer | dither | a dithered spot, drawn by dither's own rule, sits on the words under the pointer and follows it word by word and line by line |
 | Canister | scream canister controls | the band squashes and pops, with a late letter |
+
+- **On the text.** Every band, seam and spot an effect lays down lines up
+  with the text (`runtime/fx/textgrid.ts`). A word is never cut: each line
+  of the label with its glitch face, the tag's box, and each word of the
+  detail. Each line of the block with the most lines gets a band, and a seam
+  is a column on the mono cell that no word in that band crosses. An effect
+  that picks seams picks them at random, from the button's own seeded
+  stream, and never the same as its last pick.
+- **The MFNY row is one link,** so nothing inside it reacts to the pointer.
+  One hover is one opening and one choice: the segment the pointer was
+  resting on when the card was dealt lights up, and nothing changes after
+  that. MFNY's own spec stops its motion under the cursor in the same way.
+- **The dither never freezes.** It follows the pointer for as long as the
+  hover lasts, in the same frame and with no easing, like the wire's guide.
+  When the pointer is still, nothing is drawn.
 
 - **The deck.** Fourteen cards: Mark 3, Decode 2, Skeleton 2, Knockout 2,
   Jelly 2, and one each of Tricode, Bayer and Canister. It is shuffled once a visit
@@ -275,8 +295,10 @@ moves.
   Otherwise 1 hover in 4 deals a card, never within 1.5s of the last effect,
   and a hover back on the same button within 4s replays what it played.
 - **The credit.** A dealt effect shows a small "from lee" in the bottom right
-  corner, which holds a moment after the pointer leaves. A project's own row
-  shows none, since the row already says where it came from.
+  corner. It steps in with the effect's first drawing and holds a moment
+  after the pointer leaves. Leave before the effect starts and there is no
+  credit at all. A project's own row shows none, since the row already says
+  where it came from.
 - **Where it runs.** A cursor that can hover. The chunk loads after the page
   has been seen. Phones never fetch it. The keyboard and reduced motion never
   deal an effect. Under reduced motion a project's own row shows its effect's
@@ -497,10 +519,29 @@ measure the film rather than the battery. It checks:
   the cursor and its chip names ½ in Chickpea's words without touching the
   label. The Cut is legible and credited. Leaving is fast, the keyboard is
   never dressed, and Tall stays inside a page's gaps
-- lineage: the chunk loads only for a cursor, the deck of twelve, each
+- lineage: the chunk loads only for a cursor, the deck of fourteen, each
   project's own row playing its own effect, every effect's layers and credit,
   zero reflow while it plays, nothing left behind after leaving, and the
-  cooldown
+  cooldown. Then on a paused clock, frame by frame:
+  - the rest: no effect before 295ms and each one's first layer by 340ms,
+    with its credit in the same frame, and nothing at all when the pointer
+    leaves at 250ms
+  - the text grid: on rows of one, two and three lines and a home menu row,
+    one band per line and every seam on the mono cell and inside no word
+  - the dither: dot for dot what dither's own rule gives, every edge on a
+    clear seam, every whole tile 16, 12, 8 or 4 of 16, an entrance that only
+    adds dots, still following the pointer after 3s and 10s of rest, writing
+    nothing while it rests, never the band's color, gone the frame you leave
+  - Skeleton: its vendored files by hash, one capsule per block at the first
+    frame, one row of 1 to 3 cells per line, no blank frame, the text under
+    0.45 for 340ms at most, the card over within 560ms, nothing left after
+  - Tricode: no change after its step however the pointer moves, the lit
+    segment the one the pointer rested on, both seams clear on every line
+    and every segment 3em or wider, only whole segments while it opens, and
+    at least four seam pairs in 12 hovers, never the same twice running
+  - Knockout: every glyph drawn by a ground-ink copy within 0.5px of it on a
+    deep step that holds it at 4.5:1, its edges on clear seams of each line,
+    only growing, and every original back the frame you leave
 - the back button: the box filling the gutter, the pin on home's "+", the
   60px disc and 28px X, the "+" before its entrance, the glitch curtain, the
   X popping in on the pin at 45 degrees and settling, the hover swelling to
@@ -660,13 +701,40 @@ copy here.
 
 ## After Tokens
 
-`src/vendor/after-tokens/ambient-score.ts` is After Tokens' own decorative
-score, copied as it is from globalanomalyindex/after-tokens at 844d332 (MIT,
-`LICENSE` beside it). The Skeleton card runs it, and takes the rest of its
-values from After Tokens' own CSS: the cell ink at 0.2 and round, the breath
-from 0.72 to 1, the white glimmer, and the 280ms handover with its ink curve
+`src/vendor/after-tokens/` is After Tokens' own skeleton code, copied byte
+for byte from globalanomalyindex/after-tokens at 844d332 (MIT, `LICENSE`
+beside it): `growing-geometry.ts`, the growing skeleton After Tokens ships,
+and `ambient-geometry.ts` and `types.ts`, which it reaches only for types.
+The older `ambient-score.ts` is gone, since After Tokens no longer uses it.
+
+The Skeleton card (`runtime/fx/after-tokens.ts`) runs `createGrowingRows` and
+`growingRowAt` in real time, one row per line of text, and takes everything
+else from After Tokens' own files: the bar at 0.9 of a 1.625 line, the cell
+ink at 0.2 and round, the breath from 0.72 to 1, the glimmer, the opening
+from `skeleton-division.tsx` (one capsule that divides into the rows, its
+950ms keyframes played in 180ms), and the 280ms handover with its ink curve
 (0.45 at 38%, full at 74%, settling from 1.5px) and its rule of three words
-at most to a target.
+at most to a target. On a hover the ink leaves in 60ms, the capsule opens
+from 30 to 210ms, and the handover runs from 260 to 540ms after the effect
+starts. The text is under 0.45 opacity for 329ms.
+
+## Dither
+
+`src/vendor/dither/ordered.ts` is dither's ordered rule, ported from
+globalanomalyindex/dither at faf52b2: `bayerMatrix` and `normBayer`
+(dither.js lines 38 to 47) and the per-pixel rule of its "Ordered (Bayer)"
+algorithm (lines 2293 to 2317), with only types added. The repo has no
+license file. It is his own project.
+
+The Bayer card (`runtime/fx/dither.ts`) draws with it on one canvas in the
+band, one canvas pixel per dot, each dot a whole number of pixels, so a 4 by
+4 tile is about one mono cell. A level of k/16 lights exactly k of every 16
+dots. Each line is cut into stretches of whole words, at least 4 cells wide.
+The stretch under the pointer is solid. Along its line the next stretches out
+are 12, 8 and 4 of 16, and the lines above and below get 8 and 4. It builds
+up over four drawings from the pointer, only ever adding dots. Its second
+color is one of the band colors, never the band's own and never the
+button's last.
 
 ## Payload
 
