@@ -27,15 +27,16 @@
 
 import { HUES, mix, pickNot } from './band.ts';
 import { ALT, mulberry, step2, step4, type Edge, type Letter } from './ink.ts';
-import { setLineage, type Hot, type Lineage, type Look } from './buttons.ts';
+import { hotNow, setLineage, type Hot, type Lineage, type Look } from './buttons.ts';
 import { jellyFor, jellyOptics } from './jx.ts';
 import { ambientScoreAt, createAmbientScore, type ScoreRow } from '../vendor/after-tokens/ambient-score.ts';
+import { textGrid } from './fx/textgrid.ts';
 // the dress rides in this chunk: every pointer hover's shape, wire and Chickpea's Cut
 import './dress.ts';
 
 declare global {
   interface Window {
-    __lin?: { force(name: string | null): void; seed(n: number): void; state(): unknown; fits(kind: string): string[] };
+    __lin?: { force(name: string | null): void; seed(n: number): void; state(): unknown; fits(kind: string): string[]; grid(): unknown };
     __linQuiet?: boolean;
     /** the checks: hold the deck still but let the dress deal */
     __linHold?: boolean;
@@ -181,13 +182,12 @@ function deal(h: Hot): string | null {
   return fx;
 }
 
-/** The card is played: the cooldown, the repeat and the credit count from now. */
+/** The card is played at the dwell: the cooldown and the repeat count from now. The credit waits for the effect's first drawing. */
 function show(h: Hot): void {
   const now = performance.now();
   const own = h.b.hasAttribute('data-lin');
   if (!own) lastLin = !!h.fx;
   byBtn.set(h.b, { t: now, fx: h.fx });
-  if (h.fx && !own) showCredit(CREDIT[h.fx], now);
 }
 
 /* ------------------------------------------------------------ the credit */
@@ -385,21 +385,40 @@ function slabClip(h: Hot, c: ReturnType<typeof cap>, v: number, edge: Edge): str
   return `inset(${t.toFixed(1)}px ${r.toFixed(1)}px ${b.toFixed(1)}px ${l.toFixed(1)}px round ${c.r.toFixed(1)}px)`;
 }
 
+/**
+ * The rest. The glitch lands by 200ms and the dwell is at 220ms; every effect
+ * begins 80ms later, on the hover's sixth drawing (300ms), so the settled
+ * glitch holds for two drawings and the effect reads as a second beat, never
+ * as a stutter on the end of the first. The credit steps in with the effect.
+ */
+const DWELL = 220;
+const REST = 80;
+/** hovers whose effect has drawn its first frame */
+const begun = new WeakSet<Hot>();
+
 function look(h: Hot, tau: number): Look {
   const fx = h.fx;
   const g = h.geo;
   // leaving: Mark's tint stays one drawing; Jelly's slab and cast are cut at
   // once (`leave`) and the flat band takes the slab's rect for one drawing,
-  // leaving toward the edge the pointer left by
+  // leaving toward the edge the pointer left by. Left during the rest, the
+  // effect never began: the glitch leaves as it always does.
   if (h.out != null) {
+    if (!begun.has(h)) return {};
     const gone = performance.now() - h.t0 - h.out >= 50;
     if (fx === 'mark') return { band: gone ? [] : [markBand(h, 1)] };
     if (fx === 'jelly') return { band: gone ? [] : [{ c: 'bm', s: `position:absolute;inset:0;background:${h.P.main};clip-path:${slabClip(h, cap(h), 0.3, h.exit ?? h.P.edge)}` }] };
     return {};
   }
+  const t = tau - REST;
+  if (t < 0) return {};
+  if (!begun.has(h)) {
+    begun.add(h);
+    if (fx && !h.b.hasAttribute('data-lin')) showCredit(CREDIT[fx], performance.now());
+  }
   switch (fx) {
     case 'canister': {
-      const d = Math.floor(tau / 50);
+      const d = Math.floor(t / 50);
       const sx = [-4, 3, -1, 0][Math.min(d, 3)];
       const sc = d === 0 ? 1.075 : d === 1 ? 1.025 : 1.04;
       const ls = alt(h);
@@ -407,26 +426,26 @@ function look(h: Hot, tau: number): Look {
       ls[li] = {
         c: h.P.chars[li],
         s:
-          tau < 250
+          t < 250
             ? ''
-            : tau < 300
+            : t < 300
               ? `${ALT}display:inline-block;transform:translateY(-.6em);color:${h.P.twin};`
-              : tau < 350
+              : t < 350
                 ? `${ALT}display:inline-block;transform:scale(1.24,.72);transform-origin:50% 100%;`
-                : `${ALT}display:inline-block;transform:rotate(${tau < 400 ? 12 : tau < 450 ? -8 : 0}deg);transform-origin:50% 90%;`,
+                : `${ALT}display:inline-block;transform:rotate(${t < 400 ? 12 : t < 450 ? -8 : 0}deg);transform-origin:50% 90%;`,
       };
       return {
-        hostS: `transform:scaleY(${tau < 50 ? 0.8 : tau < 100 ? 0.93 : 1});transform-origin:50% 100%`,
+        hostS: `transform:scaleY(${t < 50 ? 0.8 : t < 100 ? 0.93 : 1});transform-origin:50% 100%`,
         ovS: `transform:translateX(${sx}px) scale(${sc});transform-origin:0 60%`,
         letters: ls,
       };
     }
     case 'skeleton':
-      return skeletonLook(h, tau);
+      return skeletonLook(h, t);
     case 'decode': {
       const per = Math.max(1, Math.ceil(h.P.letters.length / 6));
-      const m = Math.floor(tau / 50);
-      if (tau < 350) {
+      const m = Math.floor(t / 50);
+      if (t < 350) {
         const ls: Letter[] = h.P.chars.map((c, i) => ({ c: i < h.P.n ? c : '', s: '' }));
         h.P.letters.forEach((i, j) => {
           const dd = Math.floor(j / per) - m;
@@ -434,7 +453,7 @@ function look(h: Hot, tau: number): Look {
         });
         return { letters: ls };
       }
-      const e = E_SETTLE(Math.min(1, (tau - 350) / 200));
+      const e = E_SETTLE(Math.min(1, (t - 350) / 200));
       const y = e < 0.55 ? 0.05 * (1 - e / 0.55) : 0;
       const s = e < 0.55 ? 0.994 + 0.011 * (e / 0.55) : 1.005 - 0.005 * ((e - 0.55) / 0.45);
       return { letters: alt(h), ovS: `transform:translateY(${y.toFixed(4)}em) scale(${s.toFixed(4)});transform-origin:0 50%` };
@@ -442,9 +461,9 @@ function look(h: Hot, tau: number): Look {
     case 'mark': {
       if (!markOf.has(h.b)) markOf.set(h.b, MARKS[markI++ % MARKS.length]);
       const W = g.ww + 0.5 * g.fs;
-      const f = tau < 100 ? 0 : tau < 150 ? 0.4 : tau < 200 ? 0.85 : 1;
+      const f = t < 100 ? 0 : t < 150 ? 0.4 : t < 200 ? 0.85 : 1;
       return {
-        band: [markBand(h, step2(tau))],
+        band: [markBand(h, step2(t))],
         outline: false,
         rested: true,
         line: f ? `position:absolute;left:${(g.wl - 0.25 * g.fs).toFixed(1)}px;bottom:0;height:2px;width:${(W * f).toFixed(1)}px;background:${mix(GROUND, markOf.get(h.b)!, 0.72)}` : undefined,
@@ -453,7 +472,7 @@ function look(h: Hot, tau: number): Look {
     case 'tricode': {
       // MFNY's pill opening from the left on its own curve, held on the band's
       // drawings: 76%, 95%, then the three tile the whole band at 100ms
-      const e = tau < 50 ? E_MOVE(0.25) : tau < 100 ? E_MOVE(0.5) : 1;
+      const e = t < 50 ? E_MOVE(0.25) : t < 100 ? E_MOVE(0.5) : 1;
       const k = TRI_K0 + (1 - TRI_K0) * e;
       const cell = g.fs / 2;
       const snap = (v: number) => Math.min(g.bw, Math.round(v / cell) * cell);
@@ -469,8 +488,8 @@ function look(h: Hot, tau: number): Look {
     }
     case 'knockout': {
       const px = Math.max(0, Math.min(1, (h.px0 ?? g.bw / 2) / g.bw));
-      const p = step4(tau);
-      const blink = tau >= 250 && tau < 350;
+      const p = step4(t);
+      const blink = t >= 250 && t < 350;
       const clip = `clip-path:inset(0 ${((1 - px) * (1 - p) * 100).toFixed(2)}% 0 ${(px * (1 - p) * 100).toFixed(2)}%);visibility:${blink ? 'hidden' : 'visible'}`;
       return {
         letters: alt(h),
@@ -482,7 +501,7 @@ function look(h: Hot, tau: number): Look {
       if (!nextOf.has(h.b)) nextOf.set(h.b, pickNot(HUES, h.P.main));
       const T = 4 * Math.round(g.fs / 6);
       const cx = Math.round(h.px / T) * T;
-      const gr = tau < 50 ? 0.25 : tau < 100 ? 0.5 : tau < 150 ? 0.75 : 1;
+      const gr = t < 50 ? 0.25 : t < 100 ? 0.5 : t < 150 ? 0.75 : 1;
       const extra = [
         [1, 5],
         [2, 4],
@@ -502,8 +521,8 @@ function look(h: Hot, tau: number): Look {
       // the slab's rect; 100: the cut, the slab takes it; then its floor and
       // cast open in thirds
       const c = cap(h);
-      if (tau < 100) {
-        const q = step2(tau);
+      if (t < 100) {
+        const q = step2(t);
         const r = g.bw - c.x - c.w;
         const bot = g.bh - c.y - c.h;
         return {
@@ -511,7 +530,7 @@ function look(h: Hot, tau: number): Look {
           band: [{ c: 'bm', s: `position:absolute;inset:0;background:${h.P.main};clip-path:inset(${(c.y * q).toFixed(1)}px ${(r * q).toFixed(1)}px ${(bot * q).toFixed(1)}px ${(c.x * q).toFixed(1)}px round ${(c.r * q).toFixed(1)}px)` }],
         };
       }
-      const open = tau < 150 ? 0 : tau < 200 ? 1 / 3 : tau < 250 ? 2 / 3 : 1;
+      const open = t < 150 ? 0 : t < 200 ? 1 / 3 : t < 250 ? 2 / 3 : 1;
       return { outline: false, band: [], own: (hh) => jellyFor(hh, c, open) };
     }
   }
@@ -709,7 +728,8 @@ function leave(h: Hot, now: number): void {
   if (h.fx === 'skeleton') skeletonDone(h);
   if (h.fx) {
     linEnd = now;
-    if (!h.b.hasAttribute('data-lin') && credit) creditOut(Math.max(now + 900, h.t0 + 220 + 1600));
+    // only this hover's own credit: a hover left during the rest never showed one
+    if (!h.b.hasAttribute('data-lin') && credit && begun.has(h)) creditOut(Math.max(now + 900, h.t0 + DWELL + 1600));
     if (h.fx === 'jelly') jellyFor(h, cap(h), -2);
   }
   h.b.querySelectorAll(':scope > [data-k="kc"]').forEach((n) => n.remove());
@@ -745,4 +765,11 @@ window.__lin = {
   },
   state: () => ({ seed: visit.seed, round: visit.round, pos: visit.pos, deck: deck.slice(), lastLin, sinceLin: performance.now() - linEnd }),
   fits: (kind: string) => (FITS[kind] ?? []).slice(),
+  // the checks: the live hover's text grid, without its element references
+  grid: () => {
+    const h = hotNow()[0];
+    if (!h) return null;
+    const g = textGrid(h);
+    return { cell: g.cell, bw: g.bw, bh: g.bh, bands: g.bands, seams: g.seams, words: g.words, blocks: g.blocks.map((k) => ({ kind: k.kind, fs: k.fs, lh: k.lh, lines: k.lines })) };
+  },
 };

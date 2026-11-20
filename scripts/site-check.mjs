@@ -2015,6 +2015,167 @@ try {
   ok(again.line === 1 && again.rested, 'the same button again within 4s replays what it played', JSON.stringify(again));
   await lp.mouse.move(1430, 980);
   await lctx.close();
+
+  // Round 5: the effects on a paused clock, frame by frame. Time only moves
+  // when the check moves it, 16ms at a time, so every number here is exact.
+  const clockPage = async (route) => {
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+    await ctx.addInitScript(() => (window.__dressQuiet = true));
+    const pg = await ctx.newPage();
+    await pg.clock.install();
+    await pg.goto(`${BASE}${route}`, { waitUntil: 'networkidle' });
+    await pg.evaluate(() => document.fonts.ready);
+    for (let i = 0; i < 60 && !(await pg.evaluate(() => !!window.__lin)); i++) {
+      await pg.clock.runFor(200);
+      await sleep(40);
+    }
+    await pg.clock.runFor(1500);
+    await pg.clock.pauseAt((await pg.evaluate(() => Date.now())) + 1000);
+    return { ctx, pg };
+  };
+  /** The row, scrolled to the middle of the window: its box in the window. */
+  const rowBox = (pg, sel, nth = 0) =>
+    pg.evaluate(([s, n]) => {
+      const a = document.querySelectorAll(s)[n];
+      a.scrollIntoView({ block: 'center' });
+      const r = a.getBoundingClientRect();
+      return { x: r.left, y: r.top, width: r.width, height: r.height };
+    }, [sel, nth]);
+  /**
+   * Hover a row on the paused clock and read it every 16ms. `fx` forces the card;
+   * `at` is where across the row the pointer comes in (0 to 1); `moves` are
+   * [t, xfrac, yfrac] pointer moves during the film. Returns [{ t, ...read }].
+   */
+  const filmFx = async (pg, sel, nth, fx, at, until, read, moves = []) => {
+    await pg.evaluate((f) => window.__lin.force(f), fx);
+    const box = await rowBox(pg, sel, nth);
+    await pg.mouse.move(box.x + box.width * at, box.y - 40);
+    await pg.clock.runFor(400);
+    await pg.mouse.move(box.x + box.width * at, box.y + box.height / 2, { steps: 2 });
+    const frames = [];
+    const todo = moves.slice();
+    for (let t = 0; t <= until; t += 16) {
+      if (t) await pg.clock.runFor(16);
+      while (todo.length && todo[0][0] <= t) {
+        const [, mx, my] = todo.shift();
+        await pg.mouse.move(box.x + box.width * mx, box.y + box.height * (my ?? 0.5));
+      }
+      frames.push({ t, ...(await pg.evaluate(read, [sel, nth])) });
+    }
+    return { frames, box };
+  };
+  const awayFx = async (pg) => {
+    await pg.mouse.move(1430, 990);
+    await pg.clock.runFor(2600);
+    await pg.evaluate(() => window.__lin.force(null));
+  };
+  /** Anything an effect adds to a row, beyond the settled glitch, and the credit. */
+  const anyFx = ([s, n]) => {
+    const a = document.querySelectorAll(s)[n];
+    const hot = a.hasAttribute('data-hot');
+    const host = a.querySelector('[data-band]');
+    const w = a.querySelector('[data-word]');
+    const ov = a.querySelector('[data-glitch]');
+    const label = [...w.childNodes].filter((c) => c.nodeType === 3).map((c) => c.nodeValue).join('');
+    const want = [...(label + (label.includes('@') ? '' : '...'))];
+    const spans = ov ? [...ov.children].filter((c) => c.tagName === 'SPAN') : [];
+    // while hot, the glitch alone never: drops the outline, moves the host,
+    // styles the overlay, changes a letter's text or lets the word rest
+    const layer =
+      !!a.querySelector('[data-band] [data-k="x"], [data-band] [data-k="n"], [data-k="kc"], [data-k="bay"], [data-k="sk"], .jx-row, [data-k="jc"]') ||
+      (hot &&
+        (host?.dataset.ol === '0' ||
+          !!host?.style.transform ||
+          !!(ov && (ov.style.opacity || ov.style.transform || ov.style.visibility)) ||
+          spans.some((sp, i) => sp.textContent !== want[i]) ||
+          w.style.color === ''));
+    const cr = document.querySelector('.lin-credit');
+    return { layer, credit: cr ? cr.textContent : null, hot };
+  };
+  {
+    const { ctx, pg } = await clockPage('/product-designs/');
+    const plainC = 'a.row:not([data-lin])';
+    const rest = [];
+    for (const fx of ['mark', 'decode', 'skeleton', 'knockout', 'jelly', 'tricode', 'bayer', 'canister']) {
+      const { frames } = await filmFx(pg, plainC, 1, fx, 0.4, 400, anyFx);
+      const first = frames.find((f) => f.layer);
+      const early = frames.filter((f) => f.t < 295 && (f.layer || f.credit));
+      const together = frames.every((f) => !!f.credit === f.t >= (first?.t ?? 1e9));
+      rest.push({ fx, first: first?.t ?? null, early: early.length, together });
+      await awayFx(pg);
+    }
+    ok(rest.every((r) => r.first != null && r.first <= 340 && r.early === 0), 'the rest: every effect begins on the hover’s sixth drawing, nothing before 295ms after entry and its first layer by 340ms', JSON.stringify(rest));
+    ok(rest.every((r) => r.together), 'the credit steps in with the effect’s first drawing, not at the dwell', JSON.stringify(rest.map((r) => [r.fx, r.together])));
+    // Leaving during the rest, after the card is played at 220ms: no credit and no layer, ever.
+    const quit = [];
+    for (const fx of ['mark', 'decode', 'skeleton', 'knockout', 'jelly', 'tricode', 'bayer', 'canister']) {
+      const { frames } = await filmFx(pg, plainC, 1, fx, 0.4, 240, anyFx);
+      await pg.clock.runFor(10);
+      await pg.mouse.move(1430, 990);
+      const after = [await pg.evaluate(anyFx, [plainC, 1])];
+      for (let k = 0; k < 8; k++) {
+        await pg.clock.runFor(16);
+        after.push(await pg.evaluate(anyFx, [plainC, 1]));
+      }
+      quit.push({ fx, seen: [...frames, ...after].filter((f) => f.layer || f.credit).length });
+      await awayFx(pg);
+    }
+    ok(quit.every((q) => q.seen === 0), 'leaving at 250ms, in the rest: no credit and no layer', JSON.stringify(quit));
+
+    // The text grid: every seam on the mono cell and inside no word, on rows of one, two and three lines.
+    const gridRead = () => {
+      const g = window.__lin.grid();
+      const a = document.querySelector('[data-hot]');
+      const r = a.getBoundingClientRect();
+      const sc = r.width / a.offsetWidth;
+      const box = (q) => ({ l: (q.left - r.left) / sc, t: (q.top - r.top) / sc, r: (q.right - r.left) / sc, b: (q.bottom - r.top) / sc });
+      const words = [];
+      a.querySelectorAll('[data-word]').forEach((w) => {
+        // the label line: its resting text and its glitch face as one
+        const qs = [...w.childNodes].filter((n) => n.nodeType === 3 && n.nodeValue.trim()).flatMap((n) => { const rg = document.createRange(); rg.selectNodeContents(n); return [...rg.getClientRects()]; });
+        qs.push(...[...w.querySelectorAll('[data-glitch] > span')].filter((s) => s.textContent.trim()).map((s) => s.getBoundingClientRect()));
+        qs.filter((q) => q.width > 0.5).map(box).forEach((q) => {
+          const same = words.find((p) => p.label && Math.min(p.b, q.b) - Math.max(p.t, q.t) > 0.5 * Math.min(p.b - p.t, q.b - q.t));
+          if (same) Object.assign(same, { l: Math.min(same.l, q.l), t: Math.min(same.t, q.t), r: Math.max(same.r, q.r), b: Math.max(same.b, q.b) });
+          else words.push({ ...q, label: true });
+        });
+      });
+      a.querySelectorAll('.cs > span').forEach((s) => words.push(box(s.getBoundingClientRect())));
+      a.querySelectorAll('.l, .n').forEach((el) => {
+        const tw = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+        for (let n = tw.nextNode(); n; n = tw.nextNode()) for (const m of n.textContent.matchAll(/\S+/g)) { const rg = document.createRange(); rg.setStart(n, m.index); rg.setEnd(n, m.index + m[0].length); for (const q of rg.getClientRects()) if (q.width > 0.5) words.push(box(q)); }
+      });
+      return { g, words, bw: a.offsetWidth };
+    };
+    const gridOk = ({ g, words, bw }) => {
+      const onCell = (x) => x === bw || Math.abs(x / g.cell - Math.round(x / g.cell)) < 0.01;
+      const cuts = (x, top, bottom) => words.some((w) => Math.min(w.b, bottom) - Math.max(w.t, top) > 2 && w.l < x - 0.5 && w.r > x + 0.5);
+      const top = g.seams.every((x) => onCell(x) && !cuts(x, 0, g.bh)) && g.seams[0] === 0 && g.seams[g.seams.length - 1] === bw;
+      const bands = g.bands.every((b) => b.seams.every((x) => onCell(x) && !cuts(x, b.top, b.bottom)));
+      const tiled = g.bands[0].top === 0 && g.bands[g.bands.length - 1].bottom === g.bh && g.bands.every((b, i) => !i || Math.abs(b.top - g.bands[i - 1].bottom) < 0.01);
+      return { ok: top && bands && tiled, bands: g.bands.length, top: g.seams.length };
+    };
+    const grids = {};
+    for (const [name, sel, lines] of [['dither', 'a.row[data-lin="bayer"]', 3], ['mfny', 'a.row[data-lin="tricode"]', 2], ['one line', 'a.row[data-lin="knockout"]', 1]]) {
+      await pg.evaluate(() => (window.__linHold = true));
+      const box = await rowBox(pg, sel);
+      await pg.mouse.move(box.x + box.width * 0.3, box.y + box.height / 2, { steps: 2 });
+      await pg.clock.runFor(700);
+      const v = gridOk(await pg.evaluate(gridRead));
+      grids[name] = { ...v, lines };
+      await pg.mouse.move(1430, 990);
+      await pg.clock.runFor(400);
+    }
+    await ctx.close();
+    const home = await clockPage('/');
+    await home.pg.evaluate(() => (window.__linHold = true));
+    const hb = await rowBox(home.pg, 'a[data-hue]', 1);
+    await home.pg.mouse.move(hb.x + hb.width * 0.3, hb.y + hb.height / 2, { steps: 2 });
+    await home.pg.clock.runFor(700);
+    grids.menu = { ...gridOk(await home.pg.evaluate(gridRead)), lines: 1 };
+    await home.ctx.close();
+    ok(Object.values(grids).every((v) => v.ok && v.bands === v.lines && v.top >= 2), 'the text grid: one band per line, every seam on the mono cell and inside no word, on the dither, mfny, one-line and home menu rows', JSON.stringify(grids));
+  }
   // A finger never deals: the chunk is not even fetched on a phone.
   const tctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
   const tpg = await tctx.newPage();
