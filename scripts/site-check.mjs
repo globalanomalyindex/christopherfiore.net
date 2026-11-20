@@ -2415,7 +2415,9 @@ try {
    * A label's type, in its button's own px (the magnet moves the button, not
    * the type in it): each line's letters by index, where its first letter
    * starts, and its baseline. At rest from the resting text; hovered from the
-   * overlay. A zero-size inline-block on the baseline finds a baseline.
+   * overlay. An empty inline span finds a line's baseline: its top is the
+   * baseline less the mono's ascent, the same face at rest and hovered (an
+   * inline-block would give a long unbroken word a place to break before it).
    * `edge` is the content edge of the label's cell, `over` how far any glyph
    * of the overlay runs past it, `out` how far any glyph leaves the tile.
    */
@@ -2431,7 +2433,7 @@ try {
     const tile = a.closest('.tile')?.getBoundingClientRect();
     const probe = () => {
       const p = document.createElement('span');
-      p.style.cssText = 'display:inline-block;width:0;height:0;vertical-align:baseline';
+      p.style.cssText = 'display:inline';
       return p;
     };
     const ov = w.querySelector('[data-glitch]');
@@ -2469,17 +2471,19 @@ try {
     const spans = [...ov.children].filter((c) => c.tagName === 'SPAN');
     const heads = [ov.firstChild, ...[...ov.children].filter((c) => c.tagName === 'BR').map((b) => b.nextSibling)];
     const ps = heads.map((h) => ov.insertBefore(probe(), h));
-    const bases = ps.map((p) => Y(p.getBoundingClientRect().top));
+    const lines = ps.map((p) => {
+      const q = p.getBoundingClientRect();
+      return { base: Y(q.top), mid: Y(q.top + q.height / 2), first: null, ks: [] };
+    });
     ps.forEach((p) => p.remove());
-    const lines = bases.map((base) => ({ base, first: null, ks: [] }));
     let over = -Infinity;
     let out = 0;
     spans.forEach((s, k) => {
       if (!s.textContent.trim()) return;
       const q = s.getBoundingClientRect();
-      // its line: the baseline nearest the foot of its glyph box (about 70% of the way down)
-      const foot = Y(q.top) + 0.7 * q.height;
-      const ln = lines.reduce((b, l, i) => (Math.abs(foot - l.base) < Math.abs(foot - lines[b].base) ? i : b), 0);
+      // its line: the one whose middle is nearest the middle of its glyph box
+      const mid = Y(q.top + q.height / 2);
+      const ln = lines.reduce((b, l, i) => (Math.abs(mid - l.mid) < Math.abs(mid - lines[b].mid) ? i : b), 0);
       if (lines[ln].first == null) lines[ln].first = X(q.left);
       lines[ln].ks.push(k);
       over = Math.max(over, X(q.right) - edge);
@@ -2546,6 +2550,42 @@ try {
     }
     ok(bad.length === 0 && wrapped > 0 === vw > 480, `${eng} ${vw} wide: hovering each title, every word stays on its line, each line starts where it did, on the same baseline and pitch, inside its cell, and no box moves before, during or after (${wrapped} wrapped)`, bad.join(' | '));
     await pctx.close();
+  }
+  // Break it: the worst titles a painting could carry, set into the tiles the way the page sets
+  // a label (an address may only break after its "@"). At rest and hovered, every letter stays
+  // inside its tile, the hover keeps the resting lines on their baselines, and no box moves.
+  const WORST = [
+    '+donaudampfschifffahrtsgesellschaftskapitän',
+    '+the long walk home through the snow after the last train had already left the station',
+    '+a',
+    '+bartholomew.fitzgerald@northwind-industries-holdings.example.com',
+    '+夜明け前の静かな港で船を待っている',
+    '+những ngày mưa ở hà nội',
+    '+sunset 🌅 over the bay, again 🌊🌊',
+    '+WAITING FOR THE NIGHT BUS AT MIDNIGHT',
+  ];
+  for (const vw of [360, 390, 760, 1440, 2560]) {
+    const wctx = await browser.newContext({ viewport: { width: vw, height: 900 } });
+    await wctx.addInitScript(() => { window.__linQuiet = true; window.__dressQuiet = true; });
+    const wp = await wctx.newPage();
+    await wp.goto(`${BASE}/paintings/`, { waitUntil: 'networkidle' });
+    await settle(wp);
+    await allIn(wp);
+    await wp.evaluate((titles) => {
+      const ws = [...document.querySelectorAll('.tile [data-word]')];
+      titles.forEach((t, i) => ws[i].replaceChildren(...t.split(/(?<=@)/).flatMap((part, k) => (k ? [document.createElement('wbr'), part] : [part]))));
+    }, WORST);
+    // the faces for the scripts the new titles use (Vietnamese, say) arrive as they are asked for
+    await wp.evaluate(() => document.fonts.ready);
+    const over = await wp.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    const bad = [];
+    for (let i = 0; i < WORST.length; i++) {
+      const f = await hoverType(wp, '.tile .cell', i);
+      const s = sameType(f.rest, f.hov);
+      if (!s.ok || f.rest.out > 0.5 || !f.hov || f.hov.out > 0.5 || f.moved) bad.push(`${WORST[i]} ${JSON.stringify({ ...s, rest: +f.rest.out.toFixed(1), hover: f.hov ? +f.hov.out.toFixed(1) : null, moved: f.moved })}`);
+    }
+    ok(over === 0 && bad.length === 0, `${vw} wide, the worst titles (a 42-letter word, 86 letters, one letter, an address, Japanese, Vietnamese, emoji, capitals): every letter inside its tile at rest and on hover, the same lines, no box moves`, `${over}px sideways | ${bad.join(' | ')}`);
+    await wctx.close();
   }
   // The same, for every wrapped label elsewhere, and the baseline of every kind of label.
   for (const vw of [1440, 760]) {

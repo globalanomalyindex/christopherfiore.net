@@ -1085,10 +1085,16 @@ a.row[data-hot] {
   object-position: 50% 100%;
 }
 
+/*
+  A title always fits its tile: even one very long word breaks inside it.
+  The hover keeps the resting lines letter for letter (glitch.ts), so it
+  breaks in the same places.
+*/
 .tile .cell {
   display: block;
   padding: 0 0.5em;
   font-weight: 700;
+  overflow-wrap: anywhere;
 }
 
 /* how a subpage ends: the signature, small */
