@@ -124,6 +124,29 @@ interface Stops {
   bw: number;
 }
 
+/**
+ * A block of type is a wall to the free edge. The spring carries the edge
+ * past its stop and back (11 to 20px for about 100ms), which laid the band's
+ * edge across words, the label's among them, about one frame in eight. Past
+ * its stop, the edge may swing into a blank but never into a block of type:
+ * there it stops dead, on the stop. On its way from one blank to another it
+ * still crosses the blocks between them.
+ */
+function wall(dr: Dr): void {
+  const st = dr.stops;
+  const R = st.bw - dr.S[1];
+  const Rt = st.bw - dr.T[1];
+  if (dr.T[1] !== dr.wallT) {
+    dr.wallT = dr.T[1];
+    dr.wallSide = Math.sign(R - Rt);
+  }
+  if (!dr.wallSide || Math.sign(R - Rt) !== -dr.wallSide) return;
+  if (R < st.min - 0.01 || st.cells.some(([a, b]) => R > a + 0.01 && R < b - 0.01)) {
+    dr.S[1] = dr.T[1];
+    dr.V[1] = 0;
+  }
+}
+
 function stopAt(R: number, st: Stops): number {
   let r = R;
   for (const [a, b] of st.cells) {
@@ -182,6 +205,9 @@ interface Dr {
   clipX: boolean;
   /** where a free edge may stop */
   stops: Stops;
+  /** the stop the free edge last set out for (its right inset), and which side of it the edge was on then */
+  wallT: number;
+  wallSide: number;
   dropTop: boolean;
   dropBottom: boolean;
   outline: boolean;
@@ -502,6 +528,8 @@ function deal(h: Hot, t: number): void {
     t,
     clipX,
     stops,
+    wallT: NaN,
+    wallSide: 0,
     // an edge that runs through the label loses its strip and its outline
     dropTop: shape === 'highlighter' || T[0] > label.y + 1,
     dropBottom: shape === 'highlighter' || top < label.y + label.h - 1,
@@ -625,6 +653,7 @@ function frame(h: Hot, t: number, now: number): DressFrame {
     // the target follows the cursor; the spring carries the band to it
     dr.T = shapeIns(h, dr.shape, h.px, h.py, dr.stops);
     step(dr.S, dr.V, dr.T, dt, SHAPE_K);
+    if (dr.shape === 'reach' || dr.shape === 'ratio') wall(dr);
   }
   // to the half pixel: a sub-pixel write moves nothing anyone can see
   const [st, sr, sb, sl] = dr.S.map((v) => Math.round(v * 2) / 2);

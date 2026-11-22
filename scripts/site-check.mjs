@@ -2959,6 +2959,59 @@ try {
     await settle(dp);
     await dp.waitForFunction(() => !!window.__dress, null, { timeout: 8000 });
   }
+  // A block of type is a wall to the free edge: on every frame while the cursor jumps about, the spring may
+  // carry the edge past its stop into a blank, never into a block of type or left of the label's cell.
+  {
+    const watch = () => {
+      window.__wall = { f: 0, over: 0, worst: 0 };
+      let lt = null;
+      let side = 0;
+      const t0 = performance.now();
+      const tick = () => {
+        const a = document.querySelector('.menu a[data-hot], a.row[data-hot]');
+        const st = a && window.__dress.state(a);
+        if (st && st.stops && st.t >= st.start) {
+          const R = st.stops.bw - st.S[1];
+          const Rt = st.stops.bw - st.T[1];
+          if (Rt !== lt) { lt = Rt; side = Math.sign(R - Rt); }
+          window.__wall.f++;
+          if (side && Math.sign(R - Rt) === -side) {
+            const d = Math.max(st.stops.min - R, ...st.stops.cells.map(([x0, x1]) => Math.min(R - x0, x1 - R)));
+            if (d > 0.6) { window.__wall.over++; window.__wall.worst = Math.max(window.__wall.worst, d); }
+          }
+        }
+        if (performance.now() - t0 < 4000) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    };
+    const jumps = [0.2, 0.55, 0.12, 0.85, 0.3, 0.7, 0.1, 0.92];
+    const walled = {};
+    const run = async (sel, i, what, shape) => {
+      const q = await dp.evaluate(([s2, k]) => { const a = document.querySelectorAll(s2)[k]; a.scrollIntoView({ block: 'center' }); const r = a.getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; }, [sel, i]);
+      await sleep(200);
+      await enter(q, q[2] * 0.3, 0);
+      await dp.evaluate(watch);
+      for (const fx of jumps) { await dp.mouse.move(q[0] + q[2] * fx, q[1] + q[3] / 2, { steps: 2 }); await sleep(420); }
+      walled[`${shape} ${what}`] = await dp.evaluate(() => window.__wall);
+    };
+    for (const shape of ['reach', 'ratio']) {
+      await dp.evaluate((s2) => window.__dress.force({ shape: s2, dress: 'plain' }), shape);
+      await run('a.row:not(nav a)', pick(2), 'a two-line row', shape);
+      await run('a.row:not(nav a)', ditherAt, 'the +dither row', shape);
+    }
+    await dp.goto(`${BASE}/`, { waitUntil: 'networkidle' });
+    await settle(dp);
+    await dp.waitForFunction(() => !!window.__dress, null, { timeout: 8000 });
+    for (const shape of ['reach', 'ratio']) {
+      await dp.evaluate((s2) => window.__dress.force({ shape: s2, dress: 'plain' }), shape);
+      await run('.menu a', 1, 'a home menu row', shape);
+    }
+    const vs = Object.values(walled);
+    ok(vs.length === 6 && vs.every((v) => v.f > 120 && v.over === 0), 'Reach and Ratio: on every frame while the cursor jumps about a two-line row, the +dither row and a home menu row, the spring never carries the free edge past its stop into a block of type', JSON.stringify(walled));
+    await dp.goto(`${BASE}/product-designs/`, { waitUntil: 'networkidle' });
+    await settle(dp);
+    await dp.waitForFunction(() => !!window.__dress, null, { timeout: 8000 });
+  }
   // The Cut's rows follow the lines: every horizontal cut between two lines of the row's tallest block of type.
   /** The hot row's Cut: its horizontal cuts and its line boundaries (px from the top), and whether the label keeps one whole cell. */
   const cutFacts = () => {

@@ -203,6 +203,9 @@ hover twice running. What it deals begins 80ms later (below).
   never stops left of the label's cell. So in a blank stretch Reach still
   follows the cursor a cell at a time, and over a paragraph the band takes
   the paragraph whole or not at all. With the wire, its cells count too.
+  A block of type is also a wall: the spring may carry the edge past its
+  stop into a blank, but never into type, so the band never settles back
+  across words.
 - **Dress.** The deck has six cards: plain 2, wire 2, Cut 1, Cut and wire 1.
 - **The wire.** A skeleton in Chickpea's measure ink wraps the shape. It
   re-fits ahead of the band as the shape morphs. Each block of text (the
@@ -568,7 +571,9 @@ measure the film rather than the battery. It checks:
   never dressed, and Tall stays inside a page's gaps. Reach and Ratio, on a
   one-line row, a two-line row, the three-line +dither row and a home menu
   row at twelve cursor positions each, rest on the mono cell, never inside a
-  block of type or a word, with the whole label on the band. Every cut
+  block of type or a word, with the whole label on the band. On every frame
+  while the cursor jumps about, the spring never carries the edge past its
+  stop into a block of type. Every cut
   across in a Cut lands between two lines, and a one-line row has none.
   Filmed on a paused clock, nothing of the dress shows before 295ms: it
   begins on the 300ms drawing and shows by 340ms, no text cell is ever
