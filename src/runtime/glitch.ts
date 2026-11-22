@@ -245,8 +245,10 @@ export function faces(b: HTMLElement): Face[] {
       fits.set(w, { key, starts, tail: keep, scale });
     }
     if (scale < 1) {
+      // by `scale`, its own property: an effect that styles the overlay writes `transform`
+      // (Decode, Canister, Skeleton), and the two compose instead of one replacing the other
       const o = cs.textAlign === 'right' || cs.textAlign === 'end' ? '100%' : cs.textAlign === 'center' ? '50%' : '0';
-      ov.style.transform = `scaleX(${scale.toFixed(4)})`;
+      ov.style.scale = `${scale.toFixed(4)} 1`;
       ov.style.transformOrigin = `${o} 0`;
     }
     w.style.color = 'transparent';

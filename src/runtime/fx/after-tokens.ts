@@ -32,6 +32,7 @@
  * stops 900ms after the dwell.)
  */
 
+import { outlineOf } from '../band.ts';
 import type { Hot, Look } from '../buttons.ts';
 import { createGrowingRows, growingRowAt } from '../../vendor/after-tokens/growing-geometry.ts';
 import type { AmbientRow } from '../../vendor/after-tokens/ambient-geometry.ts';
@@ -218,7 +219,7 @@ function draw(h: Hot, t: number): void {
           }
       }),
     );
-    h.host.insertBefore(f.root, h.host.querySelector(':scope > .bo'));
+    h.host.insertBefore(f.root, outlineOf(h.host));
   }
   // the division, its slabs fading in as the ink leaves and out as the cells come in
   const p = clamp01((t - DIV0) / DIV);

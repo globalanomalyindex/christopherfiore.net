@@ -128,7 +128,17 @@ export const setDress = (d: Dress): void => {
   dress = d;
 };
 
-const DWELL = 220;
+/** How long the pointer rests before a hover is dealt an effect or a dress, ms. */
+export const DWELL = 220;
+/**
+ * The rest, ms. The glitch lands by 200ms and the dwell is at 220ms. Whatever
+ * the hover is dealt (a lineage effect, or the dress) begins this long after
+ * the dwell, on the hover's sixth drawing, 300ms in. So the settled glitch
+ * holds for two drawings and what follows reads as a second beat, never as a
+ * stutter on the end of the first. One number, shared by `lineage.ts` and
+ * `dress.ts`, so the two can never drift apart.
+ */
+export const REST = 80;
 const EXIT_MS = 110;
 
 const HOT = new Map<HTMLElement, Hot>();

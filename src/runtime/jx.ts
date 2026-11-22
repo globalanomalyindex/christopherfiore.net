@@ -49,7 +49,7 @@
  */
 
 import { pool } from './band.ts';
-import { ALT, band, plan, type Plan } from './ink.ts';
+import { ALT, band, holdsInk, plan, type Plan } from './ink.ts';
 import { reducedMotion } from './offsets.ts';
 import type { Hot } from './buttons.ts';
 import { blocks, layout } from './cells.ts';
@@ -771,17 +771,13 @@ const hueOf = (hex: string): number => {
   const h = mx === c[0] ? ((c[1] - c[2]) / d) % 6 : mx === c[1] ? (c[2] - c[0]) / d + 2 : (c[0] - c[1]) / d + 4;
   return (h * 60 + 360) % 360;
 };
-const lum = (hex: string): number => {
-  const c = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
-  return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
-};
 /**
  * The pigments that hold band ink at 4.5:1 in all three of JellyBox's states,
  * rest, highlighted and pressed, taking the pigment itself as the glass (the
  * glass over the light floor only ever reads lighter): the label on the slab,
  * and the X on its disc, always read.
  */
-const READS = PIGMENTS.filter((p) => STATES[p].every((c) => (lum(c) + 0.05) / (lum('#1A1820') + 0.05) >= 4.5));
+const READS = PIGMENTS.filter((p) => STATES[p].every(holdsInk));
 /** The readable JellyBox pigment nearest in hue to the band that was just up, so the colour carries over. */
 const nearest = (hex: string) => {
   const h = hueOf(hex);

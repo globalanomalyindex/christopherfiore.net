@@ -28,7 +28,7 @@
  * dwell. That was the freeze.
  */
 
-import { HUES } from '../band.ts';
+import { HUES, outlineOf } from '../band.ts';
 import type { Hot, Look } from '../buttons.ts';
 import { normBayer, orderedOn } from '../../vendor/dither/ordered.ts';
 import { bandAt, choose, textGrid, thin } from './textgrid.ts';
@@ -101,7 +101,7 @@ function paint(h: Hot, n: number): void {
     cv.width = s.cols[0].length;
     cv.height = s.rows.length;
     cv.style.cssText = `position:absolute;left:0;top:0;width:${cv.width * s.dot}px;height:${cv.height * s.dot}px;image-rendering:pixelated;pointer-events:none`;
-    h.host.insertBefore(cv, h.host.querySelector(':scope > .bo'));
+    h.host.insertBefore(cv, outlineOf(h.host));
     s.cv = cv;
     s.key = '';
   }

@@ -34,7 +34,7 @@
 
 import { mix } from './band.ts';
 import { ALT, mulberry, step2, type Edge, type Letter } from './ink.ts';
-import { hotNow, setLineage, type Hot, type Lineage, type Look } from './buttons.ts';
+import { DWELL, REST, hotNow, setLineage, type Hot, type Lineage, type Look } from './buttons.ts';
 import { jellyFor, jellyOptics } from './jx.ts';
 import { skeletonDone, skeletonLook } from './fx/after-tokens.ts';
 import { tricodeLook } from './fx/tricode.ts';
@@ -277,15 +277,7 @@ function slabClip(h: Hot, c: ReturnType<typeof cap>, v: number, edge: Edge): str
   return `inset(${t.toFixed(1)}px ${r.toFixed(1)}px ${b.toFixed(1)}px ${l.toFixed(1)}px round ${c.r.toFixed(1)}px)`;
 }
 
-/**
- * The rest. The glitch lands by 200ms and the dwell is at 220ms; every effect
- * begins 80ms later, on the hover's sixth drawing (300ms), so the settled
- * glitch holds for two drawings and the effect reads as a second beat, never
- * as a stutter on the end of the first. The credit steps in with the effect.
- */
-const DWELL = 220;
-const REST = 80;
-/** hovers whose effect has drawn its first frame */
+/** hovers whose effect has drawn its first frame, after the rest (`REST`, buttons.ts): the credit steps in with it */
 const begun = new WeakSet<Hot>();
 
 function look(h: Hot, tau: number): Look {
@@ -412,7 +404,7 @@ export function creditFor(text: string, now: number): void {
   showCredit(text, now);
 }
 export function creditOff(now: number, t0: number): void {
-  if (credit) creditOut(Math.max(now + 900, t0 + 220 + 1600));
+  if (credit) creditOut(Math.max(now + 900, t0 + DWELL + 1600));
 }
 setLineage(api);
 

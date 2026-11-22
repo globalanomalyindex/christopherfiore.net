@@ -260,7 +260,8 @@ hover twice running. What it deals begins 80ms later (below).
 - **The rest.** The glitch lands at 200ms. The dress waits two held
   drawings and begins at 300ms, 80ms after the dwell, on the hover's own 50ms
   drawings, so it reads as a second beat and not as a stutter one frame
-  after the first.
+  after the first. A lineage effect waits the same 80ms. Both read it from
+  one number in `buttons.ts`, so they can't drift apart.
 - **The order.** Then one thing at a time, never everything in one drawing:
   the shape begins to move and the wire's frame fades in over 150ms. The
   cells are ink, so they land on the band's 50ms drawings, 70% and then
@@ -720,7 +721,7 @@ These were left to the build, and each is marked in the code where it happens.
    up. Phones get JellyBox's CSS skin.
 6. The jelly is still at rest. It doesn't breathe.
 7. Sweeping fast gets the glitch in two drawings.
-8. Jelly gets two cards in the deck of twelve.
+8. Jelly gets two cards in the deck of fourteen.
 
 ## Evidence language
 
@@ -845,13 +846,13 @@ The scripts, gzipped:
 
 | Chunk | Size | Loads |
 |---|---:|---|
-| main | 17.9 kB | every page |
+| main | 18.7 kB | every page |
 | signature | 7.6 kB | home only |
-| lineage, with the dress, Chickpea and After Tokens | 19.6 kB | after the page is seen, for a cursor |
-| jx, with the cells | 6.4 kB | subpages, and with lineage |
+| lineage, with the dress, Chickpea and After Tokens | 23.5 kB | after the page is seen, for a cursor |
+| jx, with the cells | 6.7 kB | subpages, and with lineage |
 | jellyx | 176 kB | subpages on a desktop, after the page is seen |
 
-The checks hold main to 18.5 kB, lineage to 23 kB and jx to 7 kB.
+The checks hold main to 19.2 kB, lineage to 24.2 kB and jx to 7 kB.
 
 **The tile copies.** Paintings used to be the heavy page: every tile loaded
 its painting's own file, 1200px wide, which came to 3,979 kB on a desktop

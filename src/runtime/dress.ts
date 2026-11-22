@@ -72,10 +72,10 @@
  * through the label is dropped, and so is the outline there.
  */
 
-import { hotNow, setDress, type Dress, type DressFrame, type Hot } from './buttons.ts';
+import { REST, hotNow, setDress, type Dress, type DressFrame, type Hot } from './buttons.ts';
 import { DARK_INK, mix } from './band.ts';
-import { blocks, gaps, layout, own, xs, type Blank, type Lay, type TCell } from './cells.ts';
-import { inkBase, mulberry, step2 } from './ink.ts';
+import { blocks, gaps, layout, own, widthOf, xs, type Blank, type Lay, type TCell } from './cells.ts';
+import { holdsInk, inkBase, mulberry, step2 } from './ink.ts';
 import { spring } from './jx.ts';
 import { creditFor, creditOff } from './lineage.ts';
 import { hashSeed } from '../vendor/chickpea/grid/prng.ts';
@@ -83,7 +83,7 @@ import { composeGrid, type CompBox } from '../vendor/chickpea/grid/compose.ts';
 import { snapToRatio, ratioName } from '../vendor/chickpea/grid/ratios.ts';
 import { generatePaletteOklch } from '../vendor/chickpea/palette/engine.ts';
 import { gamutMapToRgb, maxChroma, rgbToOklch, type Oklch } from '../vendor/chickpea/palette/oklch.ts';
-import { luminance, rgbToHex } from '../vendor/chickpea/palette/hsl.ts';
+import { rgbToHex } from '../vendor/chickpea/palette/hsl.ts';
 
 declare global {
   interface Window {
@@ -104,13 +104,10 @@ const LEAN_K: [number, number] = [420, 0.82];
 const LEAN = 8;
 const WIRE_OUT = 4;
 /**
- * The rest before the dress (his note on the glitch into the hover feeling
- * "not smooth, or unintentional"). The glitch lands at 200ms; the dress
- * begins 80ms after the 220ms dwell, on the hover's own 50ms drawings: at
- * 300ms, two held drawings after the glitch, so it reads as a second beat and
- * not as a stutter one frame after the first.
+ * One held drawing, ms. The dress begins the rest (`REST`, buttons.ts) after
+ * the dwell, on one of the hover's own drawings: 300ms in for a dwell met on
+ * time, the same moment a lineage effect would begin.
  */
-const REST = 80;
 const DRAW = 50;
 
 /**
@@ -136,15 +133,6 @@ function stopAt(R: number, st: Stops): number {
     }
   }
   return Math.min(st.bw, Math.max(st.min, r));
-}
-
-/** A box's layout width, unrounded. */
-function widthOf(b: HTMLElement): number {
-  const cs = getComputedStyle(b);
-  const w = parseFloat(cs.width);
-  if (!w) return b.offsetWidth;
-  const px = (v: string) => parseFloat(v) || 0;
-  return cs.boxSizing === 'border-box' ? w : w + px(cs.paddingLeft) + px(cs.paddingRight) + px(cs.borderLeftWidth) + px(cs.borderRightWidth);
 }
 
 type Ins = [number, number, number, number]; // top, right, bottom, left, px; negative overhangs
@@ -350,18 +338,12 @@ function textBoxes(h: Hot): { label: CompBox; fig: CompBox | null } {
   return { label: lab, fig: box(b.querySelector('.n, .l')) };
 }
 
-const lum = (hex: string) => luminance([1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)) as [number, number, number]);
-const contrast = (a: string, b: string) => {
-  const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p);
-  return (x + 0.05) / (y + 0.05);
-};
-
 /** A colour lifted until it holds band ink at 4.5:1: OKLCH L raised, hue kept, chroma kept in gamut. */
 function legible(c: Oklch, floor: number): string {
   let L = Math.max(c.L, floor);
   for (let i = 0; i < 12; i++) {
     const hex = rgbToHex(gamutMapToRgb({ L, C: Math.min(c.C, maxChroma(L, c.H)), H: c.H }));
-    if (contrast(hex, DARK_INK) >= 4.5) return hex;
+    if (holdsInk(hex)) return hex;
     L = Math.min(0.98, L + 0.03);
   }
   return GROUND;

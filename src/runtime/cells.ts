@@ -72,6 +72,20 @@ export function blocks(b: HTMLElement, menuFig: boolean): Block[] {
 }
 
 /**
+ * A box's layout width, unrounded. `offsetWidth` is a whole number, so a box
+ * 833.39px wide reads as 833: near enough for a hit test, but a copy of a
+ * paragraph set that much narrower can wrap a word early (fx/knockout.ts),
+ * and an edge meant for the mono cell lands a third of a pixel off it.
+ */
+export function widthOf(b: HTMLElement): number {
+  const cs = getComputedStyle(b);
+  const w = parseFloat(cs.width);
+  if (!w) return b.offsetWidth;
+  const px = (v: string) => parseFloat(v) || 0;
+  return cs.boxSizing === 'border-box' ? w : w + px(cs.paddingLeft) + px(cs.paddingRight) + px(cs.borderLeftWidth) + px(cs.borderRightWidth);
+}
+
+/**
  * Each block's own cell, unmerged, in button px: the block padded 0.25em,
  * its sides snapped outward to the mono cell. A menu row's figure keeps the
  * band's own figure cell. In the blocks' order, so the label's comes first.

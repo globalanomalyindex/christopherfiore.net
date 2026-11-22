@@ -26,6 +26,7 @@
 import { mix } from '../band.ts';
 import type { Hot, Look } from '../buttons.ts';
 import { step4 } from '../ink.ts';
+import { widthOf } from '../cells.ts';
 import { atOrLeft, atOrRight, textGrid } from './textgrid.ts';
 
 const GROUND = '#F3F5F8';
@@ -50,6 +51,8 @@ interface Ko {
   kc: HTMLSpanElement | null;
   /** the originals the copies cover: the tag and the detail blocks */
   under: HTMLElement[];
+  /** each letter of the glitch face with its copy, and the glide the copy last took from it */
+  pairs: { sp: HTMLSpanElement; c: HTMLSpanElement; tr: string }[];
 }
 const kos = new WeakMap<Hot, Ko>();
 
@@ -62,25 +65,29 @@ const copyStyle = (cs: CSSStyleDeclaration, keys: string[]): string => keys.map(
 function copies(h: Hot, ko: Ko): HTMLSpanElement {
   const b = h.b;
   const r = b.getBoundingClientRect();
-  const sc = r.width / (b.offsetWidth || r.width) || 1;
+  // the button's scale against its unrounded width: against offsetWidth, a
+  // whole number, every size here came out up to a quarter pixel small
+  const sc = r.width / (widthOf(b) || r.width) || 1;
   const kc = document.createElement('span');
   kc.setAttribute('data-k', 'kc');
   kc.setAttribute('aria-hidden', 'true');
   const at = (q: DOMRect, dx = 0, dy = 0) => `left:${((q.left - r.left) / sc - dx).toFixed(2)}px;top:${((q.top - r.top) / sc - dy).toFixed(2)}px`;
   // a glyph run at its own rect: a line box exactly the rect's height puts the glyph on the original,
   // and the original's width keeps its kerned advance (a letter alone would set a little wider)
-  const glyphs = (of: string, text: string, q: DOMRect, cs: CSSStyleDeclaration, dx = 0, dy = 0) => {
+  const glyphs = (of: string, text: string, q: DOMRect, cs: CSSStyleDeclaration, dx = 0, dy = 0): HTMLSpanElement => {
     const s = document.createElement('span');
     s.textContent = text;
     s.dataset.ko = of;
     s.setAttribute('style', `position:absolute;${at(q, dx, dy)};width:${(q.width / sc).toFixed(2)}px;height:${(q.height / sc).toFixed(2)}px;line-height:${(q.height / sc).toFixed(2)}px;white-space:pre;overflow:visible;margin:0;padding:0;${copyStyle(cs, FONT)};color:${GROUND}`);
     kc.appendChild(s);
+    return s;
   };
   // the label: one copy per letter of the glitch face, where the letter rests
   for (const f of h.faces)
     for (const sp of f.spans) {
       if (!(sp.textContent ?? '').trim()) continue;
-      glyphs('l', sp.textContent!, sp.getBoundingClientRect(), getComputedStyle(sp), parseFloat(sp.style.left) || 0, parseFloat(sp.style.top) || 0);
+      const c = glyphs('l', sp.textContent!, sp.getBoundingClientRect(), getComputedStyle(sp), parseFloat(sp.style.left) || 0, parseFloat(sp.style.top) || 0);
+      ko.pairs.push({ sp, c, tr: '' });
     }
   // the tag: its ruled box in ground ink, and its words
   for (const tag of Array.from(b.querySelectorAll<HTMLElement>('.cs > span'))) {
@@ -94,14 +101,16 @@ function copies(h: Hot, ko: Ko): HTMLSpanElement {
     glyphs('t', tag.textContent ?? '', rg.getBoundingClientRect(), getComputedStyle(tag));
     ko.under.push(tag);
   }
-  // the detail or figure: a clone in the same box, with the same wrapping
+  // the detail or figure: a clone in the same box. It takes the original's own
+  // layout width, to the fraction, so it wraps exactly where the original does:
+  // a clone a quarter pixel narrower sent the last word of a full line down a line
   for (const el of Array.from(b.querySelectorAll<HTMLElement>('.l, .n'))) {
     if (!(el.textContent ?? '').trim()) continue;
     const q = el.getBoundingClientRect();
     const c = el.cloneNode(true) as HTMLElement;
     c.removeAttribute('class');
     c.dataset.ko = 'd';
-    c.setAttribute('style', `position:absolute;${at(q)};width:${(q.width / sc).toFixed(2)}px;box-sizing:border-box;margin:0;display:block;${copyStyle(getComputedStyle(el), BLOCK)};color:${GROUND}`);
+    c.setAttribute('style', `position:absolute;${at(q)};width:${widthOf(el)}px;box-sizing:border-box;margin:0;display:block;${copyStyle(getComputedStyle(el), BLOCK)};color:${GROUND}`);
     c.querySelectorAll<HTMLElement>('*').forEach((d) => (d.style.color = GROUND));
     kc.appendChild(c);
     ko.under.push(el);
@@ -113,7 +122,7 @@ function copies(h: Hot, ko: Ko): HTMLSpanElement {
 export function knockoutLook(h: Hot, t: number): Look {
   let ko = kos.get(h);
   if (!ko) {
-    ko = { deep: deepOf(h.P.main), kc: null, under: [] };
+    ko = { deep: deepOf(h.P.main), kc: null, under: [], pairs: [] };
     kos.set(h, ko);
   }
   const g = textGrid(h);
@@ -144,6 +153,13 @@ export function knockoutLook(h: Hot, t: number): Look {
       if (!k.kc || !k.kc.isConnected) k.kc = copies(hh, k);
       const want = `position:absolute;inset:0;z-index:1;pointer-events:none;${clip}`;
       if (k.kc.getAttribute('style') !== want) k.kc.setAttribute('style', want);
+      // A letter may still be gliding its last pixel into place after the glitch
+      // (glitch.ts moves it by `left` and `top`). Its copy rides the same glide,
+      // so no dark edge of the original ever shows beside it.
+      for (const q of k.pairs) {
+        const tr = q.sp.style.left ? `${q.sp.style.left} ${q.sp.style.top || '0px'}` : '';
+        if (q.tr !== tr) q.c.style.translate = q.tr = tr;
+      }
       for (const el of k.under) {
         const op = hide ? '0' : '';
         if (el.style.opacity !== op) el.style.opacity = op;

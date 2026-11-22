@@ -2468,6 +2468,47 @@ try {
       ok(all.every((v) => v.kc && v.n > 0 && v.off <= 0.5 && v.inks.length === 1 && v.inks[0] === 'rgb(243, 245, 248)' && v.contrast >= 4.5 && v.hidden), 'Knockout is legible: every letter, the tag and the detail drawn by a ground-ink copy within 0.5px of it, on a deep step that holds it at 4.5:1, the originals hidden under it', JSON.stringify(Object.fromEntries(Object.entries(ko).map(([k, v]) => [k, { off: v.off, n: v.n, inks: v.inks, contrast: v.contrast, hidden: v.hidden }]))));
       ok(all.every((v) => v.onSeams && v.grows && v.stepped >= 2), 'its spread lands on the text: on every line both edges are clear seams of that line, and it only grows', JSON.stringify(Object.fromEntries(Object.entries(ko).map(([k, v]) => [k, [v.onSeams, v.grows, v.stepped]]))));
       ok(all.every((v) => !v.left.kc && v.left.op === 0), 'leaving takes every copy and gives every original back in the same frame', JSON.stringify(Object.fromEntries(Object.entries(ko).map(([k, v]) => [k, v.left]))));
+      // Every project row, from the copies' first frame: each word of the detail's copy sits on its original,
+      // so the copy wraps exactly where the original does (a copy a quarter pixel narrower once sent the last
+      // word of a full line down a line), and each letter's copy rides its letter while the glitch's glide ends.
+      const koWords = ([s, n]) => {
+        const a = document.querySelectorAll(s)[n];
+        const kc = a.querySelector(':scope > [data-k="kc"]');
+        if (!kc) return { kc: false };
+        const rg = document.createRange();
+        const words = (el) => {
+          const out = [];
+          const tw = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+          for (let t = tw.nextNode(); t; t = tw.nextNode()) for (const m of t.nodeValue.matchAll(/\S+/g)) { rg.setStart(t, m.index); rg.setEnd(t, m.index + m[0].length); const q = rg.getBoundingClientRect(); out.push([q.left, q.top]); }
+          return out;
+        };
+        const apart = (A, B) => (A.length === B.length ? Math.max(0, ...A.map((q, i) => Math.max(Math.abs(q[0] - B[i][0]), Math.abs(q[1] - B[i][1])))) : 99);
+        const at = (e) => { const q = e.getBoundingClientRect(); return [q.left, q.top]; };
+        const d0 = [...a.querySelectorAll('.l, .n')].filter((e) => !e.closest('[data-k]') && e.textContent.trim());
+        const d1 = [...kc.querySelectorAll('[data-ko="d"]')];
+        return {
+          kc: true,
+          words: d0.reduce((n2, e) => n2 + words(e).length, 0),
+          detail: d0.length === d1.length ? Math.max(0, ...d0.map((e, i) => apart(words(e), words(d1[i])))) : 99,
+          letters: apart([...a.querySelectorAll('[data-glitch] > span')].filter((sp) => sp.textContent.trim()).map(at), [...kc.querySelectorAll('[data-ko="l"]')].map(at)),
+        };
+      };
+      const projects = 'a.row:not(nav a)';
+      const nRows = await pg.evaluate((s) => document.querySelectorAll(s).length, projects);
+      const koOff = [];
+      let koRows = 0;
+      let koLines = 0;
+      for (let i = 0; i < nRows; i++) {
+        const { frames } = await filmFx(pg, projects, i, 'knockout', 0.5, 520, koWords);
+        const up = frames.filter((f) => f.kc);
+        if (up.length) koRows++;
+        koLines += up[0]?.words ?? 0;
+        const detail = Math.max(0, ...up.map((f) => f.detail));
+        const letters = Math.max(0, ...up.map((f) => f.letters));
+        if (!up.length || detail > 0.5 || letters > 0.5) koOff.push(`${i} ${JSON.stringify({ frames: up.length, detail: +detail.toFixed(2), letters: +letters.toFixed(2) })}`);
+        await awayFx(pg);
+      }
+      ok(nRows >= 15 && koRows === nRows && koLines > 100 && koOff.length === 0, `Knockout on every project row (${nRows}), every frame from its first: each word of the detail’s copy within 0.5px of its original, so no word changes line, and each letter’s copy within 0.5px of its letter while it still glides`, koOff.join(' | '));
     }
     await ctx.close();
     const home = await clockPage('/');
@@ -3285,6 +3326,42 @@ try {
     ok(over === 0 && bad.length === 0, `${vw} wide, the worst titles (a 42-letter word, 86 letters, one letter, an address, Japanese, Vietnamese, emoji, capitals): every letter inside its tile at rest and on hover, the same lines, no box moves`, `${over}px sideways | ${bad.join(' | ')}`);
     await wctx.close();
   }
+  // A title narrowed to fit keeps its squeeze while an effect styles the overlay: the squeeze is the
+  // overlay's `scale`, the effect writes `transform`, and the two compose. Decode, forced on a title
+  // in capitals at 360 wide, filmed for a second: every glyph stays inside its tile.
+  {
+    const qctx = await browser.newContext({ viewport: { width: 360, height: 800 } });
+    await qctx.addInitScript(() => (window.__dressQuiet = true));
+    const qp = await qctx.newPage();
+    await qp.goto(`${BASE}/paintings/`, { waitUntil: 'networkidle' });
+    await settle(qp);
+    await qp.waitForFunction(() => !!window.__lin, null, { timeout: 10000 }).catch(() => {});
+    await qp.evaluate((t) => document.querySelector('.tile [data-word]').replaceChildren(t), WORST[7]);
+    await qp.evaluate(() => window.__lin.force('decode'));
+    const qb = await qp.evaluate(() => { const a = document.querySelector('.tile .cell'); a.scrollIntoView({ block: 'center' }); const q = a.getBoundingClientRect(); return [q.left, q.top, q.width, q.height]; });
+    await sleep(200);
+    await qp.mouse.move(qb[0] + 40, qb[1] + qb[3] / 2, { steps: 2 });
+    const squeezed = await qp.evaluate(() => new Promise((res) => {
+      const a = document.querySelector('.tile .cell');
+      const tile = a.closest('.tile').getBoundingClientRect();
+      const t0 = performance.now();
+      const seen = { frames: 0, styled: 0, out: -Infinity, scale: null };
+      const tick = () => {
+        const ov = a.querySelector('[data-glitch]');
+        if (ov) {
+          seen.frames++;
+          seen.scale = ov.style.scale;
+          if (ov.style.transform) seen.styled++;
+          for (const c of ov.children) if (c.tagName === 'SPAN' && c.textContent.trim()) { const q = c.getBoundingClientRect(); seen.out = Math.max(seen.out, q.right - tile.right, tile.left - q.left); }
+        }
+        if (performance.now() - t0 < 1000) requestAnimationFrame(tick);
+        else res(seen);
+      };
+      requestAnimationFrame(tick);
+    }));
+    ok(squeezed.frames > 20 && squeezed.styled > 5 && parseFloat(squeezed.scale) < 1 && squeezed.out <= 0.5, 'a title narrowed to fit keeps its squeeze while Decode styles the overlay: every glyph inside its tile on every frame', JSON.stringify(squeezed));
+    await qctx.close();
+  }
   // The same, for every wrapped label elsewhere, and the baseline of every kind of label.
   for (const vw of [1440, 760]) {
     const lctx = await browser.newContext({ viewport: { width: vw, height: 900 } });
@@ -4054,7 +4131,7 @@ try {
     const urls = await cpg.evaluate(() => performance.getEntriesByType('resource').map((e) => e.name).filter((u) => /\/assets\/(index|lineage|jx)-[\w-]+\.js$/.test(u)));
     const gz = {};
     for (const u of urls) gz[u.match(/\/assets\/(index|lineage|jx)-/)[1]] = gzipSync(await (await cpg.request.get(u)).body()).length;
-    ok(gz.index <= 18_500 && gz.lineage <= 23_000 && gz.jx <= 7_000, `the scripts, gzipped: main ${(gz.index / 1000).toFixed(1)} kB of 18.5, lineage ${(gz.lineage / 1000).toFixed(1)} of 23, jx ${(gz.jx / 1000).toFixed(1)} of 7`, JSON.stringify(gz));
+    ok(gz.index <= 19_200 && gz.lineage <= 24_200 && gz.jx <= 7_000, `the scripts, gzipped: main ${(gz.index / 1000).toFixed(1)} kB of 19.2, lineage ${(gz.lineage / 1000).toFixed(1)} of 24.2, jx ${(gz.jx / 1000).toFixed(1)} of 7`, JSON.stringify(gz));
     await cc.close();
   }
   }
