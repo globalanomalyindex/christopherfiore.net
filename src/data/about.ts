@@ -139,7 +139,8 @@ export const ABOUT_SECTIONS: AboutSection[] = [
         'watched the tooling change shape several times over.',
       'in practice that means Claude Code on both CLI and desktop, Claude Design, and Codex, ' +
         'plus agentic workflows i build and run myself: Ultracode in Claude Code, subagents in ' +
-        'ChatGPT Work.',
+        'ChatGPT Work. i also set up Claude Code and Codex for app developers, software ' +
+        'engineering students, and designers.',
       'i deploy and manage these rather than consume them as a service. that is the difference ' +
         'between a tools list and actual leverage.',
     ],
